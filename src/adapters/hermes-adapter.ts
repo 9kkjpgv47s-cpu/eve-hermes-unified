@@ -31,17 +31,25 @@ export class HermesAdapter implements LaneAdapter {
     const runId = `unified-hermes-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
     const started = Date.now();
 
-    const result = await runCommandWithTimeout([this.launchCommand, ...this.launchArgs, input.envelope.text], {
-      timeoutMs: this.timeoutMs,
-      env: {
-        HERMES_UNIFIED_TRACE_ID: input.envelope.traceId,
-        HERMES_UNIFIED_CHAT_ID: input.envelope.chatId,
-        HERMES_UNIFIED_MESSAGE_ID: input.envelope.messageId,
-        HERMES_UNIFIED_INTENT_ROUTE: input.intentRoute,
+    const result = await runCommandWithTimeout(
+      [this.launchCommand, ...this.launchArgs, input.envelope.text],
+      {
+        timeoutMs: this.timeoutMs,
+        env: {
+          HERMES_UNIFIED_TRACE_ID: input.envelope.traceId,
+          HERMES_UNIFIED_CHAT_ID: input.envelope.chatId,
+          HERMES_UNIFIED_MESSAGE_ID: input.envelope.messageId,
+          HERMES_UNIFIED_INTENT_ROUTE: input.intentRoute,
+        },
       },
-    });
+    );
 
-    const reason = result.code === 0 ? "hermes_dispatch_success" : `hermes_dispatch_exit_${result.code ?? "null"}`;
+    const reason =
+      result.termination === "timeout"
+        ? "hermes_dispatch_timeout"
+        : result.code === 0
+          ? "hermes_dispatch_success"
+          : `hermes_dispatch_exit_${result.code ?? "null"}`;
     const state: DispatchState = {
       status: result.code === 0 ? "pass" : "failed",
       reason,

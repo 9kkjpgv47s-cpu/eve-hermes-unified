@@ -44,7 +44,8 @@ export class EveAdapter implements LaneAdapter {
 
   async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
     const runId = `unified-eve-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
-    await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
+    const started = Date.now();
+    const commandResult = await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
       timeoutMs: this.dispatchTimeoutMs,
       env: {
         EVE_TASK_DISPATCH_RUN_ID: runId,
@@ -57,22 +58,32 @@ export class EveAdapter implements LaneAdapter {
       },
     });
 
-    const raw = await readFile(this.dispatchStatePath, "utf8");
-    const parsed = JSON.parse(raw) as EveDispatchStateFile;
+    let parsed: EveDispatchStateFile | null = null;
+    try {
+      const raw = await readFile(this.dispatchStatePath, "utf8");
+      parsed = JSON.parse(raw) as EveDispatchStateFile;
+    } catch {
+      parsed = null;
+    }
+    const isPass = parsed?.status === "pass" && commandResult.code === 0;
+    const reasonFromExit = commandResult.termination === "timeout"
+      ? "eve_dispatch_timeout"
+      : `eve_dispatch_exit_${commandResult.code ?? "null"}`;
+    const fallbackReason = parsed?.reason ?? reasonFromExit;
     const state: DispatchState = {
-      status: parsed.status === "pass" ? "pass" : "failed",
-      reason: parsed.reason ?? "unknown",
-      runtimeUsed: parsed.runtime_used ?? "unknown",
-      runId: parsed.run_id ?? runId,
-      elapsedMs: Number.isFinite(parsed.elapsed_ms) ? Number(parsed.elapsed_ms) : 0,
-      failureClass:
-        parsed.status === "pass"
-          ? "none"
-          : classifyFailure(parsed.reason ?? "dispatch_failed"),
+      status: isPass ? "pass" : "failed",
+      reason: fallbackReason,
+      runtimeUsed: parsed?.runtime_used ?? "eve",
+      runId: parsed?.run_id ?? runId,
+      elapsedMs:
+        Number.isFinite(parsed?.elapsed_ms) && Number(parsed?.elapsed_ms) >= 0
+          ? Number(parsed?.elapsed_ms)
+          : Math.max(0, Date.now() - started),
+      failureClass: isPass ? "none" : classifyFailure(fallbackReason),
       sourceLane: "eve",
-      sourceChatId: parsed.source_chat_id ?? input.envelope.chatId,
-      sourceMessageId: parsed.source_message_id ?? input.envelope.messageId,
-      traceId: parsed.trace_id ?? input.envelope.traceId,
+      sourceChatId: parsed?.source_chat_id ?? input.envelope.chatId,
+      sourceMessageId: parsed?.source_message_id ?? input.envelope.messageId,
+      traceId: parsed?.trace_id ?? input.envelope.traceId,
     };
     return validateDispatchState(state);
   }

@@ -56,4 +56,27 @@ describe("routeMessage", () => {
     expect(decision.primaryLane).toBe("eve");
     expect(decision.reason).toBe("default_policy_lane");
   });
+
+  it("carries failClosed and policyVersion into routing decisions", () => {
+    const decision = routeMessage(
+      {
+        traceId: "t4",
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        receivedAtIso: new Date().toISOString(),
+        text: "policy metadata",
+      },
+      {
+        defaultPrimary: "hermes",
+        defaultFallback: "eve",
+        failClosed: false,
+        policyVersion: "v2",
+      },
+    );
+    expect(decision.primaryLane).toBe("hermes");
+    expect(decision.fallbackLane).toBe("eve");
+    expect(decision.failClosed).toBe(false);
+    expect(decision.policyVersion).toBe("v2");
+  });
 });

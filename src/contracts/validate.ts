@@ -1,5 +1,6 @@
 import {
   type DispatchState,
+  type FailureClass,
   type RoutingDecision,
   type UnifiedMessageEnvelope,
   type UnifiedResponse,
@@ -39,11 +40,35 @@ export function validateDispatchState(value: DispatchState): DispatchState {
   ensure(value.sourceChatId.length > 0, "Dispatch sourceChatId is required.");
   ensure(value.sourceMessageId.length > 0, "Dispatch sourceMessageId is required.");
   ensure(value.traceId.length > 0, "Dispatch traceId is required.");
+  ensure(value.sourceLane === "eve" || value.sourceLane === "hermes", "Dispatch sourceLane is invalid.");
+  ensure(
+    isFailureClass(value.failureClass),
+    "Dispatch failureClass must be one of none|provider_limit|cooldown|dispatch_failure|state_unavailable|policy_failure.",
+  );
+  if (value.status === "pass") {
+    ensure(value.failureClass === "none", "Dispatch failureClass must be none when status=pass.");
+  }
   return value;
 }
 
 export function validateUnifiedResponse(value: UnifiedResponse): UnifiedResponse {
   ensure(value.responseText.length > 0 || value.consumed === false, "Response text required when consumed.");
   ensure(value.traceId.length > 0, "Unified response traceId is required.");
+  ensure(value.laneUsed === "eve" || value.laneUsed === "hermes", "Unified response laneUsed is invalid.");
+  ensure(
+    isFailureClass(value.failureClass),
+    "Unified response failureClass must be one of none|provider_limit|cooldown|dispatch_failure|state_unavailable|policy_failure.",
+  );
   return value;
+}
+
+function isFailureClass(value: FailureClass): boolean {
+  return (
+    value === "none" ||
+    value === "provider_limit" ||
+    value === "cooldown" ||
+    value === "dispatch_failure" ||
+    value === "state_unavailable" ||
+    value === "policy_failure"
+  );
 }

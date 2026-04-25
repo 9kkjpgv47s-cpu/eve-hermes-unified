@@ -48,3 +48,11 @@ export type UnifiedResponse = {
   laneUsed: LaneId;
   traceId: string;
 };
+
+export type UnifiedDispatchResult = {
+  envelope: UnifiedMessageEnvelope;
+  routing: RoutingDecision;
+  primaryState: DispatchState;
+  fallbackState?: DispatchState;
+  response: UnifiedResponse;
+};

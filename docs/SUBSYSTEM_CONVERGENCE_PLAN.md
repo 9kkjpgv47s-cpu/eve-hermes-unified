@@ -25,10 +25,16 @@ Unify these subsystem ownership domains into merged runtime modules:
 - Introduce a `UnifiedMemoryStore` interface.
 - Build Eve and Hermes memory adapters.
 - Route reads/writes through shared store API.
+- Scaffolded files:
+  - `src/memory/unified-memory-store.ts`
+  - `src/memory/eve-memory-adapter.ts`
+  - `src/memory/hermes-memory-adapter.ts`
 
 ### Phase 4: Skills and Tools Convergence
 - Create one shared capability registry.
 - Register Eve command wrappers and Hermes tools into a single catalog.
+- Scaffolded file:
+  - `src/skills/capability-registry.ts`
 
 ### Phase 5: Control Plane Convergence
 - Consolidate env/config schema.

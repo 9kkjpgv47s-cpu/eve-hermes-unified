@@ -1,0 +1,40 @@
+name: lane-validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Target rollout stage"
+        required: true
+        default: "shadow"
+        type: choice
+        options:
+          - shadow
+          - canary
+          - majority
+          - full
+
+jobs:
+  staged-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Stage policy
+        run: npm run cutover:stage -- ${{ inputs.stage }}
+
+      - name: Failure-injection smoke
+        run: npm run validate:failure-injection

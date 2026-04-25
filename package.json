@@ -1,0 +1,25 @@
+{
+  "name": "eve-hermes-unified",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dispatch": "tsx src/bin/unified-dispatch.ts",
+    "sync:sources": "bash ./scripts/sync-sources.sh",
+    "bootstrap:sources": "bash ./scripts/bootstrap-sources.sh",
+    "validate:failure-injection": "bash ./scripts/failure-injection-smoke.sh",
+    "validate:soak": "bash ./scripts/soak-simulate.sh 20",
+    "cutover:stage": "bash ./scripts/prod-cutover-stage.sh",
+    "cutover:rollback": "bash ./scripts/prod-rollback-eve-safe-lane.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.3"
+  }
+}

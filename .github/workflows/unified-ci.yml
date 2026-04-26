@@ -78,6 +78,9 @@ jobs:
       - name: Verify merge bundle package
         run: npm run verify:merge-bundle
 
+      - name: Stage promotion readiness gate
+        run: npm run check:stage-promotion-readiness -- --target-stage canary --ignore-horizon-target
+
       - name: Validate horizon status metadata
         run: npm run validate:horizon-status
 

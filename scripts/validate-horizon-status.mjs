@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5"];
 const VALID_STATUSES = ["planned", "in_progress", "blocked", "completed"];
@@ -29,7 +30,7 @@ function parseArgs(argv) {
   return options;
 }
 
-function validateHorizonStatus(payload) {
+export function validateHorizonStatus(payload) {
   const errors = [];
   if (!payload || typeof payload !== "object") {
     return { valid: false, errors: ["payload must be an object"] };
@@ -215,7 +216,12 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  process.stderr.write(`${String(error)}\n`);
-  process.exitCode = 1;
-});
+const isDirectExecution =
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectExecution) {
+  main().catch((error) => {
+    process.stderr.write(`${String(error)}\n`);
+    process.exitCode = 1;
+  });
+}

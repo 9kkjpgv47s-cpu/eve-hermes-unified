@@ -123,3 +123,31 @@ Expected result:
   - `"checks.archiveContainsManifest": true`
 
 If verification fails, do not promote cutover stage. Re-run validation/bundle generation and investigate missing or invalid artifacts.
+
+## Stage Promotion Readiness Gate
+
+Before any stage advance (`shadow -> canary -> majority -> full`), run:
+
+```bash
+npm run check:stage-promotion
+```
+
+Default behavior:
+- reads latest evidence under `evidence/`
+- validates latest `validation-summary`, `cutover-readiness`, `release-readiness`, `merge-bundle-validation`, and `bundle-verification` artifacts
+- enforces required gate pass states before allowing promotion
+- writes machine-readable output:
+  - `evidence/stage-promotion-readiness-*.json`
+
+Use explicit thresholds/targets when needed:
+
+```bash
+npm run check:stage-promotion -- \
+  --target-stage canary \
+  --min-success-rate 0.99 \
+  --max-p95-latency-ms 2000
+```
+
+Promotion policy:
+- If `check:stage-promotion` exits non-zero, do **not** promote.
+- Resolve failing gates, regenerate evidence, and rerun.

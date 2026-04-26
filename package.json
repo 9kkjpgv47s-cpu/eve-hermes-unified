@@ -18,6 +18,7 @@
     "validate:horizon-status": "node ./scripts/validate-horizon-status.mjs --file ./docs/HORIZON_STATUS.json",
     "validate:manifest-schema": "node ./scripts/validate-manifest-schema.mjs",
     "verify:merge-bundle": "node ./scripts/verify-merge-bundle.mjs",
+    "check:stage-promotion-readiness": "node ./scripts/check-stage-promotion-readiness.mjs",
     "validate:manifest-schemas": "node ./scripts/validate-manifest-schema.mjs --type all --evidence-dir ./evidence --latest-only",
     "validate:regression-eve": "bash ./scripts/regression-eve-primary.sh",
     "validate:cutover-readiness": "bash ./scripts/verify-cutover-readiness.sh",

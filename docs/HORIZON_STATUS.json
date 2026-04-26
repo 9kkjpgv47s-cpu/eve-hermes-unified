@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T13:02:00Z",
+  "updatedAtIso": "2026-04-26T13:25:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H1",
   "activeStatus": "in_progress",
-  "summary": "H1 merge operationalization baseline is in progress with CI parity, schema gating, and operator bundle verification implemented.",
+  "summary": "H1 merge operationalization baseline is in progress with CI parity, schema/verification gates, and stage-promotion readiness gate implementation underway.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -47,7 +47,7 @@
   "nextActions": [
     {
       "id": "h1-action-1",
-      "summary": "Run unified-ci and confirm evidence artifact upload reliability.",
+      "summary": "Run unified-ci and confirm evidence artifact upload reliability and stage promotion gate signal emission.",
       "targetHorizon": "H1",
       "status": "in_progress"
     },
@@ -59,7 +59,7 @@
     },
     {
       "id": "h1-action-3",
-      "summary": "Promote H1 to completed once artifact retrieval playbook is verified.",
+      "summary": "Promote H1 to completed once artifact retrieval and stage promotion gate workflow are verified.",
       "targetHorizon": "H1",
       "status": "planned"
     }
@@ -67,7 +67,7 @@
   "horizonStates": {
     "H1": {
       "status": "in_progress",
-      "summary": "Operationalization baseline mostly complete; awaiting CI artifact retrieval confirmation."
+      "summary": "Operationalization baseline mostly complete; awaiting CI artifact retrieval + stage promotion workflow confirmation."
     },
     "H2": {
       "status": "planned",
@@ -92,6 +92,12 @@
       "horizon": "H1",
       "status": "in_progress",
       "note": "Manifest policy gate, operator merge-bundle verification, and horizon status schema gate implemented."
+    },
+    {
+      "timestamp": "2026-04-26T13:25:00Z",
+      "horizon": "H1",
+      "status": "in_progress",
+      "note": "Stage promotion readiness gate added for cutover advancement decisions."
     }
   ]
 }

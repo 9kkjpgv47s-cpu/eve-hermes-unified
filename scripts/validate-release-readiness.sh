@@ -53,11 +53,11 @@ run_step() {
   started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   local command_display
   command_display="$*"
+  status="failed"
   if "$@" >"$log_file" 2>&1; then
     status="passed"
     exit_code=0
   else
-    status="failed"
     exit_code=$?
   fi
   finished_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

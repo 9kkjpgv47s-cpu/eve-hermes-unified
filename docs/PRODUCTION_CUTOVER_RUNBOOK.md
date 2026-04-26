@@ -349,3 +349,22 @@ Expected result:
   - `h2-drill-suite`
   - `h2-rollback-threshold-calibration`
   - `h2-supervised-rollback-simulation`
+
+One-command H2 closeout runner:
+
+```bash
+npm run run:h2-closeout -- \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --env-file "$HOME/.openclaw/run/gateway.env" \
+  --allow-horizon-mismatch
+```
+
+Runner behavior:
+- executes rollback-threshold calibration, supervised rollback simulation, and H2 closeout validation in sequence
+- writes consolidated manifest:
+  - `evidence/h2-closeout-run-*.json`
+- references step artifacts:
+  - `evidence/rollback-threshold-calibration-<stage>-*.json`
+  - `evidence/supervised-rollback-simulation-*.json`
+  - `evidence/horizon-closeout-H2-*.json`

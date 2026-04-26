@@ -43,6 +43,7 @@ npm run run:h2-drill-suite -- --dry-run --evidence-dir evidence
 npm run evaluate:auto-rollback-policy -- --stage canary --evidence-dir evidence
 npm run calibrate:rollback-thresholds -- --stage majority --evidence-dir evidence
 npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness
+npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness
 npm run validate:all
 npm run cutover:stage -- canary
 npm run cutover:rollback

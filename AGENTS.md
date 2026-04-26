@@ -55,6 +55,7 @@ npm run run:stage-drill -- --target-stage canary --dry-run
 npm run run:h2-drill-suite -- --dry-run --evidence-dir evidence
 npm run calibrate:rollback-thresholds -- --stage majority --evidence-dir evidence
 npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --allow-horizon-mismatch --skip-cutover-readiness
+npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
 # optional deterministic evidence mode override:
 #   --evidence-selection-mode latest-passing

@@ -58,6 +58,7 @@ function parseArgs(argv) {
     out: "",
     requireActiveNextHorizon: false,
     requireCompletedActions: false,
+    allowHorizonMismatch: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -81,6 +82,8 @@ function parseArgs(argv) {
       options.requireActiveNextHorizon = true;
     } else if (arg === "--require-completed-actions") {
       options.requireCompletedActions = true;
+    } else if (arg === "--allow-horizon-mismatch") {
+      options.allowHorizonMismatch = true;
     }
   }
   return options;
@@ -465,7 +468,12 @@ async function main() {
     }
     const nextExpectedStage = nextHorizon ? HORIZON_STAGE_MAP[nextHorizon] ?? null : null;
     const promotionTarget = String(horizonStatus?.promotionReadiness?.targetStage ?? "").trim().toLowerCase() || null;
-    if (nextExpectedStage && promotionTarget && promotionTarget !== nextExpectedStage) {
+    if (
+      !options.allowHorizonMismatch &&
+      nextExpectedStage &&
+      promotionTarget &&
+      promotionTarget !== nextExpectedStage
+    ) {
       failures.push(`promotion_target_stage_mismatch:${promotionTarget}!=${nextExpectedStage}`);
     }
     const activeMatchesNext =

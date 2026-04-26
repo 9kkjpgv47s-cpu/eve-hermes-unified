@@ -177,10 +177,13 @@ Mitigations:
    - `npm run calibrate:rollback-thresholds -- --stage majority --evidence-dir evidence`
 3. Execute supervised rollback auto-apply simulation with calibrated thresholds in a controlled environment:
    - `npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
-4. Capture promotion/rollback decision traces as required evidence for H2 closeout criteria draft from:
+4. Run consolidated H2 closeout pipeline (calibration + supervised simulation + closeout gate) in one command:
+   - `npm run run:h2-closeout -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
+5. Capture promotion/rollback decision traces as required evidence for H2 closeout criteria draft from:
    - `evidence/rollback-threshold-calibration-*.json`
    - `evidence/supervised-rollback-simulation-*.json`
-5. Enforce H2 closeout evidence via executable gate:
+   - `evidence/h2-closeout-run-*.json`
+6. Enforce H2 closeout evidence via executable gate:
    - `npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json`
 
 ## Horizon Closeout Gate

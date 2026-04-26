@@ -71,9 +71,19 @@ Exit criteria:
 - [x] `npm run validate:cutover-readiness` verifies stage transitions + rollback end state.
 - [x] Rollback path returns runtime to Eve-primary/no-fallback safe lane.
 - [x] Operational checklist and emergency actions are confirmed from runbook.
+- [x] `npm run validate:release-readiness` emits a passing machine-readable readiness manifest.
 
 Exit criteria:
 - Cutover plan is executable with validated rollback safety.
+
+## Phase 7 - Initial Scope Merge Gate
+
+- [x] All checklist items in Phases 0-6 are checked in this file.
+- [x] Latest release-readiness manifest reports `pass=true`.
+- [x] `npm run validate:initial-scope` passes.
+
+Exit criteria:
+- Initial project scope is merge-ready with executable confirmation.
 
 ## PR Delivery Requirements (every implementation cycle)
 

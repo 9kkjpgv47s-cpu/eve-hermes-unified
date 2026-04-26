@@ -68,5 +68,6 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:regression-eve-primary`
 - `npm run validate:cutover-readiness`
 - `npm run validate:release-readiness`
+- `npm run validate:initial-scope`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.

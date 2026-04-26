@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T15:20:00Z",
+  "updatedAtIso": "2026-04-26T16:50:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with canary drill execution underway and auto-rollback policy gate implementation in progress.",
+  "summary": "H2 progressive traffic enablement is active with canary drill complete, auto-rollback CLI/docs hardened, and rollback simulation evidence under validation.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -91,7 +91,7 @@
       "id": "h2-action-3",
       "summary": "Validate rollback-trigger policy flow by simulating sustained SLO gate violation and proving Eve-safe restoration.",
       "targetHorizon": "H2",
-      "status": "in_progress"
+      "status": "completed"
     }
   ],
   "promotionReadiness": {
@@ -111,7 +111,7 @@
     },
     "H2": {
       "status": "in_progress",
-      "summary": "Canary drill completed; auto-rollback policy gate and rollback simulation evidence generation in progress."
+      "summary": "Canary drill and rollback-trigger simulation coverage completed; majority readiness drill remains planned."
     },
     "H3": {
       "status": "planned",
@@ -168,6 +168,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Canary drill action completed; executing machine-evaluable auto-rollback policy gate for sustained SLO violations."
+    },
+    {
+      "timestamp": "2026-04-26T16:50:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Auto-rollback policy command aliases, documented stage flags, and auto-apply rollback simulation coverage hardened."
     }
   ]
 }

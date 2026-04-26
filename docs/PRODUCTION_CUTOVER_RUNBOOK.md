@@ -180,7 +180,7 @@ When operating in canary/majority/full stages, evaluate rollback policy from lat
 
 ```bash
 npm run evaluate:auto-rollback-policy -- \
-  --current-stage canary \
+  --stage canary \
   --evidence-dir evidence \
   --horizon-status-file docs/HORIZON_STATUS.json
 ```
@@ -209,4 +209,8 @@ npm run cutover:rollback
 
 Then verify post-action state with:
 - `npm run validate:cutover-readiness`
-- `npm run evaluate:auto-rollback-policy -- --current-stage shadow --evidence-dir evidence`
+- `npm run evaluate:auto-rollback-policy -- --stage shadow --evidence-dir evidence`
+
+Compatibility aliases:
+- `npm run evaluate:auto-rollback -- ...` delegates to the same evaluator.
+- `--target-stage` and `--current-stage` are accepted aliases for `--stage`.

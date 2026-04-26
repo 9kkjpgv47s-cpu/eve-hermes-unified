@@ -12,8 +12,11 @@ function parseArgs(argv) {
   const options = {
     evidenceDir: "",
     stage: "",
+    stageOptionName: "",
     envFile: "",
     out: "",
+    requestedDecision: "",
+    window: "",
     autoApplyRollback: false,
     horizonStatusFile: "",
     minSuccessRate: Number.NaN,
@@ -28,8 +31,15 @@ function parseArgs(argv) {
     if (arg === "--evidence-dir") {
       options.evidenceDir = value ?? "";
       index += 1;
-    } else if (arg === "--stage") {
+    } else if (arg === "--stage" || arg === "--target-stage" || arg === "--current-stage") {
       options.stage = value ?? "";
+      options.stageOptionName = arg;
+      index += 1;
+    } else if (arg === "--decision") {
+      options.requestedDecision = value ?? "";
+      index += 1;
+    } else if (arg === "--window") {
+      options.window = value ?? "";
       index += 1;
     } else if (arg === "--env-file") {
       options.envFile = value ?? "";
@@ -222,6 +232,7 @@ async function main() {
   const envFile = path.resolve(
     options.envFile || process.env.UNIFIED_RUNTIME_ENV_FILE || path.join(process.env.HOME || "", ".openclaw/run/gateway.env"),
   );
+  const requestedStage = String(options.stage ?? "").trim();
 
   const validationSummaryPath = await newestPassingValidationSummary(evidenceDir);
   const cutoverReadinessPath = await newestPassingReport(evidenceDir, "cutover-readiness-");
@@ -251,12 +262,12 @@ async function main() {
 
   const activeHorizon = String(horizonStatus?.activeHorizon ?? "");
   const inferredStage = normalizeStage(
-    options.stage || (activeHorizon === "H2" ? "canary" : activeHorizon === "H3" ? "majority" : activeHorizon === "H4" || activeHorizon === "H5" ? "full" : "shadow"),
+    requestedStage || (activeHorizon === "H2" ? "canary" : activeHorizon === "H3" ? "majority" : activeHorizon === "H4" || activeHorizon === "H5" ? "full" : "shadow"),
     "shadow",
   );
-  const stage = normalizeStage(options.stage, inferredStage);
-  if (!VALID_STAGES.includes(stage)) {
-    failures.push(`invalid_stage:${options.stage || "<empty>"}`);
+  const stage = normalizeStage(requestedStage, inferredStage);
+  if (requestedStage && !VALID_STAGES.includes(requestedStage.toLowerCase())) {
+    failures.push(`invalid_stage:${requestedStage}`);
   }
 
   const validationSummary = await readJson(validationSummaryPath);
@@ -332,6 +343,12 @@ async function main() {
       rollbackApplied: rollbackExecution?.pass === true,
     },
     stage,
+    input: {
+      stageOption: options.stageOptionName || null,
+      requestedStage: requestedStage || null,
+      requestedDecision: isNonEmptyString(options.requestedDecision) ? options.requestedDecision : null,
+      window: isNonEmptyString(options.window) ? options.window : null,
+    },
     autoApplyRollback: options.autoApplyRollback,
     rollbackApplied: rollbackExecution?.pass === true,
     reasons: decisionReasons,

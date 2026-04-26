@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { runCommandWithTimeout } from "../src/process/exec.js";
+import packageJson from "../package.json" with { type: "json" };
 
 async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "auto-rollback-policy-test-"));
@@ -251,6 +252,13 @@ async function seedHorizonStatus(horizonPath: string): Promise<void> {
 }
 
 describe("evaluate-auto-rollback-policy.mjs", () => {
+  it("keeps the documented npm alias wired to the policy evaluator", () => {
+    expect(packageJson.scripts["evaluate:auto-rollback-policy"]).toBe(
+      "node ./scripts/evaluate-auto-rollback-policy.mjs",
+    );
+    expect(packageJson.scripts["evaluate:auto-rollback"]).toBe("npm run evaluate:auto-rollback-policy --");
+  });
+
   it("holds traffic when metrics are healthy", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");
@@ -290,6 +298,116 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
       expect(payload.pass).toBe(true);
       expect(payload.decision.action).toBe("hold");
       expect(payload.reasons).toEqual([]);
+    });
+  });
+
+  it("accepts documented stage aliases without changing the decision", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const targetStageOut = path.join(evidenceDir, "rollback-policy-target-stage.json");
+      const currentStageOut = path.join(evidenceDir, "rollback-policy-current-stage.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.997,
+        p95LatencyMs: 900,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        includeCooldownSignals: false,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const targetStageResult = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--target-stage",
+          "canary",
+          "--decision",
+          "hold",
+          "--window",
+          "5m",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          targetStageOut,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(targetStageResult.code).toBe(0);
+
+      const currentStageResult = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--current-stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          currentStageOut,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(currentStageResult.code).toBe(0);
+
+      const targetStagePayload = JSON.parse(await readFile(targetStageOut, "utf8")) as {
+        decision: { action: string };
+        stage: string;
+      };
+      const currentStagePayload = JSON.parse(await readFile(currentStageOut, "utf8")) as {
+        decision: { action: string };
+        stage: string;
+      };
+      expect(targetStagePayload.stage).toBe("canary");
+      expect(currentStagePayload.stage).toBe("canary");
+      expect(targetStagePayload.decision.action).toBe("hold");
+      expect(currentStagePayload.decision.action).toBe("hold");
+    });
+  });
+
+  it("supports the documented npm alias with current-stage syntax", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy-npm-alias.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.997,
+        p95LatencyMs: 900,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        includeCooldownSignals: false,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "npm",
+          "run",
+          "evaluate:auto-rollback",
+          "--",
+          "--current-stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        decision: { action: string };
+        stage: string;
+      };
+      expect(payload.stage).toBe("canary");
+      expect(payload.decision.action).toBe("hold");
     });
   });
 
@@ -379,6 +497,127 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
       expect(payload.reasons).toContain("release_readiness_failed");
       expect(payload.reasons).toContain("cutover_readiness_failed");
       expect(payload.reasons).toContain("stage_promotion_readiness_failed");
+    });
+  });
+
+  it("auto-applies rollback to a supplied env file only when decision is rollback", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy-auto-apply.json");
+      const envPath = path.join(dir, "gateway.env");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.93,
+        p95LatencyMs: 3200,
+        missingTraceRate: 0.02,
+        unclassifiedFailures: 1,
+      });
+      await seedHorizonStatus(horizonPath);
+      await writeFile(
+        envPath,
+        [
+          "UNIFIED_ROUTER_DEFAULT_PRIMARY=hermes",
+          "UNIFIED_ROUTER_DEFAULT_FALLBACK=eve",
+          "UNIFIED_ROUTER_FAIL_CLOSED=0",
+          "UNIFIED_ROUTER_CUTOVER_STAGE=majority",
+          "UNIFIED_ROUTER_CANARY_CHAT_IDS=100,200",
+          "UNIFIED_ROUTER_MAJORITY_PERCENT=75",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "majority",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--auto-apply-rollback",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        decision: { action: string; rollbackApplied: boolean };
+        rollbackExecution: { pass: boolean } | null;
+      };
+      expect(payload.decision.action).toBe("rollback");
+      expect(payload.decision.rollbackApplied).toBe(true);
+      expect(payload.rollbackExecution?.pass).toBe(true);
+
+      const envText = await readFile(envPath, "utf8");
+      expect(envText).toContain("UNIFIED_ROUTER_DEFAULT_PRIMARY=eve");
+      expect(envText).toContain("UNIFIED_ROUTER_DEFAULT_FALLBACK=none");
+      expect(envText).toContain("UNIFIED_ROUTER_FAIL_CLOSED=1");
+      expect(envText).toContain("UNIFIED_ROUTER_CUTOVER_STAGE=shadow");
+      expect(envText).toContain("UNIFIED_ROUTER_CANARY_CHAT_IDS=");
+      expect(envText).toContain("UNIFIED_ROUTER_MAJORITY_PERCENT=0");
+    });
+  });
+
+  it("does not auto-apply rollback when policy decision is hold", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy-hold-auto-apply.json");
+      const envPath = path.join(dir, "gateway.env");
+      const originalEnv = [
+        "UNIFIED_ROUTER_DEFAULT_PRIMARY=eve",
+        "UNIFIED_ROUTER_DEFAULT_FALLBACK=hermes",
+        "UNIFIED_ROUTER_FAIL_CLOSED=0",
+        "UNIFIED_ROUTER_CUTOVER_STAGE=canary",
+        "UNIFIED_ROUTER_CANARY_CHAT_IDS=100,200",
+        "UNIFIED_ROUTER_MAJORITY_PERCENT=0",
+        "",
+      ].join("\n");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.997,
+        p95LatencyMs: 900,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        includeCooldownSignals: false,
+      });
+      await seedHorizonStatus(horizonPath);
+      await writeFile(envPath, originalEnv, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--auto-apply-rollback",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        decision: { action: string; rollbackApplied: boolean };
+        rollbackExecution: unknown;
+      };
+      expect(payload.decision.action).toBe("hold");
+      expect(payload.decision.rollbackApplied).toBe(false);
+      expect(payload.rollbackExecution).toBeNull();
+      expect(await readFile(envPath, "utf8")).toBe(originalEnv);
     });
   });
 });

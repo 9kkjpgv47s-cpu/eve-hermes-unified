@@ -384,6 +384,9 @@ npm run promote:horizon -- \
 
 Behavior:
 - runs `validate:horizon-closeout` (unless `--closeout-file` is explicitly provided)
+- can consume deterministic closeout-run evidence with:
+  - `--closeout-run-file evidence/h2-closeout-run-*.json`
+  - validates that closeout run `"pass": true` and then uses `files.closeoutOut` as the pinned closeout artifact
 - requires closeout payload `"pass": true`
 - on success updates horizon status atomically:
   - `activeHorizon` advances to the next horizon

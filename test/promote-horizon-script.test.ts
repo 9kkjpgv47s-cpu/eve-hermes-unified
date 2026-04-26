@@ -272,4 +272,69 @@ describe("promote-horizon.mjs", () => {
       expect(after).toBe(before);
     });
   });
+
+  it("uses run:h2-closeout manifest for deterministic promotion handoff", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      const closeoutPath = await seedCloseoutReport(evidenceDir, {
+        pass: true,
+        horizon: "H2",
+        nextHorizon: "H3",
+      });
+      await seedHorizonStatus(statusPath);
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-20260426-000000.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            files: {
+              closeoutOut: closeoutPath,
+            },
+            checks: {
+              h2CloseoutGatePass: true,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-run-file",
+          closeoutRunPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      if (result.code !== 0) {
+        throw new Error(
+          `promote-horizon via closeout run expected success, got ${String(result.code)}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        );
+      }
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { closeoutRunFile: string | null; closeoutFile: string };
+        checks: { closeoutRunPass: boolean };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.closeoutRunFile).toBe(closeoutRunPath);
+      expect(payload.files.closeoutFile).toBe(closeoutPath);
+      expect(payload.checks.closeoutRunPass).toBe(true);
+      expect(payload.failures).toEqual([]);
+    });
+  });
 });

@@ -13,6 +13,7 @@ function parseArgs(argv) {
     evidenceDir: "",
     horizonStatusFile: "",
     closeoutFile: "",
+    closeoutRunFile: "",
     closeoutOut: "",
     out: "",
     note: "",
@@ -40,6 +41,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--closeout-file" || arg === "--closeout-report") {
       options.closeoutFile = value ?? "";
+      index += 1;
+    } else if (arg === "--closeout-run-file" || arg === "--closeout-run-report") {
+      options.closeoutRunFile = value ?? "";
       index += 1;
     } else if (arg === "--closeout-out") {
       options.closeoutOut = value ?? "";
@@ -153,7 +157,10 @@ async function main() {
   const outPath = path.resolve(
     options.out || path.join(evidenceDir, `horizon-promotion-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
   );
-  const closeoutFile = path.resolve(options.closeoutFile || closeoutOut);
+  let closeoutFile = path.resolve(options.closeoutFile || closeoutOut);
+  const closeoutRunFile = isNonEmptyString(options.closeoutRunFile)
+    ? path.resolve(options.closeoutRunFile)
+    : "";
 
   const failures = [];
   if (!statusValidation.valid) {
@@ -166,6 +173,9 @@ async function main() {
     failures.push(`invalid_horizon:${options.horizon || "<empty>"}`);
   }
   if (!nextHorizon) {
+  if (isNonEmptyString(options.closeoutFile) && closeoutRunFile.length > 0) {
+    failures.push("conflicting_closeout_sources:closeout_file_and_closeout_run_file");
+  }
     failures.push(`invalid_next_horizon:${options.nextHorizon || "<empty>"}`);
   }
   if (!options.closeoutFile && !(await exists(evidenceDir))) {
@@ -196,9 +206,27 @@ async function main() {
     }
   }
 
+  let closeoutRunPayload = null;
+  if (failures.length === 0 && closeoutRunFile.length > 0) {
+    if (!(await exists(closeoutRunFile))) {
+      failures.push(`missing_closeout_run_file:${closeoutRunFile}`);
+    } else {
+      closeoutRunPayload = await readJson(closeoutRunFile);
+      if (closeoutRunPayload?.pass !== true) {
+        failures.push("closeout_run_not_passed");
+      }
+      const derivedCloseoutFile = String(closeoutRunPayload?.files?.closeoutOut ?? "").trim();
+      if (!isNonEmptyString(derivedCloseoutFile)) {
+        failures.push("closeout_run_missing_closeout_out");
+      } else {
+        closeoutFile = path.resolve(derivedCloseoutFile);
+      }
+    }
+  }
+
   let closeoutCommand = null;
   let closeoutPayload = null;
-  if (failures.length === 0 && !options.closeoutFile) {
+  if (failures.length === 0 && !options.closeoutFile && closeoutRunFile.length === 0) {
     const closeoutArgv = [
       "node",
       "scripts/validate-horizon-closeout.mjs",
@@ -312,6 +340,7 @@ async function main() {
       evidenceDir: options.closeoutFile ? null : evidenceDir,
       closeoutFile,
       closeoutOut: options.closeoutFile ? null : closeoutOut,
+      closeoutRunFile: closeoutRunFile || null,
       outPath,
       statusWritePath,
     },
@@ -327,6 +356,7 @@ async function main() {
       requireCompletedActions: options.requireCompletedActions,
       requireActiveNextHorizon: options.requireActiveNextHorizon,
       allowHorizonMismatch: options.allowHorizonMismatch,
+      closeoutRunPass: closeoutRunPayload?.pass === true,
     },
     status: {
       before,

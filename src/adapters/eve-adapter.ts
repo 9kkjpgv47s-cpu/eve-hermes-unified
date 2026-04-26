@@ -59,17 +59,25 @@ export class EveAdapter implements LaneAdapter {
     });
 
     let parsed: EveDispatchStateFile | null = null;
+    let parsedStateAvailable = false;
     try {
       const raw = await readFile(this.dispatchStatePath, "utf8");
       parsed = JSON.parse(raw) as EveDispatchStateFile;
+      parsedStateAvailable = true;
     } catch {
       parsed = null;
+      parsedStateAvailable = false;
     }
-    const isPass = parsed?.status === "pass" && commandResult.code === 0;
+
+    const commandSucceeded = commandResult.code === 0 && commandResult.termination !== "timeout";
+    const isPass = parsed?.status === "pass" && commandSucceeded;
     const reasonFromExit = commandResult.termination === "timeout"
       ? "eve_dispatch_timeout"
       : `eve_dispatch_exit_${commandResult.code ?? "null"}`;
-    const fallbackReason = parsed?.reason ?? reasonFromExit;
+    const fallbackReason = parsed?.reason
+      ?? (commandSucceeded && !parsedStateAvailable
+        ? "eve_dispatch_state_unavailable"
+        : reasonFromExit);
     const state: DispatchState = {
       status: isPass ? "pass" : "failed",
       reason: fallbackReason,

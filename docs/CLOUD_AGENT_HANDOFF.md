@@ -64,5 +64,6 @@ Before marking a phase complete, include artifacts from:
 - `npm test`
 - `npm run validate:failure-injection`
 - `npm run validate:soak`
+- `UNIFIED_EVIDENCE_REQUIRE_FAILURE_SCENARIOS=1 npm run validate:evidence-summary`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.

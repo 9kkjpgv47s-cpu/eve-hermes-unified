@@ -75,8 +75,8 @@ Exit criteria:
 
 ## PR Delivery Requirements (every implementation cycle)
 
-- [ ] Include scope summary and constraints.
-- [ ] Include changed files and rationale.
-- [ ] Include exact validation commands run.
-- [ ] Include notable risks and follow-up tasks.
-- [ ] Ensure staged changes are committed and pushed before and after testing deltas.
+- [x] Include scope summary and constraints.
+- [x] Include changed files and rationale.
+- [x] Include exact validation commands run.
+- [x] Include notable risks and follow-up tasks.
+- [x] Ensure staged changes are committed and pushed before and after testing deltas.

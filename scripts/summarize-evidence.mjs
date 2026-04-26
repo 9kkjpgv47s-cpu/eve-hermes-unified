@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { evaluateEvidenceGates, evaluateFailureScenarioCoverage } from "./evidence-gates.mjs";
 
 function parseArgs(argv) {
   const options = {
     evidenceDir: "",
     out: "",
     minSuccessRate: Number.NaN,
+    maxP95LatencyMs: Number.NaN,
     maxMissingTraceRate: Number.NaN,
     maxUnclassifiedFailures: Number.NaN,
+    requireFailureScenarios: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -28,6 +31,11 @@ function parseArgs(argv) {
     } else if (arg === "--max-unclassified-failures") {
       options.maxUnclassifiedFailures = Number(value);
       i += 1;
+    } else if (arg === "--max-p95-latency-ms") {
+      options.maxP95LatencyMs = Number(value);
+      i += 1;
+    } else if (arg === "--require-failure-scenarios") {
+      options.requireFailureScenarios = true;
     }
   }
   if (!options.evidenceDir) {
@@ -53,6 +61,15 @@ function parseDispatchJsonFromLine(line) {
     return null;
   }
   return null;
+}
+
+function isDispatchRecord(value) {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    value.response &&
+    value.envelope
+  );
 }
 
 function extractDispatchJsonRecords(raw) {
@@ -144,12 +161,13 @@ async function main() {
   }
 
   const soakRaw = await readFile(soakFile, "utf8");
-  const records = extractDispatchJsonRecords(soakRaw);
+  const records = extractDispatchJsonRecords(soakRaw).filter(isDispatchRecord);
 
   const total = records.length;
   let success = 0;
   let missingTrace = 0;
   let unclassifiedFailures = 0;
+  const elapsedValues = [];
   for (const record of records) {
     if (record?.response?.failureClass === "none") {
       success += 1;
@@ -162,26 +180,45 @@ async function main() {
     if (!isFailureClassKnown(failureClass)) {
       unclassifiedFailures += 1;
     }
+    const elapsedCandidates = [record?.primaryState?.elapsedMs, record?.capabilityExecution?.elapsedMs, 0];
+    for (const candidate of elapsedCandidates) {
+      const elapsedMs = Number(candidate);
+      if (Number.isFinite(elapsedMs) && elapsedMs >= 0) {
+        elapsedValues.push(elapsedMs);
+        break;
+      }
+    }
   }
 
   const successRate = total > 0 ? success / total : 0;
   const missingTraceRate = total > 0 ? missingTrace / total : 1;
-  const failedGates = [];
-  if (!Number.isNaN(options.minSuccessRate) && successRate < options.minSuccessRate) {
-    failedGates.push(`successRate ${successRate.toFixed(4)} < ${options.minSuccessRate.toFixed(4)}`);
-  }
-  if (!Number.isNaN(options.maxMissingTraceRate) && missingTraceRate > options.maxMissingTraceRate) {
-    failedGates.push(
-      `missingTraceRate ${missingTraceRate.toFixed(4)} > ${options.maxMissingTraceRate.toFixed(4)}`,
-    );
-  }
-  if (!Number.isNaN(options.maxUnclassifiedFailures) && unclassifiedFailures > options.maxUnclassifiedFailures) {
-    failedGates.push(
-      `unclassifiedFailures ${unclassifiedFailures} > ${options.maxUnclassifiedFailures}`,
-    );
-  }
+  const sortedElapsed = [...elapsedValues].sort((a, b) => a - b);
+  const p95Index = sortedElapsed.length === 0
+    ? -1
+    : Math.min(sortedElapsed.length - 1, Math.ceil(sortedElapsed.length * 0.95) - 1);
+  const p95LatencyMs = p95Index >= 0 ? sortedElapsed[p95Index] : null;
 
   const failureRaw = await readFile(failureFile, "utf8");
+  const failureLines = failureRaw.split(/\r?\n/);
+  const scenarioCoverage = evaluateFailureScenarioCoverage(failureRaw);
+
+  const gateEvaluation = evaluateEvidenceGates(
+    {
+      successRate,
+      missingTraceRate,
+      unclassifiedFailures,
+      p95LatencyMs,
+      failureScenarioPassCount: scenarioCoverage.covered,
+    },
+    {
+      minSuccessRate: options.minSuccessRate,
+      maxMissingTraceRate: options.maxMissingTraceRate,
+      maxUnclassifiedFailures: options.maxUnclassifiedFailures,
+      maxP95LatencyMs: options.maxP95LatencyMs,
+      requireFailureScenarios: options.requireFailureScenarios,
+    },
+  );
+
   const summary = {
     generatedAtIso: new Date().toISOString(),
     files: {
@@ -195,6 +232,15 @@ async function main() {
       missingTraceCount: missingTrace,
       missingTraceRate,
       unclassifiedFailures,
+      p95LatencyMs,
+      latencySampleCount: elapsedValues.length,
+      failureScenarioPassCount: scenarioCoverage.covered,
+    },
+    failureScenarios: {
+      coveredScenarios: scenarioCoverage.coveredScenarios,
+      missingScenarios: scenarioCoverage.missing,
+      covered: scenarioCoverage.covered,
+      required: scenarioCoverage.required,
     },
     gates: {
       minSuccessRate: Number.isNaN(options.minSuccessRate) ? null : options.minSuccessRate,
@@ -202,17 +248,19 @@ async function main() {
       maxUnclassifiedFailures: Number.isNaN(options.maxUnclassifiedFailures)
         ? null
         : options.maxUnclassifiedFailures,
-      passed: failedGates.length === 0,
-      failures: failedGates,
+      maxP95LatencyMs: Number.isNaN(options.maxP95LatencyMs) ? null : options.maxP95LatencyMs,
+      requireFailureScenarios: options.requireFailureScenarios,
+      passed: gateEvaluation.passed,
+      failures: gateEvaluation.failures,
     },
-    failureInjectionPreview: failureRaw.split(/\r?\n/).slice(0, 60),
+    failureInjectionPreview: failureLines.slice(0, 80),
   };
 
   await mkdir(path.dirname(options.out), { recursive: true });
   await writeFile(options.out, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
   process.stdout.write(`${options.out}\n`);
-  if (failedGates.length > 0) {
-    process.stderr.write(`Evidence gate failures:\n- ${failedGates.join("\n- ")}\n`);
+  if (!gateEvaluation.passed) {
+    process.stderr.write(`Evidence gate failures:\n- ${gateEvaluation.failures.join("\n- ")}\n`);
     process.exitCode = 2;
   }
 }

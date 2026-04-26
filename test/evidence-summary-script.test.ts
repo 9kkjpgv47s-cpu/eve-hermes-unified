@@ -24,13 +24,27 @@ describe("summarize-evidence.mjs", () => {
         soakPath,
         `${JSON.stringify({
           envelope: { traceId: "trace-1" },
+          primaryState: { elapsedMs: 0 },
           response: { failureClass: "none" },
         })}\n`,
         "utf8",
       );
       await writeFile(
         failurePath,
-        ["Failure injection smoke started", "traceId=trace-1", "Failure injection smoke ended"].join("\n"),
+        [
+          "Failure injection smoke started",
+          "Case 1: Eve lane command timeout",
+          "eve_dispatch_timeout",
+          "Case 2: Hermes lane non-zero exit",
+          "hermes_dispatch_exit_1",
+          "Case 3: Synthetic provider-limit response mapping",
+          "provider_limit",
+          "Case 4: Dispatch-state read mismatch",
+          "state_mismatch",
+          "Case 5: Policy fail-closed path with no fallback",
+          "fail-closed fallback: none",
+          "Failure injection smoke ended",
+        ].join("\n"),
         "utf8",
       );
 
@@ -44,6 +58,8 @@ describe("summarize-evidence.mjs", () => {
           summaryPath,
           "--min-success-rate",
           "0.99",
+          "--max-p95-latency-ms",
+          "250",
         ],
         { timeoutMs: 5_000 },
       );
@@ -51,6 +67,7 @@ describe("summarize-evidence.mjs", () => {
       const raw = await readFile(summaryPath, "utf8");
       expect(raw).toContain("\"passed\": true");
       expect(raw).toContain("\"successRate\": 1");
+      expect(raw).toContain("\"p95LatencyMs\": 0");
     });
   });
 
@@ -65,6 +82,7 @@ describe("summarize-evidence.mjs", () => {
         `${JSON.stringify(
           {
             envelope: { traceId: "trace-ml-1" },
+            primaryState: { elapsedMs: 50 },
             response: { failureClass: "none", traceId: "trace-ml-1" },
           },
           null,
@@ -74,7 +92,20 @@ describe("summarize-evidence.mjs", () => {
       );
       await writeFile(
         failurePath,
-        ["Failure injection smoke started", "traceId=trace-ml-1", "Failure injection smoke ended"].join("\n"),
+        [
+          "Failure injection smoke started",
+          "Case 1: Eve lane command timeout",
+          "eve_dispatch_timeout",
+          "Case 2: Hermes lane non-zero exit",
+          "hermes_dispatch_exit_1",
+          "Case 3: Synthetic provider-limit response mapping",
+          "provider_limit",
+          "Case 4: Dispatch-state read mismatch",
+          "state_mismatch",
+          "Case 5: Policy fail-closed path with no fallback",
+          "fail-closed fallback: none",
+          "Failure injection smoke ended",
+        ].join("\n"),
         "utf8",
       );
 
@@ -90,6 +121,8 @@ describe("summarize-evidence.mjs", () => {
           "0.99",
           "--max-missing-trace-rate",
           "0",
+          "--max-p95-latency-ms",
+          "250",
         ],
         { timeoutMs: 5_000 },
       );
@@ -110,13 +143,27 @@ describe("summarize-evidence.mjs", () => {
         soakPath,
         `${JSON.stringify({
           envelope: {},
+          primaryState: { elapsedMs: 10 },
           response: { failureClass: "none" },
         })}\n`,
         "utf8",
       );
       await writeFile(
         failurePath,
-        ["Failure injection smoke started", "Failure injection smoke ended"].join("\n"),
+        [
+          "Failure injection smoke started",
+          "Case 1: Eve lane command timeout",
+          "eve_dispatch_timeout",
+          "Case 2: Hermes lane non-zero exit",
+          "hermes_dispatch_exit_1",
+          "Case 3: Synthetic provider-limit response mapping",
+          "provider_limit",
+          "Case 4: Dispatch-state read mismatch",
+          "state_mismatch",
+          "Case 5: Policy fail-closed path with no fallback",
+          "fail-closed fallback: none",
+          "Failure injection smoke ended",
+        ].join("\n"),
         "utf8",
       );
 
@@ -130,6 +177,8 @@ describe("summarize-evidence.mjs", () => {
           summaryPath,
           "--max-missing-trace-rate",
           "0",
+          "--max-p95-latency-ms",
+          "250",
         ],
         { timeoutMs: 5_000 },
       );
@@ -137,6 +186,62 @@ describe("summarize-evidence.mjs", () => {
       expect(result.stderr).toContain("Evidence gate failures");
       const raw = await readFile(summaryPath, "utf8");
       expect(raw).toContain("\"missingTraceCount\": 1");
+    });
+  });
+
+  it("fails when soak p95 latency exceeds gate", async () => {
+    await withTempDir(async (dir) => {
+      const soakPath = path.join(dir, "soak-20260101-000000.jsonl");
+      const failurePath = path.join(dir, "failure-injection-20260101-000000.txt");
+      const summaryPath = path.join(dir, "summary.json");
+
+      await writeFile(
+        soakPath,
+        `${JSON.stringify({
+          envelope: { traceId: "trace-slow-1" },
+          primaryState: { elapsedMs: 900 },
+          response: { failureClass: "none" },
+        })}\n`,
+        "utf8",
+      );
+      await writeFile(
+        failurePath,
+        [
+          "Failure injection smoke started",
+          "Case 1: Eve lane command timeout",
+          "eve_dispatch_timeout",
+          "Case 2: Hermes lane non-zero exit",
+          "hermes_dispatch_exit_1",
+          "Case 3: Synthetic provider-limit response mapping",
+          "provider_limit",
+          "Case 4: Dispatch-state read mismatch",
+          "state_mismatch",
+          "Case 5: Policy fail-closed path with no fallback",
+          "fail-closed fallback: none",
+          "Failure injection smoke ended",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/summarize-evidence.mjs",
+          "--evidence-dir",
+          dir,
+          "--out",
+          summaryPath,
+          "--min-success-rate",
+          "0.99",
+          "--max-p95-latency-ms",
+          "250",
+        ],
+        { timeoutMs: 5_000 },
+      );
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain("p95LatencyMs");
+      const raw = await readFile(summaryPath, "utf8");
+      expect(raw).toContain("\"p95LatencyMs\": 900");
     });
   });
 });

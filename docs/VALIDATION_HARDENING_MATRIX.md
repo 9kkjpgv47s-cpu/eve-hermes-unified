@@ -17,6 +17,13 @@
 - Zero unclassified failures.
 - Zero missing `traceId` in emitted responses.
 
+Default gate environment variables (used by `npm run validate:evidence-summary`):
+
+- `UNIFIED_EVIDENCE_MIN_SUCCESS_RATE` (default `0.99`)
+- `UNIFIED_EVIDENCE_MAX_P95_LATENCY_MS` (default `2000`)
+- `UNIFIED_EVIDENCE_MAX_MISSING_TRACE_RATE` (default `0`)
+- `UNIFIED_EVIDENCE_MAX_UNCLASSIFIED_FAILURES` (default `0`)
+
 ## Failure Injection Scenarios
 
 1. Eve lane command timeout.
@@ -24,6 +31,9 @@
 3. Synthetic provider-limit response mapping.
 4. Dispatch-state read mismatch.
 5. Policy fail-closed path with no fallback.
+6. Hermes timeout injection via tiny timeout config.
+7. Eve stale/missing dispatch-state file.
+8. Hermes synthetic provider-limit mapping.
 
 ## Evidence Bundle Contents
 

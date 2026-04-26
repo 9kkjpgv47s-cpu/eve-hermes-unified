@@ -14,6 +14,7 @@
     "validate:failure-injection": "bash ./scripts/failure-injection-smoke.sh",
     "validate:soak": "bash ./scripts/soak-simulate.sh 20",
     "validate:evidence-summary": "bash ./scripts/validate-evidence-summary.sh",
+    "validate:evidence-gates": "node ./scripts/evidence-gates.mjs",
     "validate:all": "npm run check && npm test && npm run build && npm run validate:failure-injection && npm run validate:soak && npm run validate:evidence-summary",
     "test:cutover-scripts": "vitest run test/cutover-scripts.test.ts",
     "cutover:stage": "bash ./scripts/prod-cutover-stage.sh",

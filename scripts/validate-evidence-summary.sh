@@ -9,12 +9,16 @@ SUMMARY_PATH="${UNIFIED_EVIDENCE_SUMMARY_PATH:-$OUT_DIR/validation-summary-$(dat
 MIN_SUCCESS_RATE="${UNIFIED_EVIDENCE_MIN_SUCCESS_RATE:-0.99}"
 MAX_MISSING_TRACE_RATE="${UNIFIED_EVIDENCE_MAX_MISSING_TRACE_RATE:-0}"
 MAX_UNCLASSIFIED_FAILURES="${UNIFIED_EVIDENCE_MAX_UNCLASSIFIED_FAILURES:-0}"
+MAX_P95_LATENCY_MS="${UNIFIED_EVIDENCE_MAX_P95_LATENCY_MS:-2500}"
+REQUIRE_FAILURE_SCENARIOS="${UNIFIED_EVIDENCE_REQUIRE_FAILURE_SCENARIOS:-0}"
 
 node "$ROOT_DIR/scripts/summarize-evidence.mjs" \
   --evidence-dir "$OUT_DIR" \
   --out "$SUMMARY_PATH" \
   --min-success-rate "$MIN_SUCCESS_RATE" \
   --max-missing-trace-rate "$MAX_MISSING_TRACE_RATE" \
-  --max-unclassified-failures "$MAX_UNCLASSIFIED_FAILURES"
+  --max-unclassified-failures "$MAX_UNCLASSIFIED_FAILURES" \
+  --max-p95-latency-ms "$MAX_P95_LATENCY_MS" \
+  $(if [[ "$REQUIRE_FAILURE_SCENARIOS" == "1" ]]; then echo "--require-failure-scenarios"; fi)
 
 echo "Wrote $SUMMARY_PATH"

@@ -56,6 +56,11 @@ Then restart unified runtime.
 - Verify trace continuity for recent messages.
 - Verify failure classes and response classes are expected.
 - Confirm no unexpected lane drift.
+- Run validation bundle before and after each stage shift:
+  - `npm run validate:failure-injection`
+  - `npm run validate:soak`
+  - `UNIFIED_EVIDENCE_REQUIRE_FAILURE_SCENARIOS=1 npm run validate:evidence-summary`
+- Confirm `failureScenarioPassCount=5` and SLO gates pass in summary JSON.
 
 ## Emergency Actions
 

@@ -43,6 +43,7 @@ Extended validation:
 npm run validate:failure-injection
 npm run validate:soak
 npm run validate:evidence-summary
+npm run validate:all
 ```
 
 Cutover controls:

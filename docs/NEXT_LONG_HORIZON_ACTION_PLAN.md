@@ -189,8 +189,11 @@ Mitigations:
    - `npm run run:h2-promotion -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
 8. Enforce longer-goal progression at promotion time so each horizon carries a larger action runway than the previous:
    - `npm run run:h2-promotion -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --require-progressive-goals --minimum-goal-increase 1`
+   - optionally bind to a policy profile in `docs/HORIZON_STATUS.json.goalPolicies.transitions` using:
+     - `--goal-policy-key H2->H3`
+   - this can enforce action composition targets (for example, minimum counts of `durability`, `policy`, or `capability` tagged next-horizon actions)
 9. Optionally run direct horizon promotion with a pinned closeout artifact when replaying prior evidence:
-   - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --closeout-run-file evidence/h2-closeout-run-*.json --require-progressive-goals --minimum-goal-increase 1`
+   - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --closeout-run-file evidence/h2-closeout-run-*.json --require-progressive-goals --minimum-goal-increase 1 --goal-policy-key H2->H3`
 
 ## Horizon Closeout Gate
 

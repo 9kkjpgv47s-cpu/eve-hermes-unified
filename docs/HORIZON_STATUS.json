@@ -152,8 +152,69 @@
       "summary": "Enforce progressive horizon goal runway checks so each promotion can require the next horizon to carry more planned actions than the current horizon.",
       "targetHorizon": "H2",
       "status": "completed"
+    },
+    {
+      "id": "h3-action-1",
+      "summary": "Harden runtime durability boundaries with persistent queue/replay semantics for cross-lane dispatch recovery.",
+      "targetHorizon": "H3",
+      "status": "planned",
+      "tags": ["durability", "runtime"]
+    },
+    {
+      "id": "h3-action-2",
+      "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
+      "targetHorizon": "H3",
+      "status": "planned",
+      "tags": ["policy-hardening", "runtime"]
+    },
+    {
+      "id": "h3-action-3",
+      "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
+      "targetHorizon": "H3",
+      "status": "planned",
+      "tags": ["capability", "policy-hardening"]
+    },
+    {
+      "id": "h3-action-4",
+      "summary": "Add memory durability verification suite for crash/restart recovery and cross-lane consistency checks.",
+      "targetHorizon": "H3",
+      "status": "planned",
+      "tags": ["durability", "memory"]
+    },
+    {
+      "id": "h3-action-5",
+      "summary": "Create long-window soak validation for H3 policy and durability changes with explicit SLO drift alarms.",
+      "targetHorizon": "H3",
+      "status": "planned",
+      "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h3-action-6",
+      "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
+      "targetHorizon": "H3",
+      "status": "planned",
+      "tags": ["rollback", "operations"]
     }
   ],
+  "goalPolicies": {
+    "transitions": {
+      "H2->H3": {
+        "minimumGoalIncrease": 2,
+        "minActionGrowthFactor": 1.5,
+        "minPendingNextActions": 3,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 2,
+            "minPendingCount": 1
+          },
+          "policy-hardening": {
+            "minCount": 2,
+            "minPendingCount": 1
+          }
+        }
+      }
+    }
+  },
   "promotionReadiness": {
     "targetStage": "canary",
     "gates": {
@@ -282,6 +343,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added progressive horizon goal-runway gate (`check:progressive-horizon-goals`) and optional promotion enforcement flags so each promotion can require larger next-horizon planning scope."
+    },
+    {
+      "timestamp": "2026-04-26T22:41:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Added goal policy profiles and tagged H3 action runway so horizon promotion can enforce both runway growth and required capability categories."
     }
   ]
 }

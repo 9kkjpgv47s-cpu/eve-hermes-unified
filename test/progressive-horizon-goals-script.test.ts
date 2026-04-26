@@ -20,6 +20,7 @@ async function seedHorizonStatus(
     h3GoalCount?: number;
     activeHorizon?: string;
     h3PendingCount?: number;
+    h3CapabilityCount?: number;
   },
 ): Promise<void> {
   const h2GoalCount = options?.h2GoalCount ?? 2;
@@ -30,6 +31,7 @@ async function seedHorizonStatus(
     summary: string;
     targetHorizon: string;
     status: string;
+    tags?: string[];
   }> = [];
   for (let index = 0; index < h2GoalCount; index += 1) {
     nextActions.push({
@@ -40,12 +42,17 @@ async function seedHorizonStatus(
     });
   }
   const h3PendingCount = options?.h3PendingCount ?? h3GoalCount;
+  const h3CapabilityCount = Math.min(
+    options?.h3CapabilityCount ?? h3GoalCount,
+    h3GoalCount,
+  );
   for (let index = 0; index < h3GoalCount; index += 1) {
     nextActions.push({
       id: `h3-action-${String(index + 1)}`,
       summary: "h3 goal",
       targetHorizon: "H3",
       status: index < h3PendingCount ? "planned" : "completed",
+      tags: index < h3CapabilityCount ? ["capability"] : ["operations"],
     });
   }
   await writeFile(
@@ -99,6 +106,21 @@ async function seedHorizonStatus(
           },
         ],
         nextActions,
+        goalPolicies: {
+          transitions: {
+            "H2->H3": {
+              minimumGoalIncrease: 1,
+              minActionGrowthFactor: 1.2,
+              minPendingNextActions: 1,
+              requiredTaggedActionCounts: {
+                capability: {
+                  minCount: 2,
+                  minPendingCount: 1,
+                },
+              },
+            },
+          },
+        },
         promotionReadiness: {
           targetStage: "majority",
           gates: {
@@ -150,7 +172,9 @@ describe("check-progressive-horizon-goals.mjs", () => {
           "--next-horizon",
           "H3",
           "--minimum-goal-increase",
-          "1",
+          "0",
+          "--policy-key",
+          "H2->H3",
           "--out",
           outPath,
         ],
@@ -159,11 +183,12 @@ describe("check-progressive-horizon-goals.mjs", () => {
       expect(result.code).toBe(0);
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
-        checks: { goalDelta: number; minActionGrowthFactor: number };
+        checks: { goalDelta: number; minActionGrowthFactor: number; policyKey: string | null };
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks.goalDelta).toBe(3);
-      expect(payload.checks.minActionGrowthFactor).toBe(1);
+      expect(payload.checks.minActionGrowthFactor).toBe(1.2);
+      expect(payload.checks.policyKey).toBe("H2->H3");
     });
   });
 
@@ -185,6 +210,10 @@ describe("check-progressive-horizon-goals.mjs", () => {
           "H3",
           "--minimum-goal-increase",
           "1",
+          "--policy-key",
+          "H2->H3",
+          "--minimum-goal-increase",
+          "0",
           "--out",
           outPath,
         ],
@@ -199,6 +228,51 @@ describe("check-progressive-horizon-goals.mjs", () => {
       expect(
         payload.failures.some((failure) =>
           failure.startsWith("next_action_count_below_growth_target:"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("fails when policy-required action tag counts are missing", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(dir, "progressive-goals.json");
+      await seedHorizonStatus(statusPath, {
+        h2GoalCount: 2,
+        h3GoalCount: 5,
+        h3CapabilityCount: 1,
+        activeHorizon: "H2",
+      });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-progressive-horizon-goals.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--source-horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--policy-key",
+          "H2->H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) => failure.startsWith("required_tag_count_below_min:")),
+      ).toBe(true);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith("required_tag_count_below_min:"),
         ),
       ).toBe(true);
     });

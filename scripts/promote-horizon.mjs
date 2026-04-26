@@ -25,6 +25,7 @@ function parseArgs(argv) {
     allowInactiveSourceHorizon: false,
     requireProgressiveGoals: false,
     minimumGoalIncrease: 1,
+    goalPolicyKey: "",
     progressiveGoalsOut: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -75,6 +76,9 @@ function parseArgs(argv) {
     } else if (arg === "--minimum-goal-increase" || arg === "--min-goal-increase") {
       options.minimumGoalIncrease = Number(value ?? "1");
       index += 1;
+    } else if (arg === "--goal-policy-key") {
+      options.goalPolicyKey = value ?? "";
+      index += 1;
     } else if (arg === "--progressive-goals-out") {
       options.progressiveGoalsOut = value ?? "";
       index += 1;
@@ -94,6 +98,10 @@ function normalizeHorizon(value, fallback = "") {
 
 function stamp() {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+}
+
+function isFinitePositiveNumber(value) {
+  return Number.isFinite(value) && value > 0;
 }
 
 async function exists(targetPath) {
@@ -205,6 +213,38 @@ async function main() {
   ) {
     failures.push(`invalid_timeout_ms:${String(options.timeoutMs)}`);
   }
+  if (
+    Number.isFinite(options.minimumGoalIncrease) &&
+    (!Number.isInteger(options.minimumGoalIncrease) || options.minimumGoalIncrease < 0)
+  ) {
+    failures.push(`invalid_minimum_goal_increase:${String(options.minimumGoalIncrease)}`);
+  }
+  const goalPolicyKey = String(options.goalPolicyKey ?? "").trim();
+  if (isNonEmptyString(goalPolicyKey)) {
+    const goalPolicies =
+      statusPayload?.goalPolicies && typeof statusPayload.goalPolicies === "object"
+        ? statusPayload.goalPolicies
+        : {};
+    const transitions =
+      goalPolicies?.transitions &&
+      typeof goalPolicies.transitions === "object" &&
+      !Array.isArray(goalPolicies.transitions)
+        ? goalPolicies.transitions
+        : goalPolicies;
+    const policy = transitions?.[goalPolicyKey];
+    if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
+      failures.push(`missing_goal_policy_key:${goalPolicyKey}`);
+    } else {
+      const policyMinimumGoalIncrease = Number(policy.minimumGoalIncrease);
+      if (
+        Number.isFinite(policyMinimumGoalIncrease) &&
+        Number.isInteger(policyMinimumGoalIncrease) &&
+        policyMinimumGoalIncrease >= 0
+      ) {
+        options.minimumGoalIncrease = Math.max(options.minimumGoalIncrease, policyMinimumGoalIncrease);
+      }
+    }
+  }
 
   if (
     !options.allowInactiveSourceHorizon &&
@@ -297,6 +337,8 @@ async function main() {
       nextHorizon,
       "--minimum-goal-increase",
       String(options.minimumGoalIncrease),
+      "--policy-key",
+      String(options.goalPolicyKey ?? "").trim(),
       "--out",
       progressiveGoalsOut,
     ];
@@ -401,6 +443,10 @@ async function main() {
       allowHorizonMismatch: options.allowHorizonMismatch,
       closeoutRunPass: closeoutRunPayload?.pass === true,
       requireProgressiveGoals: options.requireProgressiveGoals,
+      goalPolicyKey:
+        options.requireProgressiveGoals === true
+          ? String(options.goalPolicyKey ?? "").trim() || null
+          : null,
       progressiveGoalsPass:
         options.requireProgressiveGoals === true
           ? progressiveGoalsPayload?.pass === true

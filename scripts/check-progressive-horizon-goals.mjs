@@ -14,6 +14,7 @@ function parseArgs(argv) {
     minimumGoalIncrease: 1,
     minActionGrowthFactor: Number.NaN,
     minPendingNextActions: 1,
+    policyKey: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -44,6 +45,9 @@ function parseArgs(argv) {
     ) {
       options.minPendingNextActions = Number(value ?? "1");
       index += 1;
+    } else if (arg === "--policy-key" || arg === "--policy") {
+      options.policyKey = value ?? "";
+      index += 1;
     }
   }
   return options;
@@ -64,6 +68,40 @@ function stamp() {
 
 function isFinitePositiveNumber(value) {
   return Number.isFinite(value) && value > 0;
+}
+
+function normalizeTag(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function countRequiredTags(actions, requiredTagMap) {
+  const counts = {};
+  for (const tag of Object.keys(requiredTagMap)) {
+    counts[tag] = {
+      total: 0,
+      pending: 0,
+    };
+  }
+  for (const action of actions) {
+    if (!action || typeof action !== "object") {
+      continue;
+    }
+    const tags = Array.isArray(action.tags) ? action.tags : [];
+    const normalizedTags = tags
+      .map((tag) => normalizeTag(tag))
+      .filter((tag) => tag.length > 0);
+    const isPending = String(action.status ?? "").trim().toLowerCase() !== "completed";
+    for (const tag of Object.keys(requiredTagMap)) {
+      if (normalizedTags.includes(tag)) {
+        counts[tag] = counts[tag] ?? { total: 0, pending: 0 };
+        counts[tag].total = Number(counts[tag].total ?? 0) + 1;
+        if (isPending) {
+          counts[tag].pending = Number(counts[tag].pending ?? 0) + 1;
+        }
+      }
+    }
+  }
+  return counts;
 }
 
 async function main() {
@@ -112,6 +150,86 @@ async function main() {
     options.minPendingNextActions < 0
   ) {
     failures.push(`invalid_min_pending_next_actions:${String(options.minPendingNextActions)}`);
+  }
+  const policyKey = String(options.policyKey ?? "").trim();
+
+  const goalPolicies =
+    horizonStatus?.goalPolicies && typeof horizonStatus.goalPolicies === "object"
+      ? horizonStatus.goalPolicies
+      : {};
+  const transitionPolicies =
+    goalPolicies?.transitions &&
+    typeof goalPolicies.transitions === "object" &&
+    !Array.isArray(goalPolicies.transitions)
+      ? goalPolicies.transitions
+      : goalPolicies;
+  const derivedPolicyKey = isNonEmptyString(policyKey)
+    ? policyKey
+    : `${sourceHorizon}->${nextHorizon}`;
+  const policyEntry = transitionPolicies?.[derivedPolicyKey];
+  const policyApplied = Boolean(policyEntry && typeof policyEntry === "object");
+  let requiredTaggedActionCounts = {};
+
+  if (policyApplied) {
+    const policyIncrease = Number(policyEntry.minimumGoalIncrease);
+    if (Number.isFinite(policyIncrease) && Number.isInteger(policyIncrease) && policyIncrease >= 0) {
+      options.minimumGoalIncrease = Math.max(options.minimumGoalIncrease, policyIncrease);
+    }
+    const policyGrowthFactor = Number(policyEntry.minActionGrowthFactor);
+    if (isFinitePositiveNumber(policyGrowthFactor)) {
+      options.minActionGrowthFactor = Number.isFinite(options.minActionGrowthFactor)
+        ? Math.max(options.minActionGrowthFactor, policyGrowthFactor)
+        : policyGrowthFactor;
+    }
+    const policyPending = Number(policyEntry.minPendingNextActions);
+    if (Number.isFinite(policyPending) && Number.isInteger(policyPending) && policyPending >= 0) {
+      options.minPendingNextActions = Math.max(options.minPendingNextActions, policyPending);
+    }
+    const policyTagCounts =
+      policyEntry.requiredTaggedActionCounts && typeof policyEntry.requiredTaggedActionCounts === "object"
+        ? policyEntry.requiredTaggedActionCounts
+        : {};
+    const normalizedTagCounts = {};
+    for (const [rawTag, rawRequirement] of Object.entries(policyTagCounts)) {
+      const normalizedTag = normalizeTag(rawTag);
+      if (normalizedTag.length === 0) {
+        continue;
+      }
+      if (
+        rawRequirement &&
+        typeof rawRequirement === "object" &&
+        !Array.isArray(rawRequirement)
+      ) {
+        const minCount = Number(rawRequirement.minCount ?? 0);
+        const minPendingCount = Number(rawRequirement.minPendingCount ?? 0);
+        if (
+          !Number.isFinite(minCount) ||
+          !Number.isInteger(minCount) ||
+          minCount < 0 ||
+          !Number.isFinite(minPendingCount) ||
+          !Number.isInteger(minPendingCount) ||
+          minPendingCount < 0
+        ) {
+          failures.push(`invalid_policy_required_tag_count:${rawTag}=${JSON.stringify(rawRequirement)}`);
+          continue;
+        }
+        normalizedTagCounts[normalizedTag] = {
+          minCount,
+          minPendingCount,
+        };
+      } else {
+        const count = Number(rawRequirement);
+        if (!Number.isFinite(count) || !Number.isInteger(count) || count < 0) {
+          failures.push(`invalid_policy_required_tag_count:${rawTag}=${String(rawRequirement)}`);
+          continue;
+        }
+        normalizedTagCounts[normalizedTag] = {
+          minCount: count,
+          minPendingCount: 0,
+        };
+      }
+    }
+    requiredTaggedActionCounts = normalizedTagCounts;
   }
 
   const sourceActions = Array.isArray(horizonStatus?.nextActions)
@@ -167,6 +285,21 @@ async function main() {
     );
   }
 
+  const nextTagCounts = countRequiredTags(nextActions, requiredTaggedActionCounts);
+  for (const [tag, requirement] of Object.entries(requiredTaggedActionCounts)) {
+    const actual = nextTagCounts[tag] ?? { total: 0, pending: 0 };
+    if (Number(actual.total) < Number(requirement.minCount)) {
+      failures.push(
+        `required_tag_count_below_min:${tag}:${String(actual.total)}<${String(requirement.minCount)}`,
+      );
+    }
+    if (Number(actual.pending) < Number(requirement.minPendingCount)) {
+      failures.push(
+        `required_tag_pending_count_below_min:${tag}:${String(actual.pending)}<${String(requirement.minPendingCount)}`,
+      );
+    }
+  }
+
   const payload = {
     generatedAtIso: new Date().toISOString(),
     pass: failures.length === 0,
@@ -183,10 +316,14 @@ async function main() {
       nextActionCount,
       goalDelta,
       nextPendingActionCount,
+      policyKey: policyApplied ? derivedPolicyKey : null,
+      policyApplied,
       minimumGoalIncrease: options.minimumGoalIncrease,
       minActionGrowthFactor: options.minActionGrowthFactor,
       minPendingNextActions: options.minPendingNextActions,
       requiredNextActionCount,
+      requiredTaggedActionCounts,
+      nextTaggedActionCounts: nextTagCounts,
       actionGrowthRatio: sourceActionCount > 0 ? nextActionCount / sourceActionCount : null,
     },
     failures,

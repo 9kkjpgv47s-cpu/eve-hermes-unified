@@ -29,6 +29,7 @@ function parseArgs(argv) {
     allowInactiveSourceHorizon: false,
     requireProgressiveGoals: false,
     minimumGoalIncrease: 1,
+    goalPolicyKey: "",
     progressiveGoalsOut: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -98,6 +99,15 @@ function parseArgs(argv) {
       options.requireProgressiveGoals = true;
     } else if (arg === "--minimum-goal-increase") {
       options.minimumGoalIncrease = Number(value ?? "1");
+      index += 1;
+    } else if (arg === "--min-action-growth-factor") {
+      options.minActionGrowthFactor = Number(value ?? "1");
+      index += 1;
+    } else if (arg === "--min-pending-next-actions") {
+      options.minPendingNextActions = Number(value ?? "1");
+      index += 1;
+    } else if (arg === "--goal-policy-key") {
+      options.goalPolicyKey = value ?? "";
       index += 1;
     } else if (arg === "--progressive-goals-out") {
       options.progressiveGoalsOut = value ?? "";
@@ -372,6 +382,9 @@ async function main() {
     if (isNonEmptyString(progressiveGoalsOut)) {
       promoteArgv.push("--progressive-goals-out", progressiveGoalsOut);
     }
+    if (isNonEmptyString(options.goalPolicyKey)) {
+      promoteArgv.push("--goal-policy-key", options.goalPolicyKey);
+    }
     if (options.requireActiveNextHorizon) {
       promoteArgv.push("--require-active-next-horizon");
     }
@@ -418,6 +431,7 @@ async function main() {
       minimumGoalIncrease: Number.isFinite(options.minimumGoalIncrease)
         ? options.minimumGoalIncrease
         : null,
+      goalPolicyKey: isNonEmptyString(options.goalPolicyKey) ? options.goalPolicyKey : null,
     },
     commands: {
       closeoutRun: closeoutRunCommand,

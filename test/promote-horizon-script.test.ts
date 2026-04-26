@@ -104,7 +104,50 @@ async function seedHorizonStatus(statusPath: string): Promise<void> {
             targetHorizon: "H2",
             status: "completed",
           },
+          {
+            id: "h2-action-2",
+            summary: "second seed action",
+            targetHorizon: "H2",
+            status: "completed",
+            tags: ["rollback"],
+          },
+          {
+            id: "h3-action-1",
+            summary: "h3 policy seed one",
+            targetHorizon: "H3",
+            status: "planned",
+            tags: ["durability", "policy"],
+          },
+          {
+            id: "h3-action-2",
+            summary: "h3 policy seed two",
+            targetHorizon: "H3",
+            status: "planned",
+            tags: ["durability"],
+          },
+          {
+            id: "h3-action-3",
+            summary: "h3 policy seed three",
+            targetHorizon: "H3",
+            status: "planned",
+            tags: ["policy"],
+          },
         ],
+        goalPolicies: {
+          transitions: {
+            "H2->H3": {
+              minimumGoalIncrease: 1,
+              minActionGrowthFactor: 1.2,
+              minPendingNextActions: 2,
+              requiredTaggedActionCounts: {
+                durability: {
+                  minCount: 2,
+                  minPendingCount: 1,
+                },
+              },
+            },
+          },
+        },
         promotionReadiness: {
           targetStage: "canary",
           gates: {
@@ -334,6 +377,43 @@ describe("promote-horizon.mjs", () => {
       expect(payload.files.closeoutRunFile).toBe(closeoutRunPath);
       expect(payload.files.closeoutFile).toBe(closeoutPath);
       expect(payload.checks.closeoutRunPass).toBe(true);
+      expect(payload.failures).toEqual([]);
+    });
+  });
+
+  it("enforces goal policy key during progressive-goals gate", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--require-progressive-goals",
+          "--goal-policy-key",
+          "H2->H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: { progressiveGoalsPass: boolean; goalPolicyKey: string | null };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.progressiveGoalsPass).toBe(true);
+      expect(payload.checks.goalPolicyKey).toBe("H2->H3");
       expect(payload.failures).toEqual([]);
     });
   });

@@ -7,6 +7,7 @@ const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5"];
 const VALID_STATUSES = ["planned", "in_progress", "blocked", "completed"];
 const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];
+const ACTION_TAG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 const REQUIRED_GATE_COMMANDS = {
   releaseReadinessPass: "npm run validate:release-readiness",
   mergeBundlePass: "npm run validate:merge-bundle",
@@ -25,6 +26,14 @@ function normalizeStatusId(value) {
 
 function normalizeHorizonId(value) {
   return String(value ?? "").trim().toUpperCase();
+}
+
+function isValidActionTag(value) {
+  return ACTION_TAG_PATTERN.test(String(value ?? "").trim());
+}
+
+function isNonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0;
 }
 
 function parseArgs(argv) {
@@ -183,7 +192,135 @@ export function validateHorizonStatus(payload) {
       if (!VALID_STATUSES.includes(String(item.status))) {
         errors.push(`${prefix}.status must be one of: ${VALID_STATUSES.join(", ")}`);
       }
+      if (item.tags !== undefined) {
+        if (!Array.isArray(item.tags) || item.tags.length === 0) {
+          errors.push(`${prefix}.tags must be a non-empty array when provided`);
+        } else {
+          const dedupe = new Set();
+          item.tags.forEach((tagValue, tagIndex) => {
+            const normalizedTag = String(tagValue ?? "").trim();
+            if (!isValidActionTag(normalizedTag)) {
+              errors.push(
+                `${prefix}.tags[${String(tagIndex)}] must match ${ACTION_TAG_PATTERN.toString()}`,
+              );
+            }
+            if (dedupe.has(normalizedTag)) {
+              errors.push(`${prefix}.tags contains duplicate value: ${normalizedTag}`);
+            }
+            dedupe.add(normalizedTag);
+          });
+        }
+      }
     });
+  }
+
+  if (payload.goalPolicies !== undefined) {
+    if (!payload.goalPolicies || typeof payload.goalPolicies !== "object" || Array.isArray(payload.goalPolicies)) {
+      errors.push("goalPolicies must be an object when provided");
+    } else {
+      const policyContainer =
+        payload.goalPolicies.transitions &&
+        typeof payload.goalPolicies.transitions === "object" &&
+        !Array.isArray(payload.goalPolicies.transitions)
+          ? payload.goalPolicies.transitions
+          : payload.goalPolicies;
+
+      for (const [policyKey, policyValue] of Object.entries(policyContainer)) {
+        const basePrefix =
+          policyContainer === payload.goalPolicies
+            ? `goalPolicies.${policyKey}`
+            : `goalPolicies.transitions.${policyKey}`;
+        if (policyKey === "transitions" && policyContainer === payload.goalPolicies) {
+          continue;
+        }
+        if (!/^H[1-5]->H[1-5]$/.test(policyKey)) {
+          errors.push(`${basePrefix} key must match pattern H<1-5>->H<1-5>`);
+        }
+        if (!policyValue || typeof policyValue !== "object" || Array.isArray(policyValue)) {
+          errors.push(`${basePrefix} must be an object`);
+          continue;
+        }
+        if (
+          policyValue.minimumGoalIncrease !== undefined &&
+          !isNonNegativeInteger(policyValue.minimumGoalIncrease)
+        ) {
+          errors.push(`${basePrefix}.minimumGoalIncrease must be a non-negative integer when provided`);
+        }
+        if (
+          policyValue.minPendingNextActions !== undefined &&
+          !isNonNegativeInteger(policyValue.minPendingNextActions)
+        ) {
+          errors.push(
+            `${basePrefix}.minPendingNextActions must be a non-negative integer when provided`,
+          );
+        }
+        if (
+          policyValue.minActionGrowthFactor !== undefined &&
+          !(Number.isFinite(policyValue.minActionGrowthFactor) && policyValue.minActionGrowthFactor > 0)
+        ) {
+          errors.push(`${basePrefix}.minActionGrowthFactor must be a positive number when provided`);
+        }
+
+        const taggedCounts =
+          policyValue.requiredTaggedActionCounts &&
+          typeof policyValue.requiredTaggedActionCounts === "object" &&
+          !Array.isArray(policyValue.requiredTaggedActionCounts)
+            ? policyValue.requiredTaggedActionCounts
+            : null;
+        if (policyValue.requiredTaggedActionCounts !== undefined && taggedCounts === null) {
+          errors.push(`${basePrefix}.requiredTaggedActionCounts must be an object when provided`);
+        }
+        if (taggedCounts) {
+          const tags = Object.keys(taggedCounts);
+          if (tags.length === 0) {
+            errors.push(`${basePrefix}.requiredTaggedActionCounts must not be empty when provided`);
+          }
+          for (const tag of tags) {
+            if (!isValidActionTag(tag)) {
+              errors.push(
+                `${basePrefix}.requiredTaggedActionCounts.${tag} must use tag format ${ACTION_TAG_PATTERN.toString()}`,
+              );
+            }
+            const requirement = taggedCounts[tag];
+            if (isNonNegativeInteger(requirement)) {
+              continue;
+            }
+            if (
+              !requirement ||
+              typeof requirement !== "object" ||
+              Array.isArray(requirement)
+            ) {
+              errors.push(
+                `${basePrefix}.requiredTaggedActionCounts.${tag} must be a non-negative integer or object`,
+              );
+              continue;
+            }
+            const hasMinCount = requirement.minCount !== undefined;
+            const hasMinPendingCount = requirement.minPendingCount !== undefined;
+            if (hasMinCount && !isNonNegativeInteger(requirement.minCount)) {
+              errors.push(
+                `${basePrefix}.requiredTaggedActionCounts.${tag}.minCount must be a non-negative integer`,
+              );
+            }
+            if (hasMinPendingCount && !isNonNegativeInteger(requirement.minPendingCount)) {
+              errors.push(
+                `${basePrefix}.requiredTaggedActionCounts.${tag}.minPendingCount must be a non-negative integer`,
+              );
+            }
+            if (
+              hasMinCount &&
+              hasMinPendingCount &&
+              Number(requirement.minCount) === 0 &&
+              Number(requirement.minPendingCount) === 0
+            ) {
+              errors.push(
+                `${basePrefix}.requiredTaggedActionCounts.${tag} must require minCount or minPendingCount greater than zero`,
+              );
+            }
+          }
+        }
+      }
+    }
   }
 
   if (payload.horizonStates && typeof payload.horizonStates === "object") {

@@ -134,13 +134,15 @@ describe("validate-merge-bundle.sh", () => {
           },
         },
       );
-      expect(result.code).toBe(0);
+      expect(result.code).not.toBe(0);
 
       const validationManifest = JSON.parse(await readFile(validationManifestPath, "utf8")) as {
         pass: boolean;
+        checks: { buildExitCode: number };
         failures: string[];
       };
       expect(validationManifest.pass).toBe(false);
+      expect(validationManifest.checks.buildExitCode).not.toBe(0);
       expect(validationManifest.failures.some((item) => item === "missing_release_readiness_report")).toBe(
         true,
       );

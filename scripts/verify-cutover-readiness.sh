@@ -23,6 +23,7 @@ UNIFIED_ROUTER_DEFAULT_PRIMARY=eve
 UNIFIED_ROUTER_DEFAULT_FALLBACK=hermes
 UNIFIED_ROUTER_FAIL_CLOSED=1
 UNIFIED_ROUTER_CUTOVER_STAGE=shadow
+UNIFIED_ROUTER_STAGE=shadow
 UNIFIED_ROUTER_CANARY_CHAT_IDS=
 UNIFIED_ROUTER_MAJORITY_PERCENT=0
 EOF
@@ -83,6 +84,7 @@ run_stage() {
       UNIFIED_ROUTER_DEFAULT_FALLBACK=*) UNIFIED_ROUTER_DEFAULT_FALLBACK="${line#*=}" ;;
       UNIFIED_ROUTER_FAIL_CLOSED=*) UNIFIED_ROUTER_FAIL_CLOSED="${line#*=}" ;;
       UNIFIED_ROUTER_CUTOVER_STAGE=*) UNIFIED_ROUTER_CUTOVER_STAGE="${line#*=}" ;;
+      UNIFIED_ROUTER_STAGE=*) UNIFIED_ROUTER_STAGE="${line#*=}" ;;
       UNIFIED_ROUTER_CANARY_CHAT_IDS=*) UNIFIED_ROUTER_CANARY_CHAT_IDS="${line#*=}" ;;
       UNIFIED_ROUTER_MAJORITY_PERCENT=*) UNIFIED_ROUTER_MAJORITY_PERCENT="${line#*=}" ;;
     esac
@@ -150,6 +152,7 @@ while IFS= read -r line; do
     UNIFIED_ROUTER_DEFAULT_FALLBACK=*) UNIFIED_ROUTER_DEFAULT_FALLBACK="${line#*=}" ;;
     UNIFIED_ROUTER_FAIL_CLOSED=*) UNIFIED_ROUTER_FAIL_CLOSED="${line#*=}" ;;
     UNIFIED_ROUTER_CUTOVER_STAGE=*) UNIFIED_ROUTER_CUTOVER_STAGE="${line#*=}" ;;
+    UNIFIED_ROUTER_STAGE=*) UNIFIED_ROUTER_STAGE="${line#*=}" ;;
     UNIFIED_ROUTER_CANARY_CHAT_IDS=*) UNIFIED_ROUTER_CANARY_CHAT_IDS="${line#*=}" ;;
     UNIFIED_ROUTER_MAJORITY_PERCENT=*) UNIFIED_ROUTER_MAJORITY_PERCENT="${line#*=}" ;;
   esac
@@ -174,6 +177,7 @@ const rollback = {
     defaultFallback: "none",
     failClosed: "1",
     cutoverStage: "shadow",
+    legacyStage: "shadow",
     lane: "eve",
     reason: "stage_shadow_default_primary",
   },
@@ -182,10 +186,11 @@ const rollback = {
     defaultFallback: process.argv[8],
     failClosed: process.argv[9],
     cutoverStage: process.argv[10],
-    canaryChats: process.argv[11],
-    majorityPercent: process.argv[12],
-    lane: process.argv[13],
-    reason: process.argv[14],
+    legacyStage: process.argv[11],
+    canaryChats: process.argv[12],
+    majorityPercent: process.argv[13],
+    lane: process.argv[14],
+    reason: process.argv[15],
   },
 };
 rollback.pass =
@@ -193,6 +198,7 @@ rollback.pass =
   rollback.actual.defaultFallback === rollback.expected.defaultFallback &&
   rollback.actual.failClosed === rollback.expected.failClosed &&
   rollback.actual.cutoverStage === rollback.expected.cutoverStage &&
+  rollback.actual.legacyStage === rollback.expected.legacyStage &&
   rollback.actual.lane === rollback.expected.lane &&
   rollback.actual.reason === rollback.expected.reason;
 const stagePass = records.every((record) => record.pass);
@@ -205,7 +211,7 @@ const payload = {
   rollback,
 };
 process.stdout.write(JSON.stringify(payload, null, 2));
-' "$shadow_record" "$canary_allow_record" "$canary_default_record" "$majority_full_record" "$majority_zero_record" "$full_record" "$UNIFIED_ROUTER_DEFAULT_PRIMARY" "$UNIFIED_ROUTER_DEFAULT_FALLBACK" "$UNIFIED_ROUTER_FAIL_CLOSED" "$UNIFIED_ROUTER_CUTOVER_STAGE" "$UNIFIED_ROUTER_CANARY_CHAT_IDS" "$UNIFIED_ROUTER_MAJORITY_PERCENT" "$rollback_lane" "$rollback_reason" >"$report"
+' "$shadow_record" "$canary_allow_record" "$canary_default_record" "$majority_full_record" "$majority_zero_record" "$full_record" "$UNIFIED_ROUTER_DEFAULT_PRIMARY" "$UNIFIED_ROUTER_DEFAULT_FALLBACK" "$UNIFIED_ROUTER_FAIL_CLOSED" "$UNIFIED_ROUTER_CUTOVER_STAGE" "$UNIFIED_ROUTER_STAGE" "$UNIFIED_ROUTER_CANARY_CHAT_IDS" "$UNIFIED_ROUTER_MAJORITY_PERCENT" "$rollback_lane" "$rollback_reason" >"$report"
 
 echo "Wrote $report"
 if ! node -e 'const fs=require("fs");const p=process.argv[1];const j=JSON.parse(fs.readFileSync(p,"utf8"));process.exit(j.pass?0:2);' "$report"; then

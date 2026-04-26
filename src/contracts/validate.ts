@@ -24,6 +24,8 @@ export function validateEnvelope(value: UnifiedMessageEnvelope): UnifiedMessageE
   ensure(value.channel === "telegram", "Envelope channel must be telegram.");
   ensure(value.chatId.length > 0, "Envelope chatId is required.");
   ensure(value.messageId.length > 0, "Envelope messageId is required.");
+  ensure(value.receivedAtIso.length > 0, "Envelope receivedAtIso is required.");
+  ensure(!Number.isNaN(Date.parse(value.receivedAtIso)), "Envelope receivedAtIso must be valid ISO date text.");
   ensure(value.text.length > 0, "Envelope text is required.");
   return value;
 }
@@ -103,15 +105,43 @@ export function validateUnifiedDispatchResult(value: UnifiedDispatchResult): Uni
   validateEnvelope(value.envelope);
   validateRoutingDecision(value.routing);
   validateDispatchState(value.primaryState);
+  ensure(
+    value.primaryState.traceId === value.envelope.traceId,
+    "Unified dispatch primaryState traceId must match envelope traceId.",
+  );
   if (value.fallbackState) {
     validateDispatchState(value.fallbackState);
+    ensure(
+      value.fallbackState.traceId === value.envelope.traceId,
+      "Unified dispatch fallbackState traceId must match envelope traceId.",
+    );
+    ensure(value.fallbackInfo?.attempted === true, "Unified dispatch fallbackInfo is required when fallbackState exists.");
+  } else {
+    ensure(!value.fallbackInfo, "Unified dispatch fallbackInfo requires fallbackState.");
   }
   validateUnifiedResponse(value.response);
+  ensure(
+    value.response.traceId === value.envelope.traceId,
+    "Unified dispatch response traceId must match envelope traceId.",
+  );
+  ensure(
+    value.response.laneUsed === (value.fallbackState ?? value.primaryState).sourceLane,
+    "Unified dispatch response laneUsed must match responding state lane.",
+  );
   if (value.capabilityDecision) {
     validateCapabilityDecision(value.capabilityDecision);
   }
   if (value.capabilityExecution) {
     validateCapabilityExecutionResult(value.capabilityExecution);
+    ensure(
+      value.capabilityDecision !== undefined,
+      "Unified dispatch capabilityDecision is required when capabilityExecution exists.",
+    );
+    ensure(
+      value.capabilityExecution.capability.id === value.capabilityDecision.id &&
+        value.capabilityExecution.capability.lane === value.capabilityDecision.lane,
+      "Unified dispatch capability execution must match capability decision.",
+    );
   }
   return value;
 }

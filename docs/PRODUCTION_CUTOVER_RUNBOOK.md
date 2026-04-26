@@ -16,7 +16,7 @@ Perform staged rollout with live rollback capability.
   - `UNIFIED_ROUTER_CANARY_CHAT_IDS=<comma-separated chat ids>`
   - `UNIFIED_ROUTER_DEFAULT_PRIMARY=eve`
   - `UNIFIED_ROUTER_DEFAULT_FALLBACK=hermes`
-  - `UNIFIED_ROUTER_FAIL_CLOSED=1`
+  - `UNIFIED_ROUTER_FAIL_CLOSED=0`
 
 ### Stage C: Majority
 - Expand Hermes-primary routing to majority traffic.
@@ -26,7 +26,7 @@ Perform staged rollout with live rollback capability.
   - `UNIFIED_ROUTER_MAJORITY_PERCENT=<0..100>`
   - `UNIFIED_ROUTER_DEFAULT_PRIMARY=eve`
   - `UNIFIED_ROUTER_DEFAULT_FALLBACK=hermes`
-  - `UNIFIED_ROUTER_FAIL_CLOSED=1`
+  - `UNIFIED_ROUTER_FAIL_CLOSED=0`
 
 ### Stage D: Full Cutover
 - Route all traffic through unified merged runtime policy.
@@ -45,6 +45,7 @@ Set:
 - `UNIFIED_ROUTER_DEFAULT_FALLBACK=none`
 - `UNIFIED_ROUTER_FAIL_CLOSED=1`
 - `UNIFIED_ROUTER_CUTOVER_STAGE=shadow`
+- `UNIFIED_ROUTER_STAGE=shadow`
 - `UNIFIED_ROUTER_CANARY_CHAT_IDS=`
 - `UNIFIED_ROUTER_MAJORITY_PERCENT=0`
 

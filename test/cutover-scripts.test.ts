@@ -52,6 +52,7 @@ describe("cutover scripts", () => {
       expect(result.code).toBe(0);
       const content = await readFile(envPath, "utf8");
       expect(content).toContain("UNIFIED_ROUTER_CUTOVER_STAGE=majority");
+      expect(content).toContain("UNIFIED_ROUTER_STAGE=majority");
       expect(content).toContain("UNIFIED_ROUTER_DEFAULT_PRIMARY=eve");
       expect(content).toContain("UNIFIED_ROUTER_DEFAULT_FALLBACK=hermes");
       expect(content).toContain("UNIFIED_ROUTER_FAIL_CLOSED=0");
@@ -87,6 +88,7 @@ describe("cutover scripts", () => {
       expect(rollbackResult.code).toBe(0);
       const content = await readFile(envPath, "utf8");
       expect(content).toContain("UNIFIED_ROUTER_CUTOVER_STAGE=shadow");
+      expect(content).toContain("UNIFIED_ROUTER_STAGE=shadow");
       expect(content).toContain("UNIFIED_ROUTER_DEFAULT_PRIMARY=eve");
       expect(content).toContain("UNIFIED_ROUTER_DEFAULT_FALLBACK=none");
       expect(content).toContain("UNIFIED_ROUTER_FAIL_CLOSED=1");

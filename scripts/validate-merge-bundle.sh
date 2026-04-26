@@ -41,16 +41,16 @@ ARCHIVE_PATH="${UNIFIED_MERGE_BUNDLE_ARCHIVE_PATH:-$OUT_DIR/merge-readiness-bund
 BUNDLE_MANIFEST_PATH="${UNIFIED_MERGE_BUNDLE_MANIFEST_PATH:-$BUNDLE_DIR/merge-readiness-manifest.json}"
 VALIDATION_MANIFEST_PATH="${UNIFIED_MERGE_BUNDLE_VALIDATION_MANIFEST_PATH:-$OUT_DIR/merge-bundle-validation-$STAMP.json}"
 
-build_exit_code=0
-if ! node "$ROOT_DIR/scripts/build-merge-readiness-bundle.mjs" \
+set +e
+node "$ROOT_DIR/scripts/build-merge-readiness-bundle.mjs" \
   --evidence-dir "$OUT_DIR" \
   --release-readiness "$RELEASE_READINESS_PATH" \
   --initial-scope "$INITIAL_SCOPE_PATH" \
   --bundle-dir "$BUNDLE_DIR" \
   --archive-path "$ARCHIVE_PATH" \
-  --manifest-out "$BUNDLE_MANIFEST_PATH"; then
-  build_exit_code=$?
-fi
+  --manifest-out "$BUNDLE_MANIFEST_PATH"
+build_exit_code=$?
+set -e
 
 node - "$VALIDATION_MANIFEST_PATH" "$BUNDLE_MANIFEST_PATH" "$build_exit_code" "$RELEASE_READINESS_PATH" "$INITIAL_SCOPE_PATH" "$ARCHIVE_PATH" <<'NODE'
 const fs = require("node:fs");

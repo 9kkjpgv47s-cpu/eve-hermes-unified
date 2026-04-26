@@ -15,6 +15,8 @@ import {
   validateCapabilityExecutionResult,
   validateDispatchState,
   validateEnvelope,
+  validateRoutingDecision,
+  validateUnifiedDispatchResult,
   validateUnifiedResponse,
 } from "../contracts/validate.js";
 import type { LaneAdapter } from "../adapters/lane-adapter.js";
@@ -96,16 +98,16 @@ function buildResult(
     validateCapabilityExecutionResult(capabilityExecution);
   }
 
-  return {
+  return validateUnifiedDispatchResult({
     envelope,
-    routing,
+    routing: validateRoutingDecision(routing),
     primaryState,
     fallbackState: options?.fallbackState,
     fallbackInfo,
     capabilityDecision,
     capabilityExecution,
     response,
-  };
+  });
 }
 
 export async function dispatchUnifiedMessage(

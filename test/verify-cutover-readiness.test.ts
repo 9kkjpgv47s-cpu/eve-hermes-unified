@@ -50,12 +50,13 @@ describe("verify-cutover-readiness.sh", () => {
       const report = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
         stageRecords: Array<{ stage: string; pass: boolean }>;
-        rollback: { pass: boolean };
+        rollback: { pass: boolean; actual: { legacyStage: string } };
       };
       expect(report.pass).toBe(true);
       expect(report.stageRecords.length).toBe(6);
       expect(report.stageRecords.every((record) => record.pass)).toBe(true);
       expect(report.rollback.pass).toBe(true);
+      expect(report.rollback.actual.legacyStage).toBe("shadow");
     });
   });
 });

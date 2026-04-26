@@ -57,9 +57,15 @@ JSON
 SCRIPT
 chmod +x "$fake_eve_script"
 
-dispatch_bin="$ROOT_DIR/dist/src/bin/unified-dispatch.js"
-if [[ ! -f "$dispatch_bin" ]]; then
-  echo "Missing dispatch binary: $dispatch_bin. Run npm run build first." >&2
+dispatch_bin="${UNIFIED_DISPATCH_BIN:-$ROOT_DIR/dist/src/bin/unified-dispatch.js}"
+dispatch_cmd=()
+if [[ -f "$dispatch_bin" ]]; then
+  dispatch_cmd=(node "$dispatch_bin")
+elif [[ -x "$ROOT_DIR/node_modules/.bin/tsx" && -f "$ROOT_DIR/src/bin/unified-dispatch.ts" ]]; then
+  dispatch_cmd=("$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/src/bin/unified-dispatch.ts")
+else
+  echo "Missing dispatch runner. Expected dist binary or local tsx install." >&2
+  echo "Run npm install and optionally npm run build before regression checks." >&2
   exit 70
 fi
 
@@ -83,7 +89,7 @@ run_dispatch() {
     UNIFIED_HERMES_LAUNCH_ARGS= \
     HERMES_LAUNCH_ARGS= \
     "$@" \
-    node "$dispatch_bin" --text "$text" --chat-id "$chat_id" --message-id "$message_id" >"$output_path"
+    "${dispatch_cmd[@]}" --text "$text" --chat-id "$chat_id" --message-id "$message_id" >"$output_path"
 }
 
 assert_dispatch() {

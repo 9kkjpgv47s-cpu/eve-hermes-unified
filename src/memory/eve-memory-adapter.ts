@@ -1,4 +1,5 @@
 import {
+  FileUnifiedMemoryStore,
   InMemoryUnifiedMemoryStore,
   type UnifiedMemoryEntry,
   type UnifiedMemoryKey,
@@ -40,4 +41,8 @@ export class EveMemoryAdapter implements UnifiedMemoryStore {
 
 export function createInMemoryEveStore(): UnifiedMemoryStore {
   return new InMemoryUnifiedMemoryStore();
+}
+
+export function createFileBackedEveStore(filePath: string): UnifiedMemoryStore {
+  return new FileUnifiedMemoryStore(filePath);
 }

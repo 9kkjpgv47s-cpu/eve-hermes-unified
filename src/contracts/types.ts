@@ -49,10 +49,38 @@ export type UnifiedResponse = {
   traceId: string;
 };
 
+export type UnifiedCapabilityDecision = {
+  id: string;
+  lane: LaneId;
+  routeReason: string;
+};
+
+export type CapabilityExecutionResult = {
+  capability: UnifiedCapabilityDecision;
+  status: "pass" | "failed";
+  consumed: boolean;
+  reason: string;
+  outputText: string;
+  failureClass: FailureClass;
+  runId: string;
+  elapsedMs: number;
+  metadata?: Record<string, string>;
+};
+
+export type DispatchFallbackInfo = {
+  attempted: boolean;
+  reason: string;
+  fromLane: LaneId;
+  toLane: LaneId;
+};
+
 export type UnifiedDispatchResult = {
   envelope: UnifiedMessageEnvelope;
   routing: RoutingDecision;
   primaryState: DispatchState;
   fallbackState?: DispatchState;
+  fallbackInfo?: DispatchFallbackInfo;
+  capabilityDecision?: UnifiedCapabilityDecision;
+  capabilityExecution?: CapabilityExecutionResult;
   response: UnifiedResponse;
 };

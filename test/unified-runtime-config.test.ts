@@ -71,4 +71,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.hermesLaunchCommand).toBe("python3");
     expect(config.hermesLaunchArgs).toEqual(["-m", "hermes", "gateway"]);
   });
+
+  it("parses unified memory store settings", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_STORE_KIND: "memory",
+          UNIFIED_MEMORY_FILE_PATH: "/tmp/custom-memory.json",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryStoreKind).toBe("memory");
+    expect(config.unifiedMemoryFilePath).toBe("/tmp/custom-memory.json");
+  });
 });

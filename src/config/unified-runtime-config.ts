@@ -1,11 +1,15 @@
 import type { LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
+import type { UnifiedMemoryStoreKind } from "../memory/unified-memory-store.js";
+
 export type UnifiedRuntimeEnvConfig = {
   eveDispatchScript: string;
   eveDispatchResultPath: string;
   hermesLaunchCommand: string;
   hermesLaunchArgs: string[];
+  unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
+  unifiedMemoryFilePath: string;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -47,6 +51,10 @@ function parseBooleanFlag(raw: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
+function parseMemoryStoreKind(raw: string | undefined): UnifiedMemoryStoreKind {
+  return raw === "memory" ? "memory" : "file";
+}
+
 export function loadUnifiedRuntimeEnvConfig(
   reader: Reader = (name) => process.env[name],
 ): UnifiedRuntimeEnvConfig {
@@ -61,6 +69,12 @@ export function loadUnifiedRuntimeEnvConfig(
     firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_COMMAND", "HERMES_LAUNCH_COMMAND"]) ?? "python3";
   const hermesLaunchArgsRaw =
     firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_ARGS", "HERMES_LAUNCH_ARGS"]) ?? "-m hermes gateway";
+  const unifiedMemoryStoreKind = parseMemoryStoreKind(
+    firstDefined(reader, ["UNIFIED_MEMORY_STORE_KIND", "MEMORY_STORE_KIND"]),
+  );
+  const unifiedMemoryFilePath =
+    firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
+    "/tmp/eve-hermes-unified-memory.json";
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -80,6 +94,8 @@ export function loadUnifiedRuntimeEnvConfig(
     eveDispatchResultPath,
     hermesLaunchCommand,
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
+    unifiedMemoryStoreKind,
+    unifiedMemoryFilePath,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

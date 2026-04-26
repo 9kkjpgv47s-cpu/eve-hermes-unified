@@ -1,3 +1,6 @@
+import { mkdtemp, readFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   EveMemoryAdapter,
@@ -10,7 +13,10 @@ import {
   registerEveCommandWrappers,
   registerHermesTools,
 } from "../src/skills/capability-registry.js";
-import { InMemoryUnifiedMemoryStore } from "../src/memory/unified-memory-store.js";
+import {
+  createUnifiedMemoryStoreFromEnv,
+  InMemoryUnifiedMemoryStore,
+} from "../src/memory/unified-memory-store.js";
 
 describe("UnifiedMemoryStore adapters", () => {
   it("reads and writes through Eve memory adapter with eve lane scope", async () => {
@@ -49,10 +55,22 @@ describe("UnifiedMemoryStore adapters", () => {
     expect(eveValues).toHaveLength(2);
     expect(hermesValues).toHaveLength(1);
   });
+
+  it("persists entries when file-backed memory store is selected", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-memory-test-"));
+    const memoryFilePath = path.join(tempDir, "memory.json");
+    const store = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
+    const eve = new EveMemoryAdapter(store);
+    await eve.set({ lane: "eve", namespace: "chat", key: "persist-1" }, "persisted");
+
+    const raw = await readFile(memoryFilePath, "utf8");
+    expect(raw).toContain("persist-1");
+    expect(raw).toContain("persisted");
+  });
 });
 
 describe("CapabilityRegistry", () => {
-  it("registers Eve and Hermes capabilities and detects ownership conflicts", () => {
+  it("registers Eve and Hermes capabilities with explicit owners", () => {
     const registry = new CapabilityRegistry();
     registerEveCommandWrappers(registry);
     registerHermesTools(registry);
@@ -61,9 +79,7 @@ describe("CapabilityRegistry", () => {
     expect(capabilities.map((item) => item.id)).toContain("check_status");
     expect(capabilities.map((item) => item.id)).toContain("summarize_state");
     const conflicts = registry.listConflicts();
-    expect(conflicts).toHaveLength(1);
-    expect(conflicts[0]?.id).toBe("dispatch_task");
-    expect(conflicts[0]?.resolution).toBe("rename-required");
+    expect(conflicts).toHaveLength(0);
   });
 
   it("rejects empty capability IDs", () => {
@@ -75,5 +91,22 @@ describe("CapabilityRegistry", () => {
         owner: "shared",
       }),
     ).toThrowError("Capability id is required.");
+  });
+
+  it("resolves capabilities by alias and exposes executor", async () => {
+    const registry = new CapabilityRegistry();
+    registerEveCommandWrappers(registry);
+    const capability = registry.findByAlias("status");
+    expect(capability?.id).toBe("check_status");
+
+    const executor = registry.getExecutor("check_status");
+    expect(executor).toBeDefined();
+    const execution = await executor?.({
+      text: "@cap status",
+      traceId: "trace-x",
+      chatId: "1",
+      messageId: "2",
+    });
+    expect(execution?.consumed).toBe(true);
   });
 });

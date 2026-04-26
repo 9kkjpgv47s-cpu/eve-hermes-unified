@@ -1,8 +1,10 @@
 import {
+  createUnifiedMemoryStoreFromEnv,
   InMemoryUnifiedMemoryStore,
   type UnifiedMemoryEntry,
   type UnifiedMemoryKey,
   type UnifiedMemoryListQuery,
+  type UnifiedMemoryStoreKind,
   type UnifiedMemoryStore,
 } from "./unified-memory-store.js";
 
@@ -32,4 +34,15 @@ export class HermesMemoryAdapter implements UnifiedMemoryStore {
 
 export function createInMemoryHermesStore(): UnifiedMemoryStore {
   return new InMemoryUnifiedMemoryStore();
+}
+
+export function createFileBackedHermesStore(filePath: string): UnifiedMemoryStore {
+  return createUnifiedMemoryStoreFromEnv("file", filePath);
+}
+
+export function createHermesMemoryStoreFromEnv(
+  kind: UnifiedMemoryStoreKind,
+  filePath: string,
+): UnifiedMemoryStore {
+  return createUnifiedMemoryStoreFromEnv(kind, filePath);
 }

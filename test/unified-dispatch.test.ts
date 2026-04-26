@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { DispatchState } from "../src/contracts/types.js";
+import type { CapabilityExecutionResult, DispatchState, UnifiedCapabilityDecision } from "../src/contracts/types.js";
 import { dispatchUnifiedMessage } from "../src/runtime/unified-dispatch.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
+import type { CapabilityEngine } from "../src/runtime/capability-engine.js";
+import type { RouterPolicyConfig } from "../src/router/policy-router.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   constructor(
@@ -12,6 +14,34 @@ class FakeLaneAdapter implements LaneAdapter {
   async dispatch(_input: LaneDispatchInput): Promise<DispatchState> {
     return this.response;
   }
+}
+
+class FakeCapabilityEngine implements CapabilityEngine {
+  constructor(
+    private readonly decision?: UnifiedCapabilityDecision,
+    private readonly execution?: CapabilityExecutionResult,
+  ) {}
+
+  select(): UnifiedCapabilityDecision | undefined {
+    return this.decision;
+  }
+
+  async execute(): Promise<CapabilityExecutionResult> {
+    if (!this.execution) {
+      throw new Error("Execution was not configured.");
+    }
+    return this.execution;
+  }
+}
+
+function baseRouterConfig(overrides?: Partial<RouterPolicyConfig>): RouterPolicyConfig {
+  return {
+    defaultPrimary: "eve",
+    defaultFallback: "hermes",
+    failClosed: false,
+    policyVersion: "v1",
+    ...overrides,
+  };
 }
 
 describe("dispatchUnifiedMessage", () => {
@@ -41,12 +71,7 @@ describe("dispatchUnifiedMessage", () => {
         sourceMessageId: "2",
         traceId: "t2",
       }),
-      routerConfig: {
-        defaultPrimary: "eve" as const,
-        defaultFallback: "hermes" as const,
-        failClosed: false,
-        policyVersion: "v1",
-      },
+      routerConfig: baseRouterConfig(),
     };
 
     const result = await dispatchUnifiedMessage(runtime, {
@@ -90,12 +115,7 @@ describe("dispatchUnifiedMessage", () => {
         sourceMessageId: "2",
         traceId: "t2",
       }),
-      routerConfig: {
-        defaultPrimary: "eve" as const,
-        defaultFallback: "hermes" as const,
-        failClosed: false,
-        policyVersion: "v1",
-      },
+      routerConfig: baseRouterConfig(),
     };
 
     const result = await dispatchUnifiedMessage(runtime, {
@@ -109,6 +129,8 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.primaryState.sourceLane).toBe("eve");
     expect(result.fallbackState?.sourceLane).toBe("hermes");
     expect(result.fallbackState?.traceId).toBe(result.envelope.traceId);
+    expect(result.fallbackInfo?.attempted).toBe(true);
+    expect(result.fallbackInfo?.reason).toBe("primary_failed");
   });
 
   it("stops on primary failure when failClosed=true", async () => {
@@ -137,12 +159,7 @@ describe("dispatchUnifiedMessage", () => {
         sourceMessageId: "2",
         traceId: "t2",
       }),
-      routerConfig: {
-        defaultPrimary: "eve" as const,
-        defaultFallback: "hermes" as const,
-        failClosed: true,
-        policyVersion: "v1",
-      },
+      routerConfig: baseRouterConfig({ failClosed: true }),
     };
 
     const result = await dispatchUnifiedMessage(runtime, {
@@ -156,5 +173,70 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.response.failureClass).toBe("policy_failure");
     expect(result.fallbackState).toBeUndefined();
     expect(result.primaryState.traceId).toBe(result.envelope.traceId);
+    expect(result.fallbackInfo).toBeUndefined();
+  });
+
+  it("uses capability engine path when explicit capability command resolves", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "failed",
+        reason: "unused",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "dispatch_failure",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "failed",
+        reason: "unused",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "dispatch_failure",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig(),
+      capabilityEngine: new FakeCapabilityEngine(
+        {
+          id: "summarize_state",
+          lane: "hermes",
+          routeReason: "explicit_capability_command",
+        },
+        {
+          capability: {
+            id: "summarize_state",
+            lane: "hermes",
+            routeReason: "explicit_capability_command",
+          },
+          status: "pass",
+          consumed: true,
+          reason: "capability_summarize_state_success",
+          outputText: "Capability summarize_state executed (Hermes owner).",
+          failureClass: "none",
+          runId: "cap-1",
+          elapsedMs: 3,
+        },
+      ),
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@cap summarize_state",
+    });
+
+    expect(result.capabilityDecision?.id).toBe("summarize_state");
+    expect(result.capabilityExecution?.status).toBe("pass");
+    expect(result.routing.reason).toBe("explicit_capability_command");
+    expect(result.response.laneUsed).toBe("hermes");
+    expect(result.response.failureClass).toBe("none");
   });
 });

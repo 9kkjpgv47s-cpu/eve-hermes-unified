@@ -12,6 +12,7 @@ export async function runCommandWithTimeout(
   argv: string[],
   options?: {
     timeoutMs?: number;
+    killAfterTimeoutMs?: number;
     env?: Record<string, string>;
   },
 ): Promise<CommandResult> {
@@ -20,6 +21,7 @@ export async function runCommandWithTimeout(
   }
   const [command, ...args] = argv;
   const timeoutMs = options?.timeoutMs ?? 60_000;
+  const killAfterTimeoutMs = options?.killAfterTimeoutMs ?? 5_000;
 
   return await new Promise<CommandResult>((resolve, reject) => {
     const child = spawn(command, args, {
@@ -30,10 +32,16 @@ export async function runCommandWithTimeout(
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let killTimeout: NodeJS.Timeout | undefined;
 
     const timeout = setTimeout(() => {
       timedOut = true;
       child.kill("SIGTERM");
+      killTimeout = setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) {
+          child.kill("SIGKILL");
+        }
+      }, killAfterTimeoutMs);
     }, timeoutMs);
 
     child.stdout.on("data", (chunk: Buffer) => {
@@ -44,10 +52,16 @@ export async function runCommandWithTimeout(
     });
     child.on("error", (error) => {
       clearTimeout(timeout);
+      if (killTimeout) {
+        clearTimeout(killTimeout);
+      }
       reject(error);
     });
     child.on("close", (code, signal) => {
       clearTimeout(timeout);
+      if (killTimeout) {
+        clearTimeout(killTimeout);
+      }
       resolve({
         stdout,
         stderr,

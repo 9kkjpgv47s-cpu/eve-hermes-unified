@@ -121,4 +121,23 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.preflight.strict).toBe(false);
     expect(config.auditLogPath).toBe("/tmp/unified-audit.jsonl");
   });
+
+  it("parses cutover stage controls and aliases", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_CUTOVER_STAGE: "majority",
+          UNIFIED_ROUTER_CANARY_CHAT_IDS: "chat-1,chat-2",
+          UNIFIED_ROUTER_MAJORITY_PERCENT: "35",
+          UNIFIED_ROUTER_HASH_SALT: "salt-1",
+          PREFLIGHT_ENABLED: "0",
+        }),
+      ),
+    );
+    expect(config.routerConfig.cutoverStage).toBe("majority");
+    expect(config.routerConfig.canaryChatIds).toEqual(["chat-1", "chat-2"]);
+    expect(config.routerConfig.majorityPercent).toBe(35);
+    expect(config.routerConfig.hashSalt).toBe("salt-1");
+    expect(config.preflight.enabled).toBe(false);
+  });
 });

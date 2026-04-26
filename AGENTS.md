@@ -55,6 +55,11 @@ npm run cutover:stage -- full
 npm run cutover:rollback
 ```
 
+Cutover stage rollout controls (set in gateway env file):
+- `UNIFIED_ROUTER_CUTOVER_STAGE`: `shadow|canary|majority|full`
+- `UNIFIED_ROUTER_CANARY_CHAT_IDS`: comma-separated chat IDs routed to Hermes in canary
+- `UNIFIED_ROUTER_MAJORITY_PERCENT`: integer `0-100` stable percentage for Hermes routing in majority
+
 ## Working Rules for Cloud Agents
 
 1. Treat `src/contracts/types.ts` as canonical schema source.

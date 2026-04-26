@@ -85,6 +85,27 @@ function parseCapabilityDefaultMode(raw: string | undefined): "allow" | "deny" {
   return raw?.toLowerCase() === "deny" ? "deny" : "allow";
 }
 
+function parseCutoverStage(raw: string | undefined): "shadow" | "canary" | "majority" | "full" {
+  const normalized = raw?.trim().toLowerCase();
+  if (
+    normalized === "shadow" ||
+    normalized === "canary" ||
+    normalized === "majority" ||
+    normalized === "full"
+  ) {
+    return normalized;
+  }
+  return "shadow";
+}
+
+function parsePercent(raw: string | undefined, fallback: number): number {
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric) && numeric >= 0 && numeric <= 100) {
+    return Math.floor(numeric);
+  }
+  return fallback;
+}
+
 export function loadUnifiedRuntimeEnvConfig(
   reader: Reader = (name) => process.env[name],
 ): UnifiedRuntimeEnvConfig {
@@ -183,7 +204,11 @@ export function loadUnifiedRuntimeEnvConfig(
     denyCapabilityChatsRaw: undefined,
   });
   const preflightEnabled = parseBooleanFlag(
-    firstDefined(reader, ["UNIFIED_PREFLIGHT_ENABLED", "PREFLIGHT_ENABLED"]),
+    firstDefined(reader, [
+      "UNIFIED_PREFLIGHT_ENABLED",
+      "UNIFIED_ENABLE_PREFLIGHT_CHECKS",
+      "PREFLIGHT_ENABLED",
+    ]),
     true,
   );
   const preflightStrict = parseBooleanFlag(
@@ -206,6 +231,28 @@ export function loadUnifiedRuntimeEnvConfig(
     true,
   );
   const policyVersion = firstDefined(reader, ["UNIFIED_ROUTER_POLICY_VERSION", "ROUTER_POLICY_VERSION"]) ?? "v1";
+  const cutoverStage = parseCutoverStage(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_CUTOVER_STAGE",
+      "ROUTER_CUTOVER_STAGE",
+      "UNIFIED_ROUTER_STAGE",
+      "ROUTER_STAGE",
+    ]),
+  );
+  const canaryChatIds = parseCsvList(
+    firstDefined(reader, ["UNIFIED_ROUTER_CANARY_CHAT_IDS", "ROUTER_CANARY_CHAT_IDS"]),
+  );
+  const majorityPercent = parsePercent(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_MAJORITY_HERMES_PERCENT",
+      "ROUTER_MAJORITY_HERMES_PERCENT",
+      "UNIFIED_ROUTER_MAJORITY_PERCENT",
+      "ROUTER_MAJORITY_PERCENT",
+    ]),
+    90,
+  );
+  const hashSalt =
+    firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
 
   return {
     eveDispatchScript,
@@ -234,6 +281,10 @@ export function loadUnifiedRuntimeEnvConfig(
       defaultFallback,
       failClosed,
       policyVersion,
+      cutoverStage,
+      canaryChatIds,
+      majorityPercent,
+      hashSalt,
     },
   };
 }

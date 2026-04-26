@@ -360,4 +360,40 @@ describe("check-stage-promotion-readiness.mjs", () => {
       expect(payload.failures).toContain("target_stage_mismatch");
     });
   });
+
+  it("accepts artifact patterns when evidence directory is relocated", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "artifacts");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "stage-promotion-readiness.json");
+      await seedEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath, "canary", "H2");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "canary",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(true);
+      expect(
+        payload.failures.some((entry) => entry.startsWith("missing_artifact_pattern_match:")),
+      ).toBe(false);
+    });
+  });
 });

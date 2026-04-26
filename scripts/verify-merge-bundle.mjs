@@ -259,10 +259,19 @@ async function main() {
     failures.push("missing_bundled_initial_scope_manifest");
   }
 
-  const selectedArchivePath =
-    resolveMaybePath(options.archive) ||
-    resolveMaybePath(bundleManifest?.archivePath) ||
-    (selectedBundleDir ? `${selectedBundleDir}.tar.gz` : "");
+  const explicitArchivePath = resolveMaybePath(options.archive);
+  const manifestArchivePath = resolveMaybePath(bundleManifest?.archivePath);
+  const derivedArchivePath = selectedBundleDir ? `${selectedBundleDir}.tar.gz` : "";
+  let selectedArchivePath = explicitArchivePath;
+  if (!selectedArchivePath) {
+    if (await isFile(manifestArchivePath)) {
+      selectedArchivePath = manifestArchivePath;
+    } else if (await isFile(derivedArchivePath)) {
+      selectedArchivePath = derivedArchivePath;
+    } else {
+      selectedArchivePath = manifestArchivePath || derivedArchivePath;
+    }
+  }
   if (options.requireArchive) {
     checks.archiveChecked = true;
     if (!(await isFile(selectedArchivePath))) {

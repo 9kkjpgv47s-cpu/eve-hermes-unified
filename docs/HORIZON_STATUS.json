@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T14:45:00Z",
+  "updatedAtIso": "2026-04-26T14:54:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H1",
   "activeStatus": "in_progress",
-  "summary": "H1 merge operationalization baseline is in progress with CI parity, schema/verification gates, and stage-promotion orchestration hardening underway.",
+  "summary": "H1 merge operationalization baseline has passing unified-ci evidence and verified operator artifact retrieval/verification workflow.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -61,19 +61,19 @@
       "id": "h1-action-1",
       "summary": "Run unified-ci and confirm evidence artifact upload reliability and stage promotion gate signal emission.",
       "targetHorizon": "H1",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "h1-action-2",
       "summary": "Exercise operator retrieval and local verification flow against CI artifact bundle.",
       "targetHorizon": "H1",
-      "status": "planned"
+      "status": "completed"
     },
     {
       "id": "h1-action-3",
       "summary": "Promote H1 to completed once artifact retrieval and stage promotion gate workflow are verified.",
       "targetHorizon": "H1",
-      "status": "planned"
+      "status": "in_progress"
     }
   ],
   "promotionReadiness": {
@@ -89,7 +89,7 @@
   "horizonStates": {
     "H1": {
       "status": "in_progress",
-      "summary": "Operationalization baseline mostly complete; awaiting CI artifact retrieval + stage promotion workflow confirmation."
+      "summary": "Operationalization baseline evidence and operator workflow verified; pending horizon closeout decision and handoff."
     },
     "H2": {
       "status": "planned",
@@ -126,6 +126,12 @@
       "horizon": "H1",
       "status": "in_progress",
       "note": "Promotion orchestration path added to gate readiness + apply stage in a single operator command."
+    },
+    {
+      "timestamp": "2026-04-26T14:54:00Z",
+      "horizon": "H1",
+      "status": "in_progress",
+      "note": "Unified CI run 24959459587 passed fully and downloaded artifact set was locally verified for merge-bundle and stage-promotion readiness."
     }
   ]
 }

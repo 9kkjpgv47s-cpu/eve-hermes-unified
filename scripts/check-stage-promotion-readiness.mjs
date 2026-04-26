@@ -157,10 +157,13 @@ function latestPathMatchesPattern(pattern, targetPath) {
     anchorIndexInAbsolute >= 0
       ? normalizedAbsolute.slice(anchorIndexInAbsolute + 1)
       : normalizedAbsolute;
+  const basenameTarget = path.basename(normalizedAbsolute);
+  const evidenceRelativeTarget = `evidence/${basenameTarget}`;
   const normalizedAbsoluteWithoutLeading = normalizedAbsolute.replace(/^\/+/, "");
   return (
     matchesArtifactPattern(normalizedPattern, normalizedAbsolute) ||
     matchesArtifactPattern(normalizedPattern, anchoredRelative) ||
+    matchesArtifactPattern(normalizedPattern, evidenceRelativeTarget) ||
     matchesArtifactPattern(normalizedPattern, normalizedAbsoluteWithoutLeading)
   );
 }

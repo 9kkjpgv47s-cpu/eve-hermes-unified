@@ -201,4 +201,61 @@ describe("verify-merge-bundle.mjs", () => {
       expect(payload.failures.some((item) => item === "missing_bundle_archive")).toBe(true);
     });
   });
+
+  it("passes for relocated bundle when archive is next to bundle dir", async () => {
+    await withTempDir(async (dir) => {
+      const fixture = await seedBundleFixture(dir);
+      const relocatedRoot = path.join(dir, "downloaded-artifact");
+      const relocatedEvidence = path.join(relocatedRoot, "evidence");
+      await mkdir(relocatedEvidence, { recursive: true });
+
+      const relocatedBundleDir = path.join(
+        relocatedEvidence,
+        path.basename(fixture.bundleDir),
+      );
+      const relocatedArchive = path.join(
+        relocatedEvidence,
+        path.basename(fixture.archivePath),
+      );
+      const relocatedManifest = path.join(
+        relocatedBundleDir,
+        "merge-readiness-manifest.json",
+      );
+
+      const copyResult = await runCommandWithTimeout(
+        [
+          "bash",
+          "-lc",
+          `cp -R "${fixture.bundleDir}" "${relocatedBundleDir}" && cp "${fixture.archivePath}" "${relocatedArchive}"`,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(copyResult.code).toBe(0);
+
+      const outputPath = path.join(relocatedEvidence, "bundle-verify-relocated.json");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/verify-merge-bundle.mjs",
+          "--bundle-manifest",
+          relocatedManifest,
+          "--evidence-dir",
+          relocatedEvidence,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        files: { bundleArchivePath: string | null };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.failures).toEqual([]);
+      expect(payload.files.bundleArchivePath).toContain("merge-readiness-bundle-1.tar.gz");
+    });
+  });
 });

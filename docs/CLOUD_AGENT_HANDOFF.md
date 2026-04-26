@@ -118,6 +118,11 @@ Schema validation expectations:
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
   - optional `--require-progressive-goals --minimum-goal-increase <n>` to require the next horizon to have at least `<n>` more planned actions than the source horizon
   - optional `--goal-policy-key <Hn->Hm>` to enforce a named transition policy from `goalPolicies` (for tagged action mix and stricter thresholds)
+  - optional `--require-goal-policy-coverage` to require transition policy coverage from the source horizon through `--until-horizon` before promotion
+  - optional `--required-policy-transitions H2->H3,H3->H4,...` to explicitly pin transitions that must have policy entries
+  - optional `--require-policy-tagged-targets` to require each covered transition policy to declare tagged action targets
+  - optional goal-policy coverage artifact:
+    - `evidence/goal-policy-coverage-<source>-to-<until>-*.json`
   - progressive-goals report artifact (when enabled):
     - `evidence/progressive-goals-check-<source>-to-<next>-*.json`
   - writes promotion manifest: `evidence/horizon-promotion-<source>-to-<next>-*.json`
@@ -126,6 +131,8 @@ Schema validation expectations:
   - executes `run:h2-closeout` then `promote:horizon --closeout-run-file ...` in one command
   - optional `--require-progressive-goals --minimum-goal-increase <n>` to enforce longer next-horizon action runway before promotion
   - optional `--goal-policy-key <Hn->Hm>` to require transition-specific action-tag minimums from `goalPolicies`
+  - optional `--require-goal-policy-coverage --goal-policy-coverage-until-horizon <H3|H4|H5>` to require policy coverage beyond the immediate transition
+  - optional `--required-policy-transitions <csv>` and `--require-policy-tagged-targets` for strict multi-transition policy gating
   - writes unified run manifest: `evidence/h2-promotion-run-*.json`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`

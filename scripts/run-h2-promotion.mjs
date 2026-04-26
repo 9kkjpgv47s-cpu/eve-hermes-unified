@@ -30,6 +30,10 @@ function parseArgs(argv) {
     requireProgressiveGoals: false,
     minimumGoalIncrease: 1,
     goalPolicyKey: "",
+    requireGoalPolicyCoverage: false,
+    goalPolicyCoverageOut: "",
+    requiredPolicyTransitions: "",
+    requirePolicyTaggedTargets: false,
     progressiveGoalsOut: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -100,14 +104,13 @@ function parseArgs(argv) {
     } else if (arg === "--minimum-goal-increase") {
       options.minimumGoalIncrease = Number(value ?? "1");
       index += 1;
-    } else if (arg === "--min-action-growth-factor") {
-      options.minActionGrowthFactor = Number(value ?? "1");
-      index += 1;
-    } else if (arg === "--min-pending-next-actions") {
-      options.minPendingNextActions = Number(value ?? "1");
-      index += 1;
     } else if (arg === "--goal-policy-key") {
       options.goalPolicyKey = value ?? "";
+      index += 1;
+    } else if (arg === "--require-goal-policy-coverage") {
+      options.requireGoalPolicyCoverage = true;
+    } else if (arg === "--goal-policy-coverage-out") {
+      options.goalPolicyCoverageOut = value ?? "";
       index += 1;
     } else if (arg === "--progressive-goals-out") {
       options.progressiveGoalsOut = value ?? "";
@@ -239,6 +242,10 @@ async function main() {
   const progressiveGoalsOut = path.resolve(
     options.progressiveGoalsOut ||
       path.join(evidenceDir, `progressive-horizon-goals-H2-to-${nextHorizon}-${runStamp}.json`),
+  );
+  const goalPolicyCoverageOut = path.resolve(
+    options.goalPolicyCoverageOut ||
+      path.join(evidenceDir, `goal-policy-coverage-H2-to-${nextHorizon}-${runStamp}.json`),
   );
 
   const failures = [];
@@ -385,6 +392,10 @@ async function main() {
     if (isNonEmptyString(options.goalPolicyKey)) {
       promoteArgv.push("--goal-policy-key", options.goalPolicyKey);
     }
+    if (options.requireGoalPolicyCoverage) {
+      promoteArgv.push("--require-goal-policy-coverage");
+      promoteArgv.push("--goal-policy-coverage-out", goalPolicyCoverageOut);
+    }
     if (options.requireActiveNextHorizon) {
       promoteArgv.push("--require-active-next-horizon");
     }
@@ -415,6 +426,7 @@ async function main() {
       closeoutRunOut,
       horizonPromotionOut,
       progressiveGoalsOut,
+      goalPolicyCoverageOut: options.requireGoalPolicyCoverage ? goalPolicyCoverageOut : null,
     },
     checks: {
       evidenceSelectionMode,
@@ -432,6 +444,11 @@ async function main() {
         ? options.minimumGoalIncrease
         : null,
       goalPolicyKey: isNonEmptyString(options.goalPolicyKey) ? options.goalPolicyKey : null,
+      requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
+      goalPolicyCoveragePass:
+        options.requireGoalPolicyCoverage === true
+          ? horizonPromotionPayload?.checks?.goalPolicyCoveragePass === true
+          : null,
     },
     commands: {
       closeoutRun: closeoutRunCommand,

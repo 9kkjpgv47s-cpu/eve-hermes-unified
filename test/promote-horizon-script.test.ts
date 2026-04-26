@@ -417,4 +417,41 @@ describe("promote-horizon.mjs", () => {
       expect(payload.failures).toEqual([]);
     });
   });
+
+  it("enforces goal policy coverage gate when required", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--require-goal-policy-coverage",
+          "--goal-policy-key",
+          "H2->H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: { goalPolicyCoveragePass: boolean; requireGoalPolicyCoverage: boolean };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.goalPolicyCoveragePass).toBe(true);
+      expect(payload.checks.requireGoalPolicyCoverage).toBe(true);
+      expect(payload.failures).toEqual([]);
+    });
+  });
 });

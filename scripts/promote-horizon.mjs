@@ -26,6 +26,11 @@ function parseArgs(argv) {
     requireProgressiveGoals: false,
     minimumGoalIncrease: 1,
     goalPolicyKey: "",
+    requireGoalPolicyCoverage: false,
+    goalPolicyCoverageOut: "",
+    goalPolicyCoverageUntilHorizon: "H5",
+    requirePolicyTaggedTargets: false,
+    requirePositivePendingPolicyMin: false,
     progressiveGoalsOut: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -79,6 +84,18 @@ function parseArgs(argv) {
     } else if (arg === "--goal-policy-key") {
       options.goalPolicyKey = value ?? "";
       index += 1;
+    } else if (arg === "--require-goal-policy-coverage") {
+      options.requireGoalPolicyCoverage = true;
+    } else if (arg === "--goal-policy-coverage-out") {
+      options.goalPolicyCoverageOut = value ?? "";
+      index += 1;
+    } else if (arg === "--goal-policy-coverage-until-horizon") {
+      options.goalPolicyCoverageUntilHorizon = value ?? "";
+      index += 1;
+    } else if (arg === "--require-policy-tagged-targets") {
+      options.requirePolicyTaggedTargets = true;
+    } else if (arg === "--require-positive-pending-policy-min") {
+      options.requirePositivePendingPolicyMin = true;
     } else if (arg === "--progressive-goals-out") {
       options.progressiveGoalsOut = value ?? "";
       index += 1;
@@ -178,6 +195,13 @@ async function main() {
       path.join(
         evidenceDir,
         `progressive-goals-check-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`,
+      ),
+  );
+  const goalPolicyCoverageOut = path.resolve(
+    options.goalPolicyCoverageOut ||
+      path.join(
+        evidenceDir,
+        `goal-policy-coverage-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`,
       ),
   );
   const outPath = path.resolve(
@@ -284,8 +308,10 @@ async function main() {
 
   let closeoutCommand = null;
   let progressiveGoalsCommand = null;
+  let goalPolicyCoverageCommand = null;
   let closeoutPayload = null;
   let progressiveGoalsPayload = null;
+  let goalPolicyCoveragePayload = null;
   if (failures.length === 0 && !options.closeoutFile && closeoutRunFile.length === 0) {
     const closeoutArgv = [
       "node",
@@ -346,6 +372,38 @@ async function main() {
     progressiveGoalsPayload = await readJson(progressiveGoalsOut);
     if (progressiveGoalsCommand.code !== 0 || progressiveGoalsPayload?.pass !== true) {
       failures.push("progressive_goals_gate_failed");
+    }
+  }
+  if (failures.length === 0 && options.requireGoalPolicyCoverage) {
+    const coverageUntilHorizon = normalizeHorizon(
+      options.goalPolicyCoverageUntilHorizon,
+      "H5",
+    );
+    const goalPolicyCoverageArgv = [
+      "node",
+      "scripts/check-goal-policy-coverage.mjs",
+      "--horizon-status-file",
+      horizonStatusFile,
+      "--source-horizon",
+      sourceHorizon,
+      "--until-horizon",
+      coverageUntilHorizon,
+      "--out",
+      goalPolicyCoverageOut,
+    ];
+    if (isNonEmptyString(options.goalPolicyKey)) {
+      goalPolicyCoverageArgv.push("--required-policy-transitions", options.goalPolicyKey);
+    }
+    if (options.requirePolicyTaggedTargets) {
+      goalPolicyCoverageArgv.push("--require-tagged-policies");
+    }
+    if (options.requirePositivePendingPolicyMin) {
+      goalPolicyCoverageArgv.push("--require-positive-pending-min");
+    }
+    goalPolicyCoverageCommand = await runCommand(goalPolicyCoverageArgv, { timeoutMs: options.timeoutMs });
+    goalPolicyCoveragePayload = await readJson(goalPolicyCoverageOut);
+    if (goalPolicyCoverageCommand.code !== 0 || goalPolicyCoveragePayload?.pass !== true) {
+      failures.push("goal_policy_coverage_gate_failed");
     }
   }
 
@@ -426,6 +484,7 @@ async function main() {
       closeoutOut: options.closeoutFile ? null : closeoutOut,
       closeoutRunFile: closeoutRunFile || null,
       progressiveGoalsOut: options.requireProgressiveGoals ? progressiveGoalsOut : null,
+      goalPolicyCoverageOut: options.requireGoalPolicyCoverage ? goalPolicyCoverageOut : null,
       outPath,
       statusWritePath,
     },
@@ -447,6 +506,11 @@ async function main() {
         options.requireProgressiveGoals === true
           ? String(options.goalPolicyKey ?? "").trim() || null
           : null,
+      requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
+      goalPolicyCoveragePass:
+        options.requireGoalPolicyCoverage === true
+          ? goalPolicyCoveragePayload?.pass === true
+          : null,
       progressiveGoalsPass:
         options.requireProgressiveGoals === true
           ? progressiveGoalsPayload?.pass === true
@@ -458,6 +522,7 @@ async function main() {
     },
     commands: {
       closeout: closeoutCommand,
+      goalPolicyCoverage: goalPolicyCoverageCommand,
       progressiveGoals: progressiveGoalsCommand,
     },
     failures,

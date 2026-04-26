@@ -366,6 +366,10 @@ describe("run-h2-promotion.mjs", () => {
           "--allow-horizon-mismatch",
           "--skip-cutover-readiness",
           "--require-progressive-goals",
+          "--require-goal-policy-coverage",
+          "--required-policy-transitions",
+          "H2->H3",
+          "--require-policy-tagged-targets",
           "--goal-policy-key",
           "H2->H3",
         ],
@@ -374,11 +378,16 @@ describe("run-h2-promotion.mjs", () => {
       expect(result.code).toBe(0);
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
-        checks: { progressiveGoalsPass: boolean; goalPolicyKey: string | null };
+        checks: {
+          progressiveGoalsPass: boolean;
+          goalPolicyKey: string | null;
+          goalPolicyCoveragePass: boolean;
+        };
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks.progressiveGoalsPass).toBe(true);
       expect(payload.checks.goalPolicyKey).toBe("H2->H3");
+      expect(payload.checks.goalPolicyCoveragePass).toBe(true);
     });
   });
 
@@ -408,6 +417,10 @@ describe("run-h2-promotion.mjs", () => {
           "--allow-horizon-mismatch",
           "--skip-cutover-readiness",
           "--require-progressive-goals",
+          "--require-goal-policy-coverage",
+          "--required-policy-transitions",
+          "H2->H3",
+          "--require-policy-tagged-targets",
           "--goal-policy-key",
           "H2->H3",
         ],
@@ -427,6 +440,7 @@ describe("run-h2-promotion.mjs", () => {
           horizonPromotionPass: boolean;
           horizonAdvanced: boolean;
           progressiveGoalsPass: boolean;
+          goalPolicyCoveragePass: boolean;
         };
         failures: string[];
       };
@@ -435,6 +449,7 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.horizonPromotionPass).toBe(true);
       expect(payload.checks.horizonAdvanced).toBe(true);
       expect(payload.checks.progressiveGoalsPass).toBe(true);
+      expect(payload.checks.goalPolicyCoveragePass).toBe(true);
       expect(payload.failures).toEqual([]);
 
       const statusPayload = JSON.parse(await readFile(statusPath, "utf8")) as {
@@ -477,6 +492,10 @@ describe("run-h2-promotion.mjs", () => {
           "--allow-horizon-mismatch",
           "--skip-cutover-readiness",
           "--require-progressive-goals",
+          "--require-goal-policy-coverage",
+          "--required-policy-transitions",
+          "H2->H3",
+          "--require-policy-tagged-targets",
         ],
         { timeoutMs: 180_000 },
       );

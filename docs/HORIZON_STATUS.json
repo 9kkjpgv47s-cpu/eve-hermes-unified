@@ -212,6 +212,36 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H3->H4": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.2,
+        "minPendingNextActions": 2,
+        "requiredTaggedActionCounts": {
+          "policy-hardening": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "retirement": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
+      },
+      "H4->H5": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.1,
+        "minPendingNextActions": 2,
+        "requiredTaggedActionCounts": {
+          "automation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -349,6 +379,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal policy profiles and tagged H3 action runway so horizon promotion can enforce both runway growth and required capability categories."
+    },
+    {
+      "timestamp": "2026-04-26T23:07:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Added goal-policy coverage gate for future horizon transitions and promotion enforcement flags so operators can require policy-backed progression beyond the immediate transition."
     }
   ]
 }

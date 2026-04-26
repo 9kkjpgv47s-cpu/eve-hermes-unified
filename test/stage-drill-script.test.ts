@@ -372,9 +372,6 @@ describe("run-stage-drill.mjs", () => {
       if (result.code !== 0) {
         throw new Error(`stage-drill failed unexpectedly:\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
       }
-      if (result.code !== 0) {
-        throw new Error(`run-stage-drill failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
-      }
       expect(result.code).toBe(0);
 
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {

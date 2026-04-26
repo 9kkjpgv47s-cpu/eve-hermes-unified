@@ -38,6 +38,7 @@ npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
 npm run check:stage-promotion -- --target-stage canary
 npm run promote:stage -- --target-stage canary --dry-run
 npm run run:stage-drill -- --target-stage canary --dry-run
+npm run run:h2-drill-suite -- --dry-run --evidence-dir evidence
 npm run evaluate:auto-rollback-policy -- --stage canary --evidence-dir evidence
 npm run validate:all
 npm run cutover:stage -- canary

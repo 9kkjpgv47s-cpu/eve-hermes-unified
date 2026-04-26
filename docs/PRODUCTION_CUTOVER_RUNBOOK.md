@@ -247,3 +247,35 @@ Useful flags:
 - `--dry-run`: validate promotion/readiness and rollback policy without mutating stage env values.
 - `--allow-horizon-mismatch`: bypass horizon-target matching for CI/test-only workflows.
 - `--auto-apply-rollback`: if policy action is `rollback`, execute Eve-safe rollback automatically.
+
+## H2 Drill Suite Orchestrator (Canary + Majority + Rollback Simulation)
+
+Use a single command to run the full H2 drill sequence:
+1) canary hold-path drill
+2) majority hold-path drill
+3) rollback-trigger simulation drill
+
+```bash
+npm run run:h2-drill-suite -- \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --runtime-env-file "$HOME/.openclaw/run/gateway.env" \
+  --canary-chats "100,200" \
+  --majority-percent "90" \
+  --dry-run
+```
+
+Behavior:
+- writes suite manifest: `evidence/h2-drill-suite-*.json`
+- writes per-step drill reports:
+  - `evidence/canary-stage-drill-*.json`
+  - `evidence/majority-stage-drill-*.json`
+  - `evidence/rollback-sim-stage-drill-*.json`
+- returns non-zero if canary/majority hold-path checks fail or rollback simulation does not trigger as expected
+
+Key controls:
+- `--skip-majority`
+- `--skip-rollback-simulation`
+- `--strict-horizon-target`
+- `--rollback-force-min-success-rate <value>` (default `1.01`) to force a rollback simulation trigger
+- `--auto-apply-rollback` to execute rollback during simulation when policy triggers

@@ -80,6 +80,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run promote:stage -- --target-stage <canary|majority|full> --dry-run`
 - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
 - `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence --dry-run`
+- `npm run run:h2-drill-suite -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --dry-run`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -113,6 +114,10 @@ Schema validation expectations:
 - staged drill orchestration can evaluate promotion + rollback policy in one command:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence`
   - add `--auto-apply-rollback` only for supervised incident simulation
+- h2 suite orchestration can run canary + majority + rollback-trigger simulation in one command:
+  - `npm run run:h2-drill-suite -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json`
+  - adds suite manifest: `evidence/h2-drill-suite-*.json`
+  - use `--strict-horizon-target` when enforcing active-horizon stage matching during suite runs
 - validate a single file with:
   - `npm run validate:manifest-schema -- --type release-readiness --file <path>`
   - `npm run validate:manifest-schema -- --type merge-bundle --file <path>`

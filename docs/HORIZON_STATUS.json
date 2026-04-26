@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T15:58:00Z",
+  "updatedAtIso": "2026-04-26T18:35:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with canary drill completed and a unified stage-drill executor in place for promotion plus rollback-policy evidence.",
+  "summary": "H2 progressive traffic enablement is active with canary/majority drill suite automation implemented and rollback-simulation evidence generation centralized.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -85,7 +85,7 @@
       "id": "h2-action-2",
       "summary": "Run majority promotion readiness drill and confirm policy gate behavior under threshold breaches.",
       "targetHorizon": "H2",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "h2-action-3",
@@ -96,6 +96,12 @@
     {
       "id": "h2-action-4",
       "summary": "Run unified stage drill command for canary and majority paths so promotion and rollback policy evidence are emitted in one operation.",
+      "targetHorizon": "H2",
+      "status": "completed"
+    },
+    {
+      "id": "h2-action-5",
+      "summary": "Run consolidated H2 drill suite command that emits canary hold, majority hold, and rollback-simulation evidence in a single report.",
       "targetHorizon": "H2",
       "status": "completed"
     }
@@ -117,7 +123,7 @@
     },
     "H2": {
       "status": "in_progress",
-      "summary": "Canary drill and rollback-policy simulation are complete; majority drill execution and threshold calibration are in progress."
+      "summary": "Canary and majority drills are automated under a single suite command; threshold calibration and supervised rollback auto-apply simulation remain in progress."
     },
     "H3": {
       "status": "planned",
@@ -180,6 +186,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Unified stage drill executor added so one command runs promotion gating and auto-rollback policy evaluation with combined evidence output."
+    },
+    {
+      "timestamp": "2026-04-26T18:35:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Added H2 drill suite runner to execute canary hold, majority hold, and rollback-simulation drills with a unified suite report artifact."
     }
   ]
 }

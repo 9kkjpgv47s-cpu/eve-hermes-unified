@@ -67,7 +67,7 @@ Mitigations:
 - Stage change verification hook before traffic promotion.
 - Tune thresholds using soak/failure evidence and production baselines.
 
-Operator drill command (single execution path):
+Operator drill commands (single execution paths):
 
 ```bash
 npm run run:stage-drill -- \
@@ -83,6 +83,19 @@ Expected artifacts:
 - `evidence/stage-promotion-execution-*.json`
 - `evidence/auto-rollback-policy-*.json`
 - `evidence/stage-drill-<stage>-*.json`
+
+H2 drill-suite command (canary + majority + rollback simulation):
+
+```bash
+npm run run:h2-drill-suite -- \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --runtime-env-file "$HOME/.openclaw/run/gateway.env" \
+  --dry-run
+```
+
+Expected drill-suite artifact:
+- `evidence/h2-drill-suite-*.json`
 
 ### Horizon H3 - Runtime Durability and Policy Maturity
 

@@ -19,6 +19,7 @@
     "validate:horizon-closeout": "node ./scripts/validate-horizon-closeout.mjs",
     "evaluate:auto-rollback-policy": "node ./scripts/evaluate-auto-rollback-policy.mjs",
     "run:stage-drill": "node ./scripts/run-stage-drill.mjs",
+    "run:h2-drill-suite": "node ./scripts/run-h2-drill-suite.mjs",
     "validate:manifest-schema": "node ./scripts/validate-manifest-schema.mjs",
     "verify:merge-bundle": "node ./scripts/verify-merge-bundle.mjs",
     "check:stage-promotion-readiness": "node ./scripts/check-stage-promotion-readiness.mjs",

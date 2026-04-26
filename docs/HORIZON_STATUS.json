@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T19:52:00Z",
+  "updatedAtIso": "2026-04-26T21:28:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, and supervised rollback simulation evidence generation.",
+  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, supervised rollback simulation evidence generation, and a machine-checkable H2 closeout gate.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -122,6 +122,12 @@
       "summary": "Execute supervised rollback auto-apply simulation with calibrated thresholds and emit a unified evidence artifact verifying rollback trigger and Eve-safe shadow restoration.",
       "targetHorizon": "H2",
       "status": "completed"
+    },
+    {
+      "id": "h2-action-9",
+      "summary": "Add an executable H2 closeout gate that validates H2-specific evidence artifacts (drill suite, threshold calibration, supervised rollback simulation) before promotion to H3.",
+      "targetHorizon": "H2",
+      "status": "completed"
     }
   ],
   "promotionReadiness": {
@@ -141,7 +147,7 @@
     },
     "H2": {
       "status": "in_progress",
-      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, and both threshold calibration and supervised rollback auto-apply simulation now have executable artifact-producing command paths."
+      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, and H2-specific closeout evidence can now be machine-validated."
     },
     "H3": {
       "status": "planned",
@@ -222,6 +228,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added rollback threshold calibration and supervised rollback simulation commands with machine-readable evidence outputs and test coverage for calibrated forcing + Eve-safe shadow restoration checks."
+    },
+    {
+      "timestamp": "2026-04-26T21:28:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Added H2 closeout evidence validation for horizon-scoped required artifacts and a dedicated validate:h2-closeout command to gate H2->H3 readiness checks."
     }
   ]
 }

@@ -23,6 +23,10 @@ function normalizeStatusId(value) {
   return String(value ?? "").trim().toUpperCase();
 }
 
+function normalizeHorizonId(value) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
 function parseArgs(argv) {
   const options = {
     file: "",
@@ -118,6 +122,20 @@ export function validateHorizonStatus(payload) {
       }
       if (typeof item.required !== "boolean") {
         errors.push(`${prefix}.required must be boolean`);
+      }
+      if (item.horizons !== undefined) {
+        if (!Array.isArray(item.horizons) || item.horizons.length === 0) {
+          errors.push(`${prefix}.horizons must be a non-empty array when provided`);
+        } else {
+          for (const [horizonIndex, horizonValue] of item.horizons.entries()) {
+            const normalizedHorizon = normalizeHorizonId(horizonValue);
+            if (!VALID_HORIZONS.includes(normalizedHorizon)) {
+              errors.push(
+                `${prefix}.horizons[${String(horizonIndex)}] must be one of: ${VALID_HORIZONS.join(", ")}`,
+              );
+            }
+          }
+        }
       }
     });
   }

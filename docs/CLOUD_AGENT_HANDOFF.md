@@ -76,6 +76,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run verify:merge-bundle -- --evidence-dir evidence --latest`
 - `npm run validate:horizon-status`
 - `npm run validate:horizon-closeout -- --horizon H1 --target-next H2`
+- `npm run validate:h2-closeout`
 - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - `npm run promote:stage -- --target-stage <canary|majority|full> --dry-run`
 - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
@@ -101,6 +102,9 @@ Schema validation expectations:
   - `npm run validate:horizon-status`
 - horizon closeout readiness is machine-validated via:
   - `npm run validate:horizon-closeout -- --horizon <H1|H2|H3|H4|H5> --target-next <H2|H3|H4|H5>`
+- dedicated H2 closeout gate:
+  - `npm run validate:h2-closeout`
+  - enforces H2-scoped required evidence (`h2-drill-suite`, rollback threshold calibration, supervised rollback simulation) when listed in `requiredEvidence`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - auto-rollback policy decisions can be machine-evaluated with:

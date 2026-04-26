@@ -22,6 +22,33 @@ function normalizeHorizon(value) {
   return HORIZON_SEQUENCE.includes(normalized) ? normalized : "";
 }
 
+function evidenceEntryAppliesToHorizon(entry, targetHorizon) {
+  if (!entry || typeof entry !== "object") {
+    return false;
+  }
+  const target = String(targetHorizon ?? "").trim().toUpperCase();
+  if (!target) {
+    return false;
+  }
+  const scopedHorizons = Array.isArray(entry.horizons)
+    ? entry.horizons
+    : Array.isArray(entry.targetHorizons)
+      ? entry.targetHorizons
+      : [];
+  if (scopedHorizons.length > 0) {
+    return scopedHorizons
+      .map((value) => String(value ?? "").trim().toUpperCase())
+      .includes(target);
+  }
+  const singleScope = String(entry.horizon ?? entry.targetHorizon ?? "all")
+    .trim()
+    .toUpperCase();
+  if (singleScope === "ALL" || singleScope.length === 0) {
+    return true;
+  }
+  return singleScope === target;
+}
+
 function parseArgs(argv) {
   const options = {
     horizon: "",
@@ -156,6 +183,15 @@ function commandVerificationType(command) {
   if (command === "npm run validate:cutover-readiness") {
     return "pass-only";
   }
+  if (command === "npm run run:h2-drill-suite") {
+    return "h2-drill-suite";
+  }
+  if (command === "npm run calibrate:rollback-thresholds") {
+    return "rollback-threshold-calibration";
+  }
+  if (command === "npm run run:supervised-rollback-simulation") {
+    return "supervised-rollback-simulation";
+  }
   if (command === "npm run validate:initial-scope") {
     return "pass-only";
   }
@@ -195,6 +231,64 @@ function evaluateCommandPayload(command, payload) {
     }
     if (payload.pass !== true) {
       checks.push("merge_bundle_validation_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h2-drill-suite") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h2_drill_suite_not_passed");
+    }
+    if (payload?.checks?.canaryHoldPass !== true) {
+      checks.push("h2_drill_canary_hold_failed");
+    }
+    if (payload?.checks?.majorityHoldPass !== true) {
+      checks.push("h2_drill_majority_hold_failed");
+    }
+    if (payload?.checks?.rollbackSimulationPass !== true) {
+      checks.push("h2_drill_rollback_simulation_failed");
+    }
+    if (payload?.checks?.rollbackSimulationTriggered !== true) {
+      checks.push("h2_drill_rollback_simulation_not_triggered");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "rollback-threshold-calibration") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("rollback_threshold_calibration_not_passed");
+    }
+    const sampleCount = Number(payload?.selection?.selectedSampleCount ?? payload?.samples?.length ?? 0);
+    if (!Number.isFinite(sampleCount) || sampleCount < 1) {
+      checks.push("rollback_threshold_calibration_samples_missing");
+    }
+    if (!Array.isArray(payload?.calibration?.recommendedPolicyArgs)) {
+      checks.push("rollback_threshold_calibration_policy_args_missing");
+    }
+    if (
+      !payload?.calibration?.recommendedThresholds ||
+      typeof payload.calibration.recommendedThresholds !== "object"
+    ) {
+      checks.push("rollback_threshold_calibration_thresholds_missing");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "supervised-rollback-simulation") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("supervised_rollback_simulation_not_passed");
+    }
+    if (payload?.checks?.rollbackTriggered !== true) {
+      checks.push("supervised_rollback_not_triggered");
+    }
+    if (payload?.checks?.rollbackApplied !== true) {
+      checks.push("supervised_rollback_not_applied");
+    }
+    if (payload?.checks?.shadowRestored !== true) {
+      checks.push("supervised_rollback_shadow_not_restored");
+    }
+    if (payload?.checks?.calibrationPass !== true) {
+      checks.push("supervised_rollback_calibration_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -305,7 +399,11 @@ async function main() {
     const evidenceFiles = await listTopLevelFiles(evidenceDir);
     const requiredEvidence = Array.isArray(horizonStatus.requiredEvidence)
       ? horizonStatus.requiredEvidence.filter(
-          (entry) => entry && typeof entry === "object" && entry.required === true,
+          (entry) =>
+            entry &&
+            typeof entry === "object" &&
+            entry.required === true &&
+            evidenceEntryAppliesToHorizon(entry, targetHorizon),
         )
       : [];
     requiredEvidenceResults = [];

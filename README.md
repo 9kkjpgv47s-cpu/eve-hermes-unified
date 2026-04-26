@@ -35,6 +35,7 @@ npm run verify:merge-bundle
 npm run validate:manifest-schemas -- --latest-only
 npm run validate:horizon-status
 npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
+npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
 npm run check:stage-promotion -- --target-stage canary
 npm run promote:stage -- --target-stage canary --dry-run
 npm run run:stage-drill -- --target-stage canary --dry-run --evidence-selection-mode latest-passing

@@ -335,3 +335,17 @@ Behavior:
 Safety/testing flags:
 - `--dry-run` to evaluate flow without applying rollback writes
 - `--skip-cutover-readiness` for isolated CI tests where dispatch readiness probes are unavailable
+
+H2 closeout evidence gate:
+
+```bash
+npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
+```
+
+Expected result:
+- exit code `0`
+- output manifest: `evidence/horizon-closeout-H2-*.json`
+- required H2 evidence passes in the manifest:
+  - `h2-drill-suite`
+  - `h2-rollback-threshold-calibration`
+  - `h2-supervised-rollback-simulation`

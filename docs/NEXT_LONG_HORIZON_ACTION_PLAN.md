@@ -180,6 +180,8 @@ Mitigations:
 4. Capture promotion/rollback decision traces as required evidence for H2 closeout criteria draft from:
    - `evidence/rollback-threshold-calibration-*.json`
    - `evidence/supervised-rollback-simulation-*.json`
+5. Enforce H2 closeout evidence via executable gate:
+   - `npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json`
 
 ## Horizon Closeout Gate
 

@@ -12,6 +12,7 @@ import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapte
 import { registerDefaultCapabilityExecutors } from "../src/runtime/default-capability-handlers.js";
 import {
   buildCapabilityPolicyFromConfig,
+  createCapabilityPolicy,
   type CapabilityPolicyConfig,
 } from "../src/runtime/capability-policy.js";
 
@@ -243,6 +244,8 @@ describe("UnifiedCapabilityEngine", () => {
       denyCapabilities: [],
       allowedChatIds: [],
       deniedChatIds: [],
+      allowCapabilityChats: {},
+      denyCapabilityChats: {},
     });
     const engine = new UnifiedCapabilityEngine(registry, {
       memoryStore,
@@ -290,6 +293,8 @@ describe("UnifiedCapabilityEngine", () => {
       denyCapabilities: [],
       allowedChatIds: ["chat-7"],
       deniedChatIds: [],
+      allowCapabilityChats: {},
+      denyCapabilityChats: {},
     };
     const engine = new UnifiedCapabilityEngine(registry, {
       memoryStore,
@@ -318,5 +323,110 @@ describe("UnifiedCapabilityEngine", () => {
     expect(result.capabilityExecution?.status).toBe("pass");
     expect(result.capabilityExecution?.failureClass).toBe("none");
     expect(result.response.failureClass).toBe("none");
+  });
+
+  it("denies capability execution when capability-specific chat policy blocks chat", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(
+      path.join(os.tmpdir(), "unified-capability-policy-chat-scope-deny.json"),
+    );
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => fakeLaneState("hermes", "should_not_run"),
+      memoryStore,
+    });
+    const policy = createCapabilityPolicy({
+      defaultMode: "allow",
+      allowCapabilities: [],
+      denyCapabilities: [],
+      allowedChatIds: [],
+      deniedChatIds: [],
+      allowCapabilityChats: {},
+      denyCapabilityChats: {
+        summarize_state: ["chat-9"],
+      },
+    });
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("hermes", "should_not_run"),
+      policy,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "hermes" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "chat-9",
+      messageId: "901",
+      text: "@cap summarize_state system-overview",
+    });
+
+    expect(result.capabilityExecution?.status).toBe("failed");
+    expect(result.capabilityExecution?.reason).toBe("capability_chat_denied_by_policy");
+    expect(result.capabilityExecution?.failureClass).toBe("policy_failure");
+  });
+
+  it("allows capability execution only for configured chat allowlist when present", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(
+      path.join(os.tmpdir(), "unified-capability-policy-chat-scope-allow.json"),
+    );
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => fakeLaneState("hermes", "allowed_by_cap_chat"),
+      memoryStore,
+    });
+    const policy = createCapabilityPolicy({
+      defaultMode: "allow",
+      allowCapabilities: [],
+      denyCapabilities: [],
+      allowedChatIds: [],
+      deniedChatIds: [],
+      allowCapabilityChats: {
+        summarize_state: ["chat-42"],
+      },
+      denyCapabilityChats: {},
+    });
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("hermes", "allowed_by_cap_chat"),
+      policy,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "hermes" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const denied = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "chat-0",
+      messageId: "902",
+      text: "@cap summarize_state system-overview",
+    });
+    expect(denied.capabilityExecution?.status).toBe("failed");
+    expect(denied.capabilityExecution?.reason).toBe("chat_not_in_capability_allowlist");
+
+    const allowed = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "chat-42",
+      messageId: "903",
+      text: "@cap summarize_state system-overview",
+    });
+    expect(allowed.capabilityExecution?.status).toBe("pass");
+    expect(allowed.capabilityExecution?.failureClass).toBe("none");
   });
 });

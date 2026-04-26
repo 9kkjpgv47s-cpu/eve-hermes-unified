@@ -2,6 +2,7 @@ import type { LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
 import type { UnifiedMemoryStoreKind } from "../memory/unified-memory-store.js";
+import { createCapabilityPolicyConfigFromEnv, parseCapabilityChatMaps } from "../runtime/capability-policy.js";
 
 export type UnifiedRuntimeEnvConfig = {
   eveDispatchScript: string;
@@ -10,13 +11,21 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
+  unifiedDispatchAuditLogPath: string;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
     denyCapabilities: string[];
     allowedChatIds: string[];
     deniedChatIds: string[];
+    allowCapabilityChats: Record<string, string[]>;
+    denyCapabilityChats: Record<string, string[]>;
   };
+  preflight: {
+    enabled: boolean;
+    strict: boolean;
+  };
+  auditLogPath: string;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -96,50 +105,94 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
+  const unifiedDispatchAuditLogPath =
+    firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
+    "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const capabilityDefaultModeRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_POLICY_MODE",
+    "CAPABILITY_POLICY_MODE",
+    "UNIFIED_CAPABILITY_POLICY_DEFAULT",
+    "CAPABILITY_POLICY_DEFAULT",
+  ]);
   const capabilityDefaultMode = parseCapabilityDefaultMode(
-    firstDefined(reader, [
-      "UNIFIED_CAPABILITY_POLICY_MODE",
-      "CAPABILITY_POLICY_MODE",
-      "UNIFIED_CAPABILITY_POLICY_DEFAULT",
-      "CAPABILITY_POLICY_DEFAULT",
-    ]),
+    capabilityDefaultModeRaw,
   );
+  const capabilityAllowListRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_ALLOWLIST",
+    "CAPABILITY_ALLOWLIST",
+    "UNIFIED_CAPABILITY_ALLOW_LIST",
+    "CAPABILITY_ALLOW_LIST",
+    "UNIFIED_CAPABILITY_ALLOWED_IDS",
+    "CAPABILITY_ALLOWED_IDS",
+  ]);
   const capabilityAllowList = parseCsvList(
-    firstDefined(reader, [
-      "UNIFIED_CAPABILITY_ALLOWLIST",
-      "CAPABILITY_ALLOWLIST",
-      "UNIFIED_CAPABILITY_ALLOW_LIST",
-      "CAPABILITY_ALLOW_LIST",
-      "UNIFIED_CAPABILITY_ALLOWED_IDS",
-      "CAPABILITY_ALLOWED_IDS",
-    ]),
+    capabilityAllowListRaw,
   );
+  const capabilityDenyListRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_DENYLIST",
+    "CAPABILITY_DENYLIST",
+    "UNIFIED_CAPABILITY_DENY_LIST",
+    "CAPABILITY_DENY_LIST",
+    "UNIFIED_CAPABILITY_DENIED_IDS",
+    "CAPABILITY_DENIED_IDS",
+  ]);
   const capabilityDenyList = parseCsvList(
-    firstDefined(reader, [
-      "UNIFIED_CAPABILITY_DENYLIST",
-      "CAPABILITY_DENYLIST",
-      "UNIFIED_CAPABILITY_DENY_LIST",
-      "CAPABILITY_DENY_LIST",
-      "UNIFIED_CAPABILITY_DENIED_IDS",
-      "CAPABILITY_DENIED_IDS",
-    ]),
+    capabilityDenyListRaw,
   );
+  const capabilityAllowedChatIdsRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_CHAT_ALLOWLIST",
+    "CAPABILITY_CHAT_ALLOWLIST",
+    "UNIFIED_CAPABILITY_ALLOWED_CHAT_IDS",
+    "CAPABILITY_ALLOWED_CHAT_IDS",
+  ]);
   const capabilityAllowedChatIds = parseCsvList(
-    firstDefined(reader, [
-      "UNIFIED_CAPABILITY_CHAT_ALLOWLIST",
-      "CAPABILITY_CHAT_ALLOWLIST",
-      "UNIFIED_CAPABILITY_ALLOWED_CHAT_IDS",
-      "CAPABILITY_ALLOWED_CHAT_IDS",
-    ]),
+    capabilityAllowedChatIdsRaw,
   );
+  const capabilityDeniedChatIdsRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_CHAT_DENYLIST",
+    "CAPABILITY_CHAT_DENYLIST",
+    "UNIFIED_CAPABILITY_DENIED_CHAT_IDS",
+    "CAPABILITY_DENIED_CHAT_IDS",
+  ]);
   const capabilityDeniedChatIds = parseCsvList(
+    capabilityDeniedChatIdsRaw,
+  );
+  const capabilityAllowChatMap = parseCapabilityChatMaps(
     firstDefined(reader, [
-      "UNIFIED_CAPABILITY_CHAT_DENYLIST",
-      "CAPABILITY_CHAT_DENYLIST",
-      "UNIFIED_CAPABILITY_DENIED_CHAT_IDS",
-      "CAPABILITY_DENIED_CHAT_IDS",
+      "UNIFIED_CAPABILITY_PER_CAPABILITY_CHAT_ALLOWLIST",
+      "CAPABILITY_PER_CAPABILITY_CHAT_ALLOWLIST",
+      "UNIFIED_CAPABILITY_ALLOW_CHAT_MAP",
+      "CAPABILITY_ALLOW_CHAT_MAP",
     ]),
   );
+  const capabilityDenyChatMap = parseCapabilityChatMaps(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_PER_CAPABILITY_CHAT_DENYLIST",
+      "CAPABILITY_PER_CAPABILITY_CHAT_DENYLIST",
+      "UNIFIED_CAPABILITY_DENY_CHAT_MAP",
+      "CAPABILITY_DENY_CHAT_MAP",
+    ]),
+  );
+  const capabilityPolicyBaseline = createCapabilityPolicyConfigFromEnv({
+    defaultModeRaw: capabilityDefaultModeRaw,
+    allowCapabilitiesRaw: capabilityAllowListRaw,
+    denyCapabilitiesRaw: capabilityDenyListRaw,
+    allowedChatIdsRaw: capabilityAllowedChatIdsRaw,
+    deniedChatIdsRaw: capabilityDeniedChatIdsRaw,
+    allowCapabilityChatsRaw: undefined,
+    denyCapabilityChatsRaw: undefined,
+  });
+  const preflightEnabled = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_PREFLIGHT_ENABLED", "PREFLIGHT_ENABLED"]),
+    true,
+  );
+  const preflightStrict = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_PREFLIGHT_STRICT", "PREFLIGHT_STRICT"]),
+    true,
+  );
+  const auditLogPath =
+    firstDefined(reader, ["UNIFIED_AUDIT_LOG_PATH", "AUDIT_LOG_PATH", "UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
+    "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -161,13 +214,21 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
+    unifiedDispatchAuditLogPath,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
-      allowCapabilities: capabilityAllowList,
-      denyCapabilities: capabilityDenyList,
-      allowedChatIds: capabilityAllowedChatIds,
-      deniedChatIds: capabilityDeniedChatIds,
+      allowCapabilities: capabilityPolicyBaseline.allowCapabilities,
+      denyCapabilities: capabilityPolicyBaseline.denyCapabilities,
+      allowedChatIds: capabilityPolicyBaseline.allowedChatIds,
+      deniedChatIds: capabilityPolicyBaseline.deniedChatIds,
+      allowCapabilityChats: capabilityAllowChatMap,
+      denyCapabilityChats: capabilityDenyChatMap,
     },
+    preflight: {
+      enabled: preflightEnabled,
+      strict: preflightStrict,
+    },
+    auditLogPath,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

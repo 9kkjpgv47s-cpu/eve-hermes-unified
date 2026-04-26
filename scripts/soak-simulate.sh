@@ -10,9 +10,9 @@ report="$OUT_DIR/soak-$(date +%Y%m%d-%H%M%S).jsonl"
 
 for i in $(seq 1 "$iterations"); do
   if (( i % 3 == 0 )); then
-    text="@hermes summarize state $i"
+    text="@cap summarize_state staged-health-$i"
   elif (( i % 2 == 0 )); then
-    text="@cursor check status $i"
+    text="@hermes status $i"
   else
     text="normal message $i"
   fi

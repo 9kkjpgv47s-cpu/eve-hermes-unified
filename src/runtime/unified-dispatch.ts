@@ -132,10 +132,11 @@ export async function dispatchUnifiedMessage(
         policyVersion: runtime.routerConfig.policyVersion,
         failClosed: true,
       };
-      return buildResult(envelope, routing, capabilityState, capabilityState, {
+      const result = buildResult(envelope, routing, capabilityState, capabilityState, {
         capabilityDecision: validatedDecision,
         capabilityExecution: validatedExecution,
       });
+      return result;
     }
   }
 
@@ -160,7 +161,7 @@ export async function dispatchUnifiedMessage(
     }),
     envelope.traceId,
   );
-  return buildResult(envelope, routing, primaryState, fallbackState, {
+  const result = buildResult(envelope, routing, primaryState, fallbackState, {
     fallbackState,
     fallbackInfo: {
       attempted: true,
@@ -169,4 +170,5 @@ export async function dispatchUnifiedMessage(
       toLane: fallbackState.sourceLane,
     },
   });
+  return result;
 }

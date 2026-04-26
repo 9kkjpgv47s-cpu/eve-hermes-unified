@@ -4,6 +4,8 @@ export type CapabilityPolicyConfig = {
   denyCapabilities: string[];
   allowedChatIds: string[];
   deniedChatIds: string[];
+  allowCapabilityChats: Record<string, string[]>;
+  denyCapabilityChats: Record<string, string[]>;
 };
 
 export type CapabilityPolicy = {
@@ -63,12 +65,23 @@ export function parseCapabilityChatAllowlists(
   return mapping;
 }
 
+export function parseCapabilityChatMaps(raw: string | undefined): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.entries(parseCapabilityChatAllowlists(raw)).map(([capabilityId, chats]) => [
+      capabilityId,
+      [...chats.values()],
+    ]),
+  );
+}
+
 export function createCapabilityPolicyConfigFromEnv(input: {
   defaultModeRaw: string | undefined;
   allowCapabilitiesRaw: string | undefined;
   denyCapabilitiesRaw: string | undefined;
   allowedChatIdsRaw: string | undefined;
   deniedChatIdsRaw: string | undefined;
+  allowCapabilityChatsRaw: string | undefined;
+  denyCapabilityChatsRaw: string | undefined;
 }): CapabilityPolicyConfig {
   const defaultMode = input.defaultModeRaw?.trim().toLowerCase() === "deny" ? "deny" : "allow";
   const allowCapabilities = [...(parseCsvSet(input.allowCapabilitiesRaw) ?? [])].map((item) =>
@@ -79,12 +92,24 @@ export function createCapabilityPolicyConfigFromEnv(input: {
   );
   const allowedChatIds = [...(parseCsvSet(input.allowedChatIdsRaw) ?? [])];
   const deniedChatIds = [...(parseCsvSet(input.deniedChatIdsRaw) ?? [])];
+  const allowCapabilityChats = Object.fromEntries(
+    Object.entries(parseCapabilityChatAllowlists(input.allowCapabilityChatsRaw)).map(
+      ([capabilityId, chatIds]) => [capabilityId, [...chatIds.values()]],
+    ),
+  );
+  const denyCapabilityChats = Object.fromEntries(
+    Object.entries(parseCapabilityChatAllowlists(input.denyCapabilityChatsRaw)).map(
+      ([capabilityId, chatIds]) => [capabilityId, [...chatIds.values()]],
+    ),
+  );
   return {
     defaultMode,
     allowCapabilities,
     denyCapabilities,
     allowedChatIds,
     deniedChatIds,
+    allowCapabilityChats,
+    denyCapabilityChats,
   };
 }
 
@@ -93,6 +118,18 @@ export function createCapabilityPolicy(config: CapabilityPolicyConfig): Capabili
   const denyCapabilities = new Set(config.denyCapabilities.map((item) => normalizeCapabilityId(item)));
   const allowedChats = new Set(config.allowedChatIds.map((item) => item.trim()).filter(Boolean));
   const deniedChats = new Set(config.deniedChatIds.map((item) => item.trim()).filter(Boolean));
+  const allowCapabilityChats = new Map<string, Set<string>>(
+    Object.entries(config.allowCapabilityChats).map(([capabilityId, chats]) => [
+      normalizeCapabilityId(capabilityId),
+      new Set(chats.map((chatId) => chatId.trim()).filter(Boolean)),
+    ]),
+  );
+  const denyCapabilityChats = new Map<string, Set<string>>(
+    Object.entries(config.denyCapabilityChats).map(([capabilityId, chats]) => [
+      normalizeCapabilityId(capabilityId),
+      new Set(chats.map((chatId) => chatId.trim()).filter(Boolean)),
+    ]),
+  );
 
   return {
     authorize(input): CapabilityPolicyDecision {
@@ -101,8 +138,16 @@ export function createCapabilityPolicy(config: CapabilityPolicyConfig): Capabili
       if (deniedChats.has(input.chatId)) {
         return { allowed: false, reason: "chat_denied_by_policy" };
       }
+      const deniedCapabilityChats = denyCapabilityChats.get(capabilityId);
+      if (deniedCapabilityChats?.has(input.chatId)) {
+        return { allowed: false, reason: "capability_chat_denied_by_policy" };
+      }
       if (denyCapabilities.has(capabilityId)) {
         return { allowed: false, reason: "capability_denied_by_policy" };
+      }
+      const allowedCapabilityChats = allowCapabilityChats.get(capabilityId);
+      if (allowedCapabilityChats && !allowedCapabilityChats.has(input.chatId)) {
+        return { allowed: false, reason: "chat_not_in_capability_allowlist" };
       }
 
       if (config.defaultMode === "deny") {

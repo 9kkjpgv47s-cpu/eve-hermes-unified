@@ -11,6 +11,8 @@ import { UnifiedCapabilityEngine } from "../runtime/capability-engine.js";
 import { registerDefaultCapabilityExecutors } from "../runtime/default-capability-handlers.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { createCapabilityPolicy } from "../runtime/capability-policy.js";
+import { runRuntimePreflight } from "../runtime/preflight.js";
+import { appendDispatchAuditLog } from "../runtime/audit-log.js";
 
 function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
   let text = "";
@@ -79,6 +81,22 @@ async function main() {
     policy: capabilityPolicy,
   });
 
+  const preflightIssues = await runRuntimePreflight({
+    enabled: config.preflight.enabled,
+    strict: config.preflight.strict,
+    eveDispatchScript: config.eveDispatchScript,
+    eveDispatchResultPath: config.eveDispatchResultPath,
+    hermesLaunchCommand: config.hermesLaunchCommand,
+    unifiedMemoryStoreKind: config.unifiedMemoryStoreKind,
+    unifiedMemoryFilePath: config.unifiedMemoryFilePath,
+    auditEnabled: true,
+    auditLogPath: config.unifiedDispatchAuditLogPath,
+  });
+  if (preflightIssues.length > 0) {
+    const reasons = preflightIssues.join("; ");
+    throw new Error(`Runtime preflight failed: ${reasons}`);
+  }
+
   const runtime = {
     eveAdapter,
     hermesAdapter,
@@ -92,6 +110,7 @@ async function main() {
     messageId,
     text,
   });
+  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 

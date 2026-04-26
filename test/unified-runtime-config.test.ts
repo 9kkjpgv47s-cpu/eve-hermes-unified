@@ -106,4 +106,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.capabilityPolicy.allowedChatIds).toEqual(["100", "200"]);
     expect(config.capabilityPolicy.deniedChatIds).toEqual(["999"]);
   });
+
+  it("parses preflight and audit log controls", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_PREFLIGHT_ENABLED: "1",
+          UNIFIED_PREFLIGHT_STRICT: "0",
+          UNIFIED_AUDIT_LOG_PATH: "/tmp/unified-audit.jsonl",
+        }),
+      ),
+    );
+    expect(config.preflight.enabled).toBe(true);
+    expect(config.preflight.strict).toBe(false);
+    expect(config.auditLogPath).toBe("/tmp/unified-audit.jsonl");
+  });
 });

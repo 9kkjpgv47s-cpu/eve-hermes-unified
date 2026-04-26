@@ -2,6 +2,7 @@
 import { access, cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
 function parseArgs(argv) {
   const options = {
@@ -292,6 +293,15 @@ async function main() {
     copiedArtifacts,
     failures,
   };
+
+  const mergeManifestSchemaValidation = validateManifestSchema("merge-bundle", manifest);
+  if (!mergeManifestSchemaValidation.valid) {
+    failures.push(...mergeManifestSchemaValidation.errors.map((item) => `schema_invalid:${item}`));
+    manifest.pass = false;
+    manifest.checks.schemaValidation = mergeManifestSchemaValidation;
+  } else {
+    manifest.checks.schemaValidation = mergeManifestSchemaValidation;
+  }
 
   await mkdir(path.dirname(manifestPath), { recursive: true });
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");

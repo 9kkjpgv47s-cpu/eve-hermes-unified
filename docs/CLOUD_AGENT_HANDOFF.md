@@ -71,6 +71,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:release-readiness`
 - `npm run validate:initial-scope`
 - `npm run validate:merge-bundle`
+- `npm run validate:manifest-schemas`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -78,6 +79,15 @@ The merge bundle workflow writes:
 - bundle validation manifest in `evidence/merge-bundle-validation-*.json` (or `UNIFIED_MERGE_BUNDLE_MANIFEST_PATH`)
 - packaged bundle directory `evidence/merge-readiness-bundle-*`
 - compressed archive `evidence/merge-readiness-bundle-*.tar.gz`
+
+Schema validation expectations:
+- release-readiness, merge-bundle, and merge-bundle-validation manifests are validated before write.
+- re-validate latest schema-compatible manifests under `evidence/` with:
+  - `npm run validate:manifest-schemas`
+- validate a single file with:
+  - `npm run validate:manifest-schema -- --type release-readiness --file <path>`
+  - `npm run validate:manifest-schema -- --type merge-bundle --file <path>`
+  - `npm run validate:manifest-schema -- --type merge-bundle-validation --file <path>`
 
 By default, `npm run validate:merge-bundle` consumes latest existing passing release-readiness + initial-scope reports.
 Set `UNIFIED_MERGE_BUNDLE_RUN_RELEASE_READINESS=1` and/or `UNIFIED_MERGE_BUNDLE_RUN_INITIAL_SCOPE=1`

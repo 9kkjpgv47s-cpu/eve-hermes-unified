@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readdir, readFile, writeFile, mkdir, access } from "node:fs/promises";
 import path from "node:path";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
 function parseArgs(argv) {
   const options = {
@@ -265,6 +266,15 @@ async function main() {
     },
     failures,
   };
+
+  const schemaValidationResult = validateManifestSchema("release-readiness", payload);
+  if (!schemaValidationResult.valid) {
+    for (const issue of schemaValidationResult.errors) {
+      failures.push(`schema_validation_error:${issue}`);
+    }
+    payload.pass = false;
+  }
+  payload.schemaValidation = schemaValidationResult;
 
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

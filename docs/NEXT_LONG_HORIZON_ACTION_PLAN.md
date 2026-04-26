@@ -29,7 +29,7 @@ Goal: promote initial-scope assets into repeatable post-merge operating workflow
 Workstreams:
 - Standardize merge bundle as release artifact input for operations.
 - Add CI job parity for `check`, `test`, `build`, `validate:all`, `validate:release-readiness`, `validate:initial-scope`, and `validate:merge-bundle`.
-- Define release candidate manifest policy (required fields + pass criteria).
+- Define release candidate manifest policy (required fields + pass criteria) and enforce via executable schema validation gate.
 
 Exit evidence:
 - CI run with all required validation jobs passing.

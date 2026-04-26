@@ -355,7 +355,7 @@ describe("run-h2-drill-suite.mjs", () => {
           canaryHoldPass: boolean;
           majorityHoldPass: boolean | null;
           rollbackSimulationPass: boolean | null;
-          rollbackSimulationTriggered: boolean;
+          rollbackSimulationTriggered: boolean | null;
         };
         failures: string[];
       };

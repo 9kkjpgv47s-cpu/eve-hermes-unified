@@ -173,9 +173,13 @@ Mitigations:
 ## Immediate Next Actions (Current Execution Slice - H2)
 
 1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report.
-2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency).
-3. Execute supervised rollback auto-apply simulation with `run:stage-drill -- --auto-apply-rollback` in a controlled environment.
-4. Capture promotion/rollback decision traces as required evidence for H2 closeout criteria draft.
+2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:
+   - `npm run calibrate:rollback-thresholds -- --stage majority --evidence-dir evidence`
+3. Execute supervised rollback auto-apply simulation with calibrated thresholds in a controlled environment:
+   - `npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
+4. Capture promotion/rollback decision traces as required evidence for H2 closeout criteria draft from:
+   - `evidence/rollback-threshold-calibration-*.json`
+   - `evidence/supervised-rollback-simulation-*.json`
 
 ## Horizon Closeout Gate
 

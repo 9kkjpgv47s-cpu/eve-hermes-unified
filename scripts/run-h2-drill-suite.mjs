@@ -92,6 +92,11 @@ function parseArgs(argv) {
   return options;
 }
 
+function normalizeEvidenceSelectionMode(value, fallback = "latest") {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "latest" || normalized === "latest-passing" ? normalized : fallback;
+}
+
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -266,6 +271,7 @@ function isRollbackSimulationPassing(step, autoApplyRollback) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  const evidenceSelectionMode = normalizeEvidenceSelectionMode(options.evidenceSelectionMode, "latest");
   const evidenceDir = path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
   const horizonStatusFile = path.resolve(
     options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
@@ -298,13 +304,16 @@ async function main() {
     failures.push("invalid_rollback_force_min_success_rate");
   }
   if (
-    options.evidenceSelectionMode !== "latest" &&
-    options.evidenceSelectionMode !== "latest-passing"
+    String(options.evidenceSelectionMode ?? "").trim().length > 0 &&
+    evidenceSelectionMode !== "latest" &&
+    evidenceSelectionMode !== "latest-passing"
   ) {
     failures.push(
       `invalid_evidence_selection_mode:${String(options.evidenceSelectionMode ?? "<empty>")}`,
     );
   }
+
+  options.evidenceSelectionMode = evidenceSelectionMode;
 
   const steps = {
     canary: null,

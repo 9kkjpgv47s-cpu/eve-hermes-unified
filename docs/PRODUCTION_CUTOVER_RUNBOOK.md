@@ -286,3 +286,52 @@ Key controls:
 - `--rollback-force-min-success-rate <value>` (default `1.01`) to force a rollback simulation trigger
 - `--auto-apply-rollback` to execute rollback during simulation when policy triggers
 - `--evidence-selection-mode <latest|latest-passing>` to run the suite against newest artifacts or newest passing artifacts
+
+## H2 Threshold Calibration and Supervised Auto-Apply Rollback
+
+Use a single calibration command to derive operator rollback-policy thresholds from recent validation summaries:
+
+```bash
+npm run calibrate:rollback-thresholds -- \
+  --stage majority \
+  --evidence-dir evidence \
+  --window 5 \
+  --min-samples 3 \
+  --evidence-selection-mode latest-passing
+```
+
+Calibration output:
+- `evidence/rollback-threshold-calibration-<stage>-*.json`
+- includes:
+  - selected summary sample set and mode (`latest` or `latest-passing`)
+  - observed metrics envelope
+  - recommended threshold args for `evaluate:auto-rollback-policy` / `run:stage-drill`
+
+Run supervised rollback auto-apply simulation using calibrated thresholds:
+
+```bash
+npm run run:supervised-rollback-simulation -- \
+  --stage majority \
+  --current-stage canary \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --env-file "$HOME/.openclaw/run/gateway.env" \
+  --majority-percent "90" \
+  --allow-horizon-mismatch
+```
+
+Behavior:
+- generates calibration report if one is not provided
+- executes `run:stage-drill` with `--auto-apply-rollback` and rollback-forcing thresholds (default force min success rate `1.01`)
+- verifies post-action rollback state in gateway env:
+  - `UNIFIED_ROUTER_CUTOVER_STAGE=shadow`
+  - `UNIFIED_ROUTER_DEFAULT_PRIMARY=eve`
+  - `UNIFIED_ROUTER_DEFAULT_FALLBACK=none`
+  - `UNIFIED_ROUTER_FAIL_CLOSED=1`
+  - `UNIFIED_ROUTER_MAJORITY_PERCENT=0`
+- emits combined evidence:
+  - `evidence/supervised-rollback-simulation-*.json`
+
+Safety/testing flags:
+- `--dry-run` to evaluate flow without applying rollback writes
+- `--skip-cutover-readiness` for isolated CI tests where dispatch readiness probes are unavailable

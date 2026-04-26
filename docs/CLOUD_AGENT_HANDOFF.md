@@ -81,6 +81,8 @@ Before marking a phase complete, include artifacts from:
 - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
 - `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence --dry-run`
 - `npm run run:h2-drill-suite -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --dry-run`
+- `npm run calibrate:rollback-thresholds -- --stage <canary|majority|full> --evidence-dir evidence`
+- `npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -125,6 +127,13 @@ Schema validation expectations:
   - adds suite manifest: `evidence/h2-drill-suite-*.json`
   - add `--evidence-selection-mode latest-passing` to reduce stale-failing artifact pickup during replay runs
   - use `--strict-horizon-target` when enforcing active-horizon stage matching during suite runs
+- rollback threshold calibration can produce policy inputs from recent validation summaries:
+  - `npm run calibrate:rollback-thresholds -- --stage <canary|majority|full> --evidence-dir evidence`
+  - emits `evidence/rollback-threshold-calibration-<stage>-*.json` with `recommendedPolicyArgs`
+- supervised rollback auto-apply simulation can run one gated drill + restoration verification:
+  - `npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
+  - emits `evidence/supervised-rollback-simulation-*.json`
+  - add `--skip-cutover-readiness` only for CI/test harnesses that use synthetic gateway env files
 - validate a single file with:
   - `npm run validate:manifest-schema -- --type release-readiness --file <path>`
   - `npm run validate:manifest-schema -- --type merge-bundle --file <path>`

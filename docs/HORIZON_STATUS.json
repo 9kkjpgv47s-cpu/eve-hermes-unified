@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T18:55:00Z",
+  "updatedAtIso": "2026-04-26T19:52:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with drill suite automation and configurable evidence-selection modes, enabling deterministic latest vs latest-passing evidence replay.",
+  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, and supervised rollback simulation evidence generation.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -110,6 +110,18 @@
       "summary": "Support selectable evidence modes (`latest` vs `latest-passing`) across readiness, promotion, stage-drill, and h2 drill suite flows for deterministic operator replay.",
       "targetHorizon": "H2",
       "status": "completed"
+    },
+    {
+      "id": "h2-action-7",
+      "summary": "Calibrate rollback-policy thresholds from recent validation summaries and capture machine-readable calibration evidence for operator replay.",
+      "targetHorizon": "H2",
+      "status": "completed"
+    },
+    {
+      "id": "h2-action-8",
+      "summary": "Execute supervised rollback auto-apply simulation with calibrated thresholds and emit a unified evidence artifact verifying rollback trigger and Eve-safe shadow restoration.",
+      "targetHorizon": "H2",
+      "status": "completed"
     }
   ],
   "promotionReadiness": {
@@ -129,7 +141,7 @@
     },
     "H2": {
       "status": "in_progress",
-      "summary": "Canary/majority drills are automated and evidence selection mode is configurable; threshold calibration and supervised rollback auto-apply simulation remain in progress."
+      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, and both threshold calibration and supervised rollback auto-apply simulation now have executable artifact-producing command paths."
     },
     "H3": {
       "status": "planned",
@@ -204,6 +216,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added evidence-selection mode controls (`latest`, `latest-passing`) across promotion/readiness/drill flows to support deterministic replay against either strict newest or newest passing evidence."
+    },
+    {
+      "timestamp": "2026-04-26T19:52:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Added rollback threshold calibration and supervised rollback simulation commands with machine-readable evidence outputs and test coverage for calibrated forcing + Eve-safe shadow restoration checks."
     }
   ]
 }

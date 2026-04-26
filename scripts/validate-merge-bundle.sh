@@ -28,12 +28,12 @@ newest_matching_file() {
 
 RELEASE_READINESS_PATH="${UNIFIED_RELEASE_READINESS_PATH:-}"
 if [[ -z "$RELEASE_READINESS_PATH" ]]; then
-  RELEASE_READINESS_PATH="$(newest_matching_file "$OUT_DIR"/release-readiness-*.json)"
+  RELEASE_READINESS_PATH="$(newest_matching_file "$OUT_DIR/release-readiness-*.json")"
 fi
 
 INITIAL_SCOPE_PATH="${UNIFIED_INITIAL_SCOPE_REPORT_PATH:-}"
 if [[ -z "$INITIAL_SCOPE_PATH" ]]; then
-  INITIAL_SCOPE_PATH="$(newest_matching_file "$OUT_DIR"/initial-scope-validation-*.json)"
+  INITIAL_SCOPE_PATH="$(newest_matching_file "$OUT_DIR/initial-scope-validation-*.json")"
 fi
 
 BUNDLE_DIR="${UNIFIED_MERGE_BUNDLE_DIR:-$OUT_DIR/merge-readiness-bundle-$STAMP}"

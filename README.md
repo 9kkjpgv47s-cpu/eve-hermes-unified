@@ -31,6 +31,7 @@ npm run validate:release-readiness
 npm run validate:initial-scope
 npm run validate:merge-bundle
 npm run bundle:merge-readiness
+npm run verify:merge-bundle
 npm run validate:manifest-schemas -- --latest-only
 npm run validate:all
 npm run cutover:stage -- canary

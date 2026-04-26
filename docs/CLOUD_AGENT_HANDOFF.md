@@ -72,6 +72,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:initial-scope`
 - `npm run validate:merge-bundle`
 - `npm run validate:manifest-schemas`
+- `npm run verify:merge-bundle -- --evidence-dir evidence --latest`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -84,6 +85,8 @@ Schema validation expectations:
 - release-readiness, merge-bundle, and merge-bundle-validation manifests are validated before write.
 - re-validate latest schema-compatible manifests under `evidence/` with:
   - `npm run validate:manifest-schemas`
+- verify latest merge bundle package + archive contents with:
+  - `npm run verify:merge-bundle -- --evidence-dir evidence --latest`
 - validate a single file with:
   - `npm run validate:manifest-schema -- --type release-readiness --file <path>`
   - `npm run validate:manifest-schema -- --type merge-bundle --file <path>`

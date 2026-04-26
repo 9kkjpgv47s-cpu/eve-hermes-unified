@@ -78,3 +78,48 @@ npm run validate:cutover-readiness
 
 - `npm run validate:regression-eve-primary` validates Eve-primary/no-fallback safe-lane behavior.
 - `npm run validate:cutover-readiness` executes staged cutover checks for shadow/canary/majority/full and confirms rollback returns to Eve-safe configuration.
+
+## Merge Bundle Retrieval and Verification (Operator Procedure)
+
+Use this flow before stage promotion when consuming CI artifacts.
+
+### 1) Retrieve evidence artifacts from CI
+
+- Download the `unified-evidence` artifact from the latest green `unified-ci` run.
+- Extract it locally to a working directory, for example:
+
+```bash
+mkdir -p /tmp/unified-evidence
+tar -xzf unified-evidence.tar.gz -C /tmp/unified-evidence
+```
+
+### 2) Locate the latest bundle verification inputs
+
+- Latest merge-bundle validation manifest:
+  - `/tmp/unified-evidence/evidence/merge-bundle-validation-*.json`
+- Latest bundle manifest:
+  - `/tmp/unified-evidence/evidence/merge-readiness-bundle-*/merge-readiness-manifest.json`
+- Latest bundle archive:
+  - `/tmp/unified-evidence/evidence/merge-readiness-bundle-*.tar.gz`
+
+### 3) Verify bundle integrity and schema
+
+Run:
+
+```bash
+npm run verify:merge-bundle -- \
+  --validation-manifest /tmp/unified-evidence/evidence/merge-bundle-validation-<stamp>.json \
+  --bundle-manifest /tmp/unified-evidence/evidence/merge-readiness-bundle-<stamp>/merge-readiness-manifest.json \
+  --archive /tmp/unified-evidence/evidence/merge-readiness-bundle-<stamp>.tar.gz
+```
+
+Expected result:
+- Exit code `0`
+- JSON output with:
+  - `"pass": true`
+  - `"checks.validationManifestPass": true`
+  - `"checks.bundleManifestPass": true`
+  - `"checks.archiveContainsBundleRoot": true`
+  - `"checks.archiveContainsManifest": true`
+
+If verification fails, do not promote cutover stage. Re-run validation/bundle generation and investigate missing or invalid artifacts.

@@ -69,5 +69,11 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:cutover-readiness`
 - `npm run validate:release-readiness`
 - `npm run validate:initial-scope`
+- `npm run validate:merge-bundle`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
+
+The merge bundle workflow writes:
+- bundle validation manifest in `evidence/merge-bundle-validation-*.json`
+- packaged bundle directory `evidence/merge-readiness-bundle-*`
+- compressed archive `evidence/merge-readiness-bundle-*.tar.gz`

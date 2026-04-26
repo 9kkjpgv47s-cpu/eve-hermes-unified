@@ -8,6 +8,7 @@ function parseArgs(argv) {
     out: "",
     commandLogDir: "",
     commandsFile: "",
+    requiredCommandNames: "",
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -23,6 +24,9 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === "--commands-file") {
       options.commandsFile = value ?? "";
+      i += 1;
+    } else if (arg === "--required-command-names") {
+      options.requiredCommandNames = value ?? "";
       i += 1;
     }
   }
@@ -74,6 +78,21 @@ async function evaluateCommandLogs(commandLogDir) {
   };
 }
 
+function commandKey(command) {
+  return command.trim().toLowerCase();
+}
+
+function normalizeReleaseCommands(raw) {
+  if (!raw || raw.trim().length === 0) {
+    return [];
+  }
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .map((item) => commandKey(item));
+}
+
 async function readCommandsFile(commandsFile) {
   if (!commandsFile || !(await exists(commandsFile))) {
     return [];
@@ -85,11 +104,18 @@ async function readCommandsFile(commandsFile) {
   return payload
     .filter((item) => item && typeof item === "object")
     .map((item) => ({
+      name: String(item.name ?? ""),
       command: String(item.command ?? ""),
       logFile: String(item.logFile ?? ""),
       exitCode: Number(item.exitCode),
       status: item.status === "passed" || item.status === "failed" ? item.status : "failed",
     }));
+}
+
+function commandId(entry) {
+  const name = typeof entry?.name === "string" ? entry.name.trim() : "";
+  const command = typeof entry?.command === "string" ? entry.command.trim() : "";
+  return commandKey(name || command);
 }
 
 async function main() {
@@ -155,6 +181,41 @@ async function main() {
     failures.push(`missing_command_logs:${commandLogs.missing.join(",")}`);
   }
   const releaseCommandLogs = await readCommandsFile(options.commandsFile);
+  const requiredReleaseCommandSource =
+    options.requiredCommandNames ||
+    process.env.UNIFIED_RELEASE_READINESS_REQUIRED_COMMANDS ||
+    "check,test,build,validate:failure-injection,validate:soak,validate:evidence-summary,validate:regression-eve,validate:cutover-readiness";
+  const requiredReleaseCommands = normalizeReleaseCommands(requiredReleaseCommandSource);
+  const executedReleaseCommands = new Set(releaseCommandLogs.map((entry) => commandId(entry)));
+  const missingRequiredCommands = requiredReleaseCommands.filter(
+    (command) => !executedReleaseCommands.has(command),
+  );
+  if (missingRequiredCommands.length > 0) {
+    failures.push(`missing_required_commands:${missingRequiredCommands.join(",")}`);
+  }
+  const missingCommandLogFiles = [];
+  if (options.commandLogDir && releaseCommandLogs.length > 0) {
+    for (const entry of releaseCommandLogs) {
+      const rawLogFile = (entry.logFile || "").trim();
+      if (!rawLogFile) {
+        missingCommandLogFiles.push("<missing-log-file-path>");
+        continue;
+      }
+      const resolvedLogFile = path.isAbsolute(rawLogFile)
+        ? rawLogFile
+        : path.join(options.commandLogDir, rawLogFile);
+      if (!(await exists(resolvedLogFile))) {
+        missingCommandLogFiles.push(rawLogFile);
+      }
+    }
+  }
+  for (const missingLogFile of missingCommandLogFiles) {
+    failures.push(`missing_command_log_file:${missingLogFile}`);
+  }
+
+  const commandFailures = releaseCommandLogs.filter(
+    (entry) => entry.status !== "passed" || entry.exitCode !== 0,
+  );
   if (releaseCommandLogs.length > 0) {
     for (const entry of releaseCommandLogs) {
       if (entry.status !== "passed" || entry.exitCode !== 0) {
@@ -192,9 +253,15 @@ async function main() {
       cutoverReadinessPassed: Boolean(cutoverSummary?.pass),
       commandLogsMissing: commandLogs.missing,
       discoveredCommandLogs: commandLogs.discovered,
-      commandFailures: releaseCommandLogs.filter(
-        (entry) => entry.status !== "passed" || entry.exitCode !== 0,
-      ),
+      requiredReleaseCommands,
+      missingRequiredCommands,
+      executedReleaseCommands: Array.from(executedReleaseCommands).sort(),
+      missingCommandLogFiles,
+      commandFailures,
+      validationCommandsPassed:
+        missingRequiredCommands.length === 0 &&
+        missingCommandLogFiles.length === 0 &&
+        commandFailures.length === 0,
     },
     failures,
   };

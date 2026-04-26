@@ -24,12 +24,18 @@ async function seedEvidence(
     cutoverPass?: boolean;
     stagePromotionPass?: boolean;
     includeCooldownSignals?: boolean;
+    createFailingLatestSummary?: boolean;
+    createFailingLatestRelease?: boolean;
+    createFailingLatestStagePromotion?: boolean;
   },
 ): Promise<{
   validationPath: string;
   releasePath: string;
   cutoverPath: string;
   stagePromotionPath: string;
+  failingValidationPath: string;
+  failingReleasePath: string;
+  failingStagePromotionPath: string;
 }> {
   await mkdir(evidenceDir, { recursive: true });
   const stamp = "20260426-000000";
@@ -37,6 +43,12 @@ async function seedEvidence(
   const releasePath = path.join(evidenceDir, `release-readiness-${stamp}.json`);
   const cutoverPath = path.join(evidenceDir, `cutover-readiness-${stamp}.json`);
   const stagePromotionPath = path.join(evidenceDir, `stage-promotion-readiness-${stamp}.json`);
+  const failingValidationPath = path.join(evidenceDir, "validation-summary-20260426-999999.json");
+  const failingReleasePath = path.join(evidenceDir, "release-readiness-20260426-999999.json");
+  const failingStagePromotionPath = path.join(
+    evidenceDir,
+    "stage-promotion-readiness-20260426-999999.json",
+  );
 
   const includeCooldownSignals = options?.includeCooldownSignals !== false;
   const failureInjectionPreview = includeCooldownSignals
@@ -169,11 +181,114 @@ async function seedEvidence(
     "utf8",
   );
 
+  if (options?.createFailingLatestSummary === true) {
+    await writeFile(
+      failingValidationPath,
+      JSON.stringify(
+        {
+          generatedAtIso: new Date().toISOString(),
+          metrics: {
+            successRate: 0.75,
+            p95LatencyMs: 3500,
+            missingTraceRate: 0.25,
+            unclassifiedFailures: 4,
+            failureScenarioPassCount: 1,
+          },
+          gates: {
+            passed: false,
+            failures: ["synthetic-failing-summary"],
+          },
+          failureInjectionPreview: [],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  }
+
+  if (options?.createFailingLatestRelease === true) {
+    await writeFile(
+      failingReleasePath,
+      JSON.stringify(
+        {
+          readinessVersion: "v1",
+          generatedAtIso: new Date().toISOString(),
+          defaultValidationCommand: "validate:all",
+          pass: false,
+          files: {
+            validationSummary: failingValidationPath,
+            regression: null,
+            cutoverReadiness: cutoverPath,
+            failureInjection: null,
+            soak: null,
+            commandLogDir: null,
+            commandsFile: null,
+          },
+          requiredArtifacts: [],
+          releaseCommandLogs: [],
+          checks: {
+            validationSummaryPassed: false,
+            regressionPassed: false,
+            cutoverReadinessPassed: false,
+            commandLogsMissing: [],
+            discoveredCommandLogs: [],
+            requiredReleaseCommands: [],
+            missingRequiredCommands: [],
+            executedReleaseCommands: [],
+            missingCommandLogFiles: [],
+            commandFailures: ["synthetic-failing-release"],
+            validationCommandsPassed: false,
+          },
+          failures: ["synthetic-failing-release"],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  }
+
+  if (options?.createFailingLatestStagePromotion === true) {
+    await writeFile(
+      failingStagePromotionPath,
+      JSON.stringify(
+        {
+          generatedAtIso: new Date().toISOString(),
+          pass: false,
+          stage: {
+            current: "canary",
+            target: "majority",
+            transitionAllowed: false,
+          },
+          checks: {
+            validationSummaryPassed: false,
+            cutoverReadinessPassed: false,
+            releaseReadinessPassed: false,
+            mergeBundleValidationPassed: false,
+            bundleVerificationPassed: false,
+            horizonValidationPass: false,
+            activeHorizon: "H2",
+            activeStatus: "in_progress",
+            stage: "majority",
+          },
+          failures: ["synthetic-failing-stage-promotion"],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  }
+
   return {
     validationPath,
     releasePath,
     cutoverPath,
     stagePromotionPath,
+    failingValidationPath,
+    failingReleasePath,
+    failingStagePromotionPath,
   };
 }
 
@@ -379,6 +494,151 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
       expect(payload.reasons).toContain("release_readiness_failed");
       expect(payload.reasons).toContain("cutover_readiness_failed");
       expect(payload.reasons).toContain("stage_promotion_readiness_failed");
+    });
+  });
+
+  it("fails in latest mode when newest evidence is failing", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.999,
+        p95LatencyMs: 200,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        includeCooldownSignals: false,
+        createFailingLatestSummary: true,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+          "--evidence-selection-mode",
+          "latest",
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        decision: { action: string };
+        reasons: string[];
+        checks: { evidenceSelectionMode: string };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.decision.action).toBe("rollback");
+      expect(payload.checks.evidenceSelectionMode).toBe("latest");
+      expect(payload.reasons).toContain("validation_summary_gate_failed");
+    });
+  });
+
+  it("uses latest-passing mode to avoid stale failing newest evidence", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.999,
+        p95LatencyMs: 200,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        includeCooldownSignals: false,
+        createFailingLatestSummary: true,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+          "--evidence-selection-mode",
+          "latest-passing",
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        decision: { action: string };
+        reasons: string[];
+        checks: { evidenceSelectionMode: string };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.decision.action).toBe("hold");
+      expect(payload.reasons).toEqual([]);
+      expect(payload.checks.evidenceSelectionMode).toBe("latest-passing");
+    });
+  });
+
+  it("uses latest-passing mode across summary/release/stage artifacts", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.999,
+        p95LatencyMs: 200,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        includeCooldownSignals: false,
+        createFailingLatestSummary: true,
+        createFailingLatestRelease: true,
+        createFailingLatestStagePromotion: true,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+          "--evidence-selection-mode",
+          "latest-passing",
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: {
+          validationSummary: string;
+          releaseReadiness: string;
+          stagePromotionReadiness: string;
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.validationSummary.endsWith("20260426-000000.json")).toBe(true);
+      expect(payload.files.releaseReadiness.endsWith("20260426-000000.json")).toBe(true);
+      expect(payload.files.stagePromotionReadiness.endsWith("20260426-000000.json")).toBe(true);
     });
   });
 });

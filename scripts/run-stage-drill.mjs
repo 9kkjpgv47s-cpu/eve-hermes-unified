@@ -311,6 +311,9 @@ async function main() {
     "--stage-promotion-readiness-file",
     promotionEvidenceFiles.stagePromotionReadiness,
   );
+  if (isNonEmptyString(options.evidenceSelectionMode)) {
+    rollbackPolicyArgs.push("--evidence-selection-mode", options.evidenceSelectionMode);
+  }
   if (options.autoApplyRollback) {
     rollbackPolicyArgs.push("--auto-apply-rollback");
   }

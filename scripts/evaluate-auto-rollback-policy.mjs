@@ -4,7 +4,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];
-const STAGE_INDEX = new Map(VALID_STAGES.map((stage, index) => [stage, index]));
+const VALID_EVIDENCE_SELECTION_MODES = ["latest", "latest-passing"];
 const DECISION_HOLD = "hold";
 const DECISION_ROLLBACK = "rollback";
 
@@ -25,6 +25,7 @@ function parseArgs(argv) {
     cutoverReadinessFile: "",
     releaseReadinessFile: "",
     stagePromotionReadinessFile: "",
+    evidenceSelectionMode: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -73,6 +74,9 @@ function parseArgs(argv) {
     } else if (arg === "--stage-promotion-readiness-file") {
       options.stagePromotionReadinessFile = value ?? "";
       index += 1;
+    } else if (arg === "--evidence-selection" || arg === "--evidence-selection-mode") {
+      options.evidenceSelectionMode = value ?? "";
+      index += 1;
     }
   }
   return options;
@@ -85,6 +89,11 @@ function isNonEmptyString(value) {
 function normalizeStage(value, fallback = "") {
   const normalized = String(value ?? "").trim().toLowerCase();
   return VALID_STAGES.includes(normalized) ? normalized : fallback;
+}
+
+function normalizeEvidenceSelection(value, fallback = "latest") {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return VALID_EVIDENCE_SELECTION_MODES.includes(normalized) ? normalized : fallback;
 }
 
 function toFiniteNumber(value, fallback) {
@@ -122,27 +131,7 @@ async function newestFileInDir(dir, prefix) {
   return matches.length > 0 ? matches[matches.length - 1] : "";
 }
 
-async function newestPassingValidationSummary(evidenceDir) {
-  const entries = await readdir(evidenceDir, { withFileTypes: true });
-  const candidates = entries
-    .filter((entry) => entry.isFile() && entry.name.startsWith("validation-summary-"))
-    .map((entry) => path.join(evidenceDir, entry.name))
-    .sort()
-    .reverse();
-  for (const candidate of candidates) {
-    try {
-      const payload = await readJson(candidate);
-      if (payload?.gates?.passed === true) {
-        return candidate;
-      }
-    } catch {
-      continue;
-    }
-  }
-  return candidates.length > 0 ? candidates[0] : "";
-}
-
-async function newestPassingReport(evidenceDir, prefix) {
+async function newestPassingFileInDir(evidenceDir, prefix, predicate) {
   const entries = await readdir(evidenceDir, { withFileTypes: true });
   const candidates = entries
     .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
@@ -152,7 +141,7 @@ async function newestPassingReport(evidenceDir, prefix) {
   for (const candidate of candidates) {
     try {
       const payload = await readJson(candidate);
-      if (payload?.pass === true) {
+      if (predicate(payload)) {
         return candidate;
       }
     } catch {
@@ -160,6 +149,22 @@ async function newestPassingReport(evidenceDir, prefix) {
     }
   }
   return candidates.length > 0 ? candidates[0] : "";
+}
+
+async function resolveEvidencePath({
+  explicitPath,
+  evidenceDir,
+  prefix,
+  evidenceSelectionMode,
+  passingSelector,
+}) {
+  if (isNonEmptyString(explicitPath)) {
+    return path.resolve(explicitPath);
+  }
+  if (evidenceSelectionMode === "latest-passing") {
+    return await newestPassingFileInDir(evidenceDir, prefix, passingSelector);
+  }
+  return await newestFileInDir(evidenceDir, prefix);
 }
 
 function evaluateThresholds(stage, metrics, thresholds) {
@@ -238,21 +243,44 @@ async function main() {
   const envFile = path.resolve(
     options.envFile || process.env.UNIFIED_RUNTIME_ENV_FILE || path.join(process.env.HOME || "", ".openclaw/run/gateway.env"),
   );
+  const evidenceSelectionMode = normalizeEvidenceSelection(options.evidenceSelectionMode, "latest");
 
-  const validationSummaryPath = isNonEmptyString(options.validationSummaryFile)
-    ? path.resolve(options.validationSummaryFile)
-    : await newestPassingValidationSummary(evidenceDir);
-  const cutoverReadinessPath = isNonEmptyString(options.cutoverReadinessFile)
-    ? path.resolve(options.cutoverReadinessFile)
-    : await newestPassingReport(evidenceDir, "cutover-readiness-");
-  const releaseReadinessPath = isNonEmptyString(options.releaseReadinessFile)
-    ? path.resolve(options.releaseReadinessFile)
-    : await newestPassingReport(evidenceDir, "release-readiness-");
-  const stagePromotionPath = isNonEmptyString(options.stagePromotionReadinessFile)
-    ? path.resolve(options.stagePromotionReadinessFile)
-    : await newestPassingReport(evidenceDir, "stage-promotion-readiness-");
+  const validationSummaryPath = await resolveEvidencePath({
+    explicitPath: options.validationSummaryFile,
+    evidenceDir,
+    prefix: "validation-summary-",
+    evidenceSelectionMode,
+    passingSelector: (payload) => payload?.gates?.passed === true,
+  });
+  const cutoverReadinessPath = await resolveEvidencePath({
+    explicitPath: options.cutoverReadinessFile,
+    evidenceDir,
+    prefix: "cutover-readiness-",
+    evidenceSelectionMode,
+    passingSelector: (payload) => payload?.pass === true,
+  });
+  const releaseReadinessPath = await resolveEvidencePath({
+    explicitPath: options.releaseReadinessFile,
+    evidenceDir,
+    prefix: "release-readiness-",
+    evidenceSelectionMode,
+    passingSelector: (payload) => payload?.pass === true,
+  });
+  const stagePromotionPath = await resolveEvidencePath({
+    explicitPath: options.stagePromotionReadinessFile,
+    evidenceDir,
+    prefix: "stage-promotion-readiness-",
+    evidenceSelectionMode,
+    passingSelector: (payload) => payload?.pass === true,
+  });
 
   const failures = [];
+  if (
+    isNonEmptyString(options.evidenceSelectionMode) &&
+    !VALID_EVIDENCE_SELECTION_MODES.includes(evidenceSelectionMode)
+  ) {
+    failures.push(`invalid_evidence_selection_mode:${String(options.evidenceSelectionMode)}`);
+  }
   if (!(await exists(validationSummaryPath))) {
     failures.push("missing_validation_summary");
   }
@@ -380,6 +408,7 @@ async function main() {
     },
     checks: {
       activeHorizon: isNonEmptyString(activeHorizon) ? activeHorizon : null,
+      evidenceSelectionMode,
       metrics,
       thresholds,
       thresholdReasons,

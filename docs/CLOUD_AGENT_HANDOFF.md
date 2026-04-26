@@ -108,6 +108,9 @@ Schema validation expectations:
     - `--cutover-readiness-file <path>`
     - `--release-readiness-file <path>`
     - `--stage-promotion-readiness-file <path>`
+  - optional artifact selection mode:
+    - `--evidence-selection-mode latest` (default)
+    - `--evidence-selection-mode latest-passing` (prefer newest passing artifacts when explicit file paths are not provided)
 - stage promotion readiness and drill commands support evidence selection mode:
   - `--evidence-selection-mode latest` (default)
   - `--evidence-selection-mode latest-passing` (prefers newest passing manifests before newest fallback)

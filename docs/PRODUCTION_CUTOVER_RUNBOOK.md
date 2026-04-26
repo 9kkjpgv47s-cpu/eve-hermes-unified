@@ -252,7 +252,7 @@ Useful flags:
 - `--dry-run`: validate promotion/readiness and rollback policy without mutating stage env values.
 - `--allow-horizon-mismatch`: bypass horizon-target matching for CI/test-only workflows.
 - `--auto-apply-rollback`: if policy action is `rollback`, execute Eve-safe rollback automatically.
-- `--evidence-selection-mode <latest|latest-passing>`: control promotion/readiness artifact selection policy.
+- `--evidence-selection-mode <latest|latest-passing>`: control artifact selection policy for both promotion/readiness and rollback-policy evaluation.
 
 ## H2 Drill Suite Orchestrator (Canary + Majority + Rollback Simulation)
 

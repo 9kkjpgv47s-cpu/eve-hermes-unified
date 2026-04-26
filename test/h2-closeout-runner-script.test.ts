@@ -246,7 +246,7 @@ async function seedHorizonStatus(statusPath: string): Promise<void> {
           },
         ],
         promotionReadiness: {
-          targetStage: "majority",
+          targetStage: "canary",
           gates: {
             releaseReadinessPass: true,
             mergeBundlePass: true,

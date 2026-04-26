@@ -349,6 +349,9 @@ async function main() {
     if (options.requireActiveNextHorizon) {
       closeoutArgv.push("--require-active-next-horizon");
     }
+    if (options.allowHorizonMismatch) {
+      closeoutArgv.push("--allow-horizon-mismatch");
+    }
     closeoutCommand = await runCommand(closeoutArgv, { timeoutMs: options.timeoutMs });
     closeoutPayload = await readJsonMaybe(closeoutOut);
     if (closeoutCommand.code !== 0 || closeoutPayload?.pass !== true) {

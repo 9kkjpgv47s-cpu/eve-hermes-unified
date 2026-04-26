@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T14:54:00Z",
+  "updatedAtIso": "2026-04-26T15:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H1",
+  "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H1 merge operationalization baseline has passing unified-ci evidence and verified operator artifact retrieval/verification workflow.",
+  "summary": "H1 closeout is machine-validated and H2 progressive production traffic enablement is now active with explicit stage-drill and rollback-policy actions.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -73,7 +73,25 @@
       "id": "h1-action-3",
       "summary": "Promote H1 to completed once artifact retrieval and stage promotion gate workflow are verified.",
       "targetHorizon": "H1",
+      "status": "completed"
+    },
+    {
+      "id": "h2-action-1",
+      "summary": "Run canary promotion drill with passing readiness gate and capture stage-promotion execution evidence.",
+      "targetHorizon": "H2",
       "status": "in_progress"
+    },
+    {
+      "id": "h2-action-2",
+      "summary": "Run majority promotion readiness drill and confirm policy gate behavior under threshold breaches.",
+      "targetHorizon": "H2",
+      "status": "planned"
+    },
+    {
+      "id": "h2-action-3",
+      "summary": "Validate rollback-trigger policy flow by simulating sustained SLO gate violation and proving Eve-safe restoration.",
+      "targetHorizon": "H2",
+      "status": "planned"
     }
   ],
   "promotionReadiness": {
@@ -88,12 +106,12 @@
   },
   "horizonStates": {
     "H1": {
-      "status": "in_progress",
-      "summary": "Operationalization baseline evidence and operator workflow verified; pending horizon closeout decision and handoff."
+      "status": "completed",
+      "summary": "Operationalization baseline closed with passing unified CI, artifact upload reliability, and downloaded artifact verification workflow."
     },
     "H2": {
-      "status": "planned",
-      "summary": "Progressive production traffic enablement with SLO auto-rollback policy."
+      "status": "in_progress",
+      "summary": "Progressive production traffic enablement active with stage-drill orchestration and rollback-policy evidence targets."
     },
     "H3": {
       "status": "planned",
@@ -132,6 +150,18 @@
       "horizon": "H1",
       "status": "in_progress",
       "note": "Unified CI run 24959459587 passed fully and downloaded artifact set was locally verified for merge-bundle and stage-promotion readiness."
+    },
+    {
+      "timestamp": "2026-04-26T15:00:00Z",
+      "horizon": "H1",
+      "status": "completed",
+      "note": "H1 closeout gate implemented and passing; active horizon advanced to H2 with explicit kickoff actions."
+    },
+    {
+      "timestamp": "2026-04-26T15:00:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "H2 initiated with canary/majority drill and rollback-policy validation actions."
     }
   ]
 }

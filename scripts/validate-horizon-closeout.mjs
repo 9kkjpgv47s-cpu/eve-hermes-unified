@@ -1,0 +1,432 @@
+#!/usr/bin/env node
+import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
+import { validateHorizonStatus } from "./validate-horizon-status.mjs";
+
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+const HORIZON_STAGE_MAP = {
+  H1: "shadow",
+  H2: "canary",
+  H3: "majority",
+  H4: "full",
+  H5: "full",
+};
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeHorizon(value) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  return HORIZON_SEQUENCE.includes(normalized) ? normalized : "";
+}
+
+function parseArgs(argv) {
+  const options = {
+    horizon: "",
+    nextHorizon: "",
+    evidenceDir: "",
+    horizonStatusFile: "",
+    out: "",
+    requireActiveNextHorizon: false,
+    requireCompletedActions: false,
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const value = argv[index + 1];
+    if (arg === "--horizon") {
+      options.horizon = value ?? "";
+      index += 1;
+    } else if (arg === "--next-horizon") {
+      options.nextHorizon = value ?? "";
+      index += 1;
+    } else if (arg === "--evidence-dir") {
+      options.evidenceDir = value ?? "";
+      index += 1;
+    } else if (arg === "--horizon-status-file") {
+      options.horizonStatusFile = value ?? "";
+      index += 1;
+    } else if (arg === "--out") {
+      options.out = value ?? "";
+      index += 1;
+    } else if (arg === "--require-active-next-horizon") {
+      options.requireActiveNextHorizon = true;
+    } else if (arg === "--require-completed-actions") {
+      options.requireCompletedActions = true;
+    }
+  }
+  return options;
+}
+
+async function exists(targetPath) {
+  if (!isNonEmptyString(targetPath)) {
+    return false;
+  }
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readJson(targetPath) {
+  const raw = await readFile(targetPath, "utf8");
+  return JSON.parse(raw);
+}
+
+function patternToRegexSource(pattern) {
+  const segments = pattern.split("*");
+  const escaped = segments.map((segment) =>
+    segment.replace(/[|\\{}()[\]^$+?.]/g, "\\$&"),
+  );
+  return `^${escaped.join(".*")}$`;
+}
+
+function trimEvidencePrefix(value) {
+  const normalized = String(value).replace(/\\/g, "/");
+  return normalized.startsWith("evidence/") ? normalized.slice("evidence/".length) : normalized;
+}
+
+function matchArtifactPattern(pattern, filePath, evidenceDir) {
+  const normalizedPattern = String(pattern ?? "").trim().replace(/\\/g, "/");
+  if (!normalizedPattern) {
+    return false;
+  }
+  const regex = new RegExp(patternToRegexSource(normalizedPattern));
+  const absolutePath = path.resolve(filePath).replace(/\\/g, "/");
+  const relativeToCwd = path.relative(process.cwd(), filePath).replace(/\\/g, "/");
+  const relativeToEvidence = path.relative(evidenceDir, filePath).replace(/\\/g, "/");
+  const baseName = path.basename(filePath);
+  const candidates = [
+    absolutePath,
+    absolutePath.replace(/^\/+/, ""),
+    relativeToCwd,
+    trimEvidencePrefix(relativeToCwd),
+    relativeToEvidence,
+    `evidence/${relativeToEvidence}`,
+    trimEvidencePrefix(`evidence/${relativeToEvidence}`),
+    baseName,
+  ];
+  return candidates.some((candidate) => regex.test(candidate));
+}
+
+async function listTopLevelFiles(evidenceDir) {
+  const entries = await readdir(evidenceDir, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.join(evidenceDir, entry.name))
+    .sort();
+}
+
+async function newestFileInDir(evidenceDir, prefix) {
+  const entries = await readdir(evidenceDir, { withFileTypes: true });
+  const matches = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .map((entry) => path.join(evidenceDir, entry.name))
+    .sort();
+  return matches.length > 0 ? matches[matches.length - 1] : "";
+}
+
+function sortByGeneratedAtDesc(entries) {
+  return [...entries].sort((left, right) => {
+    const leftGenerated = Date.parse(String(left?.payload?.generatedAtIso ?? ""));
+    const rightGenerated = Date.parse(String(right?.payload?.generatedAtIso ?? ""));
+    if (Number.isFinite(leftGenerated) && Number.isFinite(rightGenerated) && leftGenerated !== rightGenerated) {
+      return rightGenerated - leftGenerated;
+    }
+    return String(right.path ?? "").localeCompare(String(left.path ?? ""));
+  });
+}
+
+function commandVerificationType(command) {
+  if (command === "npm run validate:evidence-summary" || command === "npm run validate:all") {
+    return "validation-summary";
+  }
+  if (command === "npm run validate:release-readiness") {
+    return "release-readiness";
+  }
+  if (command === "npm run validate:merge-bundle") {
+    return "merge-bundle-validation";
+  }
+  if (command === "npm run verify:merge-bundle") {
+    return "pass-only";
+  }
+  if (command === "npm run validate:cutover-readiness") {
+    return "pass-only";
+  }
+  if (command === "npm run validate:initial-scope") {
+    return "pass-only";
+  }
+  return "existence-only";
+}
+
+function evaluateCommandPayload(command, payload) {
+  const verificationType = commandVerificationType(command);
+  if (verificationType === "existence-only") {
+    return { pass: true, checks: [] };
+  }
+  if (!payload || typeof payload !== "object") {
+    return { pass: false, checks: ["artifact_not_json_object"] };
+  }
+  if (verificationType === "validation-summary") {
+    return {
+      pass: payload?.gates?.passed === true,
+      checks: payload?.gates?.passed === true ? [] : ["validation_summary_gate_failed"],
+    };
+  }
+  if (verificationType === "release-readiness") {
+    const schema = validateManifestSchema("release-readiness", payload);
+    const checks = [];
+    if (!schema.valid) {
+      checks.push(...schema.errors.map((error) => `release_schema_invalid:${error}`));
+    }
+    if (payload.pass !== true) {
+      checks.push("release_readiness_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "merge-bundle-validation") {
+    const schema = validateManifestSchema("merge-bundle-validation", payload);
+    const checks = [];
+    if (!schema.valid) {
+      checks.push(...schema.errors.map((error) => `merge_bundle_schema_invalid:${error}`));
+    }
+    if (payload.pass !== true) {
+      checks.push("merge_bundle_validation_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  const checks = payload.pass === true ? [] : ["artifact_not_passed"];
+  return { pass: checks.length === 0, checks };
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  const evidenceDir = path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
+  const horizonStatusFile = path.resolve(
+    options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
+  );
+  const targetHorizon = normalizeHorizon(options.horizon || "H1");
+  const horizonIndex = HORIZON_SEQUENCE.indexOf(targetHorizon);
+  const derivedNext = horizonIndex >= 0 ? HORIZON_SEQUENCE[horizonIndex + 1] ?? "" : "";
+  const nextHorizon = normalizeHorizon(options.nextHorizon || derivedNext);
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+  const outPath = path.resolve(
+    options.out || path.join(evidenceDir, `horizon-closeout-${targetHorizon || "unknown"}-${stamp}.json`),
+  );
+
+  const failures = [];
+  if (!(await exists(horizonStatusFile))) {
+    failures.push(`missing_horizon_status_file:${horizonStatusFile}`);
+  }
+  if (!(await exists(evidenceDir))) {
+    failures.push(`missing_evidence_dir:${evidenceDir}`);
+  }
+  if (!targetHorizon) {
+    failures.push(`invalid_horizon:${options.horizon || "<empty>"}`);
+  }
+
+  let horizonStatus = null;
+  let horizonValidation = { valid: false, errors: ["horizon_status_not_loaded"] };
+  let requiredEvidenceResults = [];
+  let horizonActionResults = [];
+  let stagePromotionEvidence = {
+    path: null,
+    present: false,
+    pass: false,
+    checks: [],
+  };
+  let nextHorizonChecks = {
+    expectedFromSequence: derivedNext || null,
+    selectedNextHorizon: nextHorizon || null,
+    nextHorizonStateStatus: null,
+    nextHorizonExpectedStage: null,
+    promotionTargetStage: null,
+    activeMatchesNextHorizon: false,
+  };
+
+  if (await exists(horizonStatusFile)) {
+    horizonStatus = await readJson(horizonStatusFile);
+    horizonValidation = validateHorizonStatus(horizonStatus);
+    if (!horizonValidation.valid) {
+      failures.push(...horizonValidation.errors.map((error) => `horizon_status_invalid:${error}`));
+    }
+  }
+
+  if (horizonStatus && targetHorizon) {
+    const horizonState = horizonStatus?.horizonStates?.[targetHorizon];
+    if (!horizonState || typeof horizonState !== "object") {
+      failures.push(`missing_horizon_state:${targetHorizon}`);
+    }
+
+    const stagePromotionPath = await newestFileInDir(
+      evidenceDir,
+      "stage-promotion-readiness-",
+    );
+    if (!isNonEmptyString(stagePromotionPath)) {
+      stagePromotionEvidence.checks.push("missing_stage_promotion_artifact");
+      failures.push("missing_stage_promotion_readiness_artifact");
+    } else {
+      stagePromotionEvidence.path = stagePromotionPath;
+      stagePromotionEvidence.present = true;
+      const stagePromotionPayload = await readJson(stagePromotionPath);
+      if (stagePromotionPayload?.pass === true) {
+        stagePromotionEvidence.pass = true;
+      } else {
+        stagePromotionEvidence.checks.push("stage_promotion_not_passed");
+        failures.push("stage_promotion_readiness_not_passed");
+      }
+    }
+
+    const targetActions = Array.isArray(horizonStatus.nextActions)
+      ? horizonStatus.nextActions.filter(
+          (action) => action && typeof action === "object" && action.targetHorizon === targetHorizon,
+        )
+      : [];
+    if (targetActions.length === 0) {
+      failures.push(`missing_next_actions_for_horizon:${targetHorizon}`);
+    }
+    horizonActionResults = targetActions.map((action) => ({
+      id: String(action.id ?? ""),
+      status: String(action.status ?? ""),
+      summary: String(action.summary ?? ""),
+      completed: String(action.status ?? "") === "completed",
+    }));
+    if (options.requireCompletedActions) {
+      for (const action of horizonActionResults) {
+        if (!action.completed) {
+          failures.push(`incomplete_horizon_action:${action.id || "<unknown>"}`);
+        }
+      }
+    }
+
+    const evidenceFiles = await listTopLevelFiles(evidenceDir);
+    const requiredEvidence = Array.isArray(horizonStatus.requiredEvidence)
+      ? horizonStatus.requiredEvidence.filter(
+          (entry) => entry && typeof entry === "object" && entry.required === true,
+        )
+      : [];
+    requiredEvidenceResults = [];
+    for (const entry of requiredEvidence) {
+      const artifactPattern = String(entry.artifactPattern ?? "");
+      const command = String(entry.command ?? "");
+      const id = String(entry.id ?? "");
+      const matches = evidenceFiles
+        .filter((filePath) => matchArtifactPattern(artifactPattern, filePath, evidenceDir))
+        .sort();
+      const result = {
+        id,
+        command,
+        artifactPattern,
+        matchedPath: null,
+        present: false,
+        pass: false,
+        checks: [],
+      };
+      if (matches.length === 0) {
+        result.checks.push("missing_artifact_match");
+      } else {
+        const inspectedMatches = [];
+        for (const matchPath of matches) {
+          const payload = await readJson(matchPath);
+          const evaluation = evaluateCommandPayload(command, payload);
+          inspectedMatches.push({
+            path: matchPath,
+            payload,
+            pass: evaluation.pass,
+            checks: evaluation.checks,
+          });
+        }
+        const orderedMatches = sortByGeneratedAtDesc(inspectedMatches);
+        const passingEntry = orderedMatches.find((entry) => entry.pass === true);
+        const selectedEntry = passingEntry ?? orderedMatches[0];
+        result.matchedPath = selectedEntry?.path ?? null;
+        result.present = Boolean(selectedEntry);
+        result.pass = Boolean(selectedEntry?.pass);
+        if (selectedEntry && Array.isArray(selectedEntry.checks)) {
+          result.checks.push(...selectedEntry.checks);
+        }
+      }
+      if (!result.present) {
+        failures.push(`missing_required_evidence:${id || command || artifactPattern}`);
+      } else if (!result.pass) {
+        failures.push(`required_evidence_failed:${id || command || artifactPattern}`);
+      }
+      requiredEvidenceResults.push(result);
+    }
+
+    const expectedNextFromSequence = derivedNext;
+    if (expectedNextFromSequence && nextHorizon && expectedNextFromSequence !== nextHorizon) {
+      failures.push(`next_horizon_mismatch:${nextHorizon}!=${expectedNextFromSequence}`);
+    }
+    const nextState = nextHorizon ? horizonStatus?.horizonStates?.[nextHorizon] : null;
+    if (nextHorizon && (!nextState || typeof nextState !== "object")) {
+      failures.push(`missing_next_horizon_state:${nextHorizon}`);
+    }
+    const nextExpectedStage = nextHorizon ? HORIZON_STAGE_MAP[nextHorizon] ?? null : null;
+    const promotionTarget = String(horizonStatus?.promotionReadiness?.targetStage ?? "").trim().toLowerCase() || null;
+    if (nextExpectedStage && promotionTarget && promotionTarget !== nextExpectedStage) {
+      failures.push(`promotion_target_stage_mismatch:${promotionTarget}!=${nextExpectedStage}`);
+    }
+    const activeMatchesNext =
+      Boolean(nextHorizon) &&
+      horizonStatus.activeHorizon === nextHorizon &&
+      horizonStatus.activeStatus === nextState?.status;
+    if (options.requireActiveNextHorizon && !activeMatchesNext) {
+      failures.push(`active_horizon_not_next:${String(horizonStatus.activeHorizon ?? "<unknown>")}`);
+    }
+    nextHorizonChecks = {
+      expectedFromSequence: expectedNextFromSequence || null,
+      selectedNextHorizon: nextHorizon || null,
+      nextHorizonStateStatus: typeof nextState?.status === "string" ? nextState.status : null,
+      nextHorizonExpectedStage: nextExpectedStage,
+      promotionTargetStage: promotionTarget,
+      activeMatchesNextHorizon: activeMatchesNext,
+    };
+  }
+
+  const payload = {
+    generatedAtIso: new Date().toISOString(),
+    pass: failures.length === 0,
+    closeout: {
+      horizon: targetHorizon || null,
+      nextHorizon: nextHorizon || null,
+      canCloseHorizon: failures.length === 0,
+      canStartNextHorizon:
+        failures.length === 0 && nextHorizonChecks.activeMatchesNextHorizon === true,
+    },
+    files: {
+      evidenceDir,
+      horizonStatusFile,
+      outPath,
+    },
+    checks: {
+      horizonValidationPass: horizonValidation.valid,
+      horizonStatusValid: horizonValidation.valid,
+      releaseReadinessPassed: requiredEvidenceResults.some(
+        (item) => item.command === "npm run validate:release-readiness" && item.pass === true,
+      ),
+      stagePromotionPassed: stagePromotionEvidence.pass,
+      stagePromotionEvidence,
+      nextActions: horizonActionResults,
+      requiredEvidence: requiredEvidenceResults,
+      nextHorizon: nextHorizonChecks,
+    },
+    failures,
+  };
+
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  if (!payload.pass) {
+    process.stderr.write(`Horizon closeout validation failed:\n- ${failures.join("\n- ")}\n`);
+    process.exitCode = 2;
+  }
+}
+
+main().catch((error) => {
+  process.stderr.write(`${String(error)}\n`);
+  process.exitCode = 1;
+});

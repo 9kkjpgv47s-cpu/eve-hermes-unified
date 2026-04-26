@@ -75,6 +75,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:manifest-schemas`
 - `npm run verify:merge-bundle -- --evidence-dir evidence --latest`
 - `npm run validate:horizon-status`
+- `npm run validate:horizon-closeout -- --horizon H1 --target-next H2`
 - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - `npm run promote:stage -- --target-stage <canary|majority|full> --dry-run`
 
@@ -93,6 +94,8 @@ Schema validation expectations:
   - `npm run verify:merge-bundle -- --evidence-dir evidence --latest`
 - horizon tracking metadata is machine-validated via:
   - `npm run validate:horizon-status`
+- horizon closeout readiness is machine-validated via:
+  - `npm run validate:horizon-closeout -- --horizon <H1|H2|H3|H4|H5> --target-next <H2|H3|H4|H5>`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - stage promotion can be executed through a single gated command:

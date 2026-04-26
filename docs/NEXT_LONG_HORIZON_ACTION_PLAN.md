@@ -146,3 +146,19 @@ Mitigations:
 3. Add operator retrieval/verification steps to production runbook.
 4. Add horizon tracking section to handoff document so incoming agents know active gate and blockers.
 
+## Horizon Closeout Gate
+
+Before promoting a horizon from `in_progress` to `completed`, run:
+
+```bash
+npm run validate:horizon-closeout -- --horizon H1
+```
+
+Expected for passing closeout:
+- exit code `0`
+- output manifest `evidence/horizon-closeout-H1-*.json`
+- payload includes:
+  - `"pass": true`
+  - `"checks.horizonStateCompleted": true`
+  - `"checks.nextHorizonPlannedOrInProgress": true`
+

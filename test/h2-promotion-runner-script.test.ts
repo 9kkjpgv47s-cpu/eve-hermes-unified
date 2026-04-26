@@ -240,6 +240,30 @@ async function seedHorizonStatus(statusPath: string): Promise<void> {
             targetHorizon: "H2",
             status: "completed",
           },
+          {
+            id: "h2-action-2",
+            summary: "secondary seed action",
+            targetHorizon: "H2",
+            status: "completed",
+          },
+          {
+            id: "h3-action-1",
+            summary: "h3 seed action one",
+            targetHorizon: "H3",
+            status: "planned",
+          },
+          {
+            id: "h3-action-2",
+            summary: "h3 seed action two",
+            targetHorizon: "H3",
+            status: "planned",
+          },
+          {
+            id: "h3-action-3",
+            summary: "h3 seed action three",
+            targetHorizon: "H3",
+            status: "planned",
+          },
         ],
         promotionReadiness: {
           targetStage: "majority",
@@ -322,6 +346,7 @@ describe("run-h2-promotion.mjs", () => {
           outPath,
           "--allow-horizon-mismatch",
           "--skip-cutover-readiness",
+          "--require-progressive-goals",
         ],
         { timeoutMs: 180_000 },
       );
@@ -338,6 +363,7 @@ describe("run-h2-promotion.mjs", () => {
           closeoutRunPass: boolean;
           horizonPromotionPass: boolean;
           horizonAdvanced: boolean;
+          progressiveGoalsPass: boolean;
         };
         failures: string[];
       };
@@ -345,6 +371,7 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.closeoutRunPass).toBe(true);
       expect(payload.checks.horizonPromotionPass).toBe(true);
       expect(payload.checks.horizonAdvanced).toBe(true);
+      expect(payload.checks.progressiveGoalsPass).toBe(true);
       expect(payload.failures).toEqual([]);
 
       const statusPayload = JSON.parse(await readFile(statusPath, "utf8")) as {
@@ -386,6 +413,7 @@ describe("run-h2-promotion.mjs", () => {
           outPath,
           "--allow-horizon-mismatch",
           "--skip-cutover-readiness",
+          "--require-progressive-goals",
         ],
         { timeoutMs: 180_000 },
       );

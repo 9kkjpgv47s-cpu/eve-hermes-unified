@@ -36,8 +36,9 @@ npm run validate:manifest-schemas -- --latest-only
 npm run validate:horizon-status
 npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
+npm run check:progressive-horizon-goals -- --source-horizon H2 --next-horizon H3 --minimum-goal-increase 1 --horizon-status-file docs/HORIZON_STATUS.json
 npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence --allow-horizon-mismatch
-npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness
+npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness --require-progressive-goals --minimum-goal-increase 1
 npm run check:stage-promotion -- --target-stage canary
 npm run promote:stage -- --target-stage canary --dry-run
 npm run run:stage-drill -- --target-stage canary --dry-run --evidence-selection-mode latest-passing

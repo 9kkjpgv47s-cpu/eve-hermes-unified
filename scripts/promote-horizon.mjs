@@ -23,6 +23,9 @@ function parseArgs(argv) {
     requireActiveNextHorizon: false,
     allowHorizonMismatch: false,
     allowInactiveSourceHorizon: false,
+    requireProgressiveGoals: false,
+    minimumGoalIncrease: 1,
+    progressiveGoalsOut: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -67,6 +70,14 @@ function parseArgs(argv) {
       options.allowHorizonMismatch = true;
     } else if (arg === "--allow-inactive-source-horizon") {
       options.allowInactiveSourceHorizon = true;
+    } else if (arg === "--require-progressive-goals") {
+      options.requireProgressiveGoals = true;
+    } else if (arg === "--minimum-goal-increase" || arg === "--min-goal-increase") {
+      options.minimumGoalIncrease = Number(value ?? "1");
+      index += 1;
+    } else if (arg === "--progressive-goals-out") {
+      options.progressiveGoalsOut = value ?? "";
+      index += 1;
     }
   }
   return options;
@@ -154,6 +165,13 @@ async function main() {
   const closeoutOut = path.resolve(
     options.closeoutOut || path.join(evidenceDir, `horizon-closeout-${sourceHorizon}-${runStamp}.json`),
   );
+  const progressiveGoalsOut = path.resolve(
+    options.progressiveGoalsOut ||
+      path.join(
+        evidenceDir,
+        `progressive-goals-check-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`,
+      ),
+  );
   const outPath = path.resolve(
     options.out || path.join(evidenceDir, `horizon-promotion-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
   );
@@ -225,7 +243,9 @@ async function main() {
   }
 
   let closeoutCommand = null;
+  let progressiveGoalsCommand = null;
   let closeoutPayload = null;
+  let progressiveGoalsPayload = null;
   if (failures.length === 0 && !options.closeoutFile && closeoutRunFile.length === 0) {
     const closeoutArgv = [
       "node",
@@ -263,6 +283,28 @@ async function main() {
   }
   if (closeoutCommand && closeoutCommand.code !== 0) {
     failures.push(`closeout_command_failed:${String(closeoutCommand.code)}`);
+  }
+
+  if (failures.length === 0 && options.requireProgressiveGoals) {
+    const progressiveGoalsArgv = [
+      "node",
+      "scripts/check-progressive-horizon-goals.mjs",
+      "--horizon-status-file",
+      horizonStatusFile,
+      "--source-horizon",
+      sourceHorizon,
+      "--next-horizon",
+      nextHorizon,
+      "--minimum-goal-increase",
+      String(options.minimumGoalIncrease),
+      "--out",
+      progressiveGoalsOut,
+    ];
+    progressiveGoalsCommand = await runCommand(progressiveGoalsArgv, { timeoutMs: options.timeoutMs });
+    progressiveGoalsPayload = await readJson(progressiveGoalsOut);
+    if (progressiveGoalsCommand.code !== 0 || progressiveGoalsPayload?.pass !== true) {
+      failures.push("progressive_goals_gate_failed");
+    }
   }
 
   const before = {
@@ -341,6 +383,7 @@ async function main() {
       closeoutFile,
       closeoutOut: options.closeoutFile ? null : closeoutOut,
       closeoutRunFile: closeoutRunFile || null,
+      progressiveGoalsOut: options.requireProgressiveGoals ? progressiveGoalsOut : null,
       outPath,
       statusWritePath,
     },
@@ -357,6 +400,11 @@ async function main() {
       requireActiveNextHorizon: options.requireActiveNextHorizon,
       allowHorizonMismatch: options.allowHorizonMismatch,
       closeoutRunPass: closeoutRunPayload?.pass === true,
+      requireProgressiveGoals: options.requireProgressiveGoals,
+      progressiveGoalsPass:
+        options.requireProgressiveGoals === true
+          ? progressiveGoalsPayload?.pass === true
+          : null,
     },
     status: {
       before,
@@ -364,6 +412,7 @@ async function main() {
     },
     commands: {
       closeout: closeoutCommand,
+      progressiveGoals: progressiveGoalsCommand,
     },
     failures,
   };

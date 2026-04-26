@@ -424,3 +424,4 @@ Useful flags:
 - `--dry-run` (verifies full flow without mutating `docs/HORIZON_STATUS.json`)
 - `--skip-cutover-readiness` for CI/test harnesses using synthetic env files
 - `--note "<text>"` to append a custom promotion note into history on successful write mode
+- `--require-progressive-goals --minimum-goal-increase <N>` to enforce that the next horizon has at least `N` more declared actions than the source horizon before promotion is allowed

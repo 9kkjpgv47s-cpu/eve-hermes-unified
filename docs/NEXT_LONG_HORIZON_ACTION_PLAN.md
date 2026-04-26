@@ -187,8 +187,10 @@ Mitigations:
    - `npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json`
 7. Promote H2 with a single command that runs closeout and applies horizon advancement in one flow:
    - `npm run run:h2-promotion -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
-8. Optionally run direct horizon promotion with a pinned closeout artifact when replaying prior evidence:
-   - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --closeout-run-file evidence/h2-closeout-run-*.json`
+8. Enforce longer-goal progression at promotion time so each horizon carries a larger action runway than the previous:
+   - `npm run run:h2-promotion -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --require-progressive-goals --minimum-goal-increase 1`
+9. Optionally run direct horizon promotion with a pinned closeout artifact when replaying prior evidence:
+   - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --closeout-run-file evidence/h2-closeout-run-*.json --require-progressive-goals --minimum-goal-increase 1`
 
 ## Horizon Closeout Gate
 

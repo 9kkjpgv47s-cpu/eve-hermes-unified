@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T22:16:00Z",
+  "updatedAtIso": "2026-04-26T22:29:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, supervised rollback simulation evidence generation, a machine-checkable H2 closeout gate, a one-command H2 closeout runner manifest pipeline, a gated horizon-promotion command, and a single-command H2 promotion runner that chains closeout and horizon advancement.",
+  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, supervised rollback simulation evidence generation, a machine-checkable H2 closeout gate, one-command closeout/promotion runners, a gated horizon-promotion command, and progressive goal-runway enforcement so each promotion can require larger next-horizon scope.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -146,6 +146,12 @@
       "summary": "Add a single-command H2 promotion runner that executes run:h2-closeout then promote:horizon using pinned closeout-run evidence for deterministic advancement to H3.",
       "targetHorizon": "H2",
       "status": "completed"
+    },
+    {
+      "id": "h2-action-13",
+      "summary": "Enforce progressive horizon goal runway checks so each promotion can require the next horizon to carry more planned actions than the current horizon.",
+      "targetHorizon": "H2",
+      "status": "completed"
     }
   ],
   "promotionReadiness": {
@@ -165,7 +171,7 @@
     },
     "H2": {
       "status": "in_progress",
-      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, H2-specific closeout evidence is machine-validated, one-command closeout and promotion runners are available, and horizon advancement can consume pinned closeout-run evidence for deterministic H2->H3 promotion."
+      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, H2-specific closeout evidence is machine-validated, one-command closeout and promotion runners are available, horizon advancement can consume pinned closeout-run evidence, and progressive goal-runway gates can require larger next-horizon scope before promotion."
     },
     "H3": {
       "status": "planned",
@@ -270,6 +276,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added run:h2-promotion orchestrator to execute run:h2-closeout and promote:horizon in one command with pinned closeout-run handoff evidence."
+    },
+    {
+      "timestamp": "2026-04-26T22:29:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Added progressive horizon goal-runway gate (`check:progressive-horizon-goals`) and optional promotion enforcement flags so each promotion can require larger next-horizon planning scope."
     }
   ]
 }

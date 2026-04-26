@@ -116,10 +116,14 @@ Schema validation expectations:
   - `npm run promote:horizon -- --horizon <H1|H2|H3|H4> --next-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence`
   - optional `--closeout-file <path>` to consume a pinned closeout artifact instead of running `validate:horizon-closeout`
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
+  - optional `--require-progressive-goals --minimum-goal-increase <n>` to require the next horizon to have at least `<n>` more planned actions than the source horizon
+  - progressive-goals report artifact (when enabled):
+    - `evidence/progressive-goals-check-<source>-to-<next>-*.json`
   - writes promotion manifest: `evidence/horizon-promotion-<source>-to-<next>-*.json`
 - one-command H2 promotion flow (closeout + promotion):
   - `npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
   - executes `run:h2-closeout` then `promote:horizon --closeout-run-file ...` in one command
+  - optional `--require-progressive-goals --minimum-goal-increase <n>` to enforce longer next-horizon action runway before promotion
   - writes unified run manifest: `evidence/h2-promotion-run-*.json`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`

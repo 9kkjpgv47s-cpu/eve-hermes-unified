@@ -1,0 +1,250 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { runCommandWithTimeout } from "../src/process/exec.js";
+
+async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "progressive-goals-test-"));
+  try {
+    await run(dir);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function seedHorizonStatus(
+  statusPath: string,
+  options?: {
+    h2GoalCount?: number;
+    h3GoalCount?: number;
+    activeHorizon?: string;
+    h3PendingCount?: number;
+  },
+): Promise<void> {
+  const h2GoalCount = options?.h2GoalCount ?? 2;
+  const h3GoalCount = options?.h3GoalCount ?? 4;
+  const activeHorizon = options?.activeHorizon ?? "H2";
+  const nextActions: Array<{
+    id: string;
+    summary: string;
+    targetHorizon: string;
+    status: string;
+  }> = [];
+  for (let index = 0; index < h2GoalCount; index += 1) {
+    nextActions.push({
+      id: `h2-action-${String(index + 1)}`,
+      summary: "h2 goal",
+      targetHorizon: "H2",
+      status: "completed",
+    });
+  }
+  const h3PendingCount = options?.h3PendingCount ?? h3GoalCount;
+  for (let index = 0; index < h3GoalCount; index += 1) {
+    nextActions.push({
+      id: `h3-action-${String(index + 1)}`,
+      summary: "h3 goal",
+      targetHorizon: "H3",
+      status: index < h3PendingCount ? "planned" : "completed",
+    });
+  }
+  await writeFile(
+    statusPath,
+    JSON.stringify(
+      {
+        schemaVersion: "v1",
+        updatedAtIso: new Date().toISOString(),
+        owner: "cloud-agent",
+        activeHorizon,
+        activeStatus: "in_progress",
+        summary: "progressive goals fixture",
+        blockers: [],
+        requiredEvidence: [
+          {
+            id: "h1-release-readiness",
+            command: "npm run validate:release-readiness",
+            artifactPattern: "evidence/release-readiness-*.json",
+            required: true,
+          },
+          {
+            id: "h1-merge-bundle",
+            command: "npm run validate:merge-bundle",
+            artifactPattern: "evidence/merge-bundle-validation-*.json",
+            required: true,
+          },
+          {
+            id: "h1-bundle-verification",
+            command: "npm run verify:merge-bundle",
+            artifactPattern: "evidence/bundle-verification-*.json",
+            required: true,
+          },
+          {
+            id: "h1-cutover-readiness",
+            command: "npm run validate:cutover-readiness",
+            artifactPattern: "evidence/cutover-readiness-*.json",
+            required: true,
+          },
+          {
+            id: "h1-evidence-summary",
+            command: "npm run validate:evidence-summary",
+            artifactPattern: "evidence/validation-summary-*.json",
+            required: true,
+          },
+          {
+            id: "h2-drill-suite",
+            command: "npm run run:h2-drill-suite",
+            artifactPattern: "evidence/h2-drill-suite-*.json",
+            required: true,
+            horizon: "H2",
+          },
+        ],
+        nextActions,
+        promotionReadiness: {
+          targetStage: "majority",
+          gates: {
+            releaseReadinessPass: true,
+            mergeBundlePass: true,
+            bundleVerificationPass: true,
+            cutoverReadinessPass: true,
+            evidenceSummaryPass: true,
+          },
+        },
+        horizonStates: {
+          H1: { status: "completed", summary: "H1 complete" },
+          H2: { status: activeHorizon === "H2" ? "in_progress" : "completed", summary: "H2 state" },
+          H3: { status: activeHorizon === "H3" ? "in_progress" : "planned", summary: "H3 state" },
+          H4: { status: "planned", summary: "H4 planned" },
+          H5: { status: "planned", summary: "H5 planned" },
+        },
+        history: [
+          {
+            timestamp: new Date().toISOString(),
+            horizon: "H2",
+            status: "in_progress",
+            note: "seed",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
+describe("check-progressive-horizon-goals.mjs", () => {
+  it("passes when next horizon has larger goal runway", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(dir, "progressive-goals.json");
+      await seedHorizonStatus(statusPath, { h2GoalCount: 2, h3GoalCount: 5, activeHorizon: "H2" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-progressive-horizon-goals.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--source-horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--minimum-goal-increase",
+          "1",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: { goalDelta: number; minActionGrowthFactor: number };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.goalDelta).toBe(3);
+      expect(payload.checks.minActionGrowthFactor).toBe(1);
+    });
+  });
+
+  it("fails when next horizon does not increase goal runway enough", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(dir, "progressive-goals.json");
+      await seedHorizonStatus(statusPath, { h2GoalCount: 3, h3GoalCount: 3, activeHorizon: "H2" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-progressive-horizon-goals.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--source-horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--minimum-goal-increase",
+          "1",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith("next_action_count_below_growth_target:"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("fails when next horizon pending runway is below threshold", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(dir, "progressive-goals.json");
+      await seedHorizonStatus(statusPath, {
+        h2GoalCount: 2,
+        h3GoalCount: 4,
+        h3PendingCount: 1,
+        activeHorizon: "H2",
+      });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-progressive-horizon-goals.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--source-horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--minimum-goal-increase",
+          "1",
+          "--min-pending-next-actions",
+          "2",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith("next_pending_action_count_below_min:"),
+        ),
+      ).toBe(true);
+    });
+  });
+});

@@ -27,6 +27,9 @@ function parseArgs(argv) {
     requireActiveNextHorizon: false,
     requireCompletedActions: true,
     allowInactiveSourceHorizon: false,
+    requireProgressiveGoals: false,
+    minimumGoalIncrease: 1,
+    progressiveGoalsOut: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -91,6 +94,14 @@ function parseArgs(argv) {
       options.requireCompletedActions = false;
     } else if (arg === "--allow-inactive-source-horizon") {
       options.allowInactiveSourceHorizon = true;
+    } else if (arg === "--require-progressive-goals") {
+      options.requireProgressiveGoals = true;
+    } else if (arg === "--minimum-goal-increase") {
+      options.minimumGoalIncrease = Number(value ?? "1");
+      index += 1;
+    } else if (arg === "--progressive-goals-out") {
+      options.progressiveGoalsOut = value ?? "";
+      index += 1;
     }
   }
   return options;
@@ -215,6 +226,10 @@ async function main() {
     options.horizonPromotionOut ||
       path.join(evidenceDir, `horizon-promotion-H2-to-${nextHorizon}-${runStamp}.json`),
   );
+  const progressiveGoalsOut = path.resolve(
+    options.progressiveGoalsOut ||
+      path.join(evidenceDir, `progressive-horizon-goals-H2-to-${nextHorizon}-${runStamp}.json`),
+  );
 
   const failures = [];
   if (!(await exists(evidenceDir))) {
@@ -240,6 +255,12 @@ async function main() {
     String(options.evidenceSelectionMode).trim().toLowerCase() !== evidenceSelectionMode
   ) {
     failures.push(`invalid_evidence_selection_mode:${String(options.evidenceSelectionMode)}`);
+  }
+  if (
+    Number.isFinite(options.minimumGoalIncrease) &&
+    (!Number.isInteger(options.minimumGoalIncrease) || options.minimumGoalIncrease < 1)
+  ) {
+    failures.push(`invalid_minimum_goal_increase:${String(options.minimumGoalIncrease)}`);
   }
 
   let closeoutRunCommand = null;
@@ -342,6 +363,15 @@ async function main() {
     if (options.allowInactiveSourceHorizon) {
       promoteArgv.push("--allow-inactive-source-horizon");
     }
+    if (options.requireProgressiveGoals) {
+      promoteArgv.push("--require-progressive-goals");
+    }
+    if (Number.isFinite(options.minimumGoalIncrease)) {
+      promoteArgv.push("--minimum-goal-increase", String(options.minimumGoalIncrease));
+    }
+    if (isNonEmptyString(progressiveGoalsOut)) {
+      promoteArgv.push("--progressive-goals-out", progressiveGoalsOut);
+    }
     if (options.requireActiveNextHorizon) {
       promoteArgv.push("--require-active-next-horizon");
     }
@@ -371,6 +401,7 @@ async function main() {
       outPath,
       closeoutRunOut,
       horizonPromotionOut,
+      progressiveGoalsOut,
     },
     checks: {
       evidenceSelectionMode,
@@ -382,6 +413,11 @@ async function main() {
       nextHorizon,
       requireCompletedActions: options.requireCompletedActions,
       requireActiveNextHorizon: options.requireActiveNextHorizon,
+      progressiveGoalsPass: horizonPromotionPayload?.checks?.progressiveGoalsPass === true,
+      requireProgressiveGoals: options.requireProgressiveGoals,
+      minimumGoalIncrease: Number.isFinite(options.minimumGoalIncrease)
+        ? options.minimumGoalIncrease
+        : null,
     },
     commands: {
       closeoutRun: closeoutRunCommand,

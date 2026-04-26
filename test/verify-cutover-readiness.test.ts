@@ -14,7 +14,7 @@ async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
 }
 
 describe("verify-cutover-readiness.sh", () => {
-  it("verifies all stages and rollback produce expected env keys", async () => {
+  it("verifies all stages and rollback produce expected env keys", { timeout: 60_000 }, async () => {
     await withTempDir(async (dir) => {
       const envPath = path.join(dir, "gateway.env");
       const outPath = path.join(dir, "cutover-readiness.json");

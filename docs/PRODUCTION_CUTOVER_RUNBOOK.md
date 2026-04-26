@@ -59,7 +59,7 @@ Then restart unified runtime.
 - Run automated readiness verifier before stage promotion:
 
 ```bash
-npm run verify:cutover-readiness
+npm run validate:cutover-readiness
 ```
 - Run validation bundle before and after each stage shift:
   - `npm run validate:failure-injection`
@@ -77,4 +77,4 @@ npm run verify:cutover-readiness
 ## Automated Readiness and Regression Gates
 
 - `npm run validate:regression-eve-primary` validates Eve-primary/no-fallback safe-lane behavior.
-- `npm run verify:cutover-readiness` executes staged cutover checks for shadow/canary/majority/full and confirms rollback returns to Eve-safe configuration.
+- `npm run validate:cutover-readiness` executes staged cutover checks for shadow/canary/majority/full and confirms rollback returns to Eve-safe configuration.

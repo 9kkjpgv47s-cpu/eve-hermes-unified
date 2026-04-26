@@ -26,6 +26,7 @@ npm run validate:soak
 npm run validate:evidence-summary
 npm run validate:regression-eve-primary
 npm run validate:cutover-readiness
+npm run validate:release-readiness
 npm run validate:all
 npm run cutover:stage -- canary
 npm run cutover:rollback

@@ -17,6 +17,7 @@
     "validate:evidence-gates": "node ./scripts/evidence-gates.mjs",
     "validate:regression-eve": "bash ./scripts/regression-eve-primary.sh",
     "validate:cutover-readiness": "bash ./scripts/verify-cutover-readiness.sh",
+    "validate:release-readiness": "bash ./scripts/validate-release-readiness.sh",
     "validate:all": "npm run check && npm test && npm run build && npm run validate:failure-injection && npm run validate:soak && npm run validate:evidence-summary && npm run validate:regression-eve && npm run validate:cutover-readiness",
     "test:cutover-scripts": "vitest run test/cutover-scripts.test.ts",
     "cutover:stage": "bash ./scripts/prod-cutover-stage.sh",

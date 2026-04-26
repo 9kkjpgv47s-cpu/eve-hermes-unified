@@ -75,9 +75,13 @@ run_dispatch() {
     UNIFIED_ROUTER_FAIL_CLOSED=1 \
     UNIFIED_ROUTER_CUTOVER_STAGE=shadow \
     UNIFIED_EVE_TASK_DISPATCH_SCRIPT="$fake_eve_script" \
+    EVE_TASK_DISPATCH_SCRIPT="$fake_eve_script" \
     UNIFIED_EVE_DISPATCH_RESULT_PATH="$tmp_dir/eve-state.json" \
+    EVE_DISPATCH_RESULT_PATH="$tmp_dir/eve-state.json" \
     UNIFIED_HERMES_LAUNCH_COMMAND="/bin/true" \
+    HERMES_LAUNCH_COMMAND="/bin/true" \
     UNIFIED_HERMES_LAUNCH_ARGS= \
+    HERMES_LAUNCH_ARGS= \
     "$@" \
     node "$dispatch_bin" --text "$text" --chat-id "$chat_id" --message-id "$message_id" >"$output_path"
 }

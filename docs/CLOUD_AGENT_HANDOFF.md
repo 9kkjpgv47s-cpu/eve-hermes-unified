@@ -67,5 +67,6 @@ Before marking a phase complete, include artifacts from:
 - `UNIFIED_EVIDENCE_REQUIRE_FAILURE_SCENARIOS=1 npm run validate:evidence-summary`
 - `npm run validate:regression-eve-primary`
 - `npm run validate:cutover-readiness`
+- `npm run validate:release-readiness`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.

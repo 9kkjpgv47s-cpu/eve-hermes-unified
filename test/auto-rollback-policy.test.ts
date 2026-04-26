@@ -288,6 +288,10 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
         ],
         { timeoutMs: 20_000 },
       );
+      if (result.code !== 0) {
+        throw new Error(`unexpected evaluator failure\nstdout=${result.stdout}\nstderr=${result.stderr}`);
+      }
+      expect(result.stderr).toBe("");
       expect(result.code).toBe(0);
 
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
@@ -400,6 +404,7 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
         ],
         { timeoutMs: 20_000 },
       );
+      expect(result.stderr).toBe("");
       expect(result.code).toBe(0);
 
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
@@ -497,6 +502,53 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
       expect(payload.reasons).toContain("release_readiness_failed");
       expect(payload.reasons).toContain("cutover_readiness_failed");
       expect(payload.reasons).toContain("stage_promotion_readiness_failed");
+    });
+  });
+
+  it("can evaluate only core evidence without requiring stage-promotion readiness", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy-without-stage-promotion.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.997,
+        p95LatencyMs: 900,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        includeCooldownSignals: false,
+      });
+      await rm(path.join(evidenceDir, "stage-promotion-readiness-20260426-000000.json"), {
+        force: true,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "canary",
+          "--skip-stage-promotion-readiness",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        decision: { action: string };
+        checks: { stagePromotionReadinessRequired: boolean };
+        reasons: string[];
+      };
+      expect(result.code).toBe(0);
+      expect(payload.pass).toBe(true);
+      expect(payload.decision.action).toBe("hold");
+      expect(payload.checks.stagePromotionReadinessRequired).toBe(false);
+      expect(payload.reasons).toEqual([]);
     });
   });
 

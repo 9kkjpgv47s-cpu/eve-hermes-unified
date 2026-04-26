@@ -24,6 +24,7 @@ function parseArgs(argv) {
     maxUnclassifiedFailures: Number.NaN,
     minFailureScenarioPassCount: Number.NaN,
     maxP95LatencyMs: Number.NaN,
+    skipStagePromotionReadiness: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -52,6 +53,8 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--auto-apply-rollback") {
       options.autoApplyRollback = true;
+    } else if (arg === "--skip-stage-promotion-readiness") {
+      options.skipStagePromotionReadiness = true;
     } else if (arg === "--min-success-rate") {
       options.minSuccessRate = Number(value ?? "");
       index += 1;
@@ -163,6 +166,10 @@ async function newestPassingReport(evidenceDir, prefix) {
   return candidates.length > 0 ? candidates[0] : "";
 }
 
+async function newestReport(evidenceDir, prefix) {
+  return await newestFileInDir(evidenceDir, prefix);
+}
+
 function evaluateThresholds(stage, metrics, thresholds) {
   const reasons = [];
   const minSuccessRate = thresholds.minSuccessRate;
@@ -244,7 +251,7 @@ async function main() {
   const validationSummaryPath = await newestPassingValidationSummary(evidenceDir);
   const cutoverReadinessPath = await newestPassingReport(evidenceDir, "cutover-readiness-");
   const releaseReadinessPath = await newestPassingReport(evidenceDir, "release-readiness-");
-  const stagePromotionPath = await newestPassingReport(evidenceDir, "stage-promotion-readiness-");
+  const stagePromotionPath = await newestReport(evidenceDir, "stage-promotion-readiness-");
 
   const failures = [];
   if (!(await exists(validationSummaryPath))) {
@@ -256,7 +263,7 @@ async function main() {
   if (!(await exists(releaseReadinessPath))) {
     failures.push("missing_release_readiness");
   }
-  if (!(await exists(stagePromotionPath))) {
+  if (!options.skipStagePromotionReadiness && !(await exists(stagePromotionPath))) {
     failures.push("missing_stage_promotion_readiness");
   }
 
@@ -291,7 +298,7 @@ async function main() {
   if (releaseReadiness?.pass !== true) {
     failures.push("release_readiness_failed");
   }
-  if (stagePromotion?.pass !== true) {
+  if (!options.skipStagePromotionReadiness && stagePromotion?.pass !== true) {
     failures.push("stage_promotion_readiness_failed");
   }
 
@@ -379,6 +386,7 @@ async function main() {
       cutoverReadinessPassed: cutoverReadiness?.pass === true,
       releaseReadinessPassed: releaseReadiness?.pass === true,
       stagePromotionReadinessPassed: stagePromotion?.pass === true,
+      stagePromotionReadinessRequired: !options.skipStagePromotionReadiness,
     },
     rollbackExecution,
   };

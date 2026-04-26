@@ -107,6 +107,13 @@ async function readJson(targetPath) {
   return JSON.parse(raw);
 }
 
+async function readJsonIfExists(targetPath) {
+  if (!(await exists(targetPath))) {
+    return null;
+  }
+  return await readJson(targetPath);
+}
+
 async function newestFileInDir(dir, prefix) {
   const entries = await readdir(dir, { withFileTypes: true });
   const matches = entries
@@ -270,10 +277,10 @@ async function main() {
     failures.push(`invalid_stage:${requestedStage}`);
   }
 
-  const validationSummary = await readJson(validationSummaryPath);
-  const cutoverReadiness = await readJson(cutoverReadinessPath);
-  const releaseReadiness = await readJson(releaseReadinessPath);
-  const stagePromotion = await readJson(stagePromotionPath);
+  const validationSummary = await readJsonIfExists(validationSummaryPath);
+  const cutoverReadiness = await readJsonIfExists(cutoverReadinessPath);
+  const releaseReadiness = await readJsonIfExists(releaseReadinessPath);
+  const stagePromotion = await readJsonIfExists(stagePromotionPath);
 
   if (validationSummary?.gates?.passed !== true) {
     failures.push("validation_summary_gate_failed");

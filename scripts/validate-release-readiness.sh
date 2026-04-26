@@ -12,6 +12,25 @@ mkdir -p "$COMMAND_LOG_DIR"
 printf '[]\n' >"$COMMANDS_FILE"
 
 declare -a required_command_names=()
+declare -a used_log_file_basenames=()
+
+sanitize_step_name() {
+  local raw="$1"
+  local normalized
+  normalized="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
+  normalized="$(printf '%s' "$normalized" | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//; s/-{2,}/-/g')"
+  if [[ -z "$normalized" ]]; then
+    normalized="step"
+  fi
+  local candidate="$normalized"
+  local suffix=2
+  while [[ " ${used_log_file_basenames[*]} " == *" ${candidate} "* ]]; do
+    candidate="${normalized}-${suffix}"
+    suffix=$((suffix + 1))
+  done
+  used_log_file_basenames+=("$candidate")
+  printf '%s\n' "$candidate"
+}
 
 append_command_result() {
   local name="$1"
@@ -45,7 +64,9 @@ NODE
 run_step() {
   local name="$1"
   shift
-  local log_file="$COMMAND_LOG_DIR/${name}.log"
+  local safe_name
+  safe_name="$(sanitize_step_name "$name")"
+  local log_file="$COMMAND_LOG_DIR/${safe_name}.log"
   local started_at
   local finished_at
   local status

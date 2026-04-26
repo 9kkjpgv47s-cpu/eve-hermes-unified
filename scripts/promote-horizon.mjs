@@ -29,6 +29,11 @@ function parseArgs(argv) {
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
     goalPolicyCoverageUntilHorizon: "H5",
+    requireGoalPolicyReadinessAudit: false,
+    goalPolicyReadinessAuditOut: "",
+    goalPolicyReadinessAuditUntilHorizon: "",
+    requireGoalPolicyReadinessTaggedTargets: false,
+    requireGoalPolicyReadinessPositivePendingMin: false,
     requirePolicyTaggedTargets: false,
     requirePositivePendingPolicyMin: false,
     progressiveGoalsOut: "",
@@ -92,6 +97,24 @@ function parseArgs(argv) {
     } else if (arg === "--goal-policy-coverage-until-horizon") {
       options.goalPolicyCoverageUntilHorizon = value ?? "";
       index += 1;
+    } else if (arg === "--require-goal-policy-readiness-audit") {
+      options.requireGoalPolicyReadinessAudit = true;
+    } else if (arg === "--goal-policy-readiness-audit-out") {
+      options.goalPolicyReadinessAuditOut = value ?? "";
+      index += 1;
+    } else if (
+      arg === "--goal-policy-readiness-audit-until-horizon" ||
+      arg === "--goal-policy-readiness-max-target-horizon"
+    ) {
+      options.goalPolicyReadinessAuditUntilHorizon = value ?? "";
+      index += 1;
+    } else if (
+      arg === "--require-goal-policy-readiness-tagged-targets" ||
+      arg === "--require-goal-policy-readiness-tagged-requirements"
+    ) {
+      options.requireGoalPolicyReadinessTaggedTargets = true;
+    } else if (arg === "--require-goal-policy-readiness-positive-pending-min") {
+      options.requireGoalPolicyReadinessPositivePendingMin = true;
     } else if (arg === "--require-policy-tagged-targets") {
       options.requirePolicyTaggedTargets = true;
     } else if (arg === "--require-positive-pending-policy-min") {
@@ -204,6 +227,13 @@ async function main() {
         `goal-policy-coverage-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`,
       ),
   );
+  const goalPolicyReadinessAuditOut = path.resolve(
+    options.goalPolicyReadinessAuditOut ||
+      path.join(
+        evidenceDir,
+        `goal-policy-readiness-audit-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`,
+      ),
+  );
   const outPath = path.resolve(
     options.out || path.join(evidenceDir, `horizon-promotion-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
   );
@@ -309,9 +339,11 @@ async function main() {
   let closeoutCommand = null;
   let progressiveGoalsCommand = null;
   let goalPolicyCoverageCommand = null;
+  let goalPolicyReadinessAuditCommand = null;
   let closeoutPayload = null;
   let progressiveGoalsPayload = null;
   let goalPolicyCoveragePayload = null;
+  let goalPolicyReadinessAuditPayload = null;
   if (failures.length === 0 && !options.closeoutFile && closeoutRunFile.length === 0) {
     const closeoutArgv = [
       "node",
@@ -406,6 +438,40 @@ async function main() {
       failures.push("goal_policy_coverage_gate_failed");
     }
   }
+  if (failures.length === 0 && options.requireGoalPolicyReadinessAudit) {
+    const auditUntilHorizon = normalizeHorizon(
+      options.goalPolicyReadinessAuditUntilHorizon,
+      nextHorizon || "H5",
+    );
+    const goalPolicyReadinessAuditArgv = [
+      "node",
+      "scripts/audit-goal-policy-readiness.mjs",
+      "--horizon-status-file",
+      horizonStatusFile,
+      "--source-horizon",
+      sourceHorizon,
+      "--until-horizon",
+      auditUntilHorizon,
+      "--out",
+      goalPolicyReadinessAuditOut,
+    ];
+    if (options.requireGoalPolicyReadinessTaggedTargets) {
+      goalPolicyReadinessAuditArgv.push("--require-tagged-requirements");
+    }
+    if (options.requireGoalPolicyReadinessPositivePendingMin) {
+      goalPolicyReadinessAuditArgv.push("--require-positive-pending-min");
+    }
+    goalPolicyReadinessAuditCommand = await runCommand(goalPolicyReadinessAuditArgv, {
+      timeoutMs: options.timeoutMs,
+    });
+    goalPolicyReadinessAuditPayload = await readJson(goalPolicyReadinessAuditOut);
+    if (
+      goalPolicyReadinessAuditCommand.code !== 0 ||
+      goalPolicyReadinessAuditPayload?.pass !== true
+    ) {
+      failures.push("goal_policy_readiness_audit_gate_failed");
+    }
+  }
 
   const before = {
     activeHorizon: String(statusPayload?.activeHorizon ?? ""),
@@ -485,6 +551,9 @@ async function main() {
       closeoutRunFile: closeoutRunFile || null,
       progressiveGoalsOut: options.requireProgressiveGoals ? progressiveGoalsOut : null,
       goalPolicyCoverageOut: options.requireGoalPolicyCoverage ? goalPolicyCoverageOut : null,
+      goalPolicyReadinessAuditOut: options.requireGoalPolicyReadinessAudit
+        ? goalPolicyReadinessAuditOut
+        : null,
       outPath,
       statusWritePath,
     },
@@ -511,6 +580,11 @@ async function main() {
         options.requireGoalPolicyCoverage === true
           ? goalPolicyCoveragePayload?.pass === true
           : null,
+      requireGoalPolicyReadinessAudit: options.requireGoalPolicyReadinessAudit,
+      goalPolicyReadinessAuditPass:
+        options.requireGoalPolicyReadinessAudit === true
+          ? goalPolicyReadinessAuditPayload?.pass === true
+          : null,
       progressiveGoalsPass:
         options.requireProgressiveGoals === true
           ? progressiveGoalsPayload?.pass === true
@@ -523,6 +597,7 @@ async function main() {
     commands: {
       closeout: closeoutCommand,
       goalPolicyCoverage: goalPolicyCoverageCommand,
+      goalPolicyReadinessAudit: goalPolicyReadinessAuditCommand,
       progressiveGoals: progressiveGoalsCommand,
     },
     failures,

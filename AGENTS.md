@@ -63,6 +63,8 @@ npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/H
 #   --goal-policy-key H2->H3
 # optionally require multi-transition policy coverage before promotion:
 #   --require-goal-policy-coverage --goal-policy-coverage-until-horizon H5 --require-policy-tagged-targets
+# optionally require the readiness-audit gate before promotion:
+#   --require-goal-policy-readiness-audit --goal-policy-readiness-audit-max-target-horizon H5 --require-goal-policy-readiness-tagged-targets
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
 npm run audit:goal-policy-readiness -- --horizon-status-file docs/HORIZON_STATUS.json --source-horizon H2 --until-horizon H5 --require-tagged-requirements
 # optional deterministic evidence mode override:

@@ -36,6 +36,11 @@ function parseArgs(argv) {
     requiredPolicyTransitions: "",
     requirePolicyTaggedTargets: false,
     requirePositivePendingPolicyMin: false,
+    requireGoalPolicyReadinessAudit: false,
+    goalPolicyReadinessAuditOut: "",
+    goalPolicyReadinessAuditUntilHorizon: "H5",
+    requireGoalPolicyReadinessTaggedTargets: false,
+    requireGoalPolicyReadinessPositivePendingMin: false,
     progressiveGoalsOut: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -124,6 +129,18 @@ function parseArgs(argv) {
       options.requirePolicyTaggedTargets = true;
     } else if (arg === "--require-positive-pending-policy-min") {
       options.requirePositivePendingPolicyMin = true;
+    } else if (arg === "--require-goal-policy-readiness-audit") {
+      options.requireGoalPolicyReadinessAudit = true;
+    } else if (arg === "--goal-policy-readiness-audit-out") {
+      options.goalPolicyReadinessAuditOut = value ?? "";
+      index += 1;
+    } else if (arg === "--goal-policy-readiness-audit-until-horizon") {
+      options.goalPolicyReadinessAuditUntilHorizon = value ?? "";
+      index += 1;
+    } else if (arg === "--require-goal-policy-readiness-tagged-targets") {
+      options.requireGoalPolicyReadinessTaggedTargets = true;
+    } else if (arg === "--require-goal-policy-readiness-positive-pending-min") {
+      options.requireGoalPolicyReadinessPositivePendingMin = true;
     } else if (arg === "--progressive-goals-out") {
       options.progressiveGoalsOut = value ?? "";
       index += 1;
@@ -258,6 +275,10 @@ async function main() {
   const goalPolicyCoverageOut = path.resolve(
     options.goalPolicyCoverageOut ||
       path.join(evidenceDir, `goal-policy-coverage-H2-to-${nextHorizon}-${runStamp}.json`),
+  );
+  const goalPolicyReadinessAuditOut = path.resolve(
+    options.goalPolicyReadinessAuditOut ||
+      path.join(evidenceDir, `goal-policy-readiness-H2-to-${nextHorizon}-${runStamp}.json`),
   );
 
   const failures = [];
@@ -423,6 +444,22 @@ async function main() {
         promoteArgv.push("--require-positive-pending-policy-min");
       }
     }
+    if (options.requireGoalPolicyReadinessAudit) {
+      promoteArgv.push("--require-goal-policy-readiness-audit");
+      promoteArgv.push("--goal-policy-readiness-audit-out", goalPolicyReadinessAuditOut);
+      if (isNonEmptyString(options.goalPolicyReadinessAuditUntilHorizon)) {
+        promoteArgv.push(
+          "--goal-policy-readiness-audit-until-horizon",
+          options.goalPolicyReadinessAuditUntilHorizon,
+        );
+      }
+      if (options.requireGoalPolicyReadinessTaggedTargets) {
+        promoteArgv.push("--require-goal-policy-readiness-tagged-targets");
+      }
+      if (options.requireGoalPolicyReadinessPositivePendingMin) {
+        promoteArgv.push("--require-goal-policy-readiness-positive-pending-min");
+      }
+    }
     if (options.requireActiveNextHorizon) {
       promoteArgv.push("--require-active-next-horizon");
     }
@@ -454,6 +491,9 @@ async function main() {
       horizonPromotionOut,
       progressiveGoalsOut,
       goalPolicyCoverageOut: options.requireGoalPolicyCoverage ? goalPolicyCoverageOut : null,
+      goalPolicyReadinessAuditOut: options.requireGoalPolicyReadinessAudit
+        ? goalPolicyReadinessAuditOut
+        : null,
     },
     checks: {
       evidenceSelectionMode,
@@ -475,6 +515,11 @@ async function main() {
       goalPolicyCoveragePass:
         options.requireGoalPolicyCoverage === true
           ? horizonPromotionPayload?.checks?.goalPolicyCoveragePass === true
+          : null,
+      requireGoalPolicyReadinessAudit: options.requireGoalPolicyReadinessAudit,
+      goalPolicyReadinessAuditPass:
+        options.requireGoalPolicyReadinessAudit === true
+          ? horizonPromotionPayload?.checks?.goalPolicyReadinessAuditPass === true
           : null,
     },
     commands: {

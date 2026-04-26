@@ -391,6 +391,56 @@ describe("run-h2-promotion.mjs", () => {
     });
   });
 
+  it("passes when readiness audit gate is required", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-readiness-audit.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--require-progressive-goals",
+          "--goal-policy-key",
+          "H2->H3",
+          "--require-goal-policy-coverage",
+          "--required-policy-transitions",
+          "H2->H3",
+          "--require-policy-tagged-targets",
+          "--require-goal-policy-readiness-audit",
+          "--goal-policy-readiness-audit-until-horizon",
+          "H3",
+          "--require-goal-policy-readiness-tagged-targets",
+          "--require-goal-policy-readiness-positive-pending-min",
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: { goalPolicyReadinessAuditPass: boolean };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.goalPolicyReadinessAuditPass).toBe(true);
+    });
+  });
+
   it("runs closeout + promotion and advances active horizon", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");
@@ -421,6 +471,11 @@ describe("run-h2-promotion.mjs", () => {
           "--required-policy-transitions",
           "H2->H3",
           "--require-policy-tagged-targets",
+          "--require-goal-policy-readiness-audit",
+          "--goal-policy-readiness-audit-until-horizon",
+          "H3",
+          "--require-goal-policy-readiness-tagged-targets",
+          "--require-goal-policy-readiness-positive-pending-min",
           "--goal-policy-key",
           "H2->H3",
         ],
@@ -441,6 +496,7 @@ describe("run-h2-promotion.mjs", () => {
           horizonAdvanced: boolean;
           progressiveGoalsPass: boolean;
           goalPolicyCoveragePass: boolean;
+          goalPolicyReadinessAuditPass: boolean;
         };
         failures: string[];
       };
@@ -450,6 +506,7 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.horizonAdvanced).toBe(true);
       expect(payload.checks.progressiveGoalsPass).toBe(true);
       expect(payload.checks.goalPolicyCoveragePass).toBe(true);
+      expect(payload.checks.goalPolicyReadinessAuditPass).toBe(true);
       expect(payload.failures).toEqual([]);
 
       const statusPayload = JSON.parse(await readFile(statusPath, "utf8")) as {

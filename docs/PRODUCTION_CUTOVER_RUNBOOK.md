@@ -400,3 +400,27 @@ Safety/testing flags:
 - `--dry-run` evaluates and emits report without mutating `docs/HORIZON_STATUS.json`
 - `--allow-inactive-source-horizon` permits replay/promotion against non-active horizons (CI/backfill only)
 - `--allow-horizon-mismatch` forwards to closeout gate for controlled non-default promotion target checks
+
+## H2 Promotion Runner (Closeout + Horizon Promotion)
+
+Use one command to run H2 closeout and then promote horizon state using the exact emitted closeout manifest snapshot:
+
+```bash
+npm run run:h2-promotion -- \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --env-file "$HOME/.openclaw/run/gateway.env" \
+  --allow-horizon-mismatch
+```
+
+Behavior:
+- runs `run:h2-closeout` first and writes `evidence/h2-closeout-run-*.json`
+- runs `promote:horizon --closeout-run-file <h2-closeout-run>` second
+- writes unified promotion-run artifact:
+  - `evidence/h2-promotion-run-*.json`
+- returns non-zero when either closeout or promotion step fails
+
+Useful flags:
+- `--dry-run` (verifies full flow without mutating `docs/HORIZON_STATUS.json`)
+- `--skip-cutover-readiness` for CI/test harnesses using synthetic env files
+- `--note "<text>"` to append a custom promotion note into history on successful write mode

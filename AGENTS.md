@@ -57,6 +57,7 @@ npm run calibrate:rollback-thresholds -- --stage majority --evidence-dir evidenc
 npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --allow-horizon-mismatch --skip-cutover-readiness
 npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness
 npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence --allow-horizon-mismatch --note "Promote H2 after closeout"
+npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
 # optional deterministic evidence mode override:
 #   --evidence-selection-mode latest-passing

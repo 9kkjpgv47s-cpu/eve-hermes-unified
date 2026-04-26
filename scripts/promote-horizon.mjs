@@ -173,10 +173,10 @@ async function main() {
     failures.push(`invalid_horizon:${options.horizon || "<empty>"}`);
   }
   if (!nextHorizon) {
+    failures.push(`invalid_next_horizon:${options.nextHorizon || "<empty>"}`);
+  }
   if (isNonEmptyString(options.closeoutFile) && closeoutRunFile.length > 0) {
     failures.push("conflicting_closeout_sources:closeout_file_and_closeout_run_file");
-  }
-    failures.push(`invalid_next_horizon:${options.nextHorizon || "<empty>"}`);
   }
   if (!options.closeoutFile && !(await exists(evidenceDir))) {
     failures.push(`missing_evidence_dir:${evidenceDir}`);

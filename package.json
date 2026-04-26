@@ -20,6 +20,7 @@
     "validate:h2-closeout": "node ./scripts/validate-horizon-closeout.mjs --horizon H2 --next-horizon H3 --require-completed-actions",
     "promote:horizon": "node ./scripts/promote-horizon.mjs",
     "run:h2-closeout": "node ./scripts/run-h2-closeout.mjs",
+    "run:h2-promotion": "node ./scripts/run-h2-promotion.mjs",
     "evaluate:auto-rollback-policy": "node ./scripts/evaluate-auto-rollback-policy.mjs",
     "calibrate:rollback-thresholds": "node ./scripts/calibrate-rollback-thresholds.mjs",
     "run:supervised-rollback-simulation": "node ./scripts/run-supervised-rollback-simulation.mjs",

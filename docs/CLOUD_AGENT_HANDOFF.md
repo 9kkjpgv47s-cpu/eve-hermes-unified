@@ -78,6 +78,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:horizon-closeout -- --horizon H1 --target-next H2`
 - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - `npm run promote:stage -- --target-stage <canary|majority|full> --dry-run`
+- `npm run evaluate:auto-rollback-policy -- --target-stage <canary|majority|full> --evidence-dir evidence`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -98,6 +99,8 @@ Schema validation expectations:
   - `npm run validate:horizon-closeout -- --horizon <H1|H2|H3|H4|H5> --target-next <H2|H3|H4|H5>`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
+- auto-rollback policy decisions can be machine-evaluated with:
+  - `npm run evaluate:auto-rollback-policy -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - stage promotion can be executed through a single gated command:
   - `npm run promote:stage -- --target-stage <canary|majority|full> --env-file <gateway.env>`
   - add `--dry-run` to verify readiness without changing env values

@@ -37,6 +37,7 @@ npm run validate:horizon-status
 npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
 npm run check:stage-promotion -- --target-stage canary
 npm run promote:stage -- --target-stage canary --dry-run
+npm run evaluate:auto-rollback-policy -- --target-stage canary --decision hold
 npm run validate:all
 npm run cutover:stage -- canary
 npm run cutover:rollback

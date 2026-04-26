@@ -52,6 +52,7 @@ Workstreams:
 - Integrate cutover stages (`shadow`, `canary`, `majority`, `full`) with deployment workflow controls.
 - Add live SLO monitors wired to dispatch success rate, P95 latency, missing trace rate, and failure-class distribution.
 - Implement operator-safe auto-rollback trigger policy for sustained gate violations.
+- Enforce executable rollback decision evidence via `npm run evaluate:auto-rollback-policy`.
 
 Exit evidence:
 - Recorded canary and majority drills with explicit pass/fail gates.

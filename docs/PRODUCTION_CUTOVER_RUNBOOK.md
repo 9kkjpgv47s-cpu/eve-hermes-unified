@@ -173,3 +173,40 @@ Behavior:
 Safe operation flags:
 - `--dry-run` validates readiness without mutating env files.
 - `--allow-horizon-mismatch` (or `--ignore-horizon-target`) is intended for CI/testing only.
+
+## Auto-Rollback Policy Gate (H2+)
+
+When operating in canary/majority/full stages, evaluate rollback policy from latest evidence before deciding to continue traffic:
+
+```bash
+npm run evaluate:auto-rollback-policy -- \
+  --current-stage canary \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json
+```
+
+Default decision behavior:
+- `decision: hold` when all required gates pass for the current stage.
+- `decision: rollback` when critical SLO/failure gates are violated.
+
+Policy expectations:
+- Canary rollback trigger:
+  - success rate below threshold
+  - missing trace rate above threshold
+  - any unclassified failures
+  - evidence/cutover/release/merge verification gate failures
+- Majority/full add:
+  - failure scenario pass-count threshold
+
+Machine-readable output:
+- `evidence/auto-rollback-policy-*.json`
+
+If decision is rollback, execute:
+
+```bash
+npm run cutover:rollback
+```
+
+Then verify post-action state with:
+- `npm run validate:cutover-readiness`
+- `npm run evaluate:auto-rollback-policy -- --current-stage shadow --evidence-dir evidence`

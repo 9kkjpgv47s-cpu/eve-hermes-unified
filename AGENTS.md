@@ -21,9 +21,10 @@ Converge Eve and Hermes into one operating runtime with one policy router, one c
 3. `docs/UNIFIED_ARCHITECTURE_SPEC.md`
 4. `docs/SUBSYSTEM_CONVERGENCE_PLAN.md`
 5. `docs/MASTER_EXECUTION_CHECKLIST.md`
-6. `docs/VALIDATION_HARDENING_MATRIX.md`
-7. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
-8. `docs/CLOUD_AGENT_HANDOFF.md`
+6. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
+7. `docs/VALIDATION_HARDENING_MATRIX.md`
+8. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
+9. `docs/CLOUD_AGENT_HANDOFF.md`
 
 ## Build and Validation Commands
 

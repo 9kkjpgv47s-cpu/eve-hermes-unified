@@ -9,6 +9,7 @@ Use this document when one cloud agent hands execution to another. The objective
    - `AGENTS.md`
    - `docs/PROJECT_VISION.md`
    - `docs/MASTER_EXECUTION_CHECKLIST.md`
+   - `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 2. Install and verify:
    - `npm install`
    - `npm run check`

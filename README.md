@@ -35,6 +35,9 @@ npm run cutover:stage -- canary
 npm run cutover:rollback
 ```
 
+`npm run validate:merge-bundle` uses existing latest passing reports by default and writes a top-level manifest:
+- `evidence/merge-bundle-validation-*.json`
+
 ## Repository Goals
 
 - Keep current Eve production behavior safe while converging to one runtime.

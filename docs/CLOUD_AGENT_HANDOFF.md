@@ -74,6 +74,10 @@ Before marking a phase complete, include artifacts from:
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
 The merge bundle workflow writes:
-- bundle validation manifest in `evidence/merge-bundle-validation-*.json`
+- bundle validation manifest in `evidence/merge-bundle-validation-*.json` (or `UNIFIED_MERGE_BUNDLE_MANIFEST_PATH`)
 - packaged bundle directory `evidence/merge-readiness-bundle-*`
 - compressed archive `evidence/merge-readiness-bundle-*.tar.gz`
+
+By default, `npm run validate:merge-bundle` consumes latest existing passing release-readiness + initial-scope reports.
+Set `UNIFIED_MERGE_BUNDLE_RUN_RELEASE_READINESS=1` and/or `UNIFIED_MERGE_BUNDLE_RUN_INITIAL_SCOPE=1`
+to force regeneration before packaging.

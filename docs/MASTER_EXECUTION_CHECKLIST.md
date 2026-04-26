@@ -57,6 +57,7 @@ Exit criteria:
 
 - [x] `npm run validate:failure-injection` runs and captures evidence.
 - [x] `npm run validate:soak` runs and captures evidence.
+- [x] `npm run validate:regression-eve-primary` runs and captures Eve-safe regression evidence.
 - [x] Failure classes are classified (no unclassified failures in passing scenarios).
 - [x] Trace IDs are present in all sampled response outputs.
 
@@ -67,6 +68,7 @@ Exit criteria:
 
 - [x] `npm run cutover:stage -- <shadow|canary|majority|full>` process verified.
 - [x] `npm run cutover:rollback` process verified.
+- [x] `npm run validate:cutover-readiness` verifies stage transitions + rollback end state.
 - [x] Rollback path returns runtime to Eve-primary/no-fallback safe lane.
 - [x] Operational checklist and emergency actions are confirmed from runbook.
 

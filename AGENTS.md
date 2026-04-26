@@ -43,6 +43,8 @@ Extended validation:
 npm run validate:failure-injection
 npm run validate:soak
 npm run validate:evidence-summary
+npm run validate:regression-eve
+npm run validate:cutover-readiness
 npm run validate:all
 ```
 

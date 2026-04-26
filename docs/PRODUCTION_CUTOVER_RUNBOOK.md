@@ -56,6 +56,11 @@ Then restart unified runtime.
 - Verify trace continuity for recent messages.
 - Verify failure classes and response classes are expected.
 - Confirm no unexpected lane drift.
+- Run automated readiness verifier before stage promotion:
+
+```bash
+npm run verify:cutover-readiness
+```
 - Run validation bundle before and after each stage shift:
   - `npm run validate:failure-injection`
   - `npm run validate:soak`
@@ -68,3 +73,8 @@ Then restart unified runtime.
 2. Restart runtime.
 3. Verify Eve-only message flow.
 4. Capture incident evidence and route to remediation queue.
+
+## Automated Readiness and Regression Gates
+
+- `npm run validate:regression-eve-primary` validates Eve-primary/no-fallback safe-lane behavior.
+- `npm run verify:cutover-readiness` executes staged cutover checks for shadow/canary/majority/full and confirms rollback returns to Eve-safe configuration.

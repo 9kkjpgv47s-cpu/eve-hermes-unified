@@ -21,6 +21,10 @@ function parseArgs(argv) {
     maxUnclassifiedFailures: Number.NaN,
     minFailureScenarioPassCount: Number.NaN,
     maxP95LatencyMs: Number.NaN,
+    validationSummaryFile: "",
+    cutoverReadinessFile: "",
+    releaseReadinessFile: "",
+    stagePromotionReadinessFile: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -56,6 +60,18 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--max-p95-latency-ms") {
       options.maxP95LatencyMs = Number(value ?? "");
+      index += 1;
+    } else if (arg === "--validation-summary-file") {
+      options.validationSummaryFile = value ?? "";
+      index += 1;
+    } else if (arg === "--cutover-readiness-file") {
+      options.cutoverReadinessFile = value ?? "";
+      index += 1;
+    } else if (arg === "--release-readiness-file") {
+      options.releaseReadinessFile = value ?? "";
+      index += 1;
+    } else if (arg === "--stage-promotion-readiness-file") {
+      options.stagePromotionReadinessFile = value ?? "";
       index += 1;
     }
   }
@@ -223,10 +239,18 @@ async function main() {
     options.envFile || process.env.UNIFIED_RUNTIME_ENV_FILE || path.join(process.env.HOME || "", ".openclaw/run/gateway.env"),
   );
 
-  const validationSummaryPath = await newestPassingValidationSummary(evidenceDir);
-  const cutoverReadinessPath = await newestPassingReport(evidenceDir, "cutover-readiness-");
-  const releaseReadinessPath = await newestPassingReport(evidenceDir, "release-readiness-");
-  const stagePromotionPath = await newestPassingReport(evidenceDir, "stage-promotion-readiness-");
+  const validationSummaryPath = isNonEmptyString(options.validationSummaryFile)
+    ? path.resolve(options.validationSummaryFile)
+    : await newestPassingValidationSummary(evidenceDir);
+  const cutoverReadinessPath = isNonEmptyString(options.cutoverReadinessFile)
+    ? path.resolve(options.cutoverReadinessFile)
+    : await newestPassingReport(evidenceDir, "cutover-readiness-");
+  const releaseReadinessPath = isNonEmptyString(options.releaseReadinessFile)
+    ? path.resolve(options.releaseReadinessFile)
+    : await newestPassingReport(evidenceDir, "release-readiness-");
+  const stagePromotionPath = isNonEmptyString(options.stagePromotionReadinessFile)
+    ? path.resolve(options.stagePromotionReadinessFile)
+    : await newestPassingReport(evidenceDir, "stage-promotion-readiness-");
 
   const failures = [];
   if (!(await exists(validationSummaryPath))) {
@@ -259,10 +283,18 @@ async function main() {
     failures.push(`invalid_stage:${options.stage || "<empty>"}`);
   }
 
-  const validationSummary = await readJson(validationSummaryPath);
-  const cutoverReadiness = await readJson(cutoverReadinessPath);
-  const releaseReadiness = await readJson(releaseReadinessPath);
-  const stagePromotion = await readJson(stagePromotionPath);
+  const validationSummary = await exists(validationSummaryPath)
+    ? await readJson(validationSummaryPath)
+    : null;
+  const cutoverReadiness = await exists(cutoverReadinessPath)
+    ? await readJson(cutoverReadinessPath)
+    : null;
+  const releaseReadiness = await exists(releaseReadinessPath)
+    ? await readJson(releaseReadinessPath)
+    : null;
+  const stagePromotion = await exists(stagePromotionPath)
+    ? await readJson(stagePromotionPath)
+    : null;
 
   if (validationSummary?.gates?.passed !== true) {
     failures.push("validation_summary_gate_failed");

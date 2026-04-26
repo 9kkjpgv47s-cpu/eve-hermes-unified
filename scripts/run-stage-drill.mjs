@@ -133,6 +133,12 @@ async function readJsonMaybe(targetPath) {
   }
 }
 
+function maybePushFileArg(argv, flag, filePath) {
+  if (isNonEmptyString(filePath)) {
+    argv.push(flag, filePath);
+  }
+}
+
 async function runCommand(argv, options) {
   const startedAtMs = Date.now();
   return await new Promise((resolve) => {
@@ -241,10 +247,30 @@ async function main() {
     },
   });
   const promotePayload = await readJsonMaybe(promoteOut);
+  const readinessPayload = await readJsonMaybe(readinessOut);
   const promotePassed = promoteCommand.code === 0 && promotePayload?.pass === true;
   if (!promotePassed) {
     failures.push("stage_promotion_step_failed");
   }
+
+  const promotionEvidenceFiles = {
+    validationSummary: String(
+      readinessPayload?.files?.validationSummary ??
+        promotePayload?.files?.validationSummary ??
+        "",
+    ),
+    cutoverReadiness: String(
+      readinessPayload?.files?.cutoverReadiness ??
+        promotePayload?.files?.cutoverReadiness ??
+        "",
+    ),
+    releaseReadiness: String(
+      readinessPayload?.files?.releaseReadiness ??
+        promotePayload?.files?.releaseReadiness ??
+        "",
+    ),
+    stagePromotionReadiness: String(readinessOut),
+  };
 
   const rollbackPolicyArgs = [
     "node",
@@ -258,6 +284,26 @@ async function main() {
     "--out",
     rollbackPolicyOut,
   ];
+  maybePushFileArg(
+    rollbackPolicyArgs,
+    "--validation-summary-file",
+    promotionEvidenceFiles.validationSummary,
+  );
+  maybePushFileArg(
+    rollbackPolicyArgs,
+    "--cutover-readiness-file",
+    promotionEvidenceFiles.cutoverReadiness,
+  );
+  maybePushFileArg(
+    rollbackPolicyArgs,
+    "--release-readiness-file",
+    promotionEvidenceFiles.releaseReadiness,
+  );
+  maybePushFileArg(
+    rollbackPolicyArgs,
+    "--stage-promotion-readiness-file",
+    promotionEvidenceFiles.stagePromotionReadiness,
+  );
   if (options.autoApplyRollback) {
     rollbackPolicyArgs.push("--auto-apply-rollback");
   }
@@ -334,6 +380,12 @@ async function main() {
       autoApplyRollbackRequested: options.autoApplyRollback,
       dryRun: options.dryRun,
       allowHorizonMismatch: options.allowHorizonMismatch,
+      evidenceSnapshotPinned: [
+        promotionEvidenceFiles.validationSummary,
+        promotionEvidenceFiles.cutoverReadiness,
+        promotionEvidenceFiles.releaseReadiness,
+        promotionEvidenceFiles.stagePromotionReadiness,
+      ].every((filePath) => isNonEmptyString(filePath)),
     },
     commands: {
       promote: promoteCommand,

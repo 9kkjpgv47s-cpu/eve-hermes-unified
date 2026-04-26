@@ -102,6 +102,11 @@ Schema validation expectations:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - auto-rollback policy decisions can be machine-evaluated with:
   - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
+  - optional explicit artifact pinning flags:
+    - `--validation-summary-file <path>`
+    - `--cutover-readiness-file <path>`
+    - `--release-readiness-file <path>`
+    - `--stage-promotion-readiness-file <path>`
 - stage promotion can be executed through a single gated command:
   - `npm run promote:stage -- --target-stage <canary|majority|full> --env-file <gateway.env>`
   - add `--dry-run` to verify readiness without changing env values

@@ -176,7 +176,7 @@ Safe operation flags:
 
 ## Auto-Rollback Policy Gate (H2+)
 
-When operating in canary/majority/full stages, evaluate rollback policy from latest evidence before deciding to continue traffic:
+When operating in canary/majority/full stages, evaluate rollback policy from evidence before deciding to continue traffic:
 
 ```bash
 npm run evaluate:auto-rollback-policy -- \
@@ -188,6 +188,14 @@ npm run evaluate:auto-rollback-policy -- \
 Default decision behavior:
 - `decision: hold` when all required gates pass for the current stage.
 - `decision: rollback` when critical SLO/failure gates are violated.
+
+Snapshot pinning options:
+- `--validation-summary-file <path>`
+- `--cutover-readiness-file <path>`
+- `--release-readiness-file <path>`
+- `--stage-promotion-readiness-file <path>`
+
+Use these when you need rollback-policy evaluation to consume the same artifact set selected by a preceding promotion-readiness step.
 
 Policy expectations:
 - Canary rollback trigger:
@@ -229,6 +237,7 @@ npm run run:stage-drill -- \
 Behavior:
 - Always writes a unified drill report: `evidence/stage-drill-<stage>-*.json`
 - Captures child command execution details for both promotion and rollback-policy checks.
+- Pins rollback-policy evaluation to the exact evidence files selected during promotion/readiness whenever available.
 - Fails the drill when:
   - stage promotion step fails, or
   - rollback policy output is missing/unreadable, or

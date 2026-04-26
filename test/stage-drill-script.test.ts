@@ -20,8 +20,15 @@ async function seedEvidence(
     releasePass?: boolean;
     cutoverPass?: boolean;
     stagePromotionPass?: boolean;
+    createFailingLatestSummary?: boolean;
+    createFailingLatestRelease?: boolean;
   },
-): Promise<void> {
+): Promise<{
+  summaryPath: string;
+  cutoverPath: string;
+  releasePath: string;
+  stagePromotionPath?: string;
+}> {
   await mkdir(evidenceDir, { recursive: true });
   const stamp = "20260426-000000";
   const summaryPath = path.join(evidenceDir, `validation-summary-${stamp}.json`);
@@ -148,6 +155,80 @@ async function seedEvidence(
   );
 
   await writeFile(verifyPath, JSON.stringify({ pass: true }, null, 2), "utf8");
+
+  if (options?.createFailingLatestSummary === true) {
+    await writeFile(
+      path.join(evidenceDir, "validation-summary-20260426-999999.json"),
+      JSON.stringify(
+        {
+          generatedAtIso: new Date().toISOString(),
+          metrics: {
+            successRate: 0,
+            missingTraceRate: 1,
+            unclassifiedFailures: 0,
+            p95LatencyMs: 5000,
+            failureScenarioPassCount: 0,
+          },
+          gates: {
+            passed: false,
+            failures: ["synthetic-failing-summary"],
+          },
+          failureInjectionPreview: [],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  }
+
+  if (options?.createFailingLatestRelease === true) {
+    await writeFile(
+      path.join(evidenceDir, "release-readiness-20260426-999999.json"),
+      JSON.stringify(
+        {
+          readinessVersion: "v1",
+          generatedAtIso: new Date().toISOString(),
+          defaultValidationCommand: "validate:all",
+          pass: false,
+          files: {
+            validationSummary: summaryPath,
+            regression: null,
+            cutoverReadiness: cutoverPath,
+            failureInjection: null,
+            soak: null,
+            commandLogDir: null,
+            commandsFile: null,
+          },
+          requiredArtifacts: [],
+          releaseCommandLogs: [],
+          checks: {
+            validationSummaryPassed: false,
+            regressionPassed: false,
+            cutoverReadinessPassed: false,
+            commandLogsMissing: [],
+            discoveredCommandLogs: [],
+            requiredReleaseCommands: [],
+            missingRequiredCommands: [],
+            executedReleaseCommands: [],
+            missingCommandLogFiles: [],
+            commandFailures: ["synthetic-failing-release"],
+            validationCommandsPassed: false,
+          },
+          failures: ["synthetic-failing-release"],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  }
+
+  return {
+    summaryPath,
+    cutoverPath,
+    releasePath,
+  };
 }
 
 async function seedHorizonStatus(filePath: string): Promise<void> {
@@ -288,6 +369,12 @@ describe("run-stage-drill.mjs", () => {
         ],
         { timeoutMs: 30_000 },
       );
+      if (result.code !== 0) {
+        throw new Error(`stage-drill failed unexpectedly:\nSTDOUT:\n${result.stdout}\nSTDERR:\n${result.stderr}`);
+      }
+      if (result.code !== 0) {
+        throw new Error(`run-stage-drill failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+      }
       expect(result.code).toBe(0);
 
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
@@ -385,6 +472,77 @@ describe("run-stage-drill.mjs", () => {
       expect(payload.dryRun).toBe(true);
       expect(payload.checks.promotionPassed).toBe(true);
       expect(payload.checks.rollbackPolicyPassed).toBe(true);
+    });
+  });
+
+  it("pins rollback evaluation to promotion-selected evidence snapshot", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "stage-drill.json");
+
+      await seedEvidence(evidenceDir, {
+        successRate: 1,
+        createFailingLatestSummary: true,
+        createFailingLatestRelease: true,
+      });
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-stage-drill.mjs",
+          "--target-stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--canary-chats",
+          "101,202",
+        ],
+        { timeoutMs: 30_000 },
+      );
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: { rollbackPolicyPassed: boolean };
+        files: { readinessOut: string; rollbackPolicyOut: string };
+        failures?: string[];
+      };
+      expect(result.code).toBe(2);
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.rollbackPolicyPassed).toBe(false);
+      expect(payload.failures).toContain("stage_promotion_step_failed");
+      expect(payload.failures).toContain("rollback_policy_triggered");
+
+      const readinessPayload = JSON.parse(await readFile(payload.files.readinessOut, "utf8")) as {
+        files: {
+          validationSummary: string;
+          cutoverReadiness: string;
+          releaseReadiness: string;
+          mergeBundleValidation: string;
+          bundleVerification: string;
+        };
+      };
+      const rollbackPayload = JSON.parse(await readFile(payload.files.rollbackPolicyOut, "utf8")) as {
+        files: {
+          validationSummary: string;
+          cutoverReadiness: string;
+          releaseReadiness: string;
+          stagePromotionReadiness: string;
+        };
+      };
+
+      expect(rollbackPayload.files.validationSummary).toBe(readinessPayload.files.validationSummary);
+      expect(rollbackPayload.files.cutoverReadiness).toBe(readinessPayload.files.cutoverReadiness);
+      expect(rollbackPayload.files.releaseReadiness).toBe(readinessPayload.files.releaseReadiness);
+      expect(rollbackPayload.files.stagePromotionReadiness).toBe(payload.files.readinessOut);
     });
   });
 });

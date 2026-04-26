@@ -23,6 +23,11 @@ function parseArgs(argv) {
     currentStage: "",
     horizonStatusFile: "",
     out: "",
+    validationSummaryFile: "",
+    cutoverReadinessFile: "",
+    releaseReadinessFile: "",
+    mergeBundleValidationFile: "",
+    bundleVerificationFile: "",
     allowHorizonMismatch: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -42,6 +47,21 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--out") {
       options.out = value ?? "";
+      index += 1;
+    } else if (arg === "--validation-summary-file") {
+      options.validationSummaryFile = value ?? "";
+      index += 1;
+    } else if (arg === "--cutover-readiness-file") {
+      options.cutoverReadinessFile = value ?? "";
+      index += 1;
+    } else if (arg === "--release-readiness-file") {
+      options.releaseReadinessFile = value ?? "";
+      index += 1;
+    } else if (arg === "--merge-bundle-validation-file") {
+      options.mergeBundleValidationFile = value ?? "";
+      index += 1;
+    } else if (arg === "--bundle-verification-file") {
+      options.bundleVerificationFile = value ?? "";
       index += 1;
     } else if (arg === "--allow-horizon-mismatch" || arg === "--ignore-horizon-target") {
       options.allowHorizonMismatch = true;
@@ -102,13 +122,40 @@ async function newestFileInDir(dir, prefix) {
   return matches.length > 0 ? matches[matches.length - 1] : "";
 }
 
-async function pickLatestEvidencePaths(evidenceDir) {
+async function resolveEvidencePath(explicitPath, evidenceDir, prefix) {
+  if (isNonEmptyString(explicitPath)) {
+    return path.resolve(explicitPath);
+  }
+  return await newestFileInDir(evidenceDir, prefix);
+}
+
+async function pickEvidencePaths(evidenceDir, options) {
   return {
-    validationSummaryPath: await newestFileInDir(evidenceDir, "validation-summary-"),
-    cutoverReadinessPath: await newestFileInDir(evidenceDir, "cutover-readiness-"),
-    releaseReadinessPath: await newestFileInDir(evidenceDir, "release-readiness-"),
-    mergeBundleValidationPath: await newestFileInDir(evidenceDir, "merge-bundle-validation-"),
-    bundleVerificationPath: await newestFileInDir(evidenceDir, "bundle-verification-"),
+    validationSummaryPath: await resolveEvidencePath(
+      options.validationSummaryFile,
+      evidenceDir,
+      "validation-summary-",
+    ),
+    cutoverReadinessPath: await resolveEvidencePath(
+      options.cutoverReadinessFile,
+      evidenceDir,
+      "cutover-readiness-",
+    ),
+    releaseReadinessPath: await resolveEvidencePath(
+      options.releaseReadinessFile,
+      evidenceDir,
+      "release-readiness-",
+    ),
+    mergeBundleValidationPath: await resolveEvidencePath(
+      options.mergeBundleValidationFile,
+      evidenceDir,
+      "merge-bundle-validation-",
+    ),
+    bundleVerificationPath: await resolveEvidencePath(
+      options.bundleVerificationFile,
+      evidenceDir,
+      "bundle-verification-",
+    ),
   };
 }
 
@@ -198,7 +245,7 @@ async function main() {
     failures.push(`non_sequential_stage_transition:${currentStage}->${targetStage}`);
   }
 
-  const evidencePaths = await pickLatestEvidencePaths(evidenceDir);
+  const evidencePaths = await pickEvidencePaths(evidenceDir, options);
   const missingEvidence = [];
   for (const [key, value] of Object.entries(evidencePaths)) {
     if (!(await exists(value))) {

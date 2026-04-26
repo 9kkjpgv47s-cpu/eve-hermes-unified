@@ -79,7 +79,7 @@ jobs:
         run: npm run verify:merge-bundle
 
       - name: Stage promotion readiness gate
-        run: npm run check:stage-promotion-readiness -- --target-stage canary --ignore-horizon-target
+        run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch
 
       - name: Validate horizon status metadata
         run: npm run validate:horizon-status

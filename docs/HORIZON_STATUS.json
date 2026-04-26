@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T13:25:00Z",
+  "updatedAtIso": "2026-04-26T14:45:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H1",
   "activeStatus": "in_progress",
-  "summary": "H1 merge operationalization baseline is in progress with CI parity, schema/verification gates, and stage-promotion readiness gate implementation underway.",
+  "summary": "H1 merge operationalization baseline is in progress with CI parity, schema/verification gates, and stage-promotion orchestration hardening underway.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -42,6 +42,18 @@
       "command": "npm run verify:merge-bundle",
       "artifactPattern": "evidence/bundle-verification-*.json",
       "required": true
+    },
+    {
+      "id": "h1-cutover-readiness",
+      "command": "npm run validate:cutover-readiness",
+      "artifactPattern": "evidence/cutover-readiness-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-evidence-summary",
+      "command": "npm run validate:evidence-summary",
+      "artifactPattern": "evidence/validation-summary-*.json",
+      "required": true
     }
   ],
   "nextActions": [
@@ -64,6 +76,16 @@
       "status": "planned"
     }
   ],
+  "promotionReadiness": {
+    "targetStage": "canary",
+    "gates": {
+      "releaseReadinessPass": true,
+      "mergeBundlePass": true,
+      "bundleVerificationPass": true,
+      "cutoverReadinessPass": true,
+      "evidenceSummaryPass": true
+    }
+  },
   "horizonStates": {
     "H1": {
       "status": "in_progress",
@@ -98,6 +120,12 @@
       "horizon": "H1",
       "status": "in_progress",
       "note": "Stage promotion readiness gate added for cutover advancement decisions."
+    },
+    {
+      "timestamp": "2026-04-26T14:45:00Z",
+      "horizon": "H1",
+      "status": "in_progress",
+      "note": "Promotion orchestration path added to gate readiness + apply stage in a single operator command."
     }
   ]
 }

@@ -49,6 +49,8 @@ npm run validate:cutover-readiness
 npm run validate:release-readiness
 npm run validate:initial-scope
 npm run validate:merge-bundle
+npm run check:stage-promotion-readiness -- --target-stage canary
+npm run promote:stage -- --target-stage canary --dry-run
 npm run bundle:merge-readiness
 npm run validate:all
 ```

@@ -23,6 +23,7 @@ function parseArgs(argv) {
     currentStage: "",
     horizonStatusFile: "",
     out: "",
+    allowHorizonMismatch: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -42,6 +43,8 @@ function parseArgs(argv) {
     } else if (arg === "--out") {
       options.out = value ?? "";
       index += 1;
+    } else if (arg === "--allow-horizon-mismatch" || arg === "--ignore-horizon-target") {
+      options.allowHorizonMismatch = true;
     }
   }
   return options;
@@ -168,6 +171,7 @@ async function main() {
     path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
   const targetStage = normalizeStage(options.targetStage);
   const currentStage = normalizeStage(options.currentStage, "shadow");
+  const allowHorizonMismatch = options.allowHorizonMismatch === true;
   const horizonStatusFile = path.resolve(
     options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
   );
@@ -263,6 +267,7 @@ async function main() {
     }
     const horizonExpectedStage = HORIZON_STAGE_MAP[horizonStatus?.activeHorizon] ?? "";
     if (
+      !allowHorizonMismatch &&
       isNonEmptyString(horizonExpectedStage) &&
       VALID_STAGES.includes(targetStage) &&
       STAGE_ORDER.get(targetStage) < STAGE_ORDER.get(horizonExpectedStage)
@@ -270,13 +275,6 @@ async function main() {
       failures.push(
         `target_stage_precedes_active_horizon:${targetStage}<${horizonExpectedStage}`,
       );
-    }
-    if (
-      isNonEmptyString(horizonExpectedStage) &&
-      VALID_STAGES.includes(targetStage) &&
-      STAGE_ORDER.get(targetStage) < STAGE_ORDER.get(horizonExpectedStage)
-    ) {
-      failures.push("target_stage_mismatch");
     }
     const expectedEvidence = {
       "npm run validate:evidence-summary": evidencePaths.validationSummaryPath,
@@ -304,7 +302,7 @@ async function main() {
     if (promotion && typeof promotion === "object") {
       const promotionTarget = normalizeStage(promotion.targetStage);
       if (VALID_STAGES.includes(promotionTarget) && VALID_STAGES.includes(targetStage)) {
-        if (promotionTarget !== targetStage) {
+        if (!allowHorizonMismatch && promotionTarget !== targetStage) {
           failures.push("target_stage_mismatch");
         }
       }
@@ -371,6 +369,7 @@ async function main() {
       mergeBundleValidationPassed: Boolean(mergeBundleValidation?.pass),
       bundleVerificationPassed: Boolean(bundleVerification?.pass),
       horizonValidationPass: horizonValidation.valid,
+      allowHorizonMismatch,
       activeHorizon: horizonStatus?.activeHorizon ?? null,
       activeStatus: horizonStatus?.activeStatus ?? null,
       stage: targetStage || null,

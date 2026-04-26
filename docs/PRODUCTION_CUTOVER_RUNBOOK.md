@@ -117,10 +117,11 @@ Expected result:
 - Exit code `0`
 - JSON output with:
   - `"pass": true`
-  - `"checks.validationManifestPass": true`
+  - `"checks.manifestSchemaValid": true`
   - `"checks.bundleManifestPass": true`
-  - `"checks.archiveContainsBundleRoot": true`
-  - `"checks.archiveContainsManifest": true`
+  - `"checks.releaseReadinessPass": true`
+  - `"checks.initialScopePass": true`
+  - `"checks.archiveMissingEntries": []`
 
 If verification fails, do not promote cutover stage. Re-run validation/bundle generation and investigate missing or invalid artifacts.
 
@@ -129,7 +130,7 @@ If verification fails, do not promote cutover stage. Re-run validation/bundle ge
 Before any stage advance (`shadow -> canary -> majority -> full`), run:
 
 ```bash
-npm run check:stage-promotion
+npm run check:stage-promotion -- --target-stage canary --evidence-dir evidence
 ```
 
 Default behavior:
@@ -144,10 +145,31 @@ Use explicit thresholds/targets when needed:
 ```bash
 npm run check:stage-promotion -- \
   --target-stage canary \
-  --min-success-rate 0.99 \
-  --max-p95-latency-ms 2000
+  --evidence-dir evidence
 ```
 
 Promotion policy:
 - If `check:stage-promotion` exits non-zero, do **not** promote.
 - Resolve failing gates, regenerate evidence, and rerun.
+
+## One-Step Promotion Executor
+
+Use a single command to run promotion readiness and apply stage controls to the gateway env file:
+
+```bash
+npm run promote:stage -- \
+  --target-stage canary \
+  --env-file "$HOME/.openclaw/run/gateway.env" \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --evidence-dir evidence \
+  --canary-chats "100,200"
+```
+
+Behavior:
+- Runs `check-stage-promotion-readiness` first and writes `evidence/stage-promotion-readiness-*.json`.
+- Applies stage settings with `scripts/prod-cutover-stage.sh` only when readiness passes.
+- Writes execution result to `evidence/stage-promotion-execution-*.json`.
+
+Safe operation flags:
+- `--dry-run` validates readiness without mutating env files.
+- `--allow-horizon-mismatch` (or `--ignore-horizon-target`) is intended for CI/testing only.

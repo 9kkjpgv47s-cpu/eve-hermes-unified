@@ -6,6 +6,14 @@ import { fileURLToPath } from "node:url";
 const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5"];
 const VALID_STATUSES = ["planned", "in_progress", "blocked", "completed"];
 const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
+const VALID_STAGES = ["shadow", "canary", "majority", "full"];
+const REQUIRED_GATE_COMMANDS = {
+  releaseReadinessPass: "npm run validate:release-readiness",
+  mergeBundlePass: "npm run validate:merge-bundle",
+  bundleVerificationPass: "npm run verify:merge-bundle",
+  cutoverReadinessPass: "npm run validate:cutover-readiness",
+  evidenceSummaryPass: "npm run validate:evidence-summary",
+};
 
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -66,6 +74,9 @@ export function validateHorizonStatus(payload) {
   if (!Array.isArray(payload.history)) {
     errors.push("history must be an array");
   }
+  if (!payload.promotionReadiness || typeof payload.promotionReadiness !== "object") {
+    errors.push("promotionReadiness must be an object");
+  }
 
   if (payload.blockers && Array.isArray(payload.blockers)) {
     payload.blockers.forEach((item, index) => {
@@ -109,6 +120,23 @@ export function validateHorizonStatus(payload) {
         errors.push(`${prefix}.required must be boolean`);
       }
     });
+  }
+
+  if (payload.promotionReadiness && typeof payload.promotionReadiness === "object") {
+    const promotion = payload.promotionReadiness;
+    const normalizedTarget = String(promotion.targetStage ?? "").trim().toLowerCase();
+    if (!VALID_STAGES.includes(normalizedTarget)) {
+      errors.push(`promotionReadiness.targetStage must be one of: ${VALID_STAGES.join(", ")}`);
+    }
+    if (!promotion.gates || typeof promotion.gates !== "object") {
+      errors.push("promotionReadiness.gates must be an object");
+    } else {
+      for (const gateKey of Object.keys(REQUIRED_GATE_COMMANDS)) {
+        if (typeof promotion.gates[gateKey] !== "boolean") {
+          errors.push(`promotionReadiness.gates.${gateKey} must be boolean`);
+        }
+      }
+    }
   }
 
   if (Array.isArray(payload.nextActions) && payload.nextActions.length === 0) {
@@ -187,6 +215,28 @@ export function validateHorizonStatus(payload) {
       const stateStatus = normalizeStatusId(activeEntry.status);
       if (activeStatus !== stateStatus) {
         errors.push("activeStatus must match horizonStates[activeHorizon].status");
+      }
+    }
+  }
+
+  if (
+    payload.requiredEvidence &&
+    Array.isArray(payload.requiredEvidence) &&
+    payload.promotionReadiness &&
+    typeof payload.promotionReadiness === "object" &&
+    payload.promotionReadiness.gates &&
+    typeof payload.promotionReadiness.gates === "object"
+  ) {
+    const requiredCommands = new Set(
+      payload.requiredEvidence
+        .filter((item) => item && typeof item === "object" && item.required === true)
+        .map((item) => String(item.command ?? "")),
+    );
+    for (const [gateKey, commandName] of Object.entries(REQUIRED_GATE_COMMANDS)) {
+      if (payload.promotionReadiness.gates[gateKey] === true && !requiredCommands.has(commandName)) {
+        errors.push(
+          `promotionReadiness.gates.${gateKey} requires requiredEvidence command: ${commandName}`,
+        );
       }
     }
   }

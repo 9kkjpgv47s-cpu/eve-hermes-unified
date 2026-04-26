@@ -25,6 +25,7 @@ function parseArgs(argv) {
     autoApplyRollback: false,
     rollbackForceMinSuccessRate: 1.01,
     rollbackForceMaxP95LatencyMs: Number.NaN,
+    evidenceSelectionMode: "latest",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -82,6 +83,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--rollback-trigger-max-p95-latency-ms") {
       options.rollbackForceMaxP95LatencyMs = Number(value ?? "");
+      index += 1;
+    } else if (arg === "--evidence-selection-mode") {
+      options.evidenceSelectionMode = value ?? "";
       index += 1;
     }
   }
@@ -211,6 +215,9 @@ async function runDrillStep({
   if (shouldAllowHorizonMismatch(options, stage)) {
     argv.push("--allow-horizon-mismatch");
   }
+  if (isNonEmptyString(options.evidenceSelectionMode)) {
+    argv.push("--evidence-selection-mode", options.evidenceSelectionMode);
+  }
   for (const value of extraArgs) {
     argv.push(value);
   }
@@ -289,6 +296,14 @@ async function main() {
   }
   if (!Number.isFinite(options.rollbackForceMinSuccessRate)) {
     failures.push("invalid_rollback_force_min_success_rate");
+  }
+  if (
+    options.evidenceSelectionMode !== "latest" &&
+    options.evidenceSelectionMode !== "latest-passing"
+  ) {
+    failures.push(
+      `invalid_evidence_selection_mode:${String(options.evidenceSelectionMode ?? "<empty>")}`,
+    );
   }
 
   const steps = {
@@ -412,6 +427,7 @@ async function main() {
         autoApplyRollback: options.autoApplyRollback,
         forceMinSuccessRate: options.rollbackForceMinSuccessRate,
       },
+      evidenceSelectionMode: options.evidenceSelectionMode,
     },
     checks: {
       canaryHoldPass,

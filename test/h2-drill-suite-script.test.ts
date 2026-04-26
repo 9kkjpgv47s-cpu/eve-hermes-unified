@@ -23,6 +23,8 @@ async function seedEvidence(
     releasePass?: boolean;
     cutoverPass?: boolean;
     stagePromotionPass?: boolean;
+    createFailingLatestSummary?: boolean;
+    createFailingLatestRelease?: boolean;
   },
 ): Promise<void> {
   await mkdir(evidenceDir, { recursive: true });
@@ -143,6 +145,73 @@ async function seedEvidence(
     JSON.stringify({ pass: options?.stagePromotionPass !== false }, null, 2),
     "utf8",
   );
+
+  if (options?.createFailingLatestSummary === true) {
+    await writeFile(
+      path.join(evidenceDir, "validation-summary-20260426-999999.json"),
+      JSON.stringify(
+        {
+          generatedAtIso: new Date().toISOString(),
+          metrics: {
+            successRate: 0,
+            missingTraceRate: 1,
+            unclassifiedFailures: 1,
+            p95LatencyMs: 5000,
+            failureScenarioPassCount: 0,
+          },
+          gates: {
+            passed: false,
+            failures: ["synthetic-failing-summary"],
+          },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  }
+
+  if (options?.createFailingLatestRelease === true) {
+    await writeFile(
+      path.join(evidenceDir, "release-readiness-20260426-999999.json"),
+      JSON.stringify(
+        {
+          readinessVersion: "v1",
+          generatedAtIso: new Date().toISOString(),
+          defaultValidationCommand: "validate:all",
+          pass: false,
+          files: {
+            validationSummary: summaryPath,
+            regression: null,
+            cutoverReadiness: cutoverPath,
+            failureInjection: null,
+            soak: null,
+            commandLogDir: null,
+            commandsFile: null,
+          },
+          requiredArtifacts: [],
+          releaseCommandLogs: [],
+          checks: {
+            validationSummaryPassed: false,
+            regressionPassed: false,
+            cutoverReadinessPassed: false,
+            commandLogsMissing: [],
+            discoveredCommandLogs: [],
+            requiredReleaseCommands: [],
+            missingRequiredCommands: [],
+            executedReleaseCommands: [],
+            missingCommandLogFiles: [],
+            commandFailures: ["synthetic-failing-release"],
+            validationCommandsPassed: false,
+          },
+          failures: ["synthetic-failing-release"],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  }
 }
 
 async function seedHorizonStatus(filePath: string): Promise<void> {
@@ -342,6 +411,97 @@ describe("run-h2-drill-suite.mjs", () => {
       expect(payload.checks.rollbackSimulationPass).toBe(true);
       expect(payload.checks.rollbackSimulationTriggered).toBe(true);
       expect(payload.failures).toEqual([]);
+    });
+  });
+
+  it("uses latest-passing evidence mode to avoid stale failing artifacts", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-drill-suite.json");
+
+      await seedEvidence(evidenceDir, {
+        createFailingLatestSummary: true,
+        createFailingLatestRelease: true,
+      });
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-drill-suite.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--runtime-env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--evidence-selection-mode",
+          "latest-passing",
+        ],
+        { timeoutMs: 60_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        suite: { evidenceSelectionMode: string };
+        checks: { canaryHoldPass: boolean; majorityHoldPass: boolean | null };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.suite.evidenceSelectionMode).toBe("latest-passing");
+      expect(payload.checks.canaryHoldPass).toBe(true);
+      expect(payload.checks.majorityHoldPass).toBe(true);
+    });
+  });
+
+  it("fails in latest mode when newest evidence artifacts are failing", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-drill-suite.json");
+
+      await seedEvidence(evidenceDir, {
+        createFailingLatestSummary: true,
+        createFailingLatestRelease: true,
+      });
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-drill-suite.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--runtime-env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--evidence-selection-mode",
+          "latest",
+        ],
+        { timeoutMs: 60_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        suite: { evidenceSelectionMode: string };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.suite.evidenceSelectionMode).toBe("latest");
+      expect(payload.failures).toContain("canary_drill_failed");
     });
   });
 });

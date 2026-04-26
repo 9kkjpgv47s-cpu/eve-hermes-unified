@@ -108,6 +108,9 @@ Schema validation expectations:
     - `--cutover-readiness-file <path>`
     - `--release-readiness-file <path>`
     - `--stage-promotion-readiness-file <path>`
+- stage promotion readiness and drill commands support evidence selection mode:
+  - `--evidence-selection-mode latest` (default)
+  - `--evidence-selection-mode latest-passing` (prefers newest passing manifests before newest fallback)
 - stage promotion can be executed through a single gated command:
   - `npm run promote:stage -- --target-stage <canary|majority|full> --env-file <gateway.env>`
   - add `--dry-run` to verify readiness without changing env values
@@ -117,6 +120,7 @@ Schema validation expectations:
 - h2 suite orchestration can run canary + majority + rollback-trigger simulation in one command:
   - `npm run run:h2-drill-suite -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json`
   - adds suite manifest: `evidence/h2-drill-suite-*.json`
+  - add `--evidence-selection-mode latest-passing` to reduce stale-failing artifact pickup during replay runs
   - use `--strict-horizon-target` when enforcing active-horizon stage matching during suite runs
 - validate a single file with:
   - `npm run validate:manifest-schema -- --type release-readiness --file <path>`

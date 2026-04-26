@@ -19,6 +19,7 @@ function parseArgs(argv) {
     timeoutMs: 120_000,
     dryRun: false,
     allowHorizonMismatch: false,
+    evidenceSelectionMode: "latest",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -57,6 +58,9 @@ function parseArgs(argv) {
       options.dryRun = true;
     } else if (arg === "--allow-horizon-mismatch" || arg === "--ignore-horizon-target") {
       options.allowHorizonMismatch = true;
+    } else if (arg === "--evidence-selection-mode") {
+      options.evidenceSelectionMode = value ?? "";
+      index += 1;
     }
   }
   return options;
@@ -181,8 +185,20 @@ async function main() {
   );
 
   const failures = [];
+  const selectionModeRaw = String(options.evidenceSelectionMode ?? "").trim().toLowerCase();
+  const evidenceSelectionMode =
+    selectionModeRaw === "latest-passing" || selectionModeRaw === "latest"
+      ? selectionModeRaw
+      : "latest";
   if (!VALID_STAGES.includes(targetStage)) {
     failures.push(`invalid_target_stage:${requestedTargetStage || "<empty>"}`);
+  }
+  if (
+    selectionModeRaw.length > 0 &&
+    selectionModeRaw !== "latest" &&
+    selectionModeRaw !== "latest-passing"
+  ) {
+    failures.push(`invalid_evidence_selection_mode:${selectionModeRaw}`);
   }
   if (!VALID_STAGES.includes(currentStage)) {
     failures.push(`invalid_current_stage:${options.currentStage || detectedCurrentStage || "<empty>"}`);
@@ -204,6 +220,8 @@ async function main() {
     evidenceDir,
     "--out",
     readinessOut,
+    "--evidence-selection-mode",
+    evidenceSelectionMode,
   ];
   if (options.allowHorizonMismatch) {
     readinessArgv.push("--allow-horizon-mismatch");
@@ -287,6 +305,7 @@ async function main() {
       readinessPassed,
       stageApplied,
       allowHorizonMismatch: options.allowHorizonMismatch,
+      evidenceSelectionMode,
     },
     failures,
   };

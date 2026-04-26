@@ -13,12 +13,18 @@ async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
   }
 }
 
-async function seedEvidence(evidenceDir: string): Promise<{
+async function seedEvidence(
+  evidenceDir: string,
+  options?: {
+    createFailingLatestSummary?: boolean;
+  },
+): Promise<{
   summaryPath: string;
   cutoverPath: string;
   releasePath: string;
   mergeValidationPath: string;
   verifyPath: string;
+  failingSummaryPath: string;
 }> {
   await mkdir(evidenceDir, { recursive: true });
   const stamp = "20260426-000000";
@@ -27,6 +33,7 @@ async function seedEvidence(evidenceDir: string): Promise<{
   const releasePath = path.join(evidenceDir, `release-readiness-${stamp}.json`);
   const mergeValidationPath = path.join(evidenceDir, `merge-bundle-validation-${stamp}.json`);
   const verifyPath = path.join(evidenceDir, `bundle-verification-${stamp}.json`);
+  const failingSummaryPath = path.join(evidenceDir, "validation-summary-20260426-999999.json");
 
   await writeFile(
     summaryPath,
@@ -143,6 +150,29 @@ async function seedEvidence(evidenceDir: string): Promise<{
     "utf8",
   );
   await writeFile(verifyPath, JSON.stringify({ pass: true }, null, 2), "utf8");
+  if (options?.createFailingLatestSummary === true) {
+    await writeFile(
+      failingSummaryPath,
+      JSON.stringify(
+        {
+          generatedAtIso: new Date().toISOString(),
+          metrics: {
+            successRate: 0.6,
+            missingTraceRate: 0.3,
+            unclassifiedFailures: 2,
+            failureScenarioPassCount: 1,
+          },
+          gates: {
+            passed: false,
+            failures: ["synthetic-failing-summary"],
+          },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  }
 
   return {
     summaryPath,
@@ -150,6 +180,7 @@ async function seedEvidence(evidenceDir: string): Promise<{
     releasePath,
     mergeValidationPath,
     verifyPath,
+    failingSummaryPath,
   };
 }
 
@@ -273,6 +304,11 @@ describe("check-stage-promotion-readiness.mjs", () => {
         ],
         { timeoutMs: 20_000 },
       );
+      if (result.code !== 0) {
+        throw new Error(
+          `check-stage-promotion-readiness failed unexpectedly\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        );
+      }
       expect(result.code).toBe(0);
 
       const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
@@ -282,6 +318,7 @@ describe("check-stage-promotion-readiness.mjs", () => {
           horizonValidationPass: boolean;
           activeHorizon: string;
           stage: string;
+          evidenceSelectionMode: string;
         };
       };
       expect(payload.pass).toBe(true);
@@ -289,6 +326,7 @@ describe("check-stage-promotion-readiness.mjs", () => {
       expect(payload.checks.horizonValidationPass).toBe(true);
       expect(payload.checks.activeHorizon).toBe("H2");
       expect(payload.checks.stage).toBe("canary");
+      expect(payload.checks.evidenceSelectionMode).toBe("latest");
     });
   });
 
@@ -332,7 +370,7 @@ describe("check-stage-promotion-readiness.mjs", () => {
       const evidenceDir = path.join(dir, "evidence");
       const horizonPath = path.join(dir, "HORIZON_STATUS.json");
       const outputPath = path.join(evidenceDir, "stage-promotion-readiness.json");
-      await seedEvidence(evidenceDir);
+      await seedEvidence(evidenceDir, { createFailingLatestSummary: true });
       await seedHorizonStatus(horizonPath, "full", "H2");
 
       const result = await runCommandWithTimeout(
@@ -384,6 +422,11 @@ describe("check-stage-promotion-readiness.mjs", () => {
         ],
         { timeoutMs: 20_000 },
       );
+      if (result.code !== 0) {
+        throw new Error(
+          `check-stage-promotion-readiness relocation case failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        );
+      }
       expect(result.code).toBe(0);
 
       const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
@@ -394,6 +437,42 @@ describe("check-stage-promotion-readiness.mjs", () => {
       expect(
         payload.failures.some((entry) => entry.startsWith("missing_artifact_pattern_match:")),
       ).toBe(false);
+    });
+  });
+
+  it("supports selecting latest-passing evidence mode", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "stage-promotion-readiness.json");
+      await seedEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath, "canary", "H2");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "canary",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--evidence-selection-mode",
+          "latest-passing",
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        checks: { evidenceSelectionMode: string };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.evidenceSelectionMode).toBe("latest-passing");
     });
   });
 });

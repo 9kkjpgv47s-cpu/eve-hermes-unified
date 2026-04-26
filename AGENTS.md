@@ -53,6 +53,8 @@ npm run check:stage-promotion-readiness -- --target-stage canary
 npm run promote:stage -- --target-stage canary --dry-run
 npm run run:stage-drill -- --target-stage canary --dry-run
 npm run run:h2-drill-suite -- --dry-run --evidence-dir evidence
+# optional deterministic evidence mode override:
+#   --evidence-selection-mode latest-passing
 npm run evaluate:auto-rollback-policy -- --stage canary --evidence-dir evidence
 npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
 npm run bundle:merge-readiness

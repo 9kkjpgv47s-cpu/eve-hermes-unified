@@ -28,6 +28,7 @@ function parseArgs(argv) {
     rollbackMaxUnclassifiedFailures: Number.NaN,
     rollbackMinFailureScenarioPassCount: Number.NaN,
     rollbackMaxP95LatencyMs: Number.NaN,
+    evidenceSelectionMode: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -91,6 +92,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--rollback-max-p95-latency-ms") {
       options.rollbackMaxP95LatencyMs = Number(value ?? "");
+      index += 1;
+    } else if (arg === "--evidence-selection-mode") {
+      options.evidenceSelectionMode = value ?? "";
       index += 1;
     }
   }
@@ -235,6 +239,9 @@ async function main() {
   }
   if (options.allowHorizonMismatch) {
     promoteArgs.push("--allow-horizon-mismatch");
+  }
+  if (isNonEmptyString(options.evidenceSelectionMode)) {
+    promoteArgs.push("--evidence-selection-mode", options.evidenceSelectionMode);
   }
   if (Number.isFinite(options.timeoutMs)) {
     promoteArgs.push("--timeout-ms", String(options.timeoutMs));

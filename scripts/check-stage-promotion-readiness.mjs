@@ -5,6 +5,7 @@ import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];
+const EVIDENCE_SELECTION_MODES = ["latest", "latest-passing"];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
@@ -28,6 +29,7 @@ function parseArgs(argv) {
     releaseReadinessFile: "",
     mergeBundleValidationFile: "",
     bundleVerificationFile: "",
+    evidenceSelection: "",
     allowHorizonMismatch: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -63,6 +65,9 @@ function parseArgs(argv) {
     } else if (arg === "--bundle-verification-file") {
       options.bundleVerificationFile = value ?? "";
       index += 1;
+    } else if (arg === "--evidence-selection" || arg === "--evidence-selection-mode") {
+      options.evidenceSelection = value ?? "";
+      index += 1;
     } else if (arg === "--allow-horizon-mismatch" || arg === "--ignore-horizon-target") {
       options.allowHorizonMismatch = true;
     }
@@ -77,6 +82,14 @@ function isNonEmptyString(value) {
 function normalizeStage(value, fallback = "") {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (VALID_STAGES.includes(normalized)) {
+    return normalized;
+  }
+  return fallback;
+}
+
+function normalizeEvidenceSelection(value, fallback = "latest") {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (EVIDENCE_SELECTION_MODES.includes(normalized)) {
     return normalized;
   }
   return fallback;
@@ -122,39 +135,72 @@ async function newestFileInDir(dir, prefix) {
   return matches.length > 0 ? matches[matches.length - 1] : "";
 }
 
-async function resolveEvidencePath(explicitPath, evidenceDir, prefix) {
+async function newestPassingFileInDir(dir, prefix, predicate) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const candidates = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .map((entry) => path.join(dir, entry.name))
+    .sort()
+    .reverse();
+  for (const candidate of candidates) {
+    try {
+      const payload = await readJson(candidate);
+      if (predicate(payload)) {
+        return candidate;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return candidates.length > 0 ? candidates[0] : "";
+}
+
+async function resolveEvidencePath(explicitPath, evidenceDir, prefix, evidenceSelectionMode, predicate) {
   if (isNonEmptyString(explicitPath)) {
     return path.resolve(explicitPath);
+  }
+  if (evidenceSelectionMode === "latest-passing") {
+    return await newestPassingFileInDir(evidenceDir, prefix, predicate);
   }
   return await newestFileInDir(evidenceDir, prefix);
 }
 
-async function pickEvidencePaths(evidenceDir, options) {
+async function pickEvidencePaths(evidenceDir, options, evidenceSelectionMode) {
   return {
     validationSummaryPath: await resolveEvidencePath(
       options.validationSummaryFile,
       evidenceDir,
       "validation-summary-",
+      evidenceSelectionMode,
+      (payload) => payload?.gates?.passed === true,
     ),
     cutoverReadinessPath: await resolveEvidencePath(
       options.cutoverReadinessFile,
       evidenceDir,
       "cutover-readiness-",
+      evidenceSelectionMode,
+      (payload) => payload?.pass === true,
     ),
     releaseReadinessPath: await resolveEvidencePath(
       options.releaseReadinessFile,
       evidenceDir,
       "release-readiness-",
+      evidenceSelectionMode,
+      (payload) => payload?.pass === true,
     ),
     mergeBundleValidationPath: await resolveEvidencePath(
       options.mergeBundleValidationFile,
       evidenceDir,
       "merge-bundle-validation-",
+      evidenceSelectionMode,
+      (payload) => payload?.pass === true,
     ),
     bundleVerificationPath: await resolveEvidencePath(
       options.bundleVerificationFile,
       evidenceDir,
       "bundle-verification-",
+      evidenceSelectionMode,
+      (payload) => payload?.pass === true,
     ),
   };
 }
@@ -222,6 +268,7 @@ async function main() {
   const targetStage = normalizeStage(options.targetStage);
   const currentStage = normalizeStage(options.currentStage, "shadow");
   const allowHorizonMismatch = options.allowHorizonMismatch === true;
+  const evidenceSelectionMode = normalizeEvidenceSelection(options.evidenceSelection, "latest");
   const horizonStatusFile = path.resolve(
     options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
   );
@@ -237,6 +284,9 @@ async function main() {
   if (!VALID_STAGES.includes(currentStage)) {
     failures.push(`invalid_current_stage:${options.currentStage || "<empty>"}`);
   }
+  if (isNonEmptyString(options.evidenceSelection) && !EVIDENCE_SELECTION_MODES.includes(evidenceSelectionMode)) {
+    failures.push(`invalid_evidence_selection:${options.evidenceSelection}`);
+  }
   if (
     VALID_STAGES.includes(targetStage) &&
     VALID_STAGES.includes(currentStage) &&
@@ -245,7 +295,7 @@ async function main() {
     failures.push(`non_sequential_stage_transition:${currentStage}->${targetStage}`);
   }
 
-  const evidencePaths = await pickEvidencePaths(evidenceDir, options);
+  const evidencePaths = await pickEvidencePaths(evidenceDir, options, evidenceSelectionMode);
   const missingEvidence = [];
   for (const [key, value] of Object.entries(evidencePaths)) {
     if (!(await exists(value))) {
@@ -420,6 +470,7 @@ async function main() {
       bundleVerificationPassed: Boolean(bundleVerification?.pass),
       horizonValidationPass: horizonValidation.valid,
       allowHorizonMismatch,
+      evidenceSelectionMode,
       activeHorizon: horizonStatus?.activeHorizon ?? null,
       activeStatus: horizonStatus?.activeStatus ?? null,
       stage: targetStage || null,

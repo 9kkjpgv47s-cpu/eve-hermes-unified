@@ -542,4 +542,54 @@ describe("run-stage-drill.mjs", () => {
       expect(rollbackPayload.files.stagePromotionReadiness).toBe(payload.files.readinessOut);
     });
   });
+
+  it("passes with latest-passing evidence mode despite newer failing artifacts", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "stage-drill.json");
+
+      await seedEvidence(evidenceDir, {
+        successRate: 1,
+        createFailingLatestSummary: true,
+        createFailingLatestRelease: true,
+      });
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-stage-drill.mjs",
+          "--target-stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--canary-chats",
+          "101,202",
+          "--evidence-selection-mode",
+          "latest-passing",
+        ],
+        { timeoutMs: 30_000 },
+      );
+      if (result.code !== 0) {
+        throw new Error(`run-stage-drill latest-passing failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
+      }
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: { rollbackPolicyPassed: boolean };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.rollbackPolicyPassed).toBe(true);
+    });
+  });
 });

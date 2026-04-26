@@ -173,6 +173,7 @@ Behavior:
 Safe operation flags:
 - `--dry-run` validates readiness without mutating env files.
 - `--allow-horizon-mismatch` (or `--ignore-horizon-target`) is intended for CI/testing only.
+- `--evidence-selection-mode <latest|latest-passing>` controls whether readiness checks consume newest artifacts or newest passing artifacts.
 
 ## Auto-Rollback Policy Gate (H2+)
 
@@ -196,6 +197,10 @@ Snapshot pinning options:
 - `--stage-promotion-readiness-file <path>`
 
 Use these when you need rollback-policy evaluation to consume the same artifact set selected by a preceding promotion-readiness step.
+
+Artifact selection mode:
+- `--evidence-selection-mode latest` (default) uses newest matching artifacts by filename order.
+- `--evidence-selection-mode latest-passing` uses newest artifacts that also pass their gate payload checks.
 
 Policy expectations:
 - Canary rollback trigger:
@@ -247,6 +252,7 @@ Useful flags:
 - `--dry-run`: validate promotion/readiness and rollback policy without mutating stage env values.
 - `--allow-horizon-mismatch`: bypass horizon-target matching for CI/test-only workflows.
 - `--auto-apply-rollback`: if policy action is `rollback`, execute Eve-safe rollback automatically.
+- `--evidence-selection-mode <latest|latest-passing>`: control promotion/readiness artifact selection policy.
 
 ## H2 Drill Suite Orchestrator (Canary + Majority + Rollback Simulation)
 
@@ -279,3 +285,4 @@ Key controls:
 - `--strict-horizon-target`
 - `--rollback-force-min-success-rate <value>` (default `1.01`) to force a rollback simulation trigger
 - `--auto-apply-rollback` to execute rollback during simulation when policy triggers
+- `--evidence-selection-mode <latest|latest-passing>` to run the suite against newest artifacts or newest passing artifacts

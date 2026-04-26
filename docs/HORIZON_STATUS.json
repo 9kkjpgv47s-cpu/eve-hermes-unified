@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T18:35:00Z",
+  "updatedAtIso": "2026-04-26T18:55:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with canary/majority drill suite automation implemented and rollback-simulation evidence generation centralized.",
+  "summary": "H2 progressive traffic enablement is active with drill suite automation and configurable evidence-selection modes, enabling deterministic latest vs latest-passing evidence replay.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -104,6 +104,12 @@
       "summary": "Run consolidated H2 drill suite command that emits canary hold, majority hold, and rollback-simulation evidence in a single report.",
       "targetHorizon": "H2",
       "status": "completed"
+    },
+    {
+      "id": "h2-action-6",
+      "summary": "Support selectable evidence modes (`latest` vs `latest-passing`) across readiness, promotion, stage-drill, and h2 drill suite flows for deterministic operator replay.",
+      "targetHorizon": "H2",
+      "status": "completed"
     }
   ],
   "promotionReadiness": {
@@ -123,7 +129,7 @@
     },
     "H2": {
       "status": "in_progress",
-      "summary": "Canary and majority drills are automated under a single suite command; threshold calibration and supervised rollback auto-apply simulation remain in progress."
+      "summary": "Canary/majority drills are automated and evidence selection mode is configurable; threshold calibration and supervised rollback auto-apply simulation remain in progress."
     },
     "H3": {
       "status": "planned",
@@ -192,6 +198,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added H2 drill suite runner to execute canary hold, majority hold, and rollback-simulation drills with a unified suite report artifact."
+    },
+    {
+      "timestamp": "2026-04-26T18:55:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Added evidence-selection mode controls (`latest`, `latest-passing`) across promotion/readiness/drill flows to support deterministic replay against either strict newest or newest passing evidence."
     }
   ]
 }

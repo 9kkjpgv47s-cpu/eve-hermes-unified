@@ -10,7 +10,7 @@ import { createDefaultUnifiedCapabilityRegistry } from "../skills/capability-reg
 import { UnifiedCapabilityEngine } from "../runtime/capability-engine.js";
 import { registerDefaultCapabilityExecutors } from "../runtime/default-capability-handlers.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
-import type { CapabilityExecutionContext } from "../skills/capability-registry.js";
+import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 
 function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
   let text = "";
@@ -72,9 +72,11 @@ async function main() {
     dispatchLane,
     memoryStore: sharedMemoryStore,
   });
+  const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
   const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
     memoryStore: sharedMemoryStore,
     dispatchLane,
+    policy: capabilityPolicy,
   });
 
   const runtime = {

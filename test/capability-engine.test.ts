@@ -10,6 +10,10 @@ import { UnifiedCapabilityEngine } from "../src/runtime/capability-engine.js";
 import { FileUnifiedMemoryStore } from "../src/memory/unified-memory-store.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
 import { registerDefaultCapabilityExecutors } from "../src/runtime/default-capability-handlers.js";
+import {
+  buildCapabilityPolicyFromConfig,
+  type CapabilityPolicyConfig,
+} from "../src/runtime/capability-policy.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   constructor(
@@ -221,6 +225,98 @@ describe("UnifiedCapabilityEngine", () => {
     expect(result.capabilityExecution?.status).toBe("pass");
     expect(result.capabilityExecution?.outputText).toContain("summarize_state succeeded via hermes");
     expect(result.capabilityExecution?.metadata?.runId).toBe("run-hermes-1");
+    expect(result.response.failureClass).toBe("none");
+  });
+
+  it("denies capability execution when policy is default deny", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(
+      path.join(os.tmpdir(), "unified-capability-policy-deny.json"),
+    );
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => fakeLaneState("eve", "should_not_run"),
+      memoryStore,
+    });
+    const policy = buildCapabilityPolicyFromConfig({
+      defaultMode: "deny",
+      allowCapabilities: [],
+      denyCapabilities: [],
+      allowedChatIds: [],
+      deniedChatIds: [],
+    });
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("eve", "should_not_run"),
+      policy,
+    });
+
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "42",
+      messageId: "500",
+      text: "@cap status",
+    });
+
+    expect(result.capabilityExecution?.status).toBe("failed");
+    expect(result.capabilityExecution?.reason).toBe("capability_policy_denied");
+    expect(result.capabilityExecution?.failureClass).toBe("policy_failure");
+    expect(result.response.failureClass).toBe("policy_failure");
+  });
+
+  it("allows capability execution when capability and chat are explicitly allowlisted", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(
+      path.join(os.tmpdir(), "unified-capability-policy-allow.json"),
+    );
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => fakeLaneState("eve", "allowed_run"),
+      memoryStore,
+    });
+    const policyConfig: CapabilityPolicyConfig = {
+      defaultMode: "deny",
+      allowCapabilities: ["check_status"],
+      denyCapabilities: [],
+      allowedChatIds: ["chat-7"],
+      deniedChatIds: [],
+    };
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("eve", "allowed_run"),
+      policy: buildCapabilityPolicyFromConfig(policyConfig),
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "chat-7",
+      messageId: "700",
+      text: "@cap status",
+    });
+
+    expect(result.capabilityExecution?.status).toBe("pass");
+    expect(result.capabilityExecution?.failureClass).toBe("none");
     expect(result.response.failureClass).toBe("none");
   });
 });

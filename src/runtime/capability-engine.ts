@@ -17,6 +17,7 @@ import type {
   CapabilityRegistry,
 } from "../skills/capability-registry.js";
 import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
+import type { CapabilityPolicy } from "./capability-policy.js";
 
 export type CapabilityExecutionSelection = UnifiedCapabilityDecision;
 
@@ -36,6 +37,7 @@ export type DispatchLaneResult = DispatchState;
 export type CapabilityExecutionDependencies = {
   memoryStore: UnifiedMemoryStore;
   dispatchLane: CapabilityLaneDispatcher;
+  policy?: CapabilityPolicy;
 };
 
 function parseExplicitCapabilityText(text: string): { capabilityId: string; argsText: string } | undefined {
@@ -68,6 +70,28 @@ function resultReason(capabilityId: string, status: "pass" | "failed"): string {
   return status === "pass" ? `capability_${capabilityId}_success` : `capability_${capabilityId}_failed`;
 }
 
+function denialExecutionResult(
+  selection: CapabilityExecutionSelection,
+  envelope: UnifiedMessageEnvelope,
+  started: number,
+  reason: string,
+): CapabilityExecutionResult {
+  return validateCapabilityExecutionResult({
+    capability: selection,
+    status: "failed",
+    consumed: false,
+    reason,
+    outputText: `Capability '${selection.id}' is not allowed for chat ${envelope.chatId}.`,
+    failureClass: "policy_failure",
+    runId: `capability-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
+    elapsedMs: Math.max(0, Date.now() - started),
+    metadata: {
+      policy: "capability-access-control",
+      deniedChatId: envelope.chatId,
+    },
+  });
+}
+
 export class UnifiedCapabilityEngine implements CapabilityEngine {
   constructor(
     private readonly registry: CapabilityRegistry,
@@ -98,6 +122,24 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
     envelope: UnifiedMessageEnvelope,
   ): Promise<CapabilityExecutionResult> {
     const started = Date.now();
+    if (this.dependencies.policy) {
+      const authorization = this.dependencies.policy.authorize({
+        capabilityId: selection.id,
+        lane: selection.lane,
+        chatId: envelope.chatId,
+      });
+      if (!authorization.allowed) {
+        const denied = denialExecutionResult(
+          selection,
+          envelope,
+          started,
+          authorization.reason ?? "capability_policy_denied",
+        );
+        await this.writeExecutionMemory(selection, envelope, denied);
+        return denied;
+      }
+    }
+
     const executor = this.registry.getExecutor(selection.id);
     if (!executor) {
       const missingResult = validateCapabilityExecutionResult({

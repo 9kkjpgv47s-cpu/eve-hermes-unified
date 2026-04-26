@@ -10,6 +10,13 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
+  capabilityPolicy: {
+    defaultMode: "allow" | "deny";
+    allowCapabilities: string[];
+    denyCapabilities: string[];
+    allowedChatIds: string[];
+    deniedChatIds: string[];
+  };
   routerConfig: RouterPolicyConfig;
 };
 
@@ -55,6 +62,20 @@ function parseMemoryStoreKind(raw: string | undefined): UnifiedMemoryStoreKind {
   return raw === "memory" ? "memory" : "file";
 }
 
+function parseCsvList(raw: string | undefined): string[] {
+  if (!raw) {
+    return [];
+  }
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
+function parseCapabilityDefaultMode(raw: string | undefined): "allow" | "deny" {
+  return raw?.toLowerCase() === "deny" ? "deny" : "allow";
+}
+
 export function loadUnifiedRuntimeEnvConfig(
   reader: Reader = (name) => process.env[name],
 ): UnifiedRuntimeEnvConfig {
@@ -75,6 +96,50 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
+  const capabilityDefaultMode = parseCapabilityDefaultMode(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_MODE",
+      "CAPABILITY_POLICY_MODE",
+      "UNIFIED_CAPABILITY_POLICY_DEFAULT",
+      "CAPABILITY_POLICY_DEFAULT",
+    ]),
+  );
+  const capabilityAllowList = parseCsvList(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_ALLOWLIST",
+      "CAPABILITY_ALLOWLIST",
+      "UNIFIED_CAPABILITY_ALLOW_LIST",
+      "CAPABILITY_ALLOW_LIST",
+      "UNIFIED_CAPABILITY_ALLOWED_IDS",
+      "CAPABILITY_ALLOWED_IDS",
+    ]),
+  );
+  const capabilityDenyList = parseCsvList(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_DENYLIST",
+      "CAPABILITY_DENYLIST",
+      "UNIFIED_CAPABILITY_DENY_LIST",
+      "CAPABILITY_DENY_LIST",
+      "UNIFIED_CAPABILITY_DENIED_IDS",
+      "CAPABILITY_DENIED_IDS",
+    ]),
+  );
+  const capabilityAllowedChatIds = parseCsvList(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_CHAT_ALLOWLIST",
+      "CAPABILITY_CHAT_ALLOWLIST",
+      "UNIFIED_CAPABILITY_ALLOWED_CHAT_IDS",
+      "CAPABILITY_ALLOWED_CHAT_IDS",
+    ]),
+  );
+  const capabilityDeniedChatIds = parseCsvList(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_CHAT_DENYLIST",
+      "CAPABILITY_CHAT_DENYLIST",
+      "UNIFIED_CAPABILITY_DENIED_CHAT_IDS",
+      "CAPABILITY_DENIED_CHAT_IDS",
+    ]),
+  );
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -96,6 +161,13 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
+    capabilityPolicy: {
+      defaultMode: capabilityDefaultMode,
+      allowCapabilities: capabilityAllowList,
+      denyCapabilities: capabilityDenyList,
+      allowedChatIds: capabilityAllowedChatIds,
+      deniedChatIds: capabilityDeniedChatIds,
+    },
     routerConfig: {
       defaultPrimary,
       defaultFallback,

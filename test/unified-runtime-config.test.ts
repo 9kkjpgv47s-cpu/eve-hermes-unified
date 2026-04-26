@@ -84,4 +84,26 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.unifiedMemoryStoreKind).toBe("memory");
     expect(config.unifiedMemoryFilePath).toBe("/tmp/custom-memory.json");
   });
+
+  it("parses capability policy controls", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_CAPABILITY_POLICY_DEFAULT: "deny",
+          UNIFIED_CAPABILITY_ALLOW_LIST: "check_status,summarize_state",
+          UNIFIED_CAPABILITY_ALLOWED_CHAT_IDS: "100,200",
+          UNIFIED_CAPABILITY_DENY_LIST: "hermes_dispatch_task",
+          UNIFIED_CAPABILITY_DENIED_CHAT_IDS: "999",
+        }),
+      ),
+    );
+    expect(config.capabilityPolicy.defaultMode).toBe("deny");
+    expect(config.capabilityPolicy.allowCapabilities).toEqual([
+      "check_status",
+      "summarize_state",
+    ]);
+    expect(config.capabilityPolicy.denyCapabilities).toEqual(["hermes_dispatch_task"]);
+    expect(config.capabilityPolicy.allowedChatIds).toEqual(["100", "200"]);
+    expect(config.capabilityPolicy.deniedChatIds).toEqual(["999"]);
+  });
 });

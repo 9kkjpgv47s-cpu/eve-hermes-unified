@@ -242,6 +242,36 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H3->H4": {
+        "minimumGoalIncrease": 2,
+        "minActionGrowthFactor": 1.35,
+        "minPendingNextActions": 3,
+        "requiredTaggedActionCounts": {
+          "policy-hardening": {
+            "minCount": 2,
+            "minPendingCount": 1
+          },
+          "contract-tightening": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
+      },
+      "H4->H5": {
+        "minimumGoalIncrease": 2,
+        "minActionGrowthFactor": 1.25,
+        "minPendingNextActions": 3,
+        "requiredTaggedActionCounts": {
+          "automation": {
+            "minCount": 2,
+            "minPendingCount": 1
+          },
+          "scale": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },

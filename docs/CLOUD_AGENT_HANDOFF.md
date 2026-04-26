@@ -87,6 +87,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
 - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence --allow-horizon-mismatch`
 - `npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
+- `npm run audit:goal-policy-readiness -- --source-horizon H2 --until-horizon H5 --horizon-status-file docs/HORIZON_STATUS.json`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -121,6 +122,7 @@ Schema validation expectations:
   - optional `--require-goal-policy-coverage` to require transition policy coverage from the source horizon through `--until-horizon` before promotion
   - optional `--required-policy-transitions H2->H3,H3->H4,...` to explicitly pin transitions that must have policy entries
   - optional `--require-policy-tagged-targets` to require each covered transition policy to declare tagged action targets
+  - optional `--require-positive-pending-policy-min` to require each covered transition policy to set `minPendingNextActions > 0`
   - optional goal-policy coverage artifact:
     - `evidence/goal-policy-coverage-<source>-to-<until>-*.json`
   - progressive-goals report artifact (when enabled):
@@ -133,7 +135,11 @@ Schema validation expectations:
   - optional `--goal-policy-key <Hn->Hm>` to require transition-specific action-tag minimums from `goalPolicies`
   - optional `--require-goal-policy-coverage --goal-policy-coverage-until-horizon <H3|H4|H5>` to require policy coverage beyond the immediate transition
   - optional `--required-policy-transitions <csv>` and `--require-policy-tagged-targets` for strict multi-transition policy gating
+  - optional `--require-positive-pending-policy-min` to require positive pending-action floors in covered policies
   - writes unified run manifest: `evidence/h2-promotion-run-*.json`
+- goal-policy readiness can be audited independently (without promotion):
+  - `npm run audit:goal-policy-readiness -- --source-horizon <H1|H2|H3|H4> --until-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json`
+  - writes readiness matrix: `evidence/goal-policy-readiness-*.json`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - auto-rollback policy decisions can be machine-evaluated with:

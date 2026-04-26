@@ -427,7 +427,8 @@ Useful flags:
 - `--require-progressive-goals --minimum-goal-increase <N>` to enforce that the next horizon has at least `N` more declared actions than the source horizon before promotion is allowed
 - `--goal-policy-key H2->H3` to apply a named transition policy from `goalPolicies.transitions` (including tag/count requirements) during progressive-goal enforcement
 - `--require-goal-policy-coverage` to require machine-checkable transition policy coverage before promotion
-  - default scope checks from source horizon to target horizon
-  - add `--goal-policy-coverage-scope future` to require policy coverage through remaining horizons (e.g., H2->H3->H4->H5)
+  - default scope checks from source horizon through `--goal-policy-coverage-until-horizon` (default `H5`)
+  - set `--goal-policy-coverage-until-horizon H5` to require policy coverage through remaining horizons (e.g., H2->H3->H4->H5)
   - add `--required-policy-transitions "H2->H3,H3->H4,H4->H5"` for explicit transition sets
   - add `--require-policy-tagged-targets` to require tagged target requirements per transition policy
+  - add `--require-positive-pending-policy-min` to ensure each covered transition policy sets a positive `minPendingNextActions`

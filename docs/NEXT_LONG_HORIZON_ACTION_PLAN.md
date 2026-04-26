@@ -195,7 +195,9 @@ Mitigations:
      - `--require-goal-policy-coverage --required-policy-transitions H2->H3,H3->H4,H4->H5 --require-policy-tagged-targets`
    - this can enforce action composition targets (for example, minimum counts of `durability`, `policy`, or `capability` tagged next-horizon actions)
 9. Optionally run direct horizon promotion with a pinned closeout artifact when replaying prior evidence:
-   - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --closeout-run-file evidence/h2-closeout-run-*.json --require-progressive-goals --minimum-goal-increase 1 --goal-policy-key H2->H3 --require-goal-policy-coverage --required-policy-transitions H2->H3,H3->H4,H4->H5 --require-policy-tagged-targets`
+   - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --closeout-run-file evidence/h2-closeout-run-*.json --require-progressive-goals --minimum-goal-increase 1 --goal-policy-key H2->H3 --require-goal-policy-coverage --goal-policy-coverage-until-horizon H5 --required-policy-transitions H2->H3,H3->H4,H4->H5 --require-policy-tagged-targets`
+10. Generate a machine-readable multi-horizon policy readiness audit before promotion:
+   - `npm run audit:goal-policy-readiness -- --source-horizon H2 --max-target-horizon H5 --horizon-status-file docs/HORIZON_STATUS.json`
 
 ## Horizon Closeout Gate
 

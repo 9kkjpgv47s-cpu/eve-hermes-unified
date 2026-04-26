@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { runCommandWithTimeout } from "../src/process/exec.js";
 
 async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "goal-policy-coverage-test-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "goal-policy-readiness-audit-test-"));
   try {
     await run(dir);
   } finally {
@@ -15,26 +15,17 @@ async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
 
 async function seedHorizonStatus(
   statusPath: string,
-  options?: {
-    withH3H4?: boolean;
-    withH4H5?: boolean;
-    includeTaggedCounts?: boolean;
-  },
+  options?: { withH3H4?: boolean; withH4H5?: boolean; tagged?: boolean },
 ): Promise<void> {
   const withH3H4 = options?.withH3H4 ?? true;
   const withH4H5 = options?.withH4H5 ?? true;
-  const includeTaggedCounts = options?.includeTaggedCounts ?? true;
-
+  const tagged = options?.tagged ?? true;
   const transitions: Record<string, unknown> = {
     "H2->H3": {
       minimumGoalIncrease: 1,
       minActionGrowthFactor: 1.1,
       minPendingNextActions: 2,
-      requiredTaggedActionCounts: includeTaggedCounts
-        ? {
-            durability: { minCount: 2, minPendingCount: 1 },
-          }
-        : undefined,
+      requiredTaggedActionCounts: tagged ? { durability: 1 } : undefined,
     },
   };
   if (withH3H4) {
@@ -42,23 +33,15 @@ async function seedHorizonStatus(
       minimumGoalIncrease: 1,
       minActionGrowthFactor: 1.05,
       minPendingNextActions: 2,
-      requiredTaggedActionCounts: includeTaggedCounts
-        ? {
-            policy: 1,
-          }
-        : undefined,
+      requiredTaggedActionCounts: tagged ? { policy: { minCount: 1, minPendingCount: 1 } } : undefined,
     };
   }
   if (withH4H5) {
     transitions["H4->H5"] = {
       minimumGoalIncrease: 1,
       minActionGrowthFactor: 1.05,
-      minPendingNextActions: 2,
-      requiredTaggedActionCounts: includeTaggedCounts
-        ? {
-            automation: { minCount: 1, minPendingCount: 1 },
-          }
-        : undefined,
+      minPendingNextActions: 1,
+      requiredTaggedActionCounts: tagged ? { automation: 1 } : undefined,
     };
   }
 
@@ -71,7 +54,7 @@ async function seedHorizonStatus(
         owner: "cloud-agent",
         activeHorizon: "H2",
         activeStatus: "in_progress",
-        summary: "goal policy coverage fixture",
+        summary: "audit fixture",
         blockers: [],
         requiredEvidence: [
           {
@@ -106,12 +89,14 @@ async function seedHorizonStatus(
           },
         ],
         nextActions: [
-          { id: "h2-action-1", summary: "seed", targetHorizon: "H2", status: "completed", tags: ["durability"] },
-          { id: "h3-action-1", summary: "seed", targetHorizon: "H3", status: "planned", tags: ["durability"] },
-          { id: "h4-action-1", summary: "seed", targetHorizon: "H4", status: "planned", tags: ["policy"] },
-          { id: "h5-action-1", summary: "seed", targetHorizon: "H5", status: "planned", tags: ["automation"] },
+          { id: "h2-a1", summary: "h2", targetHorizon: "H2", status: "completed", tags: ["durability"] },
+          { id: "h3-a1", summary: "h3", targetHorizon: "H3", status: "planned", tags: ["durability"] },
+          { id: "h4-a1", summary: "h4", targetHorizon: "H4", status: "planned", tags: ["policy"] },
+          { id: "h5-a1", summary: "h5", targetHorizon: "H5", status: "planned", tags: ["automation"] },
         ],
-        goalPolicies: { transitions },
+        goalPolicies: {
+          transitions,
+        },
         promotionReadiness: {
           targetStage: "majority",
           gates: {
@@ -145,24 +130,24 @@ async function seedHorizonStatus(
   );
 }
 
-describe("check-goal-policy-coverage.mjs", () => {
-  it("passes when required transitions are covered with tagged policy requirements", async () => {
+describe("audit-goal-policy-readiness.mjs", () => {
+  it("passes with complete future coverage and tagged requirements", async () => {
     await withTempDir(async (dir) => {
       const statusPath = path.join(dir, "HORIZON_STATUS.json");
-      const outPath = path.join(dir, "goal-policy-coverage.json");
-      await seedHorizonStatus(statusPath, { withH3H4: true, withH4H5: true, includeTaggedCounts: true });
+      const outPath = path.join(dir, "goal-policy-readiness.json");
+      await seedHorizonStatus(statusPath, { withH3H4: true, withH4H5: true, tagged: true });
 
       const result = await runCommandWithTimeout(
         [
           "node",
-          "scripts/check-goal-policy-coverage.mjs",
+          "scripts/audit-goal-policy-readiness.mjs",
           "--horizon-status-file",
           statusPath,
           "--source-horizon",
           "H2",
-          "--max-target-horizon",
+          "--until-horizon",
           "H5",
-          "--require-tagged-requirements",
+          "--require-tagged-targets",
           "--out",
           outPath,
         ],
@@ -171,35 +156,31 @@ describe("check-goal-policy-coverage.mjs", () => {
       expect(result.code).toBe(0);
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
-        checks: {
-          transitionCount: number;
-          transitionKeys: string[];
-          transitions: Record<string, { hasTaggedRequirements: boolean }>;
-        };
+        checks: { coverageRate: number; matrix: Record<string, { failures: string[] }> };
       };
       expect(payload.pass).toBe(true);
-      expect(payload.checks.transitionCount).toBe(3);
-      expect(payload.checks.transitionKeys).toEqual(["H2->H3", "H3->H4", "H4->H5"]);
-      expect(payload.checks.transitions["H2->H3"].hasTaggedRequirements).toBe(true);
+      expect(payload.checks.coverageRate).toBe(1);
+      expect(Object.values(payload.checks.matrix).flatMap((entry) => entry.failures)).toEqual([]);
     });
   });
 
-  it("fails when a required transition policy is missing", async () => {
+  it("fails when future transition coverage is incomplete", async () => {
     await withTempDir(async (dir) => {
       const statusPath = path.join(dir, "HORIZON_STATUS.json");
-      const outPath = path.join(dir, "goal-policy-coverage.json");
-      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: true, includeTaggedCounts: true });
+      const outPath = path.join(dir, "goal-policy-readiness.json");
+      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: true, tagged: true });
 
       const result = await runCommandWithTimeout(
         [
           "node",
-          "scripts/check-goal-policy-coverage.mjs",
+          "scripts/audit-goal-policy-readiness.mjs",
           "--horizon-status-file",
           statusPath,
           "--source-horizon",
           "H2",
-          "--max-target-horizon",
+          "--until-horizon",
           "H5",
+          "--require-tagged-targets",
           "--out",
           outPath,
         ],
@@ -212,42 +193,6 @@ describe("check-goal-policy-coverage.mjs", () => {
       };
       expect(payload.pass).toBe(false);
       expect(payload.failures).toContain("missing_transition_policy:H3->H4");
-    });
-  });
-
-  it("fails when tagged requirements are required but absent", async () => {
-    await withTempDir(async (dir) => {
-      const statusPath = path.join(dir, "HORIZON_STATUS.json");
-      const outPath = path.join(dir, "goal-policy-coverage.json");
-      await seedHorizonStatus(statusPath, { withH3H4: true, withH4H5: true, includeTaggedCounts: false });
-
-      const result = await runCommandWithTimeout(
-        [
-          "node",
-          "scripts/check-goal-policy-coverage.mjs",
-          "--horizon-status-file",
-          statusPath,
-          "--source-horizon",
-          "H2",
-          "--max-target-horizon",
-          "H5",
-          "--require-positive-pending-min",
-          "--out",
-          outPath,
-        ],
-        { timeoutMs: 30_000 },
-      );
-      expect(result.code).toBe(2);
-      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
-        pass: boolean;
-        failures: string[];
-      };
-      expect(payload.pass).toBe(false);
-      expect(
-        payload.failures.some((failure) =>
-          failure.startsWith("invalid_required_tagged_action_counts:"),
-        ),
-      ).toBe(true);
     });
   });
 });

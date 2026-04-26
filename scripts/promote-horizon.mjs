@@ -392,10 +392,10 @@ async function main() {
       goalPolicyCoverageOut,
     ];
     if (isNonEmptyString(options.goalPolicyKey)) {
-      goalPolicyCoverageArgv.push("--required-policy-transitions", options.goalPolicyKey);
+      goalPolicyCoverageArgv.push("--required-policy-key", options.goalPolicyKey);
     }
     if (options.requirePolicyTaggedTargets) {
-      goalPolicyCoverageArgv.push("--require-tagged-policies");
+      goalPolicyCoverageArgv.push("--require-tagged-requirements");
     }
     if (options.requirePositivePendingPolicyMin) {
       goalPolicyCoverageArgv.push("--require-positive-pending-min");

@@ -64,6 +64,7 @@ npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/H
 # optionally require multi-transition policy coverage before promotion:
 #   --require-goal-policy-coverage --goal-policy-coverage-until-horizon H5 --require-policy-tagged-targets
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
+npm run audit:goal-policy-readiness -- --horizon-status-file docs/HORIZON_STATUS.json --source-horizon H2 --until-horizon H5 --require-tagged-requirements
 # optional deterministic evidence mode override:
 #   --evidence-selection-mode latest-passing
 npm run evaluate:auto-rollback-policy -- --stage canary --evidence-dir evidence

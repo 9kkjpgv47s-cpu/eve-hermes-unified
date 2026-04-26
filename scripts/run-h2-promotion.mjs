@@ -32,8 +32,10 @@ function parseArgs(argv) {
     goalPolicyKey: "",
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
+    goalPolicyCoverageUntilHorizon: "H5",
     requiredPolicyTransitions: "",
     requirePolicyTaggedTargets: false,
+    requirePositivePendingPolicyMin: false,
     progressiveGoalsOut: "",
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -112,6 +114,16 @@ function parseArgs(argv) {
     } else if (arg === "--goal-policy-coverage-out") {
       options.goalPolicyCoverageOut = value ?? "";
       index += 1;
+    } else if (arg === "--goal-policy-coverage-until-horizon") {
+      options.goalPolicyCoverageUntilHorizon = value ?? "";
+      index += 1;
+    } else if (arg === "--required-policy-transitions") {
+      options.requiredPolicyTransitions = value ?? "";
+      index += 1;
+    } else if (arg === "--require-policy-tagged-targets") {
+      options.requirePolicyTaggedTargets = true;
+    } else if (arg === "--require-positive-pending-policy-min") {
+      options.requirePositivePendingPolicyMin = true;
     } else if (arg === "--progressive-goals-out") {
       options.progressiveGoalsOut = value ?? "";
       index += 1;
@@ -395,6 +407,21 @@ async function main() {
     if (options.requireGoalPolicyCoverage) {
       promoteArgv.push("--require-goal-policy-coverage");
       promoteArgv.push("--goal-policy-coverage-out", goalPolicyCoverageOut);
+      if (isNonEmptyString(options.goalPolicyCoverageUntilHorizon)) {
+        promoteArgv.push(
+          "--goal-policy-coverage-until-horizon",
+          options.goalPolicyCoverageUntilHorizon,
+        );
+      }
+      if (isNonEmptyString(options.requiredPolicyTransitions)) {
+        promoteArgv.push("--required-policy-transitions", options.requiredPolicyTransitions);
+      }
+      if (options.requirePolicyTaggedTargets) {
+        promoteArgv.push("--require-policy-tagged-targets");
+      }
+      if (options.requirePositivePendingPolicyMin) {
+        promoteArgv.push("--require-positive-pending-policy-min");
+      }
     }
     if (options.requireActiveNextHorizon) {
       promoteArgv.push("--require-active-next-horizon");

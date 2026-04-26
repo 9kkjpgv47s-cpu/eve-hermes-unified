@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "v1",
+  "updatedAtIso": "2026-04-26T16:50:00Z",
+  "owner": "cloud-agent",
+  "activeHorizon": "H2",
+  "activeStatus": "in_progress",
+  "summary": "H2 progressive traffic enablement is active with canary drill complete, auto-rollback CLI/docs hardened, and rollback simulation evidence under validation.",
+  "blockers": [],
+  "requiredEvidence": [
+    {
+      "id": "h1-validate-all",
+      "command": "npm run validate:all",
+      "artifactPattern": "evidence/validation-summary-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-release-readiness",
+      "command": "npm run validate:release-readiness",
+      "artifactPattern": "evidence/release-readiness-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-initial-scope",
+      "command": "npm run validate:initial-scope",
+      "artifactPattern": "evidence/initial-scope-validation-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-merge-bundle",
+      "command": "npm run validate:merge-bundle",
+      "artifactPattern": "evidence/merge-bundle-validation-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-manifest-schemas",
+      "command": "npm run validate:manifest-schemas",
+      "artifactPattern": "evidence/release-readiness-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-bundle-verification",
+      "command": "npm run verify:merge-bundle",
+      "artifactPattern": "evidence/bundle-verification-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-cutover-readiness",
+      "command": "npm run validate:cutover-readiness",
+      "artifactPattern": "evidence/cutover-readiness-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-evidence-summary",
+      "command": "npm run validate:evidence-summary",
+      "artifactPattern": "evidence/validation-summary-*.json",
+      "required": true
+    }
+  ],
+  "nextActions": [
+    {
+      "id": "h1-action-1",
+      "summary": "Run unified-ci and confirm evidence artifact upload reliability and stage promotion gate signal emission.",
+      "targetHorizon": "H1",
+      "status": "completed"
+    },
+    {
+      "id": "h1-action-2",
+      "summary": "Exercise operator retrieval and local verification flow against CI artifact bundle.",
+      "targetHorizon": "H1",
+      "status": "completed"
+    },
+    {
+      "id": "h1-action-3",
+      "summary": "Promote H1 to completed once artifact retrieval and stage promotion gate workflow are verified.",
+      "targetHorizon": "H1",
+      "status": "completed"
+    },
+    {
+      "id": "h2-action-1",
+      "summary": "Run canary promotion drill with passing readiness gate and capture stage-promotion execution evidence.",
+      "targetHorizon": "H2",
+      "status": "completed"
+    },
+    {
+      "id": "h2-action-2",
+      "summary": "Run majority promotion readiness drill and confirm policy gate behavior under threshold breaches.",
+      "targetHorizon": "H2",
+      "status": "planned"
+    },
+    {
+      "id": "h2-action-3",
+      "summary": "Validate rollback-trigger policy flow by simulating sustained SLO gate violation and proving Eve-safe restoration.",
+      "targetHorizon": "H2",
+      "status": "completed"
+    }
+  ],
+  "promotionReadiness": {
+    "targetStage": "canary",
+    "gates": {
+      "releaseReadinessPass": true,
+      "mergeBundlePass": true,
+      "bundleVerificationPass": true,
+      "cutoverReadinessPass": true,
+      "evidenceSummaryPass": true
+    }
+  },
+  "horizonStates": {
+    "H1": {
+      "status": "completed",
+      "summary": "Operationalization baseline closed with passing unified CI, artifact upload reliability, and downloaded artifact verification workflow."
+    },
+    "H2": {
+      "status": "in_progress",
+      "summary": "Canary drill and rollback-trigger simulation coverage completed; majority readiness drill remains planned."
+    },
+    "H3": {
+      "status": "planned",
+      "summary": "Runtime durability and policy maturity hardening."
+    },
+    "H4": {
+      "status": "planned",
+      "summary": "Legacy path retirement and contract tightening."
+    },
+    "H5": {
+      "status": "planned",
+      "summary": "Autonomous operations and scale envelope."
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-04-26T13:02:00Z",
+      "horizon": "H1",
+      "status": "in_progress",
+      "note": "Manifest policy gate, operator merge-bundle verification, and horizon status schema gate implemented."
+    },
+    {
+      "timestamp": "2026-04-26T13:25:00Z",
+      "horizon": "H1",
+      "status": "in_progress",
+      "note": "Stage promotion readiness gate added for cutover advancement decisions."
+    },
+    {
+      "timestamp": "2026-04-26T14:45:00Z",
+      "horizon": "H1",
+      "status": "in_progress",
+      "note": "Promotion orchestration path added to gate readiness + apply stage in a single operator command."
+    },
+    {
+      "timestamp": "2026-04-26T14:54:00Z",
+      "horizon": "H1",
+      "status": "in_progress",
+      "note": "Unified CI run 24959459587 passed fully and downloaded artifact set was locally verified for merge-bundle and stage-promotion readiness."
+    },
+    {
+      "timestamp": "2026-04-26T15:00:00Z",
+      "horizon": "H1",
+      "status": "completed",
+      "note": "H1 closeout gate implemented and passing; active horizon advanced to H2 with explicit kickoff actions."
+    },
+    {
+      "timestamp": "2026-04-26T15:00:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "H2 initiated with canary/majority drill and rollback-policy validation actions."
+    },
+    {
+      "timestamp": "2026-04-26T15:20:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Canary drill action completed; executing machine-evaluable auto-rollback policy gate for sustained SLO violations."
+    },
+    {
+      "timestamp": "2026-04-26T16:50:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Auto-rollback policy command aliases, documented stage flags, and auto-apply rollback simulation coverage hardened."
+    }
+  ]
+}

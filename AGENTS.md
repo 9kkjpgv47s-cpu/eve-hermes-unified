@@ -67,6 +67,8 @@ npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/H
 #   --require-goal-policy-readiness-audit --goal-policy-readiness-audit-max-target-horizon H5 --require-goal-policy-readiness-tagged-targets
 # strict one-flag policy hardening mode (progressive + coverage + readiness audit + tagged + positive pending mins):
 #   --strict-goal-policy-gates --goal-policy-key H2->H3
+# optional dedicated goal-policy source (fallback still reads docs/HORIZON_STATUS.json goalPolicies):
+#   --goal-policy-file docs/GOAL_POLICIES.json
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
 npm run audit:goal-policy-readiness -- --horizon-status-file docs/HORIZON_STATUS.json --source-horizon H2 --until-horizon H5 --require-tagged-requirements
 # optional deterministic evidence mode override:

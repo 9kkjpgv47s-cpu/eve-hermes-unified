@@ -154,6 +154,41 @@ async function seedHorizonStatus(
   );
 }
 
+async function seedGoalPolicyFile(
+  policyPath: string,
+  options?: { includeTransition?: boolean; minimumGoalIncrease?: number },
+): Promise<void> {
+  const includeTransition = options?.includeTransition ?? true;
+  const minimumGoalIncrease = options?.minimumGoalIncrease ?? 1;
+  const transitions: Record<string, unknown> = {};
+  if (includeTransition) {
+    transitions["H2->H3"] = {
+      minimumGoalIncrease,
+      minActionGrowthFactor: 1.1,
+      minPendingNextActions: 1,
+      requiredTaggedActionCounts: {
+        capability: {
+          minCount: 2,
+          minPendingCount: 1,
+        },
+      },
+    };
+  }
+  await writeFile(
+    policyPath,
+    JSON.stringify(
+      {
+        schemaVersion: "v1",
+        owner: "cloud-agent",
+        transitions,
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
 describe("check-progressive-horizon-goals.mjs", () => {
   it("passes when next horizon has larger goal runway", async () => {
     await withTempDir(async (dir) => {
@@ -318,6 +353,50 @@ describe("check-progressive-horizon-goals.mjs", () => {
         payload.failures.some((failure) =>
           failure.startsWith("next_pending_action_count_below_min:"),
         ),
+      ).toBe(true);
+    });
+  });
+
+  it("uses external goal policy file when provided", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const policyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "progressive-goals.json");
+      await seedHorizonStatus(statusPath, { h2GoalCount: 2, h3GoalCount: 3, activeHorizon: "H2" });
+      await seedGoalPolicyFile(policyPath, { includeTransition: true, minimumGoalIncrease: 3 });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-progressive-horizon-goals.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          policyPath,
+          "--source-horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--policy-key",
+          "H2->H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { goalPolicyFile: string };
+        checks: { policyKey: string | null; minimumGoalIncrease: number };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.files.goalPolicyFile).toBe(policyPath);
+      expect(payload.checks.policyKey).toBe("H2->H3");
+      expect(payload.checks.minimumGoalIncrease).toBe(3);
+      expect(
+        payload.failures.some((failure) => failure.startsWith("insufficient_goal_increase:")),
       ).toBe(true);
     });
   });

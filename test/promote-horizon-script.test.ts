@@ -202,6 +202,39 @@ async function seedHorizonStatusWithoutFuturePolicies(statusPath: string): Promi
   await writeFile(statusPath, JSON.stringify(payload, null, 2), "utf8");
 }
 
+async function seedGoalPolicyFile(
+  goalPolicyPath: string,
+  options?: { includeH2H3?: boolean },
+): Promise<void> {
+  const includeH2H3 = options?.includeH2H3 ?? true;
+  const transitions: Record<string, unknown> = {};
+  if (includeH2H3) {
+    transitions["H2->H3"] = {
+      minimumGoalIncrease: 1,
+      minActionGrowthFactor: 1.2,
+      minPendingNextActions: 2,
+      requiredTaggedActionCounts: {
+        durability: {
+          minCount: 2,
+          minPendingCount: 1,
+        },
+      },
+    };
+  }
+  await writeFile(
+    goalPolicyPath,
+    JSON.stringify(
+      {
+        schemaVersion: "v1",
+        transitions,
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
 describe("promote-horizon.mjs", () => {
   it("enforces goal policy readiness audit gate when required", async () => {
     await withTempDir(async (dir) => {
@@ -619,6 +652,45 @@ describe("promote-horizon.mjs", () => {
       expect(payload.checks.requireGoalPolicyReadinessAudit).toBe(true);
       expect(payload.checks.goalPolicyReadinessAuditPass).toBe(true);
       expect(payload.failures).toEqual([]);
+    });
+  });
+
+  it("uses external goal-policy file when provided", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICY_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await seedGoalPolicyFile(goalPolicyPath, { includeH2H3: true });
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--strict-goal-policy-gates",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { goalPolicyFile: string | null };
+        checks: { strictGoalPolicyGates: boolean; progressiveGoalsPass: boolean };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.goalPolicyFile).toBe(goalPolicyPath);
+      expect(payload.checks.strictGoalPolicyGates).toBe(true);
+      expect(payload.checks.progressiveGoalsPass).toBe(true);
     });
   });
 });

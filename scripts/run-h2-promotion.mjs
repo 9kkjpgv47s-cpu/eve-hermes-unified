@@ -30,6 +30,7 @@ function parseArgs(argv) {
     requireProgressiveGoals: false,
     minimumGoalIncrease: 1,
     goalPolicyKey: "",
+    goalPolicyFile: "",
     strictGoalPolicyGates: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
@@ -116,6 +117,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--goal-policy-key") {
       options.goalPolicyKey = value ?? "";
+      index += 1;
+    } else if (arg === "--goal-policy-file") {
+      options.goalPolicyFile = value ?? "";
       index += 1;
     } else if (arg === "--strict-goal-policy-gates" || arg === "--require-strict-goal-policy-gates") {
       options.strictGoalPolicyGates = true;
@@ -453,6 +457,9 @@ async function main() {
     if (isNonEmptyString(options.goalPolicyKey)) {
       promoteArgv.push("--goal-policy-key", options.goalPolicyKey);
     }
+    if (isNonEmptyString(options.goalPolicyFile)) {
+      promoteArgv.push("--goal-policy-file", options.goalPolicyFile);
+    }
     if (options.strictGoalPolicyGates) {
       promoteArgv.push("--strict-goal-policy-gates");
     }
@@ -542,6 +549,9 @@ async function main() {
         ? options.minimumGoalIncrease
         : null,
       goalPolicyKey: isNonEmptyString(options.goalPolicyKey) ? options.goalPolicyKey : null,
+      goalPolicyFile: isNonEmptyString(options.goalPolicyFile)
+        ? path.resolve(options.goalPolicyFile)
+        : null,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
       requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
       goalPolicyCoveragePass:

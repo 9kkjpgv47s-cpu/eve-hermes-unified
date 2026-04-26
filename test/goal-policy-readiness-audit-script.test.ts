@@ -130,6 +130,45 @@ async function seedHorizonStatus(
   );
 }
 
+async function seedGoalPolicyFile(goalPolicyPath: string): Promise<void> {
+  await writeFile(
+    goalPolicyPath,
+    JSON.stringify(
+      {
+        transitions: {
+          "H2->H3": {
+            minimumGoalIncrease: 1,
+            minActionGrowthFactor: 1.1,
+            minPendingNextActions: 2,
+            requiredTaggedActionCounts: {
+              durability: 1,
+            },
+          },
+          "H3->H4": {
+            minimumGoalIncrease: 1,
+            minActionGrowthFactor: 1.05,
+            minPendingNextActions: 2,
+            requiredTaggedActionCounts: {
+              policy: { minCount: 1, minPendingCount: 1 },
+            },
+          },
+          "H4->H5": {
+            minimumGoalIncrease: 1,
+            minActionGrowthFactor: 1.05,
+            minPendingNextActions: 1,
+            requiredTaggedActionCounts: {
+              automation: 1,
+            },
+          },
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
 describe("audit-goal-policy-readiness.mjs", () => {
   it("passes with complete future coverage and tagged requirements", async () => {
     await withTempDir(async (dir) => {
@@ -193,6 +232,43 @@ describe("audit-goal-policy-readiness.mjs", () => {
       };
       expect(payload.pass).toBe(false);
       expect(payload.failures).toContain("missing_transition_policy:H3->H4");
+    });
+  });
+
+  it("supports explicit goal policy file source", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICY.json");
+      const outPath = path.join(dir, "goal-policy-readiness.json");
+      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, tagged: false });
+      await seedGoalPolicyFile(goalPolicyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/audit-goal-policy-readiness.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--source-horizon",
+          "H2",
+          "--until-horizon",
+          "H5",
+          "--require-tagged-requirements",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { goalPolicyFile: string | null; goalPolicySource: string | null };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.goalPolicySource).toBe("file");
+      expect(payload.files.goalPolicyFile).toBe(path.resolve(goalPolicyPath));
     });
   });
 });

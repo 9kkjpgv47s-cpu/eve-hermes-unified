@@ -26,6 +26,7 @@ function parseArgs(argv) {
     requireProgressiveGoals: false,
     minimumGoalIncrease: 1,
     goalPolicyKey: "",
+    goalPolicyFile: "",
     strictGoalPolicyGates: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
@@ -92,6 +93,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--goal-policy-key") {
       options.goalPolicyKey = value ?? "";
+      index += 1;
+    } else if (arg === "--goal-policy-file") {
+      options.goalPolicyFile = value ?? "";
       index += 1;
     } else if (arg === "--strict-goal-policy-gates" || arg === "--require-strict-goal-policy-gates") {
       options.strictGoalPolicyGates = true;
@@ -432,6 +436,9 @@ async function main() {
       "--out",
       progressiveGoalsOut,
     ];
+    if (isNonEmptyString(options.goalPolicyFile)) {
+      progressiveGoalsArgv.push("--goal-policy-file", options.goalPolicyFile);
+    }
     progressiveGoalsCommand = await runCommand(progressiveGoalsArgv, { timeoutMs: options.timeoutMs });
     progressiveGoalsPayload = await readJson(progressiveGoalsOut);
     if (progressiveGoalsCommand.code !== 0 || progressiveGoalsPayload?.pass !== true) {
@@ -455,6 +462,9 @@ async function main() {
       "--out",
       goalPolicyCoverageOut,
     ];
+    if (isNonEmptyString(options.goalPolicyFile)) {
+      goalPolicyCoverageArgv.push("--goal-policy-file", options.goalPolicyFile);
+    }
     if (isNonEmptyString(options.goalPolicyKey)) {
       goalPolicyCoverageArgv.push("--required-policy-key", options.goalPolicyKey);
     }
@@ -490,6 +500,9 @@ async function main() {
       "--out",
       goalPolicyReadinessAuditOut,
     ];
+    if (isNonEmptyString(options.goalPolicyFile)) {
+      goalPolicyReadinessAuditArgv.push("--goal-policy-file", options.goalPolicyFile);
+    }
     if (options.requireGoalPolicyReadinessTaggedTargets) {
       goalPolicyReadinessAuditArgv.push("--require-tagged-requirements");
     }
@@ -580,6 +593,7 @@ async function main() {
     },
     files: {
       horizonStatusFile,
+      goalPolicyFile: isNonEmptyString(options.goalPolicyFile) ? path.resolve(options.goalPolicyFile) : null,
       evidenceDir: options.closeoutFile ? null : evidenceDir,
       closeoutFile,
       closeoutOut: options.closeoutFile ? null : closeoutOut,
@@ -607,6 +621,7 @@ async function main() {
       closeoutRunPass: closeoutRunPayload?.pass === true,
       requireProgressiveGoals: options.requireProgressiveGoals,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
+      goalPolicyFile: isNonEmptyString(options.goalPolicyFile) ? path.resolve(options.goalPolicyFile) : null,
       goalPolicyKey:
         options.requireProgressiveGoals === true
           ? String(options.goalPolicyKey ?? "").trim() || null

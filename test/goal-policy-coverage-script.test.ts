@@ -145,6 +145,40 @@ async function seedHorizonStatus(
   );
 }
 
+async function seedGoalPolicyFile(
+  policyPath: string,
+  options?: { includeH3H4?: boolean; includeH4H5?: boolean; includeTaggedCounts?: boolean },
+): Promise<void> {
+  const includeH3H4 = options?.includeH3H4 ?? true;
+  const includeH4H5 = options?.includeH4H5 ?? true;
+  const includeTaggedCounts = options?.includeTaggedCounts ?? true;
+  const transitions: Record<string, unknown> = {
+    "H2->H3": {
+      minimumGoalIncrease: 2,
+      minActionGrowthFactor: 1.2,
+      minPendingNextActions: 2,
+      requiredTaggedActionCounts: includeTaggedCounts ? { durability: 1 } : {},
+    },
+  };
+  if (includeH3H4) {
+    transitions["H3->H4"] = {
+      minimumGoalIncrease: 1,
+      minActionGrowthFactor: 1.05,
+      minPendingNextActions: 2,
+      requiredTaggedActionCounts: includeTaggedCounts ? { policy: 1 } : {},
+    };
+  }
+  if (includeH4H5) {
+    transitions["H4->H5"] = {
+      minimumGoalIncrease: 1,
+      minActionGrowthFactor: 1.05,
+      minPendingNextActions: 2,
+      requiredTaggedActionCounts: includeTaggedCounts ? { automation: 1 } : {},
+    };
+  }
+  await writeFile(policyPath, JSON.stringify({ transitions }, null, 2), "utf8");
+}
+
 describe("check-goal-policy-coverage.mjs", () => {
   it("passes when required transitions are covered with tagged policy requirements", async () => {
     await withTempDir(async (dir) => {
@@ -248,6 +282,49 @@ describe("check-goal-policy-coverage.mjs", () => {
           failure.startsWith("invalid_required_tagged_action_counts:"),
         ),
       ).toBe(true);
+    });
+  });
+
+  it("uses explicit goal policy file when provided", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const policyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "goal-policy-coverage.json");
+      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, includeTaggedCounts: false });
+      await seedGoalPolicyFile(policyPath, {
+        includeH3H4: true,
+        includeH4H5: true,
+        includeTaggedCounts: true,
+      });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-goal-policy-coverage.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          policyPath,
+          "--source-horizon",
+          "H2",
+          "--max-target-horizon",
+          "H5",
+          "--require-tagged-requirements",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { goalPolicyFile: string };
+        checks: { transitionCount: number; coverageRate: number };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.goalPolicyFile).toBe(policyPath);
+      expect(payload.checks.transitionCount).toBe(3);
+      expect(payload.checks.coverageRate).toBe(1);
     });
   });
 });

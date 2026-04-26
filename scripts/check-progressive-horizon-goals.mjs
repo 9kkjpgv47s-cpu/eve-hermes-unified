@@ -2,12 +2,14 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
+import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 
 const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
 
 function parseArgs(argv) {
   const options = {
     horizonStatusFile: "",
+    goalPolicyFile: "",
     sourceHorizon: "",
     nextHorizon: "",
     out: "",
@@ -21,6 +23,9 @@ function parseArgs(argv) {
     const value = argv[index + 1];
     if (arg === "--horizon-status-file") {
       options.horizonStatusFile = value ?? "";
+      index += 1;
+    } else if (arg === "--goal-policy-file") {
+      options.goalPolicyFile = value ?? "";
       index += 1;
     } else if (arg === "--source-horizon") {
       options.sourceHorizon = value ?? "";
@@ -111,6 +116,11 @@ async function main() {
   );
   const horizonStatus = JSON.parse(await readFile(horizonStatusFile, "utf8"));
   const validation = validateHorizonStatus(horizonStatus);
+  const goalPolicySource = await resolveGoalPolicySource({
+    horizonStatus,
+    horizonStatusFile,
+    goalPolicyFile: options.goalPolicyFile,
+  });
   const sourceHorizon = normalizeHorizon(options.sourceHorizon, horizonStatus?.activeHorizon ?? "");
   const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
   const derivedNext = sourceIndex >= 0 ? HORIZON_SEQUENCE[sourceIndex + 1] ?? "" : "";
@@ -153,16 +163,7 @@ async function main() {
   }
   const policyKey = String(options.policyKey ?? "").trim();
 
-  const goalPolicies =
-    horizonStatus?.goalPolicies && typeof horizonStatus.goalPolicies === "object"
-      ? horizonStatus.goalPolicies
-      : {};
-  const transitionPolicies =
-    goalPolicies?.transitions &&
-    typeof goalPolicies.transitions === "object" &&
-    !Array.isArray(goalPolicies.transitions)
-      ? goalPolicies.transitions
-      : goalPolicies;
+  const transitionPolicies = goalPolicySource.transitions;
   const derivedPolicyKey = isNonEmptyString(policyKey)
     ? policyKey
     : `${sourceHorizon}->${nextHorizon}`;
@@ -305,6 +306,8 @@ async function main() {
     pass: failures.length === 0,
     files: {
       horizonStatusFile,
+      goalPolicyFile: goalPolicySource.goalPolicyFile,
+      goalPolicySource: goalPolicySource.source,
       outPath,
     },
     horizons: {

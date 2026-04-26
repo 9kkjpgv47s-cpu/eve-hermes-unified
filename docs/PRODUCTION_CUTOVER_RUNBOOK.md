@@ -431,6 +431,8 @@ Useful flags:
   - enables `--require-goal-policy-coverage` + `--require-policy-tagged-targets` + `--require-positive-pending-policy-min`
   - enables `--require-goal-policy-readiness-audit` + `--require-goal-policy-readiness-tagged-targets` + `--require-goal-policy-readiness-positive-pending-min`
   - defaults to the single transition (`H2->H3`) unless explicit horizon window/transition flags are supplied
+- `--goal-policy-file <path>` to load transition policies from a dedicated policy document (default `docs/GOAL_POLICIES.json`)
+  - falls back to `docs/HORIZON_STATUS.json.goalPolicies` when dedicated file is missing or invalid
 - `--require-goal-policy-coverage` to require machine-checkable transition policy coverage before promotion
   - default scope checks from source horizon through `--goal-policy-coverage-until-horizon` (default `H5`)
   - set `--goal-policy-coverage-until-horizon H5` to require policy coverage through remaining horizons (e.g., H2->H3->H4->H5)

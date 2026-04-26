@@ -36,11 +36,11 @@ npm run validate:manifest-schemas -- --latest-only
 npm run validate:horizon-status
 npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
-npm run check:progressive-horizon-goals -- --source-horizon H2 --next-horizon H3 --minimum-goal-increase 1 --policy-key H2->H3 --horizon-status-file docs/HORIZON_STATUS.json
-npm run check:goal-policy-coverage -- --source-horizon H2 --until-horizon H5 --require-positive-pending-min --horizon-status-file docs/HORIZON_STATUS.json
-npm run audit:goal-policy-readiness -- --source-horizon H2 --max-target-horizon H5 --horizon-status-file docs/HORIZON_STATUS.json
-npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence --allow-horizon-mismatch --goal-policy-key H2->H3 --strict-goal-policy-gates
-npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness --goal-policy-key H2->H3 --strict-goal-policy-gates
+npm run check:progressive-horizon-goals -- --source-horizon H2 --next-horizon H3 --minimum-goal-increase 1 --policy-key H2->H3 --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json
+npm run check:goal-policy-coverage -- --source-horizon H2 --until-horizon H5 --require-positive-pending-min --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json
+npm run audit:goal-policy-readiness -- --source-horizon H2 --max-target-horizon H5 --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json
+npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json --evidence-dir evidence --allow-horizon-mismatch --goal-policy-key H2->H3 --strict-goal-policy-gates
+npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness --goal-policy-key H2->H3 --strict-goal-policy-gates
 npm run check:stage-promotion -- --target-stage canary
 npm run promote:stage -- --target-stage canary --dry-run
 npm run run:stage-drill -- --target-stage canary --dry-run --evidence-selection-mode latest-passing

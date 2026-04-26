@@ -2,12 +2,14 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
+import { loadGoalPolicyTransitions } from "./goal-policy-source.mjs";
 
 const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
 
 function parseArgs(argv) {
   const options = {
     horizonStatusFile: "",
+    goalPolicyFile: "",
     sourceHorizon: "",
     maxTargetHorizon: "H5",
     out: "",
@@ -19,6 +21,9 @@ function parseArgs(argv) {
     const value = argv[index + 1];
     if (arg === "--horizon-status-file") {
       options.horizonStatusFile = value ?? "";
+      index += 1;
+    } else if (arg === "--goal-policy-file") {
+      options.goalPolicyFile = value ?? "";
       index += 1;
     } else if (arg === "--source-horizon") {
       options.sourceHorizon = value ?? "";
@@ -70,20 +75,6 @@ function buildTransitions(sourceHorizon, maxTargetHorizon) {
   return transitions;
 }
 
-function normalizeTransitionsContainer(goalPolicies) {
-  if (!goalPolicies || typeof goalPolicies !== "object" || Array.isArray(goalPolicies)) {
-    return {};
-  }
-  if (
-    goalPolicies.transitions &&
-    typeof goalPolicies.transitions === "object" &&
-    !Array.isArray(goalPolicies.transitions)
-  ) {
-    return goalPolicies.transitions;
-  }
-  return goalPolicies;
-}
-
 function normalizeTaggedRequirements(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -116,8 +107,15 @@ async function main() {
   const horizonStatusFile = path.resolve(
     options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
   );
+  const goalPolicyFile = isNonEmptyString(options.goalPolicyFile)
+    ? path.resolve(options.goalPolicyFile)
+    : "";
   const horizonStatus = JSON.parse(await readFile(horizonStatusFile, "utf8"));
   const validation = validateHorizonStatus(horizonStatus);
+  const policySource = await loadGoalPolicyTransitions({
+    horizonStatus,
+    goalPolicyFile,
+  });
 
   const sourceHorizon = normalizeHorizon(options.sourceHorizon, horizonStatus?.activeHorizon ?? "");
   const maxTargetHorizon = normalizeHorizon(options.maxTargetHorizon, "H5");
@@ -136,6 +134,11 @@ async function main() {
   if (!validation.valid) {
     failures.push(...validation.errors.map((error) => `horizon_status_invalid:${error}`));
   }
+  if (!policySource.ok) {
+    failures.push(`goal_policy_source_error:${policySource.reason}`);
+  } else if (policySource.fromFile && policySource.valid !== true) {
+    failures.push(...policySource.errors.map((error) => `goal_policy_file_invalid:${error}`));
+  }
   if (!sourceHorizon) {
     failures.push(`invalid_source_horizon:${String(options.sourceHorizon ?? "<empty>")}`);
   }
@@ -146,7 +149,7 @@ async function main() {
     failures.push(`invalid_transition_window:${sourceHorizon}->${maxTargetHorizon}`);
   }
 
-  const transitionsContainer = normalizeTransitionsContainer(horizonStatus?.goalPolicies);
+  const transitionsContainer = policySource.transitions;
   const matrix = {};
   for (const transitionKey of transitions) {
     const policy = transitionsContainer?.[transitionKey];
@@ -217,6 +220,8 @@ async function main() {
     pass: failures.length === 0,
     files: {
       horizonStatusFile,
+      goalPolicyFile: policySource.path,
+      goalPolicySource: policySource.source,
       outPath,
     },
     horizons: {
@@ -229,6 +234,7 @@ async function main() {
       coverageRate: transitions.length > 0 ? passingTransitions / transitions.length : 0,
       requireTaggedRequirements: options.requireTaggedRequirements,
       requirePositivePendingMin: options.requirePositivePendingMin,
+      goalPolicySource: policySource.source,
       matrix,
     },
     failures,

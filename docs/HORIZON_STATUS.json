@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "v1",
+  "updatedAtIso": "2026-04-26T13:02:00Z",
+  "owner": "cloud-agent",
+  "activeHorizon": "H1",
+  "activeStatus": "in_progress",
+  "summary": "H1 merge operationalization baseline is in progress with CI parity, schema gating, and operator bundle verification implemented.",
+  "blockers": [],
+  "requiredEvidence": [
+    {
+      "id": "h1-validate-all",
+      "command": "npm run validate:all",
+      "artifactPattern": "evidence/validation-summary-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-release-readiness",
+      "command": "npm run validate:release-readiness",
+      "artifactPattern": "evidence/release-readiness-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-initial-scope",
+      "command": "npm run validate:initial-scope",
+      "artifactPattern": "evidence/initial-scope-validation-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-merge-bundle",
+      "command": "npm run validate:merge-bundle",
+      "artifactPattern": "evidence/merge-bundle-validation-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-manifest-schemas",
+      "command": "npm run validate:manifest-schemas",
+      "artifactPattern": "evidence/release-readiness-*.json",
+      "required": true
+    },
+    {
+      "id": "h1-bundle-verification",
+      "command": "npm run verify:merge-bundle",
+      "artifactPattern": "evidence/bundle-verification-*.json",
+      "required": true
+    }
+  ],
+  "nextActions": [
+    {
+      "id": "h1-action-1",
+      "summary": "Run unified-ci and confirm evidence artifact upload reliability.",
+      "targetHorizon": "H1",
+      "status": "in_progress"
+    },
+    {
+      "id": "h1-action-2",
+      "summary": "Exercise operator retrieval and local verification flow against CI artifact bundle.",
+      "targetHorizon": "H1",
+      "status": "planned"
+    },
+    {
+      "id": "h1-action-3",
+      "summary": "Promote H1 to completed once artifact retrieval playbook is verified.",
+      "targetHorizon": "H1",
+      "status": "planned"
+    }
+  ],
+  "horizonStates": {
+    "H1": {
+      "status": "in_progress",
+      "summary": "Operationalization baseline mostly complete; awaiting CI artifact retrieval confirmation."
+    },
+    "H2": {
+      "status": "planned",
+      "summary": "Progressive production traffic enablement with SLO auto-rollback policy."
+    },
+    "H3": {
+      "status": "planned",
+      "summary": "Runtime durability and policy maturity hardening."
+    },
+    "H4": {
+      "status": "planned",
+      "summary": "Legacy path retirement and contract tightening."
+    },
+    "H5": {
+      "status": "planned",
+      "summary": "Autonomous operations and scale envelope."
+    }
+  },
+  "history": [
+    {
+      "timestamp": "2026-04-26T13:02:00Z",
+      "horizon": "H1",
+      "status": "in_progress",
+      "note": "Manifest policy gate, operator merge-bundle verification, and horizon status schema gate implemented."
+    }
+  ]
+}

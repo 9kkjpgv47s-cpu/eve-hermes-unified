@@ -33,6 +33,7 @@ npm run validate:merge-bundle
 npm run bundle:merge-readiness
 npm run verify:merge-bundle
 npm run validate:manifest-schemas -- --latest-only
+npm run validate:horizon-status
 npm run validate:all
 npm run cutover:stage -- canary
 npm run cutover:rollback

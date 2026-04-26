@@ -23,6 +23,7 @@ When taking over, capture and report:
 
 - Current branch name and latest commit
 - Current phase from `docs/MASTER_EXECUTION_CHECKLIST.md`
+- Current horizon status from `docs/HORIZON_STATUS.json` (`activeHorizon`, `state`, `blockers`)
 - Whether contracts and tests pass
 - Whether rollout scripts are operational in this environment
 - Any blockers (missing source paths, unavailable dispatch scripts, or missing secrets)
@@ -73,6 +74,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:merge-bundle`
 - `npm run validate:manifest-schemas`
 - `npm run verify:merge-bundle -- --evidence-dir evidence --latest`
+- `npm run validate:horizon-status`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -87,6 +89,8 @@ Schema validation expectations:
   - `npm run validate:manifest-schemas`
 - verify latest merge bundle package + archive contents with:
   - `npm run verify:merge-bundle -- --evidence-dir evidence --latest`
+- horizon tracking metadata is machine-validated via:
+  - `npm run validate:horizon-status`
 - validate a single file with:
   - `npm run validate:manifest-schema -- --type release-readiness --file <path>`
   - `npm run validate:manifest-schema -- --type merge-bundle --file <path>`

@@ -28,8 +28,12 @@ export type UnifiedRuntime = {
   capabilityEngine?: CapabilityEngine;
 };
 
-function getLaneAdapter(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
+export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
   return lane === "eve" ? runtime.eveAdapter : runtime.hermesAdapter;
+}
+
+function getLaneAdapter(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
+  return laneAdapterFor(runtime, lane);
 }
 
 function responseFromState(state: DispatchState, traceId: string): UnifiedResponse {

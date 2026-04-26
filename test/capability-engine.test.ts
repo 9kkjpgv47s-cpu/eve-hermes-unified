@@ -9,6 +9,7 @@ import { CapabilityRegistry } from "../src/skills/capability-registry.js";
 import { UnifiedCapabilityEngine } from "../src/runtime/capability-engine.js";
 import { FileUnifiedMemoryStore } from "../src/memory/unified-memory-store.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
+import { registerDefaultCapabilityExecutors } from "../src/runtime/default-capability-handlers.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   constructor(
@@ -28,6 +29,21 @@ function buildCapabilityResult(outputText: string): CapabilityExecutionResult {
   };
 }
 
+function fakeLaneState(lane: "eve" | "hermes", reason = "ok"): DispatchState {
+  return {
+    status: "pass",
+    reason,
+    runtimeUsed: lane,
+    runId: `run-${lane}-1`,
+    elapsedMs: 1,
+    failureClass: "none",
+    sourceLane: lane,
+    sourceChatId: "1",
+    sourceMessageId: "2",
+    traceId: "trace-1",
+  };
+}
+
 describe("UnifiedCapabilityEngine", () => {
   it("executes explicit capability command and persists memory", async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-capability-test-"));
@@ -44,7 +60,10 @@ describe("UnifiedCapabilityEngine", () => {
         },
         () => buildCapabilityResult("capability status ok"),
       );
-      const engine = new UnifiedCapabilityEngine(registry, memoryStore);
+      const engine = new UnifiedCapabilityEngine(registry, {
+        memoryStore,
+        dispatchLane: async () => fakeLaneState("eve", "capability_probe_ok"),
+      });
 
       const runtime = {
         eveAdapter: new FakeLaneAdapter("eve", {
@@ -133,7 +152,10 @@ describe("UnifiedCapabilityEngine", () => {
       },
       capabilityEngine: new UnifiedCapabilityEngine(
         new CapabilityRegistry(),
-        new FileUnifiedMemoryStore(path.join(os.tmpdir(), "unified-capability-fallback.json")),
+        {
+          memoryStore: new FileUnifiedMemoryStore(path.join(os.tmpdir(), "unified-capability-fallback.json")),
+          dispatchLane: async () => fakeLaneState("eve", "lane_fallback"),
+        },
       ),
     };
 
@@ -147,5 +169,58 @@ describe("UnifiedCapabilityEngine", () => {
     expect(result.capabilityDecision).toBeUndefined();
     expect(result.capabilityExecution).toBeUndefined();
     expect(result.response.laneUsed).toBe("eve");
+  });
+
+  it("runs production-style handler via lane dispatch contracts", async () => {
+    const memoryPath = path.join(os.tmpdir(), "unified-capability-production-handler.json");
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(memoryPath);
+    const laneState: DispatchState = {
+      status: "pass",
+      reason: "hermes_dispatch_success",
+      runtimeUsed: "hermes",
+      runId: "run-hermes-1",
+      elapsedMs: 3,
+      failureClass: "none",
+      sourceLane: "hermes",
+      sourceChatId: "77",
+      sourceMessageId: "88",
+      traceId: "trace-hermes",
+    };
+
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => laneState,
+      memoryStore,
+    });
+
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => laneState,
+    });
+
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", laneState),
+      hermesAdapter: new FakeLaneAdapter("hermes", laneState),
+      routerConfig: {
+        defaultPrimary: "hermes" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "77",
+      messageId: "88",
+      text: "@cap summarize_state current-system-health",
+    });
+
+    expect(result.capabilityDecision?.id).toBe("summarize_state");
+    expect(result.capabilityExecution?.status).toBe("pass");
+    expect(result.capabilityExecution?.outputText).toContain("summarize_state succeeded via hermes");
+    expect(result.capabilityExecution?.metadata?.runId).toBe("run-hermes-1");
+    expect(result.response.failureClass).toBe("none");
   });
 });

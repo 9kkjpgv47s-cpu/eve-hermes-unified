@@ -12,6 +12,7 @@ import {
   CapabilityRegistry,
   registerEveCommandWrappers,
   registerHermesTools,
+  type CapabilityExecutionContext,
 } from "../src/skills/capability-registry.js";
 import {
   createUnifiedMemoryStoreFromEnv,
@@ -101,11 +102,29 @@ describe("CapabilityRegistry", () => {
 
     const executor = registry.getExecutor("check_status");
     expect(executor).toBeDefined();
-    const execution = await executor?.({
+    const fakeDispatchState = {
+      status: "pass" as const,
+      reason: "ok",
+      runtimeUsed: "eve",
+      runId: "r1",
+      elapsedMs: 1,
+      failureClass: "none" as const,
+      sourceLane: "eve" as const,
+      sourceChatId: "1",
+      sourceMessageId: "2",
+      traceId: "trace-x",
+    };
+    const context: CapabilityExecutionContext = {
       text: "@cap status",
+      argsText: "",
       traceId: "trace-x",
       chatId: "1",
       messageId: "2",
+      memoryStore: new InMemoryUnifiedMemoryStore(),
+      dispatchLane: async () => fakeDispatchState,
+    };
+    const execution = await executor?.({
+      ...context,
     });
     expect(execution?.consumed).toBe(true);
   });

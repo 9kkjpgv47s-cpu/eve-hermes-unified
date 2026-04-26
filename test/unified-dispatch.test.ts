@@ -26,7 +26,10 @@ class FakeCapabilityEngine implements CapabilityEngine {
     return this.decision;
   }
 
-  async execute(): Promise<CapabilityExecutionResult> {
+  async execute(
+    _selection: UnifiedCapabilityDecision,
+    _envelope: { traceId: string },
+  ): Promise<CapabilityExecutionResult> {
     if (!this.execution) {
       throw new Error("Execution was not configured.");
     }

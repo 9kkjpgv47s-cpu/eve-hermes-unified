@@ -8,7 +8,9 @@ import { loadUnifiedRuntimeEnvConfig } from "../config/unified-runtime-config.js
 import { createUnifiedMemoryStoreFromEnv } from "../memory/unified-memory-store.js";
 import { createDefaultUnifiedCapabilityRegistry } from "../skills/capability-registry.js";
 import { UnifiedCapabilityEngine } from "../runtime/capability-engine.js";
+import { registerDefaultCapabilityExecutors } from "../runtime/default-capability-handlers.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
+import type { CapabilityExecutionContext } from "../skills/capability-registry.js";
 
 function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
   let text = "";
@@ -42,12 +44,42 @@ async function main() {
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
   );
+  const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
+  const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);
   const capabilityRegistry = createDefaultUnifiedCapabilityRegistry();
-  const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, sharedMemoryStore);
+  const dispatchLane = async (input: {
+    lane: "eve" | "hermes";
+    text: string;
+    intentRoute: string;
+    chatId: string;
+    messageId: string;
+    traceId: string;
+  }) => {
+    const adapter = input.lane === "eve" ? eveAdapter : hermesAdapter;
+    return adapter.dispatch({
+      envelope: {
+        channel: "telegram",
+        chatId: input.chatId,
+        messageId: input.messageId,
+        text: input.text,
+        traceId: input.traceId,
+        receivedAtIso: new Date().toISOString(),
+      },
+      intentRoute: input.intentRoute,
+    });
+  };
+  registerDefaultCapabilityExecutors(capabilityRegistry, {
+    dispatchLane,
+    memoryStore: sharedMemoryStore,
+  });
+  const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
+    memoryStore: sharedMemoryStore,
+    dispatchLane,
+  });
 
   const runtime = {
-    eveAdapter: new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath),
-    hermesAdapter: new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs),
+    eveAdapter,
+    hermesAdapter,
     routerConfig: config.routerConfig,
     capabilityEngine,
   };

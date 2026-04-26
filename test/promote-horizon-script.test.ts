@@ -1,0 +1,275 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { runCommandWithTimeout } from "../src/process/exec.js";
+
+async function withTempDir(run: (dir: string) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "promote-horizon-test-"));
+  try {
+    await run(dir);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function seedCloseoutReport(
+  evidenceDir: string,
+  options?: { pass?: boolean; horizon?: string; nextHorizon?: string },
+): Promise<string> {
+  await mkdir(evidenceDir, { recursive: true });
+  const reportPath = path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json");
+  await writeFile(
+    reportPath,
+    JSON.stringify(
+      {
+        generatedAtIso: new Date().toISOString(),
+        pass: options?.pass ?? true,
+        closeout: {
+          horizon: options?.horizon ?? "H2",
+          nextHorizon: options?.nextHorizon ?? "H3",
+          canCloseHorizon: options?.pass ?? true,
+          canStartNextHorizon: false,
+        },
+        checks: {
+          horizonValidationPass: true,
+          nextActions: [{ id: "h2-action-1", completed: true }],
+          requiredEvidence: [{ id: "h2-drill-suite", pass: true }],
+        },
+        failures: options?.pass === false ? ["synthetic_closeout_failure"] : [],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+  return reportPath;
+}
+
+async function seedHorizonStatus(statusPath: string): Promise<void> {
+  await writeFile(
+    statusPath,
+    JSON.stringify(
+      {
+        schemaVersion: "v1",
+        updatedAtIso: "2026-04-26T21:40:00Z",
+        owner: "cloud-agent",
+        activeHorizon: "H2",
+        activeStatus: "in_progress",
+        summary: "H2 active",
+        blockers: [],
+        requiredEvidence: [
+          {
+            id: "h1-release-readiness",
+            command: "npm run validate:release-readiness",
+            artifactPattern: "evidence/release-readiness-*.json",
+            required: true,
+          },
+          {
+            id: "h1-merge-bundle",
+            command: "npm run validate:merge-bundle",
+            artifactPattern: "evidence/merge-bundle-validation-*.json",
+            required: true,
+          },
+          {
+            id: "h1-bundle-verification",
+            command: "npm run verify:merge-bundle",
+            artifactPattern: "evidence/bundle-verification-*.json",
+            required: true,
+          },
+          {
+            id: "h1-cutover-readiness",
+            command: "npm run validate:cutover-readiness",
+            artifactPattern: "evidence/cutover-readiness-*.json",
+            required: true,
+          },
+          {
+            id: "h1-evidence-summary",
+            command: "npm run validate:evidence-summary",
+            artifactPattern: "evidence/validation-summary-*.json",
+            required: true,
+          },
+          {
+            id: "h2-drill-suite",
+            command: "npm run run:h2-drill-suite",
+            artifactPattern: "evidence/h2-drill-suite-*.json",
+            required: true,
+            horizon: "H2",
+          },
+        ],
+        nextActions: [
+          {
+            id: "h2-action-1",
+            summary: "seed action",
+            targetHorizon: "H2",
+            status: "completed",
+          },
+        ],
+        promotionReadiness: {
+          targetStage: "canary",
+          gates: {
+            releaseReadinessPass: true,
+            mergeBundlePass: true,
+            bundleVerificationPass: true,
+            cutoverReadinessPass: true,
+            evidenceSummaryPass: true,
+          },
+        },
+        horizonStates: {
+          H1: { status: "completed", summary: "H1 complete" },
+          H2: { status: "in_progress", summary: "H2 active" },
+          H3: { status: "planned", summary: "H3 planned" },
+          H4: { status: "planned", summary: "H4 planned" },
+          H5: { status: "planned", summary: "H5 planned" },
+        },
+        history: [
+          {
+            timestamp: "2026-04-26T21:40:00Z",
+            horizon: "H2",
+            status: "in_progress",
+            note: "seed H2 active",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
+describe("promote-horizon.mjs", () => {
+  it("promotes horizon when closeout evidence passes", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--out",
+          outPath,
+          "--note",
+          "Promoted by integration test",
+        ],
+        { timeoutMs: 40_000 },
+      );
+      if (result.code !== 0) {
+        throw new Error(
+          `promote-horizon expected success, got ${String(result.code)}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        );
+      }
+      expect(result.code).toBe(0);
+
+      const promotionPayload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: { statusUpdated: boolean; activeAdvanced: boolean };
+      };
+      expect(promotionPayload.pass).toBe(true);
+      expect(promotionPayload.checks.statusUpdated).toBe(true);
+      expect(promotionPayload.checks.activeAdvanced).toBe(true);
+
+      const statusPayload = JSON.parse(await readFile(statusPath, "utf8")) as {
+        activeHorizon: string;
+        activeStatus: string;
+        horizonStates: Record<string, { status: string; summary: string }>;
+      };
+      expect(statusPayload.activeHorizon).toBe("H3");
+      expect(statusPayload.activeStatus).toBe("in_progress");
+      expect(statusPayload.horizonStates.H2.status).toBe("completed");
+      expect(statusPayload.horizonStates.H3.status).toBe("in_progress");
+    });
+  });
+
+  it("fails promotion when closeout evidence is failing", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await seedCloseoutReport(evidenceDir, { pass: false, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const promotionPayload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(promotionPayload.pass).toBe(false);
+      expect(promotionPayload.failures).toContain("closeout_not_passed");
+
+      const statusPayload = JSON.parse(await readFile(statusPath, "utf8")) as {
+        activeHorizon: string;
+        activeStatus: string;
+      };
+      expect(statusPayload.activeHorizon).toBe("H2");
+      expect(statusPayload.activeStatus).toBe("in_progress");
+    });
+  });
+
+  it("supports dry-run without mutating horizon status", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const before = await readFile(statusPath, "utf8");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--out",
+          outPath,
+          "--dry-run",
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        dryRun: boolean;
+        checks: { statusUpdated: boolean };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.dryRun).toBe(true);
+      expect(payload.checks.statusUpdated).toBe(false);
+
+      const after = await readFile(statusPath, "utf8");
+      expect(after).toBe(before);
+    });
+  });
+});

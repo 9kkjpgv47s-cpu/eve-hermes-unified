@@ -1,0 +1,353 @@
+#!/usr/bin/env node
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import path from "node:path";
+import { validateHorizonStatus } from "./validate-horizon-status.mjs";
+
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+
+function parseArgs(argv) {
+  const options = {
+    horizon: "",
+    nextHorizon: "",
+    evidenceDir: "",
+    horizonStatusFile: "",
+    closeoutFile: "",
+    closeoutOut: "",
+    out: "",
+    note: "",
+    timeoutMs: 180_000,
+    dryRun: false,
+    requireCompletedActions: true,
+    requireActiveNextHorizon: false,
+    allowHorizonMismatch: false,
+    allowInactiveSourceHorizon: false,
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const value = argv[index + 1];
+    if (arg === "--horizon") {
+      options.horizon = value ?? "";
+      index += 1;
+    } else if (arg === "--next-horizon") {
+      options.nextHorizon = value ?? "";
+      index += 1;
+    } else if (arg === "--evidence-dir") {
+      options.evidenceDir = value ?? "";
+      index += 1;
+    } else if (arg === "--horizon-status-file") {
+      options.horizonStatusFile = value ?? "";
+      index += 1;
+    } else if (arg === "--closeout-file" || arg === "--closeout-report") {
+      options.closeoutFile = value ?? "";
+      index += 1;
+    } else if (arg === "--closeout-out") {
+      options.closeoutOut = value ?? "";
+      index += 1;
+    } else if (arg === "--out") {
+      options.out = value ?? "";
+      index += 1;
+    } else if (arg === "--note") {
+      options.note = value ?? "";
+      index += 1;
+    } else if (arg === "--timeout-ms") {
+      options.timeoutMs = Number(value ?? "180000");
+      index += 1;
+    } else if (arg === "--dry-run") {
+      options.dryRun = true;
+    } else if (arg === "--allow-incomplete-actions") {
+      options.requireCompletedActions = false;
+    } else if (arg === "--require-active-next-horizon") {
+      options.requireActiveNextHorizon = true;
+    } else if (arg === "--allow-horizon-mismatch") {
+      options.allowHorizonMismatch = true;
+    } else if (arg === "--allow-inactive-source-horizon") {
+      options.allowInactiveSourceHorizon = true;
+    }
+  }
+  return options;
+}
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeHorizon(value, fallback = "") {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  return HORIZON_SEQUENCE.includes(normalized) ? normalized : fallback;
+}
+
+function stamp() {
+  return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+}
+
+async function exists(targetPath) {
+  if (!isNonEmptyString(targetPath)) {
+    return false;
+  }
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readJson(targetPath) {
+  return JSON.parse(await readFile(targetPath, "utf8"));
+}
+
+async function runCommand(argv, options = {}) {
+  const startedAtMs = Date.now();
+  return await new Promise((resolve) => {
+    const [command, ...args] = argv;
+    const child = spawn(command, args, {
+      env: { ...process.env, ...(options.env ?? {}) },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+    }, options.timeoutMs ?? 180_000);
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("close", (code, signal) => {
+      clearTimeout(timeout);
+      resolve({
+        argv,
+        code: Number(code ?? -1),
+        signal: signal ?? null,
+        stdout,
+        stderr,
+        durationMs: Date.now() - startedAtMs,
+        termination: timedOut ? "timeout" : signal ? "signal" : "exit",
+      });
+    });
+  });
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  const horizonStatusFile = path.resolve(
+    options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
+  );
+  const evidenceDir = path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
+  const statusPayload = await readJson(horizonStatusFile);
+  const statusValidation = validateHorizonStatus(statusPayload);
+
+  const sourceHorizon = normalizeHorizon(options.horizon, statusPayload?.activeHorizon ?? "");
+  const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
+  const derivedNext = sourceIndex >= 0 ? HORIZON_SEQUENCE[sourceIndex + 1] ?? "" : "";
+  const nextHorizon = normalizeHorizon(options.nextHorizon, derivedNext);
+  const runStamp = stamp();
+  const closeoutOut = path.resolve(
+    options.closeoutOut || path.join(evidenceDir, `horizon-closeout-${sourceHorizon}-${runStamp}.json`),
+  );
+  const outPath = path.resolve(
+    options.out || path.join(evidenceDir, `horizon-promotion-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
+  );
+  const closeoutFile = path.resolve(options.closeoutFile || closeoutOut);
+
+  const failures = [];
+  if (!statusValidation.valid) {
+    failures.push(...statusValidation.errors.map((error) => `horizon_status_invalid:${error}`));
+  }
+  if (!(await exists(horizonStatusFile))) {
+    failures.push(`missing_horizon_status_file:${horizonStatusFile}`);
+  }
+  if (!sourceHorizon) {
+    failures.push(`invalid_horizon:${options.horizon || "<empty>"}`);
+  }
+  if (!nextHorizon) {
+    failures.push(`invalid_next_horizon:${options.nextHorizon || "<empty>"}`);
+  }
+  if (!options.closeoutFile && !(await exists(evidenceDir))) {
+    failures.push(`missing_evidence_dir:${evidenceDir}`);
+  }
+  if (
+    Number.isFinite(options.timeoutMs) &&
+    (!Number.isInteger(options.timeoutMs) || options.timeoutMs < 1000)
+  ) {
+    failures.push(`invalid_timeout_ms:${String(options.timeoutMs)}`);
+  }
+
+  if (
+    !options.allowInactiveSourceHorizon &&
+    sourceHorizon &&
+    sourceHorizon !== String(statusPayload?.activeHorizon ?? "")
+  ) {
+    failures.push(`source_horizon_not_active:${sourceHorizon}!=${String(statusPayload?.activeHorizon ?? "")}`);
+  }
+
+  if (sourceHorizon && nextHorizon) {
+    const expectedNext = derivedNext;
+    if (expectedNext && nextHorizon !== expectedNext) {
+      failures.push(`next_horizon_sequence_mismatch:${nextHorizon}!=${expectedNext}`);
+    }
+    if (HORIZON_SEQUENCE.indexOf(nextHorizon) <= HORIZON_SEQUENCE.indexOf(sourceHorizon)) {
+      failures.push(`next_horizon_not_forward:${sourceHorizon}->${nextHorizon}`);
+    }
+  }
+
+  let closeoutCommand = null;
+  let closeoutPayload = null;
+  if (failures.length === 0 && !options.closeoutFile) {
+    const closeoutArgv = [
+      "node",
+      "scripts/validate-horizon-closeout.mjs",
+      "--horizon",
+      sourceHorizon,
+      "--next-horizon",
+      nextHorizon,
+      "--evidence-dir",
+      evidenceDir,
+      "--horizon-status-file",
+      horizonStatusFile,
+      "--out",
+      closeoutOut,
+    ];
+    if (options.requireCompletedActions) {
+      closeoutArgv.push("--require-completed-actions");
+    }
+    if (options.requireActiveNextHorizon) {
+      closeoutArgv.push("--require-active-next-horizon");
+    }
+    if (options.allowHorizonMismatch) {
+      closeoutArgv.push("--allow-horizon-mismatch");
+    }
+    closeoutCommand = await runCommand(closeoutArgv, { timeoutMs: options.timeoutMs });
+  }
+
+  if (!(await exists(closeoutFile))) {
+    failures.push(`missing_closeout_file:${closeoutFile}`);
+  } else {
+    closeoutPayload = await readJson(closeoutFile);
+    if (closeoutPayload?.pass !== true) {
+      failures.push("closeout_not_passed");
+    }
+  }
+  if (closeoutCommand && closeoutCommand.code !== 0) {
+    failures.push(`closeout_command_failed:${String(closeoutCommand.code)}`);
+  }
+
+  const before = {
+    activeHorizon: String(statusPayload?.activeHorizon ?? ""),
+    activeStatus: String(statusPayload?.activeStatus ?? ""),
+    sourceStatus: String(statusPayload?.horizonStates?.[sourceHorizon]?.status ?? ""),
+    nextStatus: String(statusPayload?.horizonStates?.[nextHorizon]?.status ?? ""),
+  };
+
+  let updatedStatus = statusPayload;
+  let statusWritePath = null;
+  if (failures.length === 0) {
+    const promotionNote = isNonEmptyString(options.note)
+      ? options.note.trim()
+      : `Promoted ${sourceHorizon} to completed and advanced active horizon to ${nextHorizon} via closeout gate`;
+    updatedStatus = {
+      ...statusPayload,
+      updatedAtIso: new Date().toISOString(),
+      activeHorizon: nextHorizon,
+      activeStatus: "in_progress",
+      horizonStates: {
+        ...statusPayload.horizonStates,
+        [sourceHorizon]: {
+          ...(statusPayload.horizonStates?.[sourceHorizon] ?? {}),
+          status: "completed",
+        },
+        [nextHorizon]: {
+          ...(statusPayload.horizonStates?.[nextHorizon] ?? {}),
+          status: "in_progress",
+        },
+      },
+      history: [
+        ...(Array.isArray(statusPayload.history) ? statusPayload.history : []),
+        {
+          timestamp: new Date().toISOString(),
+          horizon: sourceHorizon,
+          status: "completed",
+          note: promotionNote,
+        },
+        {
+          timestamp: new Date().toISOString(),
+          horizon: nextHorizon,
+          status: "in_progress",
+          note: `Active horizon advanced to ${nextHorizon} after ${sourceHorizon} closeout`,
+        },
+      ],
+    };
+    const postValidation = validateHorizonStatus(updatedStatus);
+    if (!postValidation.valid) {
+      failures.push(...postValidation.errors.map((error) => `updated_horizon_status_invalid:${error}`));
+    } else if (!options.dryRun) {
+      await writeFile(horizonStatusFile, `${JSON.stringify(updatedStatus, null, 2)}\n`, "utf8");
+      statusWritePath = horizonStatusFile;
+    }
+  }
+
+  const after = {
+    activeHorizon: String(updatedStatus?.activeHorizon ?? ""),
+    activeStatus: String(updatedStatus?.activeStatus ?? ""),
+    sourceStatus: String(updatedStatus?.horizonStates?.[sourceHorizon]?.status ?? ""),
+    nextStatus: String(updatedStatus?.horizonStates?.[nextHorizon]?.status ?? ""),
+  };
+
+  const payload = {
+    generatedAtIso: new Date().toISOString(),
+    pass: failures.length === 0,
+    promoted: failures.length === 0,
+    dryRun: options.dryRun,
+    horizon: {
+      source: sourceHorizon || null,
+      next: nextHorizon || null,
+    },
+    files: {
+      horizonStatusFile,
+      evidenceDir: options.closeoutFile ? null : evidenceDir,
+      closeoutFile,
+      closeoutOut: options.closeoutFile ? null : closeoutOut,
+      outPath,
+      statusWritePath,
+    },
+    checks: {
+      closeoutPass: closeoutPayload?.pass === true,
+      sourceWasActive:
+        sourceHorizon.length > 0 && sourceHorizon === String(statusPayload?.activeHorizon ?? ""),
+      statusUpdated: isNonEmptyString(statusWritePath),
+      activeAdvanced:
+        failures.length === 0 &&
+        String(updatedStatus?.activeHorizon ?? "") === nextHorizon &&
+        String(updatedStatus?.activeStatus ?? "") === "in_progress",
+      requireCompletedActions: options.requireCompletedActions,
+      requireActiveNextHorizon: options.requireActiveNextHorizon,
+      allowHorizonMismatch: options.allowHorizonMismatch,
+    },
+    status: {
+      before,
+      after,
+    },
+    commands: {
+      closeout: closeoutCommand,
+    },
+    failures,
+  };
+
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  if (!payload.pass) {
+    process.stderr.write(`Horizon promotion failed:\n- ${failures.join("\n- ")}\n`);
+    process.exitCode = 2;
+  }
+}
+
+main().catch((error) => {
+  process.stderr.write(`${String(error)}\n`);
+  process.exitCode = 1;
+});

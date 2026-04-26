@@ -185,6 +185,8 @@ Mitigations:
    - `evidence/h2-closeout-run-*.json`
 6. Enforce H2 closeout evidence via executable gate:
    - `npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json`
+7. Promote horizon state atomically once closeout passes:
+   - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence`
 
 ## Horizon Closeout Gate
 

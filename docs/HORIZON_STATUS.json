@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T21:40:00Z",
+  "updatedAtIso": "2026-04-26T22:10:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, supervised rollback simulation evidence generation, a machine-checkable H2 closeout gate, and a one-command H2 closeout runner manifest pipeline.",
+  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, supervised rollback simulation evidence generation, a machine-checkable H2 closeout gate, a one-command H2 closeout runner manifest pipeline, and a gated horizon-promotion command for auditable H2->H3 advancement.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -134,6 +134,12 @@
       "summary": "Add a single-command H2 closeout runner that executes calibration + supervised rollback simulation + H2 closeout validation and emits one consolidated manifest.",
       "targetHorizon": "H2",
       "status": "completed"
+    },
+    {
+      "id": "h2-action-11",
+      "summary": "Add a gated horizon promotion command that advances H2 to completed and H3 to active only when closeout evidence passes, with optional dry-run support.",
+      "targetHorizon": "H2",
+      "status": "completed"
     }
   ],
   "promotionReadiness": {
@@ -153,7 +159,7 @@
     },
     "H2": {
       "status": "in_progress",
-      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, H2-specific closeout evidence is machine-validated, and a one-command H2 closeout runner now emits consolidated readiness manifests."
+      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, H2-specific closeout evidence is machine-validated, a one-command H2 closeout runner emits consolidated readiness manifests, and a gated horizon promotion command is available for controlled H2->H3 advancement."
     },
     "H3": {
       "status": "planned",
@@ -246,6 +252,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added run:h2-closeout orchestrator to execute calibration + supervised rollback simulation + H2 closeout validation in one command and emit consolidated manifest evidence."
+    },
+    {
+      "timestamp": "2026-04-26T22:10:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Added promote:horizon command to gate horizon advancement on closeout evidence and atomically update HORIZON_STATUS with dry-run support."
     }
   ]
 }

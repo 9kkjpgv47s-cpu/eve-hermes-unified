@@ -85,6 +85,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run calibrate:rollback-thresholds -- --stage <canary|majority|full> --evidence-dir evidence`
 - `npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
 - `npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
+- `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence --allow-horizon-mismatch`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -110,6 +111,10 @@ Schema validation expectations:
   - `npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
   - executes calibration + supervised rollback simulation + H2 closeout gate in one run
   - emits unified manifest: `evidence/h2-closeout-run-*.json`
+- horizon state promotion after passing closeout:
+  - `npm run promote:horizon -- --horizon <H1|H2|H3|H4> --next-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence`
+  - optional `--closeout-file <path>` to consume a pinned closeout artifact instead of running `validate:horizon-closeout`
+  - writes promotion manifest: `evidence/horizon-promotion-<source>-to-<next>-*.json`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - auto-rollback policy decisions can be machine-evaluated with:

@@ -368,3 +368,32 @@ Runner behavior:
   - `evidence/rollback-threshold-calibration-<stage>-*.json`
   - `evidence/supervised-rollback-simulation-*.json`
   - `evidence/horizon-closeout-H2-*.json`
+
+## Horizon Promotion Executor (Closeout-Gated)
+
+Use a single command to promote a horizon in `docs/HORIZON_STATUS.json` only when closeout evidence passes:
+
+```bash
+npm run promote:horizon -- \
+  --horizon H2 \
+  --next-horizon H3 \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --allow-horizon-mismatch
+```
+
+Behavior:
+- runs `validate:horizon-closeout` (unless `--closeout-file` is explicitly provided)
+- requires closeout payload `"pass": true`
+- on success updates horizon status atomically:
+  - `activeHorizon` advances to the next horizon
+  - source horizon state becomes `completed`
+  - next horizon state becomes `in_progress`
+  - appends promotion history entries
+- writes machine-readable promotion report:
+  - `evidence/horizon-promotion-<source>-to-<next>-*.json`
+
+Safety/testing flags:
+- `--dry-run` evaluates and emits report without mutating `docs/HORIZON_STATUS.json`
+- `--allow-inactive-source-horizon` permits replay/promotion against non-active horizons (CI/backfill only)
+- `--allow-horizon-mismatch` forwards to closeout gate for controlled non-default promotion target checks

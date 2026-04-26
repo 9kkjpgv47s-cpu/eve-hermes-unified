@@ -125,9 +125,13 @@ Schema validation expectations:
   - optional `--require-goal-policy-readiness-audit` to require passing readiness-audit matrix before promotion
   - optional `--goal-policy-readiness-audit-out <path>` to pin readiness audit report output path
   - optional `--goal-policy-readiness-audit-max-target-horizon <H3|H4|H5>` to bound readiness audit horizon window
-  - optional `--require-policy-audit-tagged-targets` to require tagged requirements in readiness audit
-  - optional `--require-policy-audit-positive-pending-min` to require positive pending minimum targets in readiness audit
+  - optional `--require-goal-policy-readiness-tagged-targets` to require tagged requirements in readiness audit
+  - optional `--require-goal-policy-readiness-positive-pending-min` to require positive pending minimum targets in readiness audit
   - optional `--require-positive-pending-policy-min` to require each covered transition policy to set `minPendingNextActions > 0`
+  - optional `--strict-goal-policy-gates` (alias: `--require-strict-goal-policy-gates`) to enable a one-flag strict profile:
+    - enables progressive goals + goal-policy coverage + goal-policy readiness audit gates
+    - enforces tagged targets + positive pending mins in both coverage and readiness gates
+    - defaults to a single-transition scope (`<source>-><next>`) unless explicit horizon windows or transition sets are provided
   - optional goal-policy coverage artifact:
     - `evidence/goal-policy-coverage-<source>-to-<until>-*.json`
   - progressive-goals report artifact (when enabled):
@@ -142,8 +146,9 @@ Schema validation expectations:
   - optional `--required-policy-transitions <csv>` and `--require-policy-tagged-targets` for strict multi-transition policy gating
   - optional `--require-goal-policy-readiness-audit` to run readiness audit gate as part of promotion
   - optional `--goal-policy-readiness-audit-max-target-horizon <H3|H4|H5>` to set readiness audit horizon window
-  - optional `--require-policy-audit-tagged-targets` and `--require-policy-audit-positive-pending-min` for stricter readiness criteria
+  - optional `--require-goal-policy-readiness-tagged-targets` and `--require-goal-policy-readiness-positive-pending-min` for stricter readiness criteria
   - optional `--require-positive-pending-policy-min` to require positive pending-action floors in covered policies
+  - optional `--strict-goal-policy-gates` (alias: `--require-strict-goal-policy-gates`) to enforce the full strict policy profile with one flag
   - writes unified run manifest: `evidence/h2-promotion-run-*.json`
 - goal-policy readiness can be audited independently (without promotion):
   - `npm run audit:goal-policy-readiness -- --source-horizon <H1|H2|H3|H4> --until-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json`

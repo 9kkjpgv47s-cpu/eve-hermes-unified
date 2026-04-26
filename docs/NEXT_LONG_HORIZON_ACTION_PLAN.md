@@ -191,10 +191,13 @@ Mitigations:
    - `npm run run:h2-promotion -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --require-progressive-goals --minimum-goal-increase 1`
    - optionally bind to a policy profile in `docs/HORIZON_STATUS.json.goalPolicies.transitions` using:
      - `--goal-policy-key H2->H3`
+   - optionally enable strict one-flag policy gating for the immediate transition:
+     - `--strict-goal-policy-gates`
+     - this enables progressive-goals + coverage + readiness-audit gates and requires tagged targets + positive pending minimums
   - optionally require policy coverage from current to future horizons:
     - `--require-goal-policy-coverage --goal-policy-coverage-until-horizon H5 --required-policy-transitions H2->H3,H3->H4,H4->H5 --require-policy-tagged-targets`
   - optionally require a passing policy readiness audit gate during promotion:
-    - `--require-goal-policy-readiness-audit --goal-policy-readiness-audit-max-target-horizon H5 --require-goal-policy-readiness-tagged-targets`
+    - `--require-goal-policy-readiness-audit --goal-policy-readiness-audit-max-target-horizon H5 --require-goal-policy-readiness-tagged-targets --require-goal-policy-readiness-positive-pending-min`
    - this can enforce action composition targets (for example, minimum counts of `durability`, `policy`, or `capability` tagged next-horizon actions)
 9. Optionally run direct horizon promotion with a pinned closeout artifact when replaying prior evidence:
    - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --closeout-run-file evidence/h2-closeout-run-*.json --require-progressive-goals --minimum-goal-increase 1 --goal-policy-key H2->H3 --require-goal-policy-coverage --goal-policy-coverage-until-horizon H5 --required-policy-transitions H2->H3,H3->H4,H4->H5 --require-policy-tagged-targets`

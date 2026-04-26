@@ -426,6 +426,11 @@ Useful flags:
 - `--note "<text>"` to append a custom promotion note into history on successful write mode
 - `--require-progressive-goals --minimum-goal-increase <N>` to enforce that the next horizon has at least `N` more declared actions than the source horizon before promotion is allowed
 - `--goal-policy-key H2->H3` to apply a named transition policy from `goalPolicies.transitions` (including tag/count requirements) during progressive-goal enforcement
+- `--strict-goal-policy-gates` to enable one-flag strict policy gating for promotion:
+  - enables `--require-progressive-goals`
+  - enables `--require-goal-policy-coverage` + `--require-policy-tagged-targets` + `--require-positive-pending-policy-min`
+  - enables `--require-goal-policy-readiness-audit` + `--require-goal-policy-readiness-tagged-targets` + `--require-goal-policy-readiness-positive-pending-min`
+  - defaults to the single transition (`H2->H3`) unless explicit horizon window/transition flags are supplied
 - `--require-goal-policy-coverage` to require machine-checkable transition policy coverage before promotion
   - default scope checks from source horizon through `--goal-policy-coverage-until-horizon` (default `H5`)
   - set `--goal-policy-coverage-until-horizon H5` to require policy coverage through remaining horizons (e.g., H2->H3->H4->H5)
@@ -435,6 +440,6 @@ Useful flags:
 - `--require-goal-policy-readiness-audit` to run `audit:goal-policy-readiness` as an explicit promotion gate
   - writes/reads `goal-policy-readiness-audit-*.json` and requires audit `"pass": true`
   - use `--goal-policy-readiness-audit-out <path>` for pinned audit artifact paths in deterministic replays
-  - add `--goal-policy-readiness-audit-max-target-horizon <H3|H4|H5>` to define readiness-audit transition window
-  - add `--goal-policy-readiness-require-tagged-targets` to require tagged requirements in each covered transition policy
-  - add `--goal-policy-readiness-require-positive-pending-min` to require each covered transition policy to declare a positive `minPendingNextActions`
+  - add `--goal-policy-readiness-audit-max-target-horizon <H3|H4|H5>` (alias of `--goal-policy-readiness-audit-until-horizon`) to define readiness-audit transition window
+  - add `--require-goal-policy-readiness-tagged-targets` to require tagged requirements in each covered transition policy
+  - add `--require-goal-policy-readiness-positive-pending-min` to require each covered transition policy to declare a positive `minPendingNextActions`

@@ -26,12 +26,16 @@ function parseArgs(argv) {
     requireProgressiveGoals: false,
     minimumGoalIncrease: 1,
     goalPolicyKey: "",
+    strictGoalPolicyGates: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
     goalPolicyCoverageUntilHorizon: "H5",
+    goalPolicyCoverageUntilExplicit: false,
+    requiredPolicyTransitions: "",
     requireGoalPolicyReadinessAudit: false,
     goalPolicyReadinessAuditOut: "",
     goalPolicyReadinessAuditUntilHorizon: "",
+    goalPolicyReadinessAuditUntilExplicit: false,
     requireGoalPolicyReadinessTaggedTargets: false,
     requireGoalPolicyReadinessPositivePendingMin: false,
     requirePolicyTaggedTargets: false,
@@ -89,6 +93,8 @@ function parseArgs(argv) {
     } else if (arg === "--goal-policy-key") {
       options.goalPolicyKey = value ?? "";
       index += 1;
+    } else if (arg === "--strict-goal-policy-gates" || arg === "--require-strict-goal-policy-gates") {
+      options.strictGoalPolicyGates = true;
     } else if (arg === "--require-goal-policy-coverage") {
       options.requireGoalPolicyCoverage = true;
     } else if (arg === "--goal-policy-coverage-out") {
@@ -96,6 +102,10 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--goal-policy-coverage-until-horizon") {
       options.goalPolicyCoverageUntilHorizon = value ?? "";
+      options.goalPolicyCoverageUntilExplicit = true;
+      index += 1;
+    } else if (arg === "--required-policy-transitions") {
+      options.requiredPolicyTransitions = value ?? "";
       index += 1;
     } else if (arg === "--require-goal-policy-readiness-audit") {
       options.requireGoalPolicyReadinessAudit = true;
@@ -107,6 +117,7 @@ function parseArgs(argv) {
       arg === "--goal-policy-readiness-max-target-horizon"
     ) {
       options.goalPolicyReadinessAuditUntilHorizon = value ?? "";
+      options.goalPolicyReadinessAuditUntilExplicit = true;
       index += 1;
     } else if (
       arg === "--require-goal-policy-readiness-tagged-targets" ||
@@ -317,6 +328,27 @@ async function main() {
       failures.push(`next_horizon_not_forward:${sourceHorizon}->${nextHorizon}`);
     }
   }
+  if (options.strictGoalPolicyGates) {
+    options.requireProgressiveGoals = true;
+    options.requireGoalPolicyCoverage = true;
+    options.requireGoalPolicyReadinessAudit = true;
+    options.requirePolicyTaggedTargets = true;
+    options.requirePositivePendingPolicyMin = true;
+    options.requireGoalPolicyReadinessTaggedTargets = true;
+    options.requireGoalPolicyReadinessPositivePendingMin = true;
+    if (!options.goalPolicyCoverageUntilExplicit && nextHorizon) {
+      options.goalPolicyCoverageUntilHorizon = nextHorizon;
+    }
+    if (!options.goalPolicyReadinessAuditUntilExplicit && nextHorizon) {
+      options.goalPolicyReadinessAuditUntilHorizon = nextHorizon;
+    }
+    if (!isNonEmptyString(options.requiredPolicyTransitions) && sourceHorizon && nextHorizon) {
+      options.requiredPolicyTransitions = `${sourceHorizon}->${nextHorizon}`;
+    }
+    if (!isNonEmptyString(options.goalPolicyKey) && sourceHorizon && nextHorizon) {
+      options.goalPolicyKey = `${sourceHorizon}->${nextHorizon}`;
+    }
+  }
 
   let closeoutRunPayload = null;
   if (failures.length === 0 && closeoutRunFile.length > 0) {
@@ -425,6 +457,9 @@ async function main() {
     ];
     if (isNonEmptyString(options.goalPolicyKey)) {
       goalPolicyCoverageArgv.push("--required-policy-key", options.goalPolicyKey);
+    }
+    if (isNonEmptyString(options.requiredPolicyTransitions)) {
+      goalPolicyCoverageArgv.push("--required-policy-transitions", options.requiredPolicyTransitions);
     }
     if (options.requirePolicyTaggedTargets) {
       goalPolicyCoverageArgv.push("--require-tagged-requirements");
@@ -571,11 +606,20 @@ async function main() {
       allowHorizonMismatch: options.allowHorizonMismatch,
       closeoutRunPass: closeoutRunPayload?.pass === true,
       requireProgressiveGoals: options.requireProgressiveGoals,
+      strictGoalPolicyGates: options.strictGoalPolicyGates,
       goalPolicyKey:
         options.requireProgressiveGoals === true
           ? String(options.goalPolicyKey ?? "").trim() || null
           : null,
       requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
+      goalPolicyCoverageUntilHorizon:
+        options.requireGoalPolicyCoverage === true
+          ? normalizeHorizon(options.goalPolicyCoverageUntilHorizon, nextHorizon || "H5") || null
+          : null,
+      requiredPolicyTransitions:
+        options.requireGoalPolicyCoverage === true && isNonEmptyString(options.requiredPolicyTransitions)
+          ? String(options.requiredPolicyTransitions ?? "").trim()
+          : null,
       goalPolicyCoveragePass:
         options.requireGoalPolicyCoverage === true
           ? goalPolicyCoveragePayload?.pass === true
@@ -584,6 +628,10 @@ async function main() {
       goalPolicyReadinessAuditPass:
         options.requireGoalPolicyReadinessAudit === true
           ? goalPolicyReadinessAuditPayload?.pass === true
+          : null,
+      goalPolicyReadinessAuditUntilHorizon:
+        options.requireGoalPolicyReadinessAudit === true
+          ? normalizeHorizon(options.goalPolicyReadinessAuditUntilHorizon, nextHorizon || "H5") || null
           : null,
       progressiveGoalsPass:
         options.requireProgressiveGoals === true

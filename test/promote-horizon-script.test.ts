@@ -553,12 +553,71 @@ describe("promote-horizon.mjs", () => {
       expect(result.code).toBe(0);
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
-        checks: { goalPolicyCoveragePass: boolean; requireGoalPolicyCoverage: boolean };
+        checks: {
+          goalPolicyCoveragePass: boolean;
+          requireGoalPolicyCoverage: boolean;
+          requiredPolicyTransitions: string | null;
+        };
         failures: string[];
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks.goalPolicyCoveragePass).toBe(true);
       expect(payload.checks.requireGoalPolicyCoverage).toBe(true);
+      expect(payload.checks.requiredPolicyTransitions).toBe("H2->H3");
+      expect(payload.failures).toEqual([]);
+    });
+  });
+
+  it("enables strict goal-policy gates with one flag", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--goal-policy-key",
+          "H2->H3",
+          "--strict-goal-policy-gates",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          requireProgressiveGoals: boolean;
+          progressiveGoalsPass: boolean;
+          strictGoalPolicyGates: boolean;
+          requireGoalPolicyCoverage: boolean;
+          goalPolicyCoveragePass: boolean;
+          goalPolicyCoverageUntilHorizon: string | null;
+          requiredPolicyTransitions: string | null;
+          requireGoalPolicyReadinessAudit: boolean;
+          goalPolicyReadinessAuditPass: boolean;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.strictGoalPolicyGates).toBe(true);
+      expect(payload.checks.requireProgressiveGoals).toBe(true);
+      expect(payload.checks.progressiveGoalsPass).toBe(true);
+      expect(payload.checks.requireGoalPolicyCoverage).toBe(true);
+      expect(payload.checks.goalPolicyCoveragePass).toBe(true);
+      expect(payload.checks.goalPolicyCoverageUntilHorizon).toBe("H3");
+      expect(payload.checks.requiredPolicyTransitions).toBe("H2->H3");
+      expect(payload.checks.requireGoalPolicyReadinessAudit).toBe(true);
+      expect(payload.checks.goalPolicyReadinessAuditPass).toBe(true);
       expect(payload.failures).toEqual([]);
     });
   });

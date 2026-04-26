@@ -30,15 +30,18 @@ function parseArgs(argv) {
     requireProgressiveGoals: false,
     minimumGoalIncrease: 1,
     goalPolicyKey: "",
+    strictGoalPolicyGates: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
     goalPolicyCoverageUntilHorizon: "H5",
+    goalPolicyCoverageUntilExplicit: false,
     requiredPolicyTransitions: "",
     requirePolicyTaggedTargets: false,
     requirePositivePendingPolicyMin: false,
     requireGoalPolicyReadinessAudit: false,
     goalPolicyReadinessAuditOut: "",
     goalPolicyReadinessAuditUntilHorizon: "H5",
+    goalPolicyReadinessAuditUntilExplicit: false,
     requireGoalPolicyReadinessTaggedTargets: false,
     requireGoalPolicyReadinessPositivePendingMin: false,
     progressiveGoalsOut: "",
@@ -114,6 +117,8 @@ function parseArgs(argv) {
     } else if (arg === "--goal-policy-key") {
       options.goalPolicyKey = value ?? "";
       index += 1;
+    } else if (arg === "--strict-goal-policy-gates" || arg === "--require-strict-goal-policy-gates") {
+      options.strictGoalPolicyGates = true;
     } else if (arg === "--require-goal-policy-coverage") {
       options.requireGoalPolicyCoverage = true;
     } else if (arg === "--goal-policy-coverage-out") {
@@ -121,6 +126,7 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--goal-policy-coverage-until-horizon") {
       options.goalPolicyCoverageUntilHorizon = value ?? "";
+      options.goalPolicyCoverageUntilExplicit = true;
       index += 1;
     } else if (arg === "--required-policy-transitions") {
       options.requiredPolicyTransitions = value ?? "";
@@ -134,8 +140,12 @@ function parseArgs(argv) {
     } else if (arg === "--goal-policy-readiness-audit-out") {
       options.goalPolicyReadinessAuditOut = value ?? "";
       index += 1;
-    } else if (arg === "--goal-policy-readiness-audit-until-horizon") {
+    } else if (
+      arg === "--goal-policy-readiness-audit-until-horizon" ||
+      arg === "--goal-policy-readiness-audit-max-target-horizon"
+    ) {
       options.goalPolicyReadinessAuditUntilHorizon = value ?? "";
+      options.goalPolicyReadinessAuditUntilExplicit = true;
       index += 1;
     } else if (arg === "--require-goal-policy-readiness-tagged-targets") {
       options.requireGoalPolicyReadinessTaggedTargets = true;
@@ -312,6 +322,24 @@ async function main() {
   ) {
     failures.push(`invalid_minimum_goal_increase:${String(options.minimumGoalIncrease)}`);
   }
+  if (options.strictGoalPolicyGates) {
+    options.requireProgressiveGoals = true;
+    options.requireGoalPolicyCoverage = true;
+    options.requireGoalPolicyReadinessAudit = true;
+    options.requirePolicyTaggedTargets = true;
+    options.requirePositivePendingPolicyMin = true;
+    options.requireGoalPolicyReadinessTaggedTargets = true;
+    options.requireGoalPolicyReadinessPositivePendingMin = true;
+    if (!options.goalPolicyCoverageUntilExplicit) {
+      options.goalPolicyCoverageUntilHorizon = nextHorizon;
+    }
+    if (!options.goalPolicyReadinessAuditUntilExplicit) {
+      options.goalPolicyReadinessAuditUntilHorizon = nextHorizon;
+    }
+    if (!isNonEmptyString(options.requiredPolicyTransitions)) {
+      options.requiredPolicyTransitions = `H2->${nextHorizon}`;
+    }
+  }
 
   let closeoutRunCommand = null;
   let closeoutRunPayload = null;
@@ -425,6 +453,9 @@ async function main() {
     if (isNonEmptyString(options.goalPolicyKey)) {
       promoteArgv.push("--goal-policy-key", options.goalPolicyKey);
     }
+    if (options.strictGoalPolicyGates) {
+      promoteArgv.push("--strict-goal-policy-gates");
+    }
     if (options.requireGoalPolicyCoverage) {
       promoteArgv.push("--require-goal-policy-coverage");
       promoteArgv.push("--goal-policy-coverage-out", goalPolicyCoverageOut);
@@ -511,6 +542,7 @@ async function main() {
         ? options.minimumGoalIncrease
         : null,
       goalPolicyKey: isNonEmptyString(options.goalPolicyKey) ? options.goalPolicyKey : null,
+      strictGoalPolicyGates: options.strictGoalPolicyGates,
       requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
       goalPolicyCoveragePass:
         options.requireGoalPolicyCoverage === true

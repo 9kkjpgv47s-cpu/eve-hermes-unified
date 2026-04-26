@@ -78,7 +78,8 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:horizon-closeout -- --horizon H1 --target-next H2`
 - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - `npm run promote:stage -- --target-stage <canary|majority|full> --dry-run`
-- `npm run evaluate:auto-rollback-policy -- --target-stage <canary|majority|full> --evidence-dir evidence`
+- `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
+- `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence --dry-run`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 
@@ -100,10 +101,13 @@ Schema validation expectations:
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - auto-rollback policy decisions can be machine-evaluated with:
-  - `npm run evaluate:auto-rollback-policy -- --target-stage <canary|majority|full> --evidence-dir evidence`
+  - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
 - stage promotion can be executed through a single gated command:
   - `npm run promote:stage -- --target-stage <canary|majority|full> --env-file <gateway.env>`
   - add `--dry-run` to verify readiness without changing env values
+- staged drill orchestration can evaluate promotion + rollback policy in one command:
+  - `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence`
+  - add `--auto-apply-rollback` only for supervised incident simulation
 - validate a single file with:
   - `npm run validate:manifest-schema -- --type release-readiness --file <path>`
   - `npm run validate:manifest-schema -- --type merge-bundle --file <path>`

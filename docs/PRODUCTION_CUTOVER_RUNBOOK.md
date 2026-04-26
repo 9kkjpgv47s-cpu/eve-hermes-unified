@@ -180,7 +180,7 @@ When operating in canary/majority/full stages, evaluate rollback policy from lat
 
 ```bash
 npm run evaluate:auto-rollback-policy -- \
-  --current-stage canary \
+  --stage canary \
   --evidence-dir evidence \
   --horizon-status-file docs/HORIZON_STATUS.json
 ```
@@ -209,4 +209,32 @@ npm run cutover:rollback
 
 Then verify post-action state with:
 - `npm run validate:cutover-readiness`
-- `npm run evaluate:auto-rollback-policy -- --current-stage shadow --evidence-dir evidence`
+- `npm run evaluate:auto-rollback-policy -- --stage shadow --evidence-dir evidence`
+
+## Stage Drill Orchestrator (H2+)
+
+Use a single command to run:
+1) stage promotion readiness/apply (`promote:stage`)
+2) auto-rollback policy evaluation (`evaluate:auto-rollback-policy`)
+
+```bash
+npm run run:stage-drill -- \
+  --target-stage canary \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --runtime-env-file "$HOME/.openclaw/run/gateway.env" \
+  --canary-chats "100,200"
+```
+
+Behavior:
+- Always writes a unified drill report: `evidence/stage-drill-<stage>-*.json`
+- Captures child command execution details for both promotion and rollback-policy checks.
+- Fails the drill when:
+  - stage promotion step fails, or
+  - rollback policy output is missing/unreadable, or
+  - rollback policy action is `rollback`.
+
+Useful flags:
+- `--dry-run`: validate promotion/readiness and rollback policy without mutating stage env values.
+- `--allow-horizon-mismatch`: bypass horizon-target matching for CI/test-only workflows.
+- `--auto-apply-rollback`: if policy action is `rollback`, execute Eve-safe rollback automatically.

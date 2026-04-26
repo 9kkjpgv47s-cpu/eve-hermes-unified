@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T15:20:00Z",
+  "updatedAtIso": "2026-04-26T15:58:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with canary drill execution underway and auto-rollback policy gate implementation in progress.",
+  "summary": "H2 progressive traffic enablement is active with canary drill completed and a unified stage-drill executor in place for promotion plus rollback-policy evidence.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -85,13 +85,19 @@
       "id": "h2-action-2",
       "summary": "Run majority promotion readiness drill and confirm policy gate behavior under threshold breaches.",
       "targetHorizon": "H2",
-      "status": "planned"
+      "status": "in_progress"
     },
     {
       "id": "h2-action-3",
       "summary": "Validate rollback-trigger policy flow by simulating sustained SLO gate violation and proving Eve-safe restoration.",
       "targetHorizon": "H2",
-      "status": "in_progress"
+      "status": "completed"
+    },
+    {
+      "id": "h2-action-4",
+      "summary": "Run unified stage drill command for canary and majority paths so promotion and rollback policy evidence are emitted in one operation.",
+      "targetHorizon": "H2",
+      "status": "completed"
     }
   ],
   "promotionReadiness": {
@@ -111,7 +117,7 @@
     },
     "H2": {
       "status": "in_progress",
-      "summary": "Canary drill completed; auto-rollback policy gate and rollback simulation evidence generation in progress."
+      "summary": "Canary drill and rollback-policy simulation are complete; majority drill execution and threshold calibration are in progress."
     },
     "H3": {
       "status": "planned",
@@ -168,6 +174,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Canary drill action completed; executing machine-evaluable auto-rollback policy gate for sustained SLO violations."
+    },
+    {
+      "timestamp": "2026-04-26T15:58:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "Unified stage drill executor added so one command runs promotion gating and auto-rollback policy evaluation with combined evidence output."
     }
   ]
 }

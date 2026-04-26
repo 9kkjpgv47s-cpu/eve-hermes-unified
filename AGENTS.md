@@ -51,7 +51,8 @@ npm run validate:initial-scope
 npm run validate:merge-bundle
 npm run check:stage-promotion-readiness -- --target-stage canary
 npm run promote:stage -- --target-stage canary --dry-run
-npm run evaluate:auto-rollback -- --stage canary --window 5m
+npm run run:stage-drill -- --target-stage canary --dry-run
+npm run evaluate:auto-rollback-policy -- --stage canary --evidence-dir evidence
 npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
 npm run bundle:merge-readiness
 npm run validate:all

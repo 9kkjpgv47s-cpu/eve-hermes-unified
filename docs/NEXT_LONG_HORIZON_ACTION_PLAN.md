@@ -67,6 +67,23 @@ Mitigations:
 - Stage change verification hook before traffic promotion.
 - Tune thresholds using soak/failure evidence and production baselines.
 
+Operator drill command (single execution path):
+
+```bash
+npm run run:stage-drill -- \
+  --target-stage canary \
+  --evidence-dir evidence \
+  --horizon-status-file docs/HORIZON_STATUS.json \
+  --runtime-env-file "$HOME/.openclaw/run/gateway.env" \
+  --canary-chats "100,200"
+```
+
+Expected artifacts:
+- `evidence/stage-promotion-readiness-*.json`
+- `evidence/stage-promotion-execution-*.json`
+- `evidence/auto-rollback-policy-*.json`
+- `evidence/stage-drill-<stage>-*.json`
+
 ### Horizon H3 - Runtime Durability and Policy Maturity
 
 Goal: harden memory, capability policy, and audit controls for long-run production load.
@@ -140,12 +157,12 @@ Mitigations:
 3. Every horizon change set must update `docs/CLOUD_AGENT_HANDOFF.md` with new operational expectations.
 4. If a horizon introduces a new critical artifact, add validation script + test before rollout.
 
-## Immediate Next Actions (First Execution Slice)
+## Immediate Next Actions (Current Execution Slice - H2)
 
-1. Add CI workflow that executes the full validation chain and publishes merge bundle artifacts.
-2. Add schema validation test for `release-readiness` and merge-bundle manifests.
-3. Add operator retrieval/verification steps to production runbook.
-4. Add horizon tracking section to handoff document so incoming agents know active gate and blockers.
+1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report.
+2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency).
+3. Execute supervised rollback auto-apply simulation with `run:stage-drill -- --auto-apply-rollback` in a controlled environment.
+4. Capture promotion/rollback decision traces as required evidence for H2 closeout criteria draft.
 
 ## Horizon Closeout Gate
 

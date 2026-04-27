@@ -71,6 +71,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:cutover-readiness`
 - `npm run validate:release-readiness`
 - `npm run validate:initial-scope`
+  - strict option: `UNIFIED_INITIAL_SCOPE_REQUIRE_GOAL_POLICY_VALIDATION=1 npm run validate:initial-scope`
 - strict release-readiness policy-file evidence gate:
   - `UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_FILE_VALIDATION=1 npm run validate:release-readiness`
 - `npm run validate:merge-bundle`
@@ -151,6 +152,9 @@ Schema validation expectations:
   - validates transition-policy schema and required transition window defaults (`H2->H3`, `H3->H4`, `H4->H5`)
   - emits deterministic validation artifact:
     - `evidence/goal-policy-file-validation-*.json`
+- initial-scope gate can require release-readiness to include and pass goal-policy validation evidence:
+  - `UNIFIED_INITIAL_SCOPE_REQUIRE_GOAL_POLICY_VALIDATION=1 npm run validate:initial-scope`
+  - fails if `release-readiness.checks.goalPolicyFileValidationPassed !== true`
 - one-command H2 promotion flow (closeout + promotion):
   - `npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
   - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force policy checks to use a dedicated policy document

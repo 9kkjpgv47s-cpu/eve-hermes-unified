@@ -86,6 +86,9 @@ describe("validate-merge-bundle.sh", () => {
           {
             pass: true,
             checklistPath,
+            checks: {
+              releaseReadinessGoalPolicyFileValidationPassed: true,
+            },
             failures: [],
           },
           null,

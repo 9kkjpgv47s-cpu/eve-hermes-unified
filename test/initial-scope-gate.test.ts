@@ -47,6 +47,9 @@ describe("validate-initial-scope.mjs", () => {
           {
             readinessVersion: "v1",
             pass: true,
+            checks: {
+              goalPolicyFileValidationPassed: true,
+            },
             failures: [],
           },
           null,
@@ -72,6 +75,7 @@ describe("validate-initial-scope.mjs", () => {
       const reportRaw = await readFile(reportPath, "utf8");
       expect(reportRaw).toContain("\"pass\": true");
       expect(reportRaw).toContain("\"releaseReadinessPass\": true");
+      expect(reportRaw).toContain("\"releaseReadinessGoalPolicyValidationPass\": true");
       expect(reportRaw).toContain("\"missingChecklistItems\": []");
     });
   });
@@ -99,6 +103,9 @@ describe("validate-initial-scope.mjs", () => {
           {
             readinessVersion: "v1",
             pass: true,
+            checks: {
+              goalPolicyFileValidationPassed: true,
+            },
             failures: [],
           },
           null,
@@ -124,6 +131,60 @@ describe("validate-initial-scope.mjs", () => {
       const reportRaw = await readFile(reportPath, "utf8");
       expect(reportRaw).toContain("\"pass\": false");
       expect(reportRaw).toContain("validate:soak");
+    });
+  });
+
+  it("fails when release readiness is missing goal-policy validation pass", async () => {
+    await withTempDir(async (dir) => {
+      const checklistPath = path.join(dir, "MASTER_EXECUTION_CHECKLIST.md");
+      const readinessPath = path.join(dir, "release-readiness.json");
+      const reportPath = path.join(dir, "initial-scope-gate.json");
+
+      await writeFile(
+        checklistPath,
+        [
+          "# Master Execution Checklist",
+          "",
+          "## Phase 5 - Validation and Hardening",
+          "- [x] `npm run validate:failure-injection` runs and captures evidence.",
+          "- [x] `npm run validate:soak` runs and captures evidence.",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(
+        readinessPath,
+        JSON.stringify(
+          {
+            readinessVersion: "v1",
+            pass: true,
+            checks: {
+              goalPolicyFileValidationPassed: false,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-initial-scope.mjs",
+          "--checklist",
+          checklistPath,
+          "--release-readiness",
+          readinessPath,
+          "--out",
+          reportPath,
+        ],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      const reportRaw = await readFile(reportPath, "utf8");
+      expect(reportRaw).toContain("\"pass\": false");
+      expect(reportRaw).toContain("release_readiness_goal_policy_validation_not_passed");
     });
   });
 });

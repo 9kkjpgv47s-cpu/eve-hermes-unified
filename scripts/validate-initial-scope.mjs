@@ -8,6 +8,7 @@ function parseArgs(argv) {
     releaseReadinessPath: "",
     evidenceDir: "",
     out: "",
+    requireReleaseReadinessGoalPolicyValidation: true,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -24,9 +25,37 @@ function parseArgs(argv) {
     } else if (arg === "--out") {
       options.out = value ?? "";
       i += 1;
+    } else if (
+      arg === "--allow-release-readiness-without-goal-policy-validation" ||
+      arg === "--allow-release-readiness-without-goal-policy-file-validation"
+    ) {
+      options.requireReleaseReadinessGoalPolicyValidation = false;
+    } else if (
+      arg === "--require-release-readiness-goal-policy-validation" ||
+      arg === "--require-release-readiness-goal-policy-file-validation"
+    ) {
+      options.requireReleaseReadinessGoalPolicyValidation = true;
     }
   }
   return options;
+}
+
+function applyBooleanEnvOverride(options) {
+  const rawValue = String(
+    process.env.UNIFIED_INITIAL_SCOPE_REQUIRE_GOAL_POLICY_FILE_VALIDATION ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  if (rawValue === "1" || rawValue === "true" || rawValue === "yes" || rawValue === "on") {
+    options.requireReleaseReadinessGoalPolicyValidation = true;
+  } else if (
+    rawValue === "0" ||
+    rawValue === "false" ||
+    rawValue === "no" ||
+    rawValue === "off"
+  ) {
+    options.requireReleaseReadinessGoalPolicyValidation = false;
+  }
 }
 
 async function newestFileInDir(dir, prefix) {
@@ -58,6 +87,7 @@ function findUncheckedChecklistItems(checklistRaw) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  applyBooleanEnvOverride(options);
   const checklistPath =
     options.checklistPath.trim() ||
     path.resolve(process.cwd(), "docs/MASTER_EXECUTION_CHECKLIST.md");
@@ -81,13 +111,32 @@ async function main() {
   }
 
   let releaseReadiness = null;
+  let releaseReadinessGoalPolicyValidationPassed = false;
+  let releaseReadinessGoalPolicyValidationReported = false;
   if (!releaseReadinessPath) {
     failures.push("missing_release_readiness_report");
   } else {
     const raw = await readFile(releaseReadinessPath, "utf8");
     releaseReadiness = JSON.parse(raw);
+    const goalPolicyFileValidationResult = releaseReadiness?.checks?.goalPolicyFileValidationPassed;
+    const legacyGoalPolicyValidationResult = releaseReadiness?.checks?.goalPolicyValidationPass;
+    releaseReadinessGoalPolicyValidationReported =
+      typeof goalPolicyFileValidationResult === "boolean" ||
+      typeof legacyGoalPolicyValidationResult === "boolean";
+    releaseReadinessGoalPolicyValidationPassed =
+      goalPolicyFileValidationResult === true || legacyGoalPolicyValidationResult === true;
     if (!releaseReadiness?.pass) {
       failures.push("release_readiness_not_passed");
+    }
+    if (
+      options.requireReleaseReadinessGoalPolicyValidation &&
+      !releaseReadinessGoalPolicyValidationPassed
+    ) {
+      failures.push(
+        releaseReadinessGoalPolicyValidationReported
+          ? "release_readiness_goal_policy_validation_not_passed"
+          : "release_readiness_goal_policy_validation_missing",
+      );
     }
   }
 
@@ -98,9 +147,16 @@ async function main() {
     releaseReadinessPath: releaseReadinessPath || null,
     missingChecklistItems: uncheckedItems,
     releaseReadinessPass: Boolean(releaseReadiness?.pass),
+    releaseReadinessGoalPolicyValidationPass: releaseReadinessGoalPolicyValidationPassed,
     checks: {
       uncheckedChecklistItems: uncheckedItems,
       releaseReadinessPassed: Boolean(releaseReadiness?.pass),
+      requireReleaseReadinessGoalPolicyValidation:
+        options.requireReleaseReadinessGoalPolicyValidation,
+      releaseReadinessGoalPolicyValidationReported:
+        releaseReadinessGoalPolicyValidationReported,
+      releaseReadinessGoalPolicyValidationPassed:
+        releaseReadinessGoalPolicyValidationPassed,
       releaseReadinessFailures: Array.isArray(releaseReadiness?.failures)
         ? releaseReadiness.failures
         : [],

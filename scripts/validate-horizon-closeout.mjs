@@ -196,9 +196,27 @@ function commandVerificationType(command) {
     return "supervised-rollback-simulation";
   }
   if (command === "npm run validate:initial-scope") {
-    return "pass-only";
+    return "initial-scope";
   }
   return "existence-only";
+}
+
+function resolveInitialScopeGoalPolicyValidationState(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    payload.releaseReadinessGoalPolicyValidationPass,
+    checks.releaseReadinessGoalPolicyValidationPassed,
+    checks.releaseReadinessGoalPolicyFileValidationPassed,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
 }
 
 function resolveReleaseGoalPolicyValidationStatus(payload) {
@@ -312,6 +330,19 @@ function evaluateCommandPayload(command, payload) {
     }
     if (payload?.checks?.calibrationPass !== true) {
       checks.push("supervised_rollback_calibration_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "initial-scope") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("initial_scope_not_passed");
+    }
+    const initialScopeGoalPolicyValidation = resolveInitialScopeGoalPolicyValidationState(payload);
+    if (!initialScopeGoalPolicyValidation.reported) {
+      checks.push("initial_scope_goal_policy_validation_not_reported");
+    } else if (!initialScopeGoalPolicyValidation.pass) {
+      checks.push("initial_scope_goal_policy_validation_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }

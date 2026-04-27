@@ -109,6 +109,9 @@ Schema validation expectations:
   - `npm run validate:horizon-status`
 - horizon closeout readiness is machine-validated via:
   - `npm run validate:horizon-closeout -- --horizon <H1|H2|H3|H4|H5> --target-next <H2|H3|H4|H5>`
+  - closeout release evidence now fail-closes on goal-policy signals:
+    - `validate:release-readiness` evidence must report and pass `checks.goalPolicyFileValidationPassed`
+    - `validate:initial-scope` evidence must report and pass propagated release goal-policy status
 - dedicated H2 closeout gate:
   - `npm run validate:h2-closeout`
   - enforces H2-scoped required evidence (`h2-drill-suite`, rollback threshold calibration, supervised rollback simulation) when listed in `requiredEvidence`

@@ -111,9 +111,11 @@ async function seedEvidence(evidenceDir: string): Promise<{
         releaseReadinessPath: releasePath,
         missingChecklistItems: [],
         releaseReadinessPass: true,
+            releaseReadinessGoalPolicyValidationPass: true,
         checks: {
           uncheckedChecklistItems: [],
           releaseReadinessPassed: true,
+              releaseReadinessGoalPolicyValidationPassed: true,
           releaseReadinessFailures: [],
         },
         failures: [],
@@ -419,6 +421,64 @@ describe("validate-horizon-closeout.mjs", () => {
       };
       expect(payload.pass).toBe(false);
       expect(payload.failures.some((item) => item.startsWith("missing_required_evidence:"))).toBe(true);
+    });
+  });
+
+  it("fails when initial-scope goal-policy validation is not passed", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "horizon-closeout.json");
+      const seeded = await seedEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath, "h1-in-progress");
+
+      const initialScopePayload = JSON.parse(await readFile(seeded.initialScopePath, "utf8")) as {
+        releaseReadinessGoalPolicyValidationPass?: boolean;
+        checks?: Record<string, unknown>;
+      };
+      initialScopePayload.releaseReadinessGoalPolicyValidationPass = false;
+      initialScopePayload.checks = {
+        ...(initialScopePayload.checks ?? {}),
+        releaseReadinessGoalPolicyValidationPassed: false,
+      };
+      await writeFile(
+        seeded.initialScopePath,
+        `${JSON.stringify(initialScopePayload, null, 2)}\n`,
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H1",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: { requiredEvidence: Array<{ id: string; pass: boolean; checks: string[] }> };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("required_evidence_failed:h1-initial-scope");
+      expect(payload.checks.requiredEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "h1-initial-scope",
+            pass: false,
+            checks: expect.arrayContaining(["initial_scope_goal_policy_validation_not_passed"]),
+          }),
+        ]),
+      );
     });
   });
 

@@ -128,6 +128,7 @@ Schema validation expectations:
   - optional `--closeout-file <path>` to consume a pinned closeout artifact instead of running `validate:horizon-closeout`
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
   - fail-closed enforcement for `--closeout-run-file`:
+    - closeout run must report `checks.h2CloseoutGatePass=true`
     - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationReported=true`
     - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationPassed=true`
   - optional `--require-progressive-goals --minimum-goal-increase <n>` to require the next horizon to have at least `<n>` more planned actions than the source horizon

@@ -224,6 +224,17 @@ function resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload) {
   };
 }
 
+function resolveCloseoutRunH2CloseoutGate(closeoutRunPayload) {
+  const checks =
+    closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
+      ? closeoutRunPayload.checks
+      : {};
+  return {
+    reported: typeof checks.h2CloseoutGatePass === "boolean",
+    pass: checks.h2CloseoutGatePass === true,
+  };
+}
+
 async function exists(targetPath) {
   if (!isNonEmptyString(targetPath)) {
     return false;
@@ -434,18 +445,24 @@ async function main() {
   }
 
   let closeoutRunPayload = null;
+  let closeoutRunH2CloseoutGate = { reported: false, pass: false };
   let closeoutRunStageGoalPolicySignals = { reported: false, pass: false };
   if (failures.length === 0 && closeoutRunFile.length > 0) {
     if (!(await exists(closeoutRunFile))) {
       failures.push(`missing_closeout_run_file:${closeoutRunFile}`);
     } else {
       closeoutRunPayload = await readJson(closeoutRunFile);
+      closeoutRunH2CloseoutGate = resolveCloseoutRunH2CloseoutGate(closeoutRunPayload);
       closeoutRunStageGoalPolicySignals = resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload);
       if (closeoutRunPayload?.pass !== true) {
         failures.push("closeout_run_not_passed");
       }
       if (sourceHorizon === "H2") {
-        if (!closeoutRunStageGoalPolicySignals.reported) {
+        if (!closeoutRunH2CloseoutGate.reported) {
+          failures.push("closeout_run_h2_closeout_gate_not_reported");
+        } else if (!closeoutRunH2CloseoutGate.pass) {
+          failures.push("closeout_run_h2_closeout_gate_not_passed");
+        } else if (!closeoutRunStageGoalPolicySignals.reported) {
           failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported");
         } else if (!closeoutRunStageGoalPolicySignals.pass) {
           failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_passed");
@@ -756,6 +773,8 @@ async function main() {
       requireActiveNextHorizon: options.requireActiveNextHorizon,
       allowHorizonMismatch: options.allowHorizonMismatch,
       closeoutRunPass: closeoutRunPayload?.pass === true,
+      closeoutRunH2CloseoutGateReported: closeoutRunH2CloseoutGate.reported,
+      closeoutRunH2CloseoutGatePass: closeoutRunH2CloseoutGate.pass,
       closeoutRunSupervisedSimulationPass:
         closeoutRunPayload?.checks?.supervisedSimulationPass === true,
       closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported:

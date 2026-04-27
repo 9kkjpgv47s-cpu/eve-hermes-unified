@@ -233,6 +233,9 @@ function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
     closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
       ? closeoutRunPayload.checks
       : {};
+  const h2CloseoutGatePass = resolveBooleanCandidate(checks, [
+    "h2CloseoutGatePass",
+  ]);
   const supervisedSimulationPass = resolveBooleanCandidate(checks, [
     "supervisedSimulationPass",
   ]);
@@ -246,6 +249,7 @@ function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
     "supervisedSimulationStagePolicySignalsPass",
   ]);
   return {
+    h2CloseoutGatePass,
     propagationReported,
     propagationPassed,
     supervisedSimulationPass,
@@ -535,6 +539,8 @@ async function main() {
     closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
       failures.push("h2_closeout_run_failed");
+    } else if (!closeoutRunSimulationSignals.h2CloseoutGatePass) {
+      failures.push("h2_closeout_run_gate_not_passed");
     } else if (!closeoutRunSimulationSignals.propagationReported) {
       failures.push("h2_closeout_run_missing_supervised_stage_goal_policy");
     } else if (!closeoutRunSimulationSignals.propagationPassed) {
@@ -674,6 +680,7 @@ async function main() {
       evidenceSelectionMode,
       closeoutRunPass: closeoutRunPayload?.pass === true,
       closeoutGatePass: closeoutRunPayload?.checks?.h2CloseoutGatePass === true,
+      closeoutRunH2CloseoutGatePass: closeoutRunSimulationSignals.h2CloseoutGatePass,
       closeoutRunSupervisedSimulationPass: closeoutRunSimulationSignals.supervisedSimulationPass,
       closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported:
         closeoutRunSimulationSignals.propagationReported,

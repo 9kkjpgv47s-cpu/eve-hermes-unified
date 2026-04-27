@@ -257,6 +257,20 @@ function evaluatePolicyGates(targetStage, metrics) {
   return failures;
 }
 
+function resolveGoalPolicyValidationState(payload, checkKeys) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  for (const key of checkKeys) {
+    const candidate = checks[key];
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
 function latestPathMatchesPattern(pattern, targetPath) {
   if (!isNonEmptyString(pattern) || !isNonEmptyString(targetPath)) {
     return false;
@@ -337,6 +351,14 @@ async function main() {
   let bundleVerification = null;
   let releaseGoalPolicyValidationReported = false;
   let releaseGoalPolicyValidationPassed = false;
+  let mergeBundleReleaseGoalPolicyValidationReported = false;
+  let mergeBundleReleaseGoalPolicyValidationPassed = false;
+  let mergeBundleInitialScopeGoalPolicyValidationReported = false;
+  let mergeBundleInitialScopeGoalPolicyValidationPassed = false;
+  let bundleVerificationReleaseGoalPolicyValidationReported = false;
+  let bundleVerificationReleaseGoalPolicyValidationPassed = false;
+  let bundleVerificationInitialScopeGoalPolicyValidationReported = false;
+  let bundleVerificationInitialScopeGoalPolicyValidationPassed = false;
   let horizonStatus = null;
   let horizonValidation = { valid: false, errors: ["horizon_status_not_loaded"] };
 
@@ -389,11 +411,61 @@ async function main() {
         ...mergeValidationSchema.errors.map((error) => `merge_bundle_validation_schema_invalid:${error}`),
       );
     }
+    const mergeBundleReleaseGoalPolicyValidation = resolveGoalPolicyValidationState(
+      mergeBundleValidation,
+      ["releaseGoalPolicyValidationPassed"],
+    );
+    mergeBundleReleaseGoalPolicyValidationReported = mergeBundleReleaseGoalPolicyValidation.reported;
+    mergeBundleReleaseGoalPolicyValidationPassed = mergeBundleReleaseGoalPolicyValidation.pass;
+    if (!mergeBundleReleaseGoalPolicyValidationReported) {
+      failures.push("merge_bundle_release_goal_policy_validation_not_reported");
+    } else if (!mergeBundleReleaseGoalPolicyValidationPassed) {
+      failures.push("merge_bundle_release_goal_policy_validation_not_passed");
+    }
+    const mergeBundleInitialScopeGoalPolicyValidation = resolveGoalPolicyValidationState(
+      mergeBundleValidation,
+      ["initialScopeGoalPolicyValidationPassed"],
+    );
+    mergeBundleInitialScopeGoalPolicyValidationReported =
+      mergeBundleInitialScopeGoalPolicyValidation.reported;
+    mergeBundleInitialScopeGoalPolicyValidationPassed =
+      mergeBundleInitialScopeGoalPolicyValidation.pass;
+    if (!mergeBundleInitialScopeGoalPolicyValidationReported) {
+      failures.push("merge_bundle_initial_scope_goal_policy_validation_not_reported");
+    } else if (!mergeBundleInitialScopeGoalPolicyValidationPassed) {
+      failures.push("merge_bundle_initial_scope_goal_policy_validation_not_passed");
+    }
   }
   if (await exists(evidencePaths.bundleVerificationPath)) {
     bundleVerification = await readJson(evidencePaths.bundleVerificationPath);
     if (!bundleVerification?.pass) {
       failures.push("bundle_verification_failed");
+    }
+    const bundleVerificationReleaseGoalPolicyValidation = resolveGoalPolicyValidationState(
+      bundleVerification,
+      ["releaseGoalPolicyValidationPassed"],
+    );
+    bundleVerificationReleaseGoalPolicyValidationReported =
+      bundleVerificationReleaseGoalPolicyValidation.reported;
+    bundleVerificationReleaseGoalPolicyValidationPassed =
+      bundleVerificationReleaseGoalPolicyValidation.pass;
+    if (!bundleVerificationReleaseGoalPolicyValidationReported) {
+      failures.push("bundle_verify_release_goal_policy_validation_not_reported");
+    } else if (!bundleVerificationReleaseGoalPolicyValidationPassed) {
+      failures.push("bundle_verify_release_goal_policy_validation_not_passed");
+    }
+    const bundleVerificationInitialScopeGoalPolicyValidation = resolveGoalPolicyValidationState(
+      bundleVerification,
+      ["initialScopeGoalPolicyValidationPassed"],
+    );
+    bundleVerificationInitialScopeGoalPolicyValidationReported =
+      bundleVerificationInitialScopeGoalPolicyValidation.reported;
+    bundleVerificationInitialScopeGoalPolicyValidationPassed =
+      bundleVerificationInitialScopeGoalPolicyValidation.pass;
+    if (!bundleVerificationInitialScopeGoalPolicyValidationReported) {
+      failures.push("bundle_verify_initial_scope_goal_policy_validation_not_reported");
+    } else if (!bundleVerificationInitialScopeGoalPolicyValidationPassed) {
+      failures.push("bundle_verify_initial_scope_goal_policy_validation_not_passed");
     }
   }
   if (await exists(horizonStatusFile)) {
@@ -451,10 +523,24 @@ async function main() {
       if (promotionGates.releaseReadinessPass === true && !releaseReadiness?.pass) {
         failures.push("promotion_gate_release_readiness_not_met");
       }
-      if (promotionGates.mergeBundlePass === true && !mergeBundleValidation?.pass) {
+      if (
+        promotionGates.mergeBundlePass === true &&
+        !(
+          mergeBundleValidation?.pass
+          && mergeBundleReleaseGoalPolicyValidationPassed
+          && mergeBundleInitialScopeGoalPolicyValidationPassed
+        )
+      ) {
         failures.push("promotion_gate_merge_bundle_not_met");
       }
-      if (promotionGates.bundleVerificationPass === true && !bundleVerification?.pass) {
+      if (
+        promotionGates.bundleVerificationPass === true &&
+        !(
+          bundleVerification?.pass
+          && bundleVerificationReleaseGoalPolicyValidationPassed
+          && bundleVerificationInitialScopeGoalPolicyValidationPassed
+        )
+      ) {
         failures.push("promotion_gate_bundle_verification_not_met");
       }
       if (promotionGates.cutoverReadinessPass === true && !cutoverReadiness?.pass) {
@@ -509,7 +595,15 @@ async function main() {
       releaseGoalPolicyValidationReported,
       releaseGoalPolicyValidationPassed,
       mergeBundleValidationPassed: Boolean(mergeBundleValidation?.pass),
+      mergeBundleReleaseGoalPolicyValidationReported,
+      mergeBundleReleaseGoalPolicyValidationPassed,
+      mergeBundleInitialScopeGoalPolicyValidationReported,
+      mergeBundleInitialScopeGoalPolicyValidationPassed,
       bundleVerificationPassed: Boolean(bundleVerification?.pass),
+      bundleVerificationReleaseGoalPolicyValidationReported,
+      bundleVerificationReleaseGoalPolicyValidationPassed,
+      bundleVerificationInitialScopeGoalPolicyValidationReported,
+      bundleVerificationInitialScopeGoalPolicyValidationPassed,
       horizonValidationPass: horizonValidation.valid,
       allowHorizonMismatch,
       evidenceSelectionMode,

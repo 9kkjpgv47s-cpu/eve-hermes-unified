@@ -142,6 +142,10 @@ async function seedEvidence(
           buildExitCode: 0,
           bundleManifestPresent: true,
           bundleManifestPass: true,
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
           bundleFailures: [],
         },
         failures: [],
@@ -151,7 +155,23 @@ async function seedEvidence(
     ),
     "utf8",
   );
-  await writeFile(verifyPath, JSON.stringify({ pass: true }, null, 2), "utf8");
+  await writeFile(
+    verifyPath,
+    JSON.stringify(
+      {
+        pass: true,
+        checks: {
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
   if (options?.createFailingLatestSummary === true) {
     await writeFile(
       failingSummaryPath,
@@ -371,6 +391,104 @@ describe("check-stage-promotion-readiness.mjs", () => {
       };
       expect(payload.pass).toBe(false);
       expect(payload.failures).toContain("release_goal_policy_validation_not_passed");
+    });
+  });
+
+  it("fails when merge-bundle goal-policy propagation is missing", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "stage-promotion-readiness.json");
+      const seeded = await seedEvidence(evidenceDir);
+      const mergePayload = JSON.parse(await readFile(seeded.mergeValidationPath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      mergePayload.checks = {
+        ...(mergePayload.checks ?? {}),
+      };
+      delete mergePayload.checks.releaseGoalPolicyValidationReported;
+      delete mergePayload.checks.releaseGoalPolicyValidationPassed;
+      delete mergePayload.checks.initialScopeGoalPolicyValidationReported;
+      delete mergePayload.checks.initialScopeGoalPolicyValidationPassed;
+      await writeFile(seeded.mergeValidationPath, JSON.stringify(mergePayload, null, 2), "utf8");
+      await seedHorizonStatus(horizonPath, "canary", "H2");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "canary",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("merge_bundle_release_goal_policy_validation_not_reported");
+      expect(payload.failures).toContain(
+        "merge_bundle_initial_scope_goal_policy_validation_not_reported",
+      );
+      expect(payload.failures).toContain("promotion_gate_merge_bundle_not_met");
+    });
+  });
+
+  it("fails when bundle verification goal-policy propagation is missing", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "stage-promotion-readiness.json");
+      const seeded = await seedEvidence(evidenceDir);
+      const verifyPayload = JSON.parse(await readFile(seeded.verifyPath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      verifyPayload.checks = {
+        ...(verifyPayload.checks ?? {}),
+      };
+      delete verifyPayload.checks.releaseGoalPolicyValidationReported;
+      delete verifyPayload.checks.releaseGoalPolicyValidationPassed;
+      delete verifyPayload.checks.initialScopeGoalPolicyValidationReported;
+      delete verifyPayload.checks.initialScopeGoalPolicyValidationPassed;
+      await writeFile(seeded.verifyPath, JSON.stringify(verifyPayload, null, 2), "utf8");
+      await seedHorizonStatus(horizonPath, "canary", "H2");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "canary",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("bundle_verify_release_goal_policy_validation_not_reported");
+      expect(payload.failures).toContain(
+        "bundle_verify_initial_scope_goal_policy_validation_not_reported",
+      );
+      expect(payload.failures).toContain("promotion_gate_bundle_verification_not_met");
     });
   });
 

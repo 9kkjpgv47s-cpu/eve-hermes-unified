@@ -186,6 +186,7 @@ Schema validation expectations:
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
   - fail-closed enforcement: selected release-readiness evidence must report `checks.goalPolicyFileValidationPassed=true`
+  - fail-closed enforcement: selected `validate:merge-bundle` and `verify:merge-bundle` evidence must each report and pass both release + initial-scope goal-policy propagation checks
 - auto-rollback policy decisions can be machine-evaluated with:
   - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
   - fail-closed enforcement: selected release-readiness evidence must report `checks.goalPolicyFileValidationPassed=true`

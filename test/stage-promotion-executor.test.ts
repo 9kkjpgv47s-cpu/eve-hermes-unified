@@ -132,6 +132,10 @@ async function seedEvidence(evidenceDir: string): Promise<void> {
           buildExitCode: 0,
           bundleManifestPresent: true,
           bundleManifestPass: true,
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
           bundleFailures: [],
         },
         failures: [],
@@ -141,7 +145,23 @@ async function seedEvidence(evidenceDir: string): Promise<void> {
     ),
     "utf8",
   );
-  await writeFile(verifyPath, JSON.stringify({ pass: true }, null, 2), "utf8");
+  await writeFile(
+    verifyPath,
+    JSON.stringify(
+      {
+        pass: true,
+        checks: {
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
 }
 
 async function seedHorizonStatus(filePath: string): Promise<void> {

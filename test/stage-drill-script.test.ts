@@ -145,6 +145,10 @@ async function seedEvidence(
           buildExitCode: 0,
           bundleManifestPresent: true,
           bundleManifestPass: true,
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
           bundleFailures: [],
         },
         failures: [],
@@ -155,7 +159,23 @@ async function seedEvidence(
     "utf8",
   );
 
-  await writeFile(verifyPath, JSON.stringify({ pass: true }, null, 2), "utf8");
+  await writeFile(
+    verifyPath,
+    JSON.stringify(
+      {
+        pass: true,
+        checks: {
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
 
   if (options?.createFailingLatestSummary === true) {
     await writeFile(

@@ -167,6 +167,7 @@ npm run promote:stage -- \
 
 Behavior:
 - Runs `check-stage-promotion-readiness` first and writes `evidence/stage-promotion-readiness-*.json`.
+- Readiness fail-closes unless selected `validate:merge-bundle` and `verify:merge-bundle` artifacts explicitly report/passed release + initial-scope goal-policy propagation checks.
 - Applies stage settings with `scripts/prod-cutover-stage.sh` only when readiness passes.
 - Writes execution result to `evidence/stage-promotion-execution-*.json`.
 

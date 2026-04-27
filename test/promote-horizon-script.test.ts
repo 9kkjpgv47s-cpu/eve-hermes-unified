@@ -480,6 +480,9 @@ describe("promote-horizon.mjs", () => {
             },
             checks: {
               h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
             },
           },
           null,
@@ -511,14 +514,92 @@ describe("promote-horizon.mjs", () => {
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
         files: { closeoutRunFile: string | null; closeoutFile: string };
-        checks: { closeoutRunPass: boolean };
+        checks: {
+          closeoutRunPass: boolean;
+          closeoutRunSupervisedSimulationPass: boolean;
+          closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported: boolean;
+          closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed: boolean;
+        };
         failures: string[];
       };
       expect(payload.pass).toBe(true);
       expect(payload.files.closeoutRunFile).toBe(closeoutRunPath);
       expect(payload.files.closeoutFile).toBe(closeoutPath);
       expect(payload.checks.closeoutRunPass).toBe(true);
+      expect(payload.checks.closeoutRunSupervisedSimulationPass).toBe(true);
+      expect(payload.checks.closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported).toBe(
+        true,
+      );
+      expect(payload.checks.closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed).toBe(
+        true,
+      );
       expect(payload.failures).toEqual([]);
+    });
+  });
+
+  it("fails when closeout run omits supervised simulation stage goal-policy propagation", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      const closeoutPath = await seedCloseoutReport(evidenceDir, {
+        pass: true,
+        horizon: "H2",
+        nextHorizon: "H3",
+      });
+      await seedHorizonStatus(statusPath);
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-20260426-000000.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            files: {
+              closeoutOut: closeoutPath,
+            },
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: false,
+              supervisedSimulationStageGoalPolicyPropagationPassed: false,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-run-file",
+          closeoutRunPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          closeoutRunSupervisedSimulationStageGoalPolicyPropagationPass: boolean;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunSupervisedSimulationStageGoalPolicyPropagationPass).toBe(
+        false,
+      );
+      expect(payload.failures).toContain(
+        "closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported",
+      );
     });
   });
 

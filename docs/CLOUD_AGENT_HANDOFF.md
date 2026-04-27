@@ -127,6 +127,9 @@ Schema validation expectations:
   - when `--goal-policy-file` is omitted, promotion auto-detects a sibling `GOAL_POLICIES.json` next to `--horizon-status-file`; if not present, it falls back to `goalPolicies` in horizon status
   - optional `--closeout-file <path>` to consume a pinned closeout artifact instead of running `validate:horizon-closeout`
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
+  - fail-closed enforcement for `--closeout-run-file`:
+    - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationReported=true`
+    - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationPassed=true`
   - optional `--require-progressive-goals --minimum-goal-increase <n>` to require the next horizon to have at least `<n>` more planned actions than the source horizon
   - optional `--goal-policy-key <Hn->Hm>` to enforce a named transition policy from `goalPolicies` (for tagged action mix and stricter thresholds)
   - optional `--require-goal-policy-coverage` to require transition policy coverage from the source horizon through `--until-horizon` before promotion

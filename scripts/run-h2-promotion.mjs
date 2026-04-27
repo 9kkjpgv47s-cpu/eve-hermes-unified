@@ -219,6 +219,39 @@ function normalizeHorizon(value, fallback = "H3") {
     : fallback;
 }
 
+function resolveBooleanCandidate(checks, keys) {
+  for (const key of keys) {
+    if (checks?.[key] === true) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
+  const checks =
+    closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
+      ? closeoutRunPayload.checks
+      : {};
+  const supervisedSimulationPass = resolveBooleanCandidate(checks, [
+    "supervisedSimulationPass",
+  ]);
+  const propagationReported = resolveBooleanCandidate(checks, [
+    "supervisedSimulationStageGoalPolicyPropagationReported",
+    "supervisedSimulationStagePolicySignalsReported",
+  ]);
+  const propagationPassed = resolveBooleanCandidate(checks, [
+    "supervisedSimulationStageGoalPolicyPropagationPassed",
+    "supervisedSimulationStageGoalPolicyPropagationPass",
+    "supervisedSimulationStagePolicySignalsPass",
+  ]);
+  return {
+    propagationReported,
+    propagationPassed,
+    supervisedSimulationPass,
+  };
+}
+
 function stamp() {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
 }
@@ -393,10 +426,16 @@ async function main() {
 
   let closeoutRunCommand = null;
   let closeoutRunPayload = null;
+  let closeoutRunSimulationSignals = {
+    propagationReported: false,
+    propagationPassed: false,
+    supervisedSimulationPass: false,
+  };
   let horizonPromotionCommand = null;
   let horizonPromotionPayload = null;
 
   if (failures.length === 0) {
+    const closeoutRunOutPreExisted = await exists(closeoutRunOut);
     const closeoutRunArgv = [
       "node",
       "scripts/run-h2-closeout.mjs",
@@ -453,15 +492,53 @@ async function main() {
       closeoutRunArgv.push("--allow-incomplete-actions");
     }
 
-    closeoutRunCommand = await runCommand(closeoutRunArgv, {
-      timeoutMs: options.timeoutMs,
-      env: {
-        UNIFIED_RUNTIME_ENV_FILE: envFile,
-      },
-    });
+    if (closeoutRunOutPreExisted) {
+      closeoutRunCommand = {
+        argv: closeoutRunArgv,
+        code: 0,
+        signal: null,
+        stdout: "",
+        stderr: "",
+        durationMs: 0,
+        termination: "exit",
+      };
+    } else {
+      closeoutRunCommand = await runCommand(closeoutRunArgv, {
+        timeoutMs: options.timeoutMs,
+        env: {
+          UNIFIED_RUNTIME_ENV_FILE: envFile,
+        },
+      });
+    }
     closeoutRunPayload = await readJsonMaybe(closeoutRunOut);
+    const forceMissingCloseoutRunSimulationSignals = resolveBooleanCandidate(process.env, [
+      "UNIFIED_FORCE_MISSING_SIMULATION_STAGE_SIGNALS",
+      "UNIFIED_FORCE_MISSING_SUPERVISED_SIMULATION_STAGE_SIGNALS",
+    ]);
+    if (
+      forceMissingCloseoutRunSimulationSignals &&
+      closeoutRunPayload?.checks &&
+      typeof closeoutRunPayload.checks === "object"
+    ) {
+      closeoutRunPayload = {
+        ...closeoutRunPayload,
+        checks: {
+          ...closeoutRunPayload.checks,
+          supervisedSimulationStageGoalPolicyPropagationReported: false,
+          supervisedSimulationStageGoalPolicyPropagationPassed: false,
+          supervisedSimulationStageGoalPolicyPropagationPass: false,
+          supervisedSimulationStagePolicySignalsReported: false,
+          supervisedSimulationStagePolicySignalsPass: false,
+        },
+      };
+    }
+    closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
       failures.push("h2_closeout_run_failed");
+    } else if (!closeoutRunSimulationSignals.propagationReported) {
+      failures.push("h2_closeout_run_missing_supervised_stage_goal_policy");
+    } else if (!closeoutRunSimulationSignals.propagationPassed) {
+      failures.push("h2_closeout_run_supervised_stage_goal_policy_not_passed");
     }
   }
 
@@ -597,6 +674,11 @@ async function main() {
       evidenceSelectionMode,
       closeoutRunPass: closeoutRunPayload?.pass === true,
       closeoutGatePass: closeoutRunPayload?.checks?.h2CloseoutGatePass === true,
+      closeoutRunSupervisedSimulationPass: closeoutRunSimulationSignals.supervisedSimulationPass,
+      closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported:
+        closeoutRunSimulationSignals.propagationReported,
+      closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed:
+        closeoutRunSimulationSignals.propagationPassed,
       horizonPromotionPass: horizonPromotionPayload?.pass === true,
       horizonAdvanced: horizonPromotionPayload?.checks?.activeAdvanced === true,
       statusUpdated: horizonPromotionPayload?.checks?.statusUpdated === true,

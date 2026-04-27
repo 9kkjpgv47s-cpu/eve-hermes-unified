@@ -190,6 +190,40 @@ function isFinitePositiveNumber(value) {
   return Number.isFinite(value) && value > 0;
 }
 
+function resolveBooleanCandidate(checks, keys) {
+  for (const key of keys) {
+    if (checks?.[key] === true) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload) {
+  const checks =
+    closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
+      ? closeoutRunPayload.checks
+      : {};
+  const supervisedSimulationPass = resolveBooleanCandidate(checks, [
+    "supervisedSimulationPass",
+    "h2CloseoutGatePass",
+  ]);
+  const propagationPass = resolveBooleanCandidate(checks, [
+    "supervisedSimulationStageGoalPolicyPropagationPassed",
+    "supervisedSimulationStageGoalPolicyPropagationPass",
+    "supervisedSimulationStagePolicySignalsPass",
+  ]);
+  const propagationReported = resolveBooleanCandidate(checks, [
+    "supervisedSimulationStageGoalPolicyPropagationReported",
+    "supervisedSimulationStagePolicySignalsReported",
+  ]) || propagationPass;
+  return {
+    supervisedSimulationPass,
+    reported: propagationReported,
+    pass: propagationPass,
+  };
+}
+
 async function exists(targetPath) {
   if (!isNonEmptyString(targetPath)) {
     return false;
@@ -400,13 +434,22 @@ async function main() {
   }
 
   let closeoutRunPayload = null;
+  let closeoutRunStageGoalPolicySignals = { reported: false, pass: false };
   if (failures.length === 0 && closeoutRunFile.length > 0) {
     if (!(await exists(closeoutRunFile))) {
       failures.push(`missing_closeout_run_file:${closeoutRunFile}`);
     } else {
       closeoutRunPayload = await readJson(closeoutRunFile);
+      closeoutRunStageGoalPolicySignals = resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload);
       if (closeoutRunPayload?.pass !== true) {
         failures.push("closeout_run_not_passed");
+      }
+      if (sourceHorizon === "H2") {
+        if (!closeoutRunStageGoalPolicySignals.reported) {
+          failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported");
+        } else if (!closeoutRunStageGoalPolicySignals.pass) {
+          failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_passed");
+        }
       }
       const derivedCloseoutFile = String(closeoutRunPayload?.files?.closeoutOut ?? "").trim();
       if (!isNonEmptyString(derivedCloseoutFile)) {
@@ -713,6 +756,14 @@ async function main() {
       requireActiveNextHorizon: options.requireActiveNextHorizon,
       allowHorizonMismatch: options.allowHorizonMismatch,
       closeoutRunPass: closeoutRunPayload?.pass === true,
+      closeoutRunSupervisedSimulationPass:
+        closeoutRunPayload?.checks?.supervisedSimulationPass === true,
+      closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported:
+        closeoutRunStageGoalPolicySignals.reported,
+      closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed:
+        closeoutRunStageGoalPolicySignals.pass,
+      closeoutRunSupervisedSimulationStageGoalPolicyPropagationPass:
+        closeoutRunStageGoalPolicySignals.pass,
       requireProgressiveGoals: options.requireProgressiveGoals,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
       goalPolicySource: goalPolicySource.source,

@@ -741,6 +741,87 @@ describe("run-h2-promotion.mjs", () => {
     });
   });
 
+  it("fails when closeout run omits supervised simulation stage goal-policy propagation", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-missing-supervised-stage-policy.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-99999999999999.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            files: {
+              closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+            },
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: false,
+              supervisedSimulationStageGoalPolicyPropagationPassed: false,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--closeout-run-out",
+          closeoutRunPath,
+        ],
+        {
+          timeoutMs: 180_000,
+          env: {
+            UNIFIED_FORCE_MISSING_STAGE_DRILL_SIGNALS: "1",
+          },
+        },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported: boolean | null;
+          closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed: boolean | null;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported).toBe(
+        false,
+      );
+      expect(payload.checks.closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed).toBe(
+        false,
+      );
+      expect(payload.failures).toContain("h2_closeout_run_missing_supervised_stage_goal_policy");
+      expect(payload.failures).not.toContain("horizon_promotion_failed");
+    });
+  });
+
   it("auto-loads co-located GOAL_POLICIES.json when explicit flag is omitted", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");

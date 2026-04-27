@@ -82,6 +82,7 @@ async function seedEvidence(evidenceDir: string): Promise<{
           validationSummaryPassed: true,
           regressionPassed: true,
           cutoverReadinessPassed: true,
+          goalPolicyFileValidationPassed: true,
           requiredReleaseCommands: [],
           missingRequiredCommands: [],
           executedReleaseCommands: [],
@@ -208,6 +209,7 @@ async function seedEvidence(evidenceDir: string): Promise<{
         checks: {
           validationSummaryPassed: true,
           cutoverReadinessPassed: true,
+          goalPolicyFileValidationPassed: true,
           releaseReadinessPassed: true,
           mergeBundleValidationPassed: true,
           bundleVerificationPassed: true,

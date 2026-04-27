@@ -204,6 +204,12 @@ async function main() {
     registerRequiredInput("cutover-readiness", releaseReadiness.files.cutoverReadiness, true, "file");
     registerRequiredInput("failure-injection", releaseReadiness.files.failureInjection, true, "file");
     registerRequiredInput("soak", releaseReadiness.files.soak, true, "file");
+    registerRequiredInput(
+      "goal-policy-file-validation",
+      releaseReadiness.files.goalPolicyFileValidation,
+      true,
+      "file",
+    );
     registerRequiredInput("release-command-results", releaseReadiness.files.commandsFile, false, "file");
     registerRequiredInput("release-command-logs", releaseReadiness.files.commandLogDir, false, "directory");
   }
@@ -247,6 +253,11 @@ async function main() {
     ["cutover-readiness", releaseReadiness?.files?.cutoverReadiness, "artifacts/cutover-readiness.json"],
     ["failure-injection", releaseReadiness?.files?.failureInjection, "artifacts/failure-injection.txt"],
     ["soak", releaseReadiness?.files?.soak, "artifacts/soak.jsonl"],
+    [
+      "goal-policy-file-validation",
+      releaseReadiness?.files?.goalPolicyFileValidation,
+      "artifacts/goal-policy-file-validation.json",
+    ],
     ["release-command-results", releaseReadiness?.files?.commandsFile, "commands/commands.json"],
     ["master-checklist", initialScope?.checklistPath, "docs/MASTER_EXECUTION_CHECKLIST.md"],
   ];

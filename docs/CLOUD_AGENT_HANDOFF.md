@@ -71,6 +71,8 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:cutover-readiness`
 - `npm run validate:release-readiness`
 - `npm run validate:initial-scope`
+- strict release-readiness policy-file evidence gate:
+  - `UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_FILE_VALIDATION=1 npm run validate:release-readiness`
 - `npm run validate:merge-bundle`
 - `npm run validate:manifest-schemas`
 - `npm run verify:merge-bundle -- --evidence-dir evidence --latest`

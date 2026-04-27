@@ -94,6 +94,7 @@ async function seedEvidence(evidenceDir: string): Promise<void> {
           validationSummaryPassed: true,
           regressionPassed: true,
           cutoverReadinessPassed: true,
+          goalPolicyFileValidationPassed: true,
           commandLogsMissing: [],
           discoveredCommandLogs: [],
           requiredReleaseCommands: [],

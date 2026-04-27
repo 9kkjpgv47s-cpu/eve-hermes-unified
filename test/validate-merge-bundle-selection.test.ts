@@ -26,6 +26,7 @@ describe("validate-merge-bundle.sh report selection", () => {
       const cutoverPath = path.join(evidenceDir, "cutover-readiness-1.json");
       const failureInjectionPath = path.join(evidenceDir, "failure-injection-1.txt");
       const soakPath = path.join(evidenceDir, "soak-1.jsonl");
+      const goalPolicyValidationPath = path.join(evidenceDir, "goal-policy-file-validation-1.json");
       const commandLogDir = path.join(evidenceDir, "release-command-logs");
       const commandsFilePath = path.join(evidenceDir, "commands.json");
       const checklistPath = path.join(dir, "MASTER_EXECUTION_CHECKLIST.md");
@@ -41,6 +42,7 @@ describe("validate-merge-bundle.sh report selection", () => {
       await writeFile(cutoverPath, JSON.stringify({ pass: true }), "utf8");
       await writeFile(failureInjectionPath, "ok\n", "utf8");
       await writeFile(soakPath, "{}\n", "utf8");
+      await writeFile(goalPolicyValidationPath, JSON.stringify({ pass: true, failures: [] }), "utf8");
 
       const baseRelease = {
         readinessVersion: "v1",
@@ -53,6 +55,7 @@ describe("validate-merge-bundle.sh report selection", () => {
           cutoverReadiness: cutoverPath,
           failureInjection: failureInjectionPath,
           soak: soakPath,
+          goalPolicyFileValidation: goalPolicyValidationPath,
           commandLogDir,
           commandsFile: commandsFilePath,
         },
@@ -62,6 +65,7 @@ describe("validate-merge-bundle.sh report selection", () => {
           validationSummaryPassed: true,
           regressionPassed: true,
           cutoverReadinessPassed: true,
+          goalPolicyFileValidationPassed: true,
           commandLogsMissing: [],
           discoveredCommandLogs: [],
           requiredReleaseCommands: [],

@@ -24,6 +24,7 @@ describe("validate-merge-bundle.sh", () => {
       const cutoverPath = path.join(evidenceDir, "cutover-readiness-1.json");
       const failureInjectionPath = path.join(evidenceDir, "failure-injection-1.txt");
       const soakPath = path.join(evidenceDir, "soak-1.jsonl");
+      const goalPolicyValidationPath = path.join(evidenceDir, "goal-policy-file-validation-1.json");
       const commandsFilePath = path.join(evidenceDir, "commands.json");
       const commandLogDir = path.join(evidenceDir, "release-command-logs");
       const checklistPath = path.join(dir, "MASTER_EXECUTION_CHECKLIST.md");
@@ -39,6 +40,11 @@ describe("validate-merge-bundle.sh", () => {
       await writeFile(cutoverPath, JSON.stringify({ pass: true }), "utf8");
       await writeFile(failureInjectionPath, "failure report\n", "utf8");
       await writeFile(soakPath, "{}\n", "utf8");
+      await writeFile(
+        goalPolicyValidationPath,
+        JSON.stringify({ pass: true, failures: [] }, null, 2),
+        "utf8",
+      );
       await writeFile(path.join(commandLogDir, "check.log"), "ok\n", "utf8");
       await writeFile(
         commandsFilePath,
@@ -61,6 +67,7 @@ describe("validate-merge-bundle.sh", () => {
               cutoverReadiness: cutoverPath,
               failureInjection: failureInjectionPath,
               soak: soakPath,
+              goalPolicyFileValidation: goalPolicyValidationPath,
               commandsFile: commandsFilePath,
               commandLogDir,
             },

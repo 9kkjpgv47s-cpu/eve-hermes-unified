@@ -12,6 +12,7 @@ const REQUIRED_BUNDLE_FILES = [
   "artifacts/cutover-readiness.json",
   "artifacts/failure-injection.txt",
   "artifacts/soak.jsonl",
+  "artifacts/goal-policy-file-validation.json",
 ];
 
 function parseArgs(argv) {

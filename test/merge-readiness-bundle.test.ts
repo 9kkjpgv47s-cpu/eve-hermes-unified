@@ -24,6 +24,7 @@ describe("build-merge-readiness-bundle.mjs", () => {
       const cutoverPath = path.join(evidenceDir, "cutover-readiness-1.json");
       const failureInjectionPath = path.join(evidenceDir, "failure-injection-1.txt");
       const soakPath = path.join(evidenceDir, "soak-1.jsonl");
+      const goalPolicyValidationPath = path.join(evidenceDir, "goal-policy-file-validation-1.json");
       const commandsFilePath = path.join(evidenceDir, "command-results.json");
       const commandLogDir = path.join(evidenceDir, "command-logs");
       const checklistPath = path.join(dir, "MASTER_EXECUTION_CHECKLIST.md");
@@ -39,6 +40,7 @@ describe("build-merge-readiness-bundle.mjs", () => {
       await writeFile(cutoverPath, JSON.stringify({ pass: true }), "utf8");
       await writeFile(failureInjectionPath, "failure report\n", "utf8");
       await writeFile(soakPath, "{}\n", "utf8");
+      await writeFile(goalPolicyValidationPath, JSON.stringify({ pass: true }), "utf8");
       await writeFile(
         commandsFilePath,
         JSON.stringify(
@@ -61,6 +63,7 @@ describe("build-merge-readiness-bundle.mjs", () => {
               cutoverReadiness: cutoverPath,
               failureInjection: failureInjectionPath,
               soak: soakPath,
+              goalPolicyFileValidation: goalPolicyValidationPath,
               commandsFile: commandsFilePath,
               commandLogDir,
             },

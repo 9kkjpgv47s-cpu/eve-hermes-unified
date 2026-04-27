@@ -29,6 +29,7 @@ async function seedBundleFixture(rootDir: string): Promise<{
   const cutoverPath = path.join(evidenceDir, "cutover-readiness-1.json");
   const failureInjectionPath = path.join(evidenceDir, "failure-injection-1.txt");
   const soakPath = path.join(evidenceDir, "soak-1.jsonl");
+  const goalPolicyValidationPath = path.join(evidenceDir, "goal-policy-file-validation-1.json");
   const commandsFilePath = path.join(evidenceDir, "commands.json");
   const commandLogDir = path.join(evidenceDir, "release-command-logs");
   const checklistPath = path.join(rootDir, "MASTER_EXECUTION_CHECKLIST.md");
@@ -44,6 +45,11 @@ async function seedBundleFixture(rootDir: string): Promise<{
   await writeFile(cutoverPath, JSON.stringify({ pass: true }), "utf8");
   await writeFile(failureInjectionPath, "failure report\n", "utf8");
   await writeFile(soakPath, "{}\n", "utf8");
+  await writeFile(
+    goalPolicyValidationPath,
+    JSON.stringify({ pass: true, failures: [] }, null, 2),
+    "utf8",
+  );
   await writeFile(path.join(commandLogDir, "check.log"), "ok\n", "utf8");
   await writeFile(
     commandsFilePath,
@@ -69,6 +75,7 @@ async function seedBundleFixture(rootDir: string): Promise<{
           cutoverReadiness: cutoverPath,
           failureInjection: failureInjectionPath,
           soak: soakPath,
+          goalPolicyFileValidation: goalPolicyValidationPath,
           commandsFile: commandsFilePath,
           commandLogDir,
         },
@@ -78,6 +85,7 @@ async function seedBundleFixture(rootDir: string): Promise<{
           { name: "cutover-readiness", path: cutoverPath, present: true },
           { name: "failure-injection", path: failureInjectionPath, present: true },
           { name: "soak", path: soakPath, present: true },
+          { name: "goal-policy-file-validation", path: goalPolicyValidationPath, present: true },
         ],
         releaseCommandLogs: [
           { name: "check", command: "check", logFile: "check.log", status: "passed", exitCode: 0 },
@@ -86,6 +94,7 @@ async function seedBundleFixture(rootDir: string): Promise<{
           validationSummaryPassed: true,
           regressionPassed: true,
           cutoverReadinessPassed: true,
+          goalPolicyFileValidationPassed: true,
           commandLogsMissing: [],
           discoveredCommandLogs: ["check.log"],
           requiredReleaseCommands: ["check"],

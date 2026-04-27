@@ -11,6 +11,10 @@ function isStringOrNull(value) {
   return typeof value === "string" || value === null;
 }
 
+function isStringOrNullOrUndefined(value) {
+  return typeof value === "string" || value === null || value === undefined;
+}
+
 function pushError(errors, condition, message) {
   if (!condition) {
     errors.push(message);
@@ -88,11 +92,16 @@ export function validateReleaseReadinessManifest(payload) {
       "cutoverReadiness",
       "failureInjection",
       "soak",
+      "goalPolicyFileValidation",
       "commandLogDir",
       "commandsFile",
     ];
     for (const key of requiredFileKeys) {
-      pushError(errors, isStringOrNull(files[key]), `files.${key} must be string or null`);
+      pushError(
+        errors,
+        isStringOrNullOrUndefined(files[key]),
+        `files.${key} must be string, null, or undefined`,
+      );
     }
   }
 
@@ -122,6 +131,12 @@ export function validateReleaseReadinessManifest(payload) {
     for (const key of requiredBooleanChecks) {
       pushError(errors, typeof checks[key] === "boolean", `checks.${key} must be boolean`);
     }
+    pushError(
+      errors,
+      checks.goalPolicyFileValidationPassed === undefined
+        || typeof checks.goalPolicyFileValidationPassed === "boolean",
+      "checks.goalPolicyFileValidationPassed must be boolean or undefined",
+    );
     pushError(
       errors,
       Array.isArray(checks.requiredReleaseCommands),

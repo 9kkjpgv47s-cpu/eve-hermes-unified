@@ -8,6 +8,7 @@ mkdir -p "$OUT_DIR"
 SUMMARY_PATH="${UNIFIED_RELEASE_READINESS_SUMMARY_PATH:-${UNIFIED_RELEASE_READINESS_REPORT_PATH:-$OUT_DIR/release-readiness-$(date +%Y%m%d-%H%M%S).json}}"
 COMMAND_LOG_DIR="${UNIFIED_RELEASE_READINESS_COMMAND_LOG_DIR:-$OUT_DIR/release-readiness-command-logs-$(date +%Y%m%d-%H%M%S)}"
 COMMANDS_FILE="${UNIFIED_RELEASE_READINESS_COMMANDS_FILE:-$COMMAND_LOG_DIR/commands.json}"
+GOAL_POLICY_VALIDATION_REPORT_PATH="${UNIFIED_RELEASE_READINESS_GOAL_POLICY_VALIDATION_REPORT_PATH:-$OUT_DIR/goal-policy-file-validation-$(date +%Y%m%d-%H%M%S).json}"
 mkdir -p "$COMMAND_LOG_DIR"
 printf '[]\n' >"$COMMANDS_FILE"
 
@@ -107,6 +108,20 @@ else
   run_step "validate:cutover-readiness" npm --prefix "$ROOT_DIR" run validate:cutover-readiness
 fi
 
+if [[ "${UNIFIED_RELEASE_READINESS_RUN_GOAL_POLICY_FILE_VALIDATION:-1}" == "1" ]]; then
+  run_step \
+    "validate:goal-policy-file" \
+    node \
+    "$ROOT_DIR/scripts/validate-goal-policy-file.mjs" \
+    --horizon-status-file "$ROOT_DIR/docs/HORIZON_STATUS.json" \
+    --goal-policy-file "$ROOT_DIR/docs/GOAL_POLICIES.json" \
+    --source-horizon H2 \
+    --until-horizon H5 \
+    --require-tagged-requirements \
+    --require-positive-pending-min \
+    --out "$GOAL_POLICY_VALIDATION_REPORT_PATH"
+fi
+
 required_joined=""
 if [[ "${#required_command_names[@]}" -gt 0 ]]; then
   required_joined="$(printf "%s," "${required_command_names[@]}")"
@@ -118,6 +133,8 @@ node "$ROOT_DIR/scripts/release-readiness.mjs" \
   --out "$SUMMARY_PATH" \
   --command-log-dir "$COMMAND_LOG_DIR" \
   --commands-file "$COMMANDS_FILE" \
+  --goal-policy-file-validation-report "$GOAL_POLICY_VALIDATION_REPORT_PATH" \
+  $(if [[ "${UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_FILE_VALIDATION_REPORT:-1}" != "1" ]]; then printf '%s' "--allow-missing-goal-policy-file-validation-report"; fi) \
   $(if [[ -n "$required_joined" ]]; then printf '%s %s' "--required-command-names" "$required_joined"; fi)
 
 echo "Wrote $SUMMARY_PATH"

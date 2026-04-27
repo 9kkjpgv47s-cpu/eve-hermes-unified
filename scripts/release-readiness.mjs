@@ -10,6 +10,8 @@ function parseArgs(argv) {
     commandLogDir: "",
     commandsFile: "",
     requiredCommandNames: "",
+    goalPolicyFileValidationReport: "",
+    requireGoalPolicyFileValidationReport: true,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -29,6 +31,22 @@ function parseArgs(argv) {
     } else if (arg === "--required-command-names") {
       options.requiredCommandNames = value ?? "";
       i += 1;
+    } else if (
+      arg === "--goal-policy-file-validation-report" ||
+      arg === "--goal-policy-validation-report"
+    ) {
+      options.goalPolicyFileValidationReport = value ?? "";
+      i += 1;
+    } else if (
+      arg === "--require-goal-policy-file-validation-report" ||
+      arg === "--require-goal-policy-validation-report"
+    ) {
+      options.requireGoalPolicyFileValidationReport = true;
+    } else if (
+      arg === "--allow-missing-goal-policy-file-validation-report" ||
+      arg === "--allow-missing-goal-policy-validation-report"
+    ) {
+      options.requireGoalPolicyFileValidationReport = false;
     }
   }
   if (!options.evidenceDir) {
@@ -41,6 +59,18 @@ async function newestFileInDir(dir, prefix) {
   const entries = await readdir(dir, { withFileTypes: true });
   const matches = entries
     .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .map((entry) => path.join(dir, entry.name));
+  if (matches.length === 0) {
+    return null;
+  }
+  matches.sort();
+  return matches[matches.length - 1];
+}
+
+async function newestFileWithPrefixes(dir, prefixes) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const matches = entries
+    .filter((entry) => entry.isFile() && prefixes.some((prefix) => entry.name.startsWith(prefix)))
     .map((entry) => path.join(dir, entry.name));
   if (matches.length === 0) {
     return null;
@@ -121,12 +151,33 @@ function commandId(entry) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  const requireGoalPolicyFileValidationReportFromEnv =
+    process.env.UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_FILE_VALIDATION_REPORT;
+  if (
+    typeof requireGoalPolicyFileValidationReportFromEnv === "string" &&
+    requireGoalPolicyFileValidationReportFromEnv.trim().length > 0
+  ) {
+    options.requireGoalPolicyFileValidationReport =
+      requireGoalPolicyFileValidationReportFromEnv.trim() !== "0";
+  }
   const evidenceDir = path.resolve(options.evidenceDir);
   const validationSummaryPath = await newestFileInDir(evidenceDir, "validation-summary-");
   const regressionPath = await newestFileInDir(evidenceDir, "regression-eve-primary-");
   const cutoverPath = await newestFileInDir(evidenceDir, "cutover-readiness-");
   const failureInjectionPath = await newestFileInDir(evidenceDir, "failure-injection-");
   const soakPath = await newestFileInDir(evidenceDir, "soak-");
+  const explicitGoalPolicyValidationPath = options.goalPolicyFileValidationReport
+    ? path.resolve(options.goalPolicyFileValidationReport)
+    : "";
+  const discoveredGoalPolicyValidationPath = explicitGoalPolicyValidationPath
+    || (await newestFileWithPrefixes(evidenceDir, [
+      "goal-policy-file-validation-",
+      "goal-policy-validation-",
+    ]))
+    || ((await exists(path.join(evidenceDir, "goal-policy-file-validation.json")))
+      ? path.join(evidenceDir, "goal-policy-file-validation.json")
+      : null);
+  const goalPolicyValidationPath = discoveredGoalPolicyValidationPath || null;
 
   const failures = [];
   if (!validationSummaryPath) {
@@ -144,17 +195,26 @@ async function main() {
   if (!soakPath) {
     failures.push("missing_soak_report");
   }
+  if (options.requireGoalPolicyFileValidationReport && !goalPolicyValidationPath) {
+    failures.push("missing_goal_policy_file_validation_report");
+  }
   const requiredArtifacts = [
     { name: "validation-summary", path: validationSummaryPath, present: Boolean(validationSummaryPath) },
     { name: "regression-eve-primary", path: regressionPath, present: Boolean(regressionPath) },
     { name: "cutover-readiness", path: cutoverPath, present: Boolean(cutoverPath) },
     { name: "failure-injection", path: failureInjectionPath, present: Boolean(failureInjectionPath) },
     { name: "soak", path: soakPath, present: Boolean(soakPath) },
+    {
+      name: "goal-policy-file-validation",
+      path: goalPolicyValidationPath,
+      present: Boolean(goalPolicyValidationPath),
+    },
   ];
 
   let validationSummary = null;
   let regressionSummary = null;
   let cutoverSummary = null;
+  let goalPolicyValidationSummary = null;
   if (validationSummaryPath) {
     validationSummary = await readJson(validationSummaryPath);
     if (!validationSummary?.gates?.passed) {
@@ -174,6 +234,12 @@ async function main() {
     cutoverSummary = await readJson(cutoverPath);
     if (!cutoverSummary?.pass) {
       failures.push("cutover_readiness_failed");
+    }
+  }
+  if (goalPolicyValidationPath) {
+    goalPolicyValidationSummary = await readJson(goalPolicyValidationPath);
+    if (goalPolicyValidationSummary?.pass !== true) {
+      failures.push("goal_policy_file_validation_failed");
     }
   }
 
@@ -241,6 +307,7 @@ async function main() {
       cutoverReadiness: cutoverPath,
       failureInjection: failureInjectionPath,
       soak: soakPath,
+      goalPolicyFileValidation: goalPolicyValidationPath,
       commandLogDir: options.commandLogDir || null,
       commandsFile: options.commandsFile || null,
     },
@@ -252,6 +319,8 @@ async function main() {
         regressionSummary?.pass === true || regressionSummary?.passed === true,
       ),
       cutoverReadinessPassed: Boolean(cutoverSummary?.pass),
+      requireGoalPolicyFileValidationReport: options.requireGoalPolicyFileValidationReport,
+      goalPolicyFileValidationPassed: goalPolicyValidationSummary?.pass === true,
       commandLogsMissing: commandLogs.missing,
       discoveredCommandLogs: commandLogs.discovered,
       requiredReleaseCommands,

@@ -357,6 +357,20 @@ function resolveCloseoutArtifactTransition(closeoutPayload) {
   };
 }
 
+function resolveTransitionAlignmentSignals(closeoutRunTransition, closeoutArtifactTransition) {
+  const sourceComparable =
+    closeoutRunTransition.sourceReported && closeoutArtifactTransition.sourceReported;
+  const nextComparable = closeoutRunTransition.nextReported && closeoutArtifactTransition.nextReported;
+  return {
+    sourceComparable,
+    nextComparable,
+    sourceAligned:
+      sourceComparable && closeoutRunTransition.source === closeoutArtifactTransition.source,
+    nextAligned:
+      nextComparable && closeoutRunTransition.next === closeoutArtifactTransition.next,
+  };
+}
+
 function stamp() {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
 }
@@ -550,6 +564,12 @@ async function main() {
     sourceMatches: false,
     nextMatches: false,
   };
+  let closeoutTransitionAlignment = {
+    sourceComparable: false,
+    nextComparable: false,
+    sourceAligned: false,
+    nextAligned: false,
+  };
   let closeoutRunSimulationSignals = {
     h2CloseoutGateReported: false,
     h2CloseoutGatePass: false,
@@ -686,6 +706,10 @@ async function main() {
           ? closeoutArtifactResolved.next === nextHorizon
           : false,
       };
+      closeoutTransitionAlignment = resolveTransitionAlignmentSignals(
+        closeoutRunTransition,
+        closeoutArtifactTransition,
+      );
       if (!closeoutArtifactPayload) {
         failures.push("h2_closeout_run_closeout_artifact_missing");
       } else if (!closeoutArtifactPass) {
@@ -698,6 +722,14 @@ async function main() {
         failures.push("h2_closeout_run_closeout_artifact_horizon_next_not_reported");
       } else if (!closeoutArtifactTransition.nextMatches) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_next_mismatch");
+      } else if (!closeoutTransitionAlignment.sourceComparable) {
+        failures.push("h2_closeout_run_transition_source_alignment_not_comparable");
+      } else if (!closeoutTransitionAlignment.sourceAligned) {
+        failures.push("h2_closeout_run_transition_source_misaligned");
+      } else if (!closeoutTransitionAlignment.nextComparable) {
+        failures.push("h2_closeout_run_transition_next_alignment_not_comparable");
+      } else if (!closeoutTransitionAlignment.nextAligned) {
+        failures.push("h2_closeout_run_transition_next_misaligned");
       } else if (!closeoutRunSimulationSignals.h2CloseoutGateReported) {
         failures.push("h2_closeout_run_gate_not_reported");
       } else if (!closeoutRunSimulationSignals.h2CloseoutGatePass) {
@@ -861,6 +893,18 @@ async function main() {
         closeoutArtifactTransition.sourceReported ? closeoutArtifactTransition.sourceMatches : null,
       closeoutRunCloseoutArtifactHorizonNextMatches:
         closeoutArtifactTransition.nextReported ? closeoutArtifactTransition.nextMatches : null,
+      closeoutRunTransitionSourceAlignmentComparable:
+        closeoutTransitionAlignment.sourceComparable,
+      closeoutRunTransitionSourceAligned:
+        closeoutTransitionAlignment.sourceComparable
+          ? closeoutTransitionAlignment.sourceAligned
+          : null,
+      closeoutRunTransitionNextAlignmentComparable:
+        closeoutTransitionAlignment.nextComparable,
+      closeoutRunTransitionNextAligned:
+        closeoutTransitionAlignment.nextComparable
+          ? closeoutTransitionAlignment.nextAligned
+          : null,
       closeoutRunH2CloseoutGateReported: closeoutRunSimulationSignals.h2CloseoutGateReported,
       closeoutRunH2CloseoutGatePass: closeoutRunSimulationSignals.h2CloseoutGatePass,
       closeoutRunSupervisedSimulationPass: closeoutRunSimulationSignals.supervisedSimulationPass,

@@ -197,6 +197,7 @@ Schema validation expectations:
     - rejects when pinned closeout artifact file is missing
     - rejects when pinned closeout artifact `pass !== true`
     - rejects when pinned closeout artifact transition metadata does not match expected `H2-><next>`
+    - rejects when closeout-run and pinned closeout artifact transitions disagree, even if each individually appears valid
   - fail-closed pre-promotion closeout-run transition checks:
     - rejects when closeout-run does not report resolvable source horizon metadata
     - rejects when closeout-run does not report resolvable next-horizon metadata

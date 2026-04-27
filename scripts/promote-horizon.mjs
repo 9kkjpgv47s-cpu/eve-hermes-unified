@@ -284,7 +284,10 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
   };
 }
 
-function resolveCloseoutRunCloseoutPathSignals(closeoutRunPayload) {
+function resolveCloseoutRunCloseoutPathSignals(closeoutRunPayload, closeoutRunPath = "") {
+  const baseDir = isNonEmptyString(closeoutRunPath)
+    ? path.dirname(path.resolve(closeoutRunPath))
+    : process.cwd();
   const files =
     closeoutRunPayload?.files && typeof closeoutRunPayload.files === "object"
       ? closeoutRunPayload.files
@@ -302,7 +305,7 @@ function resolveCloseoutRunCloseoutPathSignals(closeoutRunPayload) {
       return {
         key: entry.key,
         raw: trimmed,
-        resolved: path.resolve(trimmed),
+        resolved: path.isAbsolute(trimmed) ? path.resolve(trimmed) : path.resolve(baseDir, trimmed),
       };
     })
     .filter(Boolean);
@@ -596,7 +599,7 @@ async function main() {
         sourceHorizon,
         nextHorizon,
       );
-      closeoutRunPathSignals = resolveCloseoutRunCloseoutPathSignals(closeoutRunPayload);
+      closeoutRunPathSignals = resolveCloseoutRunCloseoutPathSignals(closeoutRunPayload, closeoutRunFile);
       closeoutRunH2CloseoutGate = resolveCloseoutRunH2CloseoutGate(closeoutRunPayload);
       closeoutRunStageGoalPolicySignals = resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload);
       if (closeoutRunPayload?.pass !== true) {

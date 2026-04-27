@@ -307,15 +307,20 @@ function firstNonEmptyString(values) {
   return "";
 }
 
-function resolveCloseoutRunCloseoutArtifactPath(closeoutRunPayload) {
+function resolveCloseoutRunCloseoutArtifactPath(closeoutRunPayload, closeoutRunManifestPath = "") {
   const files =
     closeoutRunPayload?.files && typeof closeoutRunPayload.files === "object"
       ? closeoutRunPayload.files
       : {};
+  const manifestBaseDir = isNonEmptyString(closeoutRunManifestPath)
+    ? path.dirname(path.resolve(closeoutRunManifestPath))
+    : process.cwd();
   const rawCandidates = [files.closeoutOut, files.closeoutFile, closeoutRunPayload?.closeoutOut]
     .map((value) => (isNonEmptyString(value) ? String(value).trim() : ""))
     .filter((value) => value.length > 0);
-  const resolvedCandidates = Array.from(new Set(rawCandidates.map((candidate) => path.resolve(candidate))));
+  const resolvedCandidates = Array.from(
+    new Set(rawCandidates.map((candidate) => path.resolve(manifestBaseDir, candidate))),
+  );
   return {
     path: resolvedCandidates[0] ?? "",
     reported: resolvedCandidates.length > 0,
@@ -688,7 +693,10 @@ async function main() {
       };
     }
     closeoutRunTransition = resolveCloseoutRunTransition(closeoutRunPayload, "H2", nextHorizon);
-    closeoutArtifactReference = resolveCloseoutRunCloseoutArtifactPath(closeoutRunPayload);
+    closeoutArtifactReference = resolveCloseoutRunCloseoutArtifactPath(
+      closeoutRunPayload,
+      closeoutRunOut,
+    );
     closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
       failures.push("h2_closeout_run_failed");

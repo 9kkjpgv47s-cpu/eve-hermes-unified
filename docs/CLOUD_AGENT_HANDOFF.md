@@ -196,6 +196,7 @@ Schema validation expectations:
   - optional `--strict-goal-policy-gates` (alias: `--require-strict-goal-policy-gates`) to enforce the full strict policy profile with one flag
   - fail-closed pre-promotion closeout artifact checks:
     - runner rejects closeout-run manifests that report conflicting closeout artifact path aliases
+    - runner resolves relative closeout artifact aliases relative to the closeout-run manifest directory
     - runner validates `closeoutOut` referenced by closeout-run before invoking `promote:horizon`
     - rejects when pinned closeout artifact file is missing
     - rejects when pinned closeout artifact `pass !== true`

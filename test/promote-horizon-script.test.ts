@@ -921,6 +921,97 @@ describe("promote-horizon.mjs", () => {
     });
   });
 
+  it("resolves relative closeout artifact paths against closeout-run manifest directory", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+
+      const runBundleDir = path.join(dir, "bundle");
+      const nestedEvidenceDir = path.join(runBundleDir, "evidence");
+      await mkdir(nestedEvidenceDir, { recursive: true });
+      const closeoutPath = path.join(nestedEvidenceDir, "horizon-closeout-H2-relative.json");
+      await writeFile(
+        closeoutPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            closeout: {
+              horizon: "H2",
+              nextHorizon: "H3",
+            },
+            checks: {
+              nextHorizon: {
+                selectedNextHorizon: "H3",
+              },
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const closeoutRunPath = path.join(runBundleDir, "h2-closeout-run-relative.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H2",
+              next: "H3",
+            },
+            files: {
+              closeoutOut: "evidence/horizon-closeout-H2-relative.json",
+            },
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-run-file",
+          closeoutRunPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      if (result.code !== 0) {
+        throw new Error(
+          `promote-horizon relative closeout path expected success, got ${String(result.code)}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        );
+      }
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { closeoutFile: string };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.closeoutFile).toBe(closeoutPath);
+    });
+  });
+
   it("fails when pinned closeout report transition does not match promotion request", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");

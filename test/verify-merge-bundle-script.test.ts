@@ -270,4 +270,111 @@ describe("verify-merge-bundle.mjs", () => {
       expect(payload.files.bundleArchivePath).toContain("merge-readiness-bundle-1.tar.gz");
     });
   });
+
+  it("resolves bundle manifest from validation manifest path", async () => {
+    await withTempDir(async (dir) => {
+      const fixture = await seedBundleFixture(dir);
+      const validationManifestPath = path.join(fixture.evidenceDir, "merge-bundle-validation-1.json");
+      await writeFile(
+        validationManifestPath,
+        JSON.stringify(
+          {
+            pass: true,
+            files: {
+              bundleManifestPath: fixture.bundleManifestPath,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const outputPath = path.join(fixture.evidenceDir, "merge-bundle-verify-from-validation.json");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/verify-merge-bundle.mjs",
+          "--validation-manifest",
+          validationManifestPath,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          validationManifestResolved: boolean;
+        };
+        files: {
+          validationManifestPath: string | null;
+          bundleManifestPath: string | null;
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.failures).toEqual([]);
+      expect(payload.checks.validationManifestResolved).toBe(true);
+      expect(payload.files.validationManifestPath).toBe(validationManifestPath);
+      expect(payload.files.bundleManifestPath).toBe(fixture.bundleManifestPath);
+    });
+  });
+
+  it("resolves latest bundle alias with --latest", async () => {
+    await withTempDir(async (dir) => {
+      const fixture = await seedBundleFixture(dir);
+      const latestAliasDir = path.join(fixture.evidenceDir, "merge-readiness-bundle-latest");
+      const latestAliasArchive = path.join(fixture.evidenceDir, "merge-readiness-bundle-latest.tar.gz");
+
+      const aliasResult = await runCommandWithTimeout(
+        [
+          "bash",
+          "-lc",
+          `cp -R "${fixture.bundleDir}" "${latestAliasDir}" && cp "${fixture.archivePath}" "${latestAliasArchive}" && cp "${fixture.bundleManifestPath}" "${latestAliasDir}/merge-readiness-manifest.json"`,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(aliasResult.code).toBe(0);
+
+      const outputPath = path.join(fixture.evidenceDir, "merge-bundle-verify-latest.json");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/verify-merge-bundle.mjs",
+          "--evidence-dir",
+          fixture.evidenceDir,
+          "--latest",
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      if (result.code !== 0) {
+        throw new Error(
+          `verify-merge-bundle --latest expected success, got ${String(result.code)}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        );
+      }
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          latestAliasResolved: boolean;
+        };
+        files: {
+          bundleDir: string | null;
+          bundleArchivePath: string | null;
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.failures).toEqual([]);
+      expect(payload.checks.latestAliasResolved).toBe(true);
+      expect(payload.files.bundleDir).toBe(latestAliasDir);
+      expect(payload.files.bundleArchivePath).toBe(latestAliasArchive);
+    });
+  });
 });

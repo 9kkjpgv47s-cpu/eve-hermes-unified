@@ -80,7 +80,8 @@ Before marking a phase complete, include artifacts from:
 - `npm run validate:merge-bundle`
 - `npm run bundle:merge-readiness` (writes timestamped `merge-readiness-bundle-*` dir + archive)
 - `npm run validate:manifest-schemas`
-- `npm run verify:merge-bundle -- --bundle-manifest evidence/merge-readiness-bundle-<timestamp>/merge-readiness-manifest.json`
+- `npm run verify:merge-bundle -- --latest`
+  - optional explicit pin: `npm run verify:merge-bundle -- --bundle-manifest evidence/merge-readiness-bundle-<timestamp>/merge-readiness-manifest.json`
 - `npm run validate:horizon-status`
 - `npm run validate:horizon-closeout -- --horizon H1 --target-next H2`
 - `npm run validate:h2-closeout`

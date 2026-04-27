@@ -20,9 +20,11 @@ function parseArgs(argv) {
     evidenceDir: "",
     bundleDir: "",
     bundleManifest: "",
+    validationManifest: "",
     archive: "",
     out: "",
     requireArchive: true,
+    latest: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -36,6 +38,9 @@ function parseArgs(argv) {
     } else if (arg === "--bundle-manifest") {
       options.bundleManifest = value ?? "";
       index += 1;
+    } else if (arg === "--validation-manifest") {
+      options.validationManifest = value ?? "";
+      index += 1;
     } else if (arg === "--archive") {
       options.archive = value ?? "";
       index += 1;
@@ -44,6 +49,8 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--no-require-archive") {
       options.requireArchive = false;
+    } else if (arg === "--latest") {
+      options.latest = true;
     }
   }
   return options;
@@ -106,6 +113,15 @@ async function newestBundleDirectory(evidenceDir) {
   return directories.length > 0 ? directories[directories.length - 1] : "";
 }
 
+async function newestFileInDir(evidenceDir, prefix) {
+  const entries = await readdir(evidenceDir, { withFileTypes: true });
+  const files = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .map((entry) => path.join(evidenceDir, entry.name))
+    .sort();
+  return files.length > 0 ? files[files.length - 1] : "";
+}
+
 async function readJson(targetPath) {
   const raw = await readFile(targetPath, "utf8");
   return JSON.parse(raw);
@@ -142,14 +158,50 @@ async function listTarEntries(archivePath) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const evidenceDir = resolveMaybePath(options.evidenceDir) || path.resolve(process.cwd(), "evidence");
+  const requestedValidationManifestPath = resolveMaybePath(options.validationManifest);
   const requestedBundleDir = resolveMaybePath(options.bundleDir);
   const requestedManifestPath = resolveMaybePath(options.bundleManifest);
-  const selectedBundleDir =
-    requestedBundleDir ||
-    (requestedManifestPath ? path.dirname(requestedManifestPath) : await newestBundleDirectory(evidenceDir));
-  const selectedManifestPath =
-    requestedManifestPath ||
-    (selectedBundleDir ? path.join(selectedBundleDir, "merge-readiness-manifest.json") : "");
+  const requestedLatest = options.latest;
+  const latestBundleAliasDir = path.join(evidenceDir, "merge-readiness-bundle-latest");
+  const latestBundleAliasManifestPath = path.join(
+    latestBundleAliasDir,
+    "merge-readiness-manifest.json",
+  );
+  const latestValidationManifestPath = await newestFileInDir(evidenceDir, "merge-bundle-validation-");
+  let selectedBundleDir = requestedBundleDir;
+  let selectedManifestPath = requestedManifestPath;
+  if (!selectedBundleDir && !selectedManifestPath) {
+    if (requestedLatest) {
+      selectedBundleDir = latestBundleAliasDir;
+      selectedManifestPath = latestBundleAliasManifestPath;
+    } else if (requestedValidationManifestPath && (await isFile(requestedValidationManifestPath))) {
+      const validationPayload = await readJson(requestedValidationManifestPath);
+      const candidateFromValidation = resolveMaybePath(validationPayload?.files?.bundleManifestPath);
+      if (candidateFromValidation) {
+        selectedManifestPath = candidateFromValidation;
+        selectedBundleDir = path.dirname(candidateFromValidation);
+      }
+    }
+  }
+  if (!selectedBundleDir && !selectedManifestPath && latestValidationManifestPath) {
+    const latestValidationPayload = await readJson(latestValidationManifestPath);
+    const candidateFromValidation = resolveMaybePath(latestValidationPayload?.files?.bundleManifestPath);
+    if (candidateFromValidation) {
+      selectedManifestPath = candidateFromValidation;
+      selectedBundleDir = path.dirname(candidateFromValidation);
+    }
+  }
+  if (!selectedBundleDir && !selectedManifestPath) {
+    selectedBundleDir = await newestBundleDirectory(evidenceDir);
+  }
+  if (!selectedManifestPath) {
+    selectedManifestPath = selectedBundleDir
+      ? path.join(selectedBundleDir, "merge-readiness-manifest.json")
+      : "";
+  }
+  if (!selectedBundleDir && selectedManifestPath) {
+    selectedBundleDir = path.dirname(selectedManifestPath);
+  }
   const outPath =
     resolveMaybePath(options.out) || path.join(evidenceDir, `bundle-verification-${nowStamp()}.json`);
 
@@ -157,6 +209,8 @@ async function main() {
   const checks = {
     manifestSchemaValid: false,
     bundleManifestPass: false,
+    validationManifestResolved: false,
+    latestAliasResolved: false,
     releaseReadinessSchemaValid: false,
     releaseReadinessPass: false,
     releaseGoalPolicyValidationReported: false,
@@ -178,6 +232,13 @@ async function main() {
   }
 
   let bundleManifest = null;
+  checks.validationManifestResolved = Boolean(
+    requestedValidationManifestPath && selectedManifestPath,
+  );
+  checks.latestAliasResolved =
+    requestedLatest &&
+    selectedBundleDir === latestBundleAliasDir &&
+    selectedManifestPath === latestBundleAliasManifestPath;
   if (await isFile(selectedManifestPath)) {
     bundleManifest = await readJson(selectedManifestPath);
     const schema = validateManifestSchema("merge-bundle", bundleManifest);
@@ -292,7 +353,9 @@ async function main() {
   const derivedArchivePath = selectedBundleDir ? `${selectedBundleDir}.tar.gz` : "";
   let selectedArchivePath = explicitArchivePath;
   if (!selectedArchivePath) {
-    if (await isFile(manifestArchivePath)) {
+    if (requestedLatest && (await isFile(derivedArchivePath))) {
+      selectedArchivePath = derivedArchivePath;
+    } else if (await isFile(manifestArchivePath)) {
       selectedArchivePath = manifestArchivePath;
     } else if (await isFile(derivedArchivePath)) {
       selectedArchivePath = derivedArchivePath;
@@ -306,13 +369,19 @@ async function main() {
       failures.push("missing_bundle_archive");
     } else {
       const archiveEntries = await listTarEntries(selectedArchivePath);
-      const archiveRoot = path.basename(selectedBundleDir);
-      const requiredArchiveEntries = REQUIRED_BUNDLE_FILES.map(
-        (relativePath) => `${archiveRoot}/${relativePath}`,
+      const archiveRoots = Array.from(
+        new Set([
+          path.basename(selectedBundleDir),
+          path.basename(resolveMaybePath(bundleManifest?.bundleDir)),
+        ].filter((value) => value.length > 0)),
+      );
+      const requiredArchiveEntries = REQUIRED_BUNDLE_FILES.map((relativePath) =>
+        archiveRoots.map((root) => `${root}/${relativePath}`),
       );
       for (const requiredEntry of requiredArchiveEntries) {
-        if (!archiveEntries.includes(requiredEntry)) {
-          checks.archiveMissingEntries.push(requiredEntry);
+        const anyRootMatches = requiredEntry.some((candidate) => archiveEntries.includes(candidate));
+        if (!anyRootMatches) {
+          checks.archiveMissingEntries.push(requiredEntry[0]);
         }
       }
       if (checks.archiveMissingEntries.length > 0) {
@@ -330,6 +399,7 @@ async function main() {
       bundleDir: selectedBundleDir || null,
       bundleManifestPath: selectedManifestPath || null,
       bundleArchivePath: selectedArchivePath || null,
+      validationManifestPath: requestedValidationManifestPath || latestValidationManifestPath || null,
     },
     checks,
     failures,

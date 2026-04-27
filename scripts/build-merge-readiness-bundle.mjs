@@ -195,6 +195,7 @@ async function main() {
   const manifestPath = path.resolve(
     options.manifestOut || path.join(bundleDir, "merge-readiness-manifest.json"),
   );
+  const canonicalBundleManifestPath = path.join(bundleDir, "merge-readiness-manifest.json");
 
   const failures = [];
   const copiedArtifacts = [];
@@ -375,9 +376,19 @@ async function main() {
 
   await mkdir(path.dirname(manifestPath), { recursive: true });
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  if (path.resolve(manifestPath) !== path.resolve(canonicalBundleManifestPath)) {
+    await mkdir(path.dirname(canonicalBundleManifestPath), { recursive: true });
+    await writeFile(canonicalBundleManifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  }
 
   if (manifest.pass) {
     await runTarArchive(bundleDir, archivePath);
+    const latestAliasDir = path.join(evidenceDir, "merge-readiness-bundle-latest");
+    const latestAliasArchive = path.join(evidenceDir, "merge-readiness-bundle-latest.tar.gz");
+    await rm(latestAliasDir, { recursive: true, force: true });
+    await rm(latestAliasArchive, { force: true });
+    await cp(bundleDir, latestAliasDir, { recursive: true });
+    await cp(archivePath, latestAliasArchive);
   }
 
   process.stdout.write(`${manifestPath}\n`);

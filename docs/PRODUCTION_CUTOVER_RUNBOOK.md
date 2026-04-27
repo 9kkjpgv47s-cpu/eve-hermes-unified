@@ -113,6 +113,14 @@ npm run verify:merge-bundle -- \
   --archive /tmp/unified-evidence/evidence/merge-readiness-bundle-<stamp>.tar.gz
 ```
 
+Convenience mode (resolves latest passing bundle directly from validation manifest):
+
+```bash
+npm run verify:merge-bundle -- \
+  --evidence-dir /tmp/unified-evidence/evidence \
+  --validation-manifest /tmp/unified-evidence/evidence/merge-bundle-validation-<stamp>.json
+```
+
 Shortcut for local operator reruns:
 
 ```bash

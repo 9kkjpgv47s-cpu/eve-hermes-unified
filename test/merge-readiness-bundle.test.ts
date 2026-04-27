@@ -123,6 +123,18 @@ describe("build-merge-readiness-bundle.mjs", () => {
       expect(manifest.pass).toBe(true);
       expect(manifest.archivePath).toBe(archivePath);
       expect(manifest.failures).toEqual([]);
+      const latestAliasManifestPath = path.join(
+        evidenceDir,
+        "merge-readiness-bundle-latest",
+        "merge-readiness-manifest.json",
+      );
+      const latestAliasArchivePath = path.join(evidenceDir, "merge-readiness-bundle-latest.tar.gz");
+      const latestAliasManifest = JSON.parse(await readFile(latestAliasManifestPath, "utf8")) as {
+        pass: boolean;
+      };
+      expect(latestAliasManifest.pass).toBe(true);
+      const latestAliasArchiveStat = await readFile(latestAliasArchivePath);
+      expect(latestAliasArchiveStat.length).toBeGreaterThan(0);
     });
   });
 

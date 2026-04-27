@@ -366,6 +366,39 @@ async function seedEnvFile(filePath: string): Promise<void> {
   );
 }
 
+async function seedCloseoutArtifact(
+  evidenceDir: string,
+  options?: { pass?: boolean; horizon?: string; nextHorizon?: string },
+): Promise<string> {
+  const closeoutPath = path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json");
+  await writeFile(
+    closeoutPath,
+    JSON.stringify(
+      {
+        generatedAtIso: new Date().toISOString(),
+        pass: options?.pass ?? true,
+        closeout: {
+          horizon: options?.horizon ?? "H2",
+          nextHorizon: options?.nextHorizon ?? "H3",
+          canCloseHorizon: options?.pass ?? true,
+          canStartNextHorizon: false,
+        },
+        checks: {
+          horizonValidationPass: true,
+          nextHorizon: {
+            selectedNextHorizon: options?.nextHorizon ?? "H3",
+          },
+        },
+        failures: options?.pass === false ? ["synthetic_closeout_failure"] : [],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+  return closeoutPath;
+}
+
 async function seedGoalPolicyFile(goalPolicyPath: string): Promise<void> {
   await writeFile(
     goalPolicyPath,
@@ -751,6 +784,22 @@ describe("run-h2-promotion.mjs", () => {
       await seedSharedEvidence(evidenceDir);
       await seedHorizonStatus(statusPath);
       await seedEnvFile(envPath);
+      await writeFile(
+        path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            closeout: {
+              horizon: "H2",
+              nextHorizon: "H3",
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
 
       const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-99999999999999.json");
       await writeFile(
@@ -832,6 +881,22 @@ describe("run-h2-promotion.mjs", () => {
       await seedSharedEvidence(evidenceDir);
       await seedHorizonStatus(statusPath);
       await seedEnvFile(envPath);
+      await writeFile(
+        path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            closeout: {
+              horizon: "H2",
+              nextHorizon: "H3",
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
 
       const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-88888888888888.json");
       await writeFile(
@@ -904,6 +969,22 @@ describe("run-h2-promotion.mjs", () => {
       await seedSharedEvidence(evidenceDir);
       await seedHorizonStatus(statusPath);
       await seedEnvFile(envPath);
+      await writeFile(
+        path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            closeout: {
+              horizon: "H2",
+              nextHorizon: "H3",
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
 
       const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-99999999999997.json");
       await writeFile(
@@ -966,6 +1047,178 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.closeoutRunHorizonSourceMatches).toBe(true);
       expect(payload.checks.closeoutRunHorizonNextMatches).toBe(false);
       expect(payload.failures).toContain("h2_closeout_run_horizon_next_mismatch");
+      expect(payload.failures).not.toContain("horizon_promotion_failed");
+    });
+  });
+
+  it("fails when closeout run references missing closeout artifact", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-missing-closeout-artifact.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-99999999999996.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H2",
+              next: "H3",
+            },
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+            },
+            files: {
+              closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-missing.json"),
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--closeout-run-out",
+          closeoutRunPath,
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          closeoutRunCloseoutArtifactPass: boolean | null;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunCloseoutArtifactPass).toBe(null);
+      expect(payload.failures).toContain("h2_closeout_run_closeout_artifact_missing");
+      expect(payload.failures).not.toContain("horizon_promotion_failed");
+    });
+  });
+
+  it("fails when closeout artifact transition metadata mismatches requested transition", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-mismatched-closeout-artifact.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+
+      const mismatchedCloseoutPath = path.join(evidenceDir, "horizon-closeout-H2-20260426-mismatch.json");
+      await writeFile(
+        mismatchedCloseoutPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            closeout: {
+              horizon: "H2",
+              nextHorizon: "H4",
+            },
+            checks: {
+              nextHorizon: {
+                selectedNextHorizon: "H4",
+              },
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-99999999999995.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H2",
+              next: "H3",
+            },
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+            },
+            files: {
+              closeoutOut: mismatchedCloseoutPath,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--closeout-run-out",
+          closeoutRunPath,
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          closeoutRunCloseoutArtifactHorizonNextMatches: boolean | null;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunCloseoutArtifactHorizonNextMatches).toBe(false);
+      expect(payload.failures).toContain("h2_closeout_run_closeout_artifact_horizon_next_mismatch");
       expect(payload.failures).not.toContain("horizon_promotion_failed");
     });
   });

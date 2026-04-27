@@ -192,6 +192,11 @@ Schema validation expectations:
   - optional `--require-goal-policy-readiness-tagged-targets` and `--require-goal-policy-readiness-positive-pending-min` for stricter readiness criteria
   - optional `--require-positive-pending-policy-min` to require positive pending-action floors in covered policies
   - optional `--strict-goal-policy-gates` (alias: `--require-strict-goal-policy-gates`) to enforce the full strict policy profile with one flag
+  - fail-closed pre-promotion closeout artifact checks:
+    - runner validates `closeoutOut` referenced by closeout-run before invoking `promote:horizon`
+    - rejects when pinned closeout artifact file is missing
+    - rejects when pinned closeout artifact `pass !== true`
+    - rejects when pinned closeout artifact transition metadata does not match expected `H2-><next>`
   - writes unified run manifest: `evidence/h2-promotion-run-*.json`
 - goal-policy readiness can be audited independently (without promotion):
   - `npm run audit:goal-policy-readiness -- --source-horizon <H1|H2|H3|H4> --until-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json`

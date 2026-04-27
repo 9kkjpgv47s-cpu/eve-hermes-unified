@@ -36,6 +36,7 @@ npm run validate:manifest-schemas -- --latest-only
 npm run validate:horizon-status
 npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
+npm run validate:goal-policy-file -- --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json --source-horizon H2 --until-horizon H5 --require-tagged-requirements --require-positive-pending-min
 npm run check:progressive-horizon-goals -- --source-horizon H2 --next-horizon H3 --minimum-goal-increase 1 --policy-key H2->H3 --horizon-status-file docs/HORIZON_STATUS.json
 npm run check:goal-policy-coverage -- --source-horizon H2 --until-horizon H5 --require-positive-pending-min --horizon-status-file docs/HORIZON_STATUS.json
 npm run audit:goal-policy-readiness -- --source-horizon H2 --max-target-horizon H5 --horizon-status-file docs/HORIZON_STATUS.json

@@ -207,6 +207,10 @@ Mitigations:
 10. Generate a machine-readable multi-horizon policy readiness audit before promotion:
    - `npm run audit:goal-policy-readiness -- --source-horizon H2 --max-target-horizon H5 --horizon-status-file docs/HORIZON_STATUS.json`
    - optional explicit source pinning: `--goal-policy-file docs/GOAL_POLICIES.json`
+11. Validate dedicated goal-policy manifests as a standalone gate before promotion:
+   - `npm run validate:goal-policy-file -- --horizon-status-file docs/HORIZON_STATUS.json`
+   - optional explicit policy source: `--goal-policy-file docs/GOAL_POLICIES.json`
+   - optional strict transition window override: `--source-horizon H2 --until-horizon H5 --require-tagged-requirements --require-positive-pending-min`
 
 ## Horizon Closeout Gate
 

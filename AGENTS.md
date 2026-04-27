@@ -70,6 +70,8 @@ npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/H
 # optional dedicated goal-policy source:
 #   --goal-policy-file docs/GOAL_POLICIES.json
 # or omit the flag and auto-discovery will load GOAL_POLICIES.json next to HORIZON_STATUS.json when present
+# policy-file schema/coverage gate (explicit file mode):
+#   npm run validate:goal-policy-file -- --goal-policy-file docs/GOAL_POLICIES.json
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
 npm run audit:goal-policy-readiness -- --horizon-status-file docs/HORIZON_STATUS.json --source-horizon H2 --until-horizon H5 --require-tagged-requirements
 # optional deterministic evidence mode override:

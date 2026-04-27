@@ -433,6 +433,7 @@ Useful flags:
   - defaults to the single transition (`H2->H3`) unless explicit horizon window/transition flags are supplied
 - `--goal-policy-file <path>` to load transition policies from a dedicated policy document
   - when omitted, policy sourcing auto-detects `<horizon-status-dir>/GOAL_POLICIES.json` first
+  - run `npm run validate:goal-policy-file` to enforce dedicated file validity before promotion
   - if no co-located file exists, it falls back to `goalPolicies` inside `docs/HORIZON_STATUS.json`
 - `--require-goal-policy-coverage` to require machine-checkable transition policy coverage before promotion
   - default scope checks from source horizon through `--goal-policy-coverage-until-horizon` (default `H5`)

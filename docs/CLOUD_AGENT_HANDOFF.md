@@ -139,6 +139,12 @@ Schema validation expectations:
   - progressive-goals report artifact (when enabled):
     - `evidence/progressive-goals-check-<source>-to-<next>-*.json`
   - writes promotion manifest: `evidence/horizon-promotion-<source>-to-<next>-*.json`
+- explicit dedicated goal-policy manifest validation gate:
+  - `npm run validate:goal-policy-file -- --horizon-status-file docs/HORIZON_STATUS.json`
+  - optional `--goal-policy-file <path>` to pin a specific policy file
+  - validates transition-policy schema and required transition window defaults (`H2->H3`, `H3->H4`, `H4->H5`)
+  - emits deterministic validation artifact:
+    - `evidence/goal-policy-file-validation-*.json`
 - one-command H2 promotion flow (closeout + promotion):
   - `npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
   - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force policy checks to use a dedicated policy document

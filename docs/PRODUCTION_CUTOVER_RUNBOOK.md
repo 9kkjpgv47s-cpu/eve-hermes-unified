@@ -121,6 +121,14 @@ npm run verify:merge-bundle -- \
   --validation-manifest /tmp/unified-evidence/evidence/merge-bundle-validation-<stamp>.json
 ```
 
+Latest alias mode (prefers `merge-readiness-bundle-latest`, falls back to newest timestamped bundle if alias is missing):
+
+```bash
+npm run verify:merge-bundle -- \
+  --evidence-dir /tmp/unified-evidence/evidence \
+  --latest
+```
+
 Shortcut for local operator reruns:
 
 ```bash

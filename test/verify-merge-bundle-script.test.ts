@@ -377,4 +377,48 @@ describe("verify-merge-bundle.mjs", () => {
       expect(payload.files.bundleArchivePath).toBe(latestAliasArchive);
     });
   });
+
+  it("falls back to newest timestamped bundle when --latest alias is missing", async () => {
+    await withTempDir(async (dir) => {
+      const fixture = await seedBundleFixture(dir);
+      const latestAliasDir = path.join(fixture.evidenceDir, "merge-readiness-bundle-latest");
+      const latestAliasArchive = path.join(fixture.evidenceDir, "merge-readiness-bundle-latest.tar.gz");
+      await rm(latestAliasDir, { recursive: true, force: true });
+      await rm(latestAliasArchive, { force: true });
+
+      const outputPath = path.join(fixture.evidenceDir, "merge-bundle-verify-latest-fallback.json");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/verify-merge-bundle.mjs",
+          "--evidence-dir",
+          fixture.evidenceDir,
+          "--latest",
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          latestAliasResolved: boolean;
+          latestAliasFallbackUsed: boolean;
+        };
+        files: {
+          bundleDir: string | null;
+          bundleManifestPath: string | null;
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.failures).toEqual([]);
+      expect(payload.checks.latestAliasResolved).toBe(false);
+      expect(payload.checks.latestAliasFallbackUsed).toBe(true);
+      expect(payload.files.bundleDir).toBe(fixture.bundleDir);
+      expect(payload.files.bundleManifestPath).toBe(fixture.bundleManifestPath);
+    });
+  });
 });

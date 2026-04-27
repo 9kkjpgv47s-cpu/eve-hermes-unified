@@ -168,18 +168,35 @@ async function main() {
     "merge-readiness-manifest.json",
   );
   const latestValidationManifestPath = await newestFileInDir(evidenceDir, "merge-bundle-validation-");
+  const latestBundleDirCandidate = await newestBundleDirectory(evidenceDir);
+  const latestBundleManifestCandidate = latestBundleDirCandidate
+    ? path.join(latestBundleDirCandidate, "merge-readiness-manifest.json")
+    : "";
   let selectedBundleDir = requestedBundleDir;
   let selectedManifestPath = requestedManifestPath;
+  let validationManifestResolved = false;
+  let latestAliasResolved = false;
+  let latestAliasFallbackUsed = false;
   if (!selectedBundleDir && !selectedManifestPath) {
-    if (requestedLatest) {
-      selectedBundleDir = latestBundleAliasDir;
-      selectedManifestPath = latestBundleAliasManifestPath;
-    } else if (requestedValidationManifestPath && (await isFile(requestedValidationManifestPath))) {
+    if (requestedValidationManifestPath && (await isFile(requestedValidationManifestPath))) {
       const validationPayload = await readJson(requestedValidationManifestPath);
       const candidateFromValidation = resolveMaybePath(validationPayload?.files?.bundleManifestPath);
       if (candidateFromValidation) {
         selectedManifestPath = candidateFromValidation;
         selectedBundleDir = path.dirname(candidateFromValidation);
+        validationManifestResolved = true;
+      }
+    } else if (requestedLatest) {
+      const aliasManifestExists = await isFile(latestBundleAliasManifestPath);
+      const aliasDirExists = await isDirectory(latestBundleAliasDir);
+      if (aliasManifestExists || aliasDirExists) {
+        selectedBundleDir = latestBundleAliasDir;
+        selectedManifestPath = latestBundleAliasManifestPath;
+        latestAliasResolved = true;
+      } else if (latestBundleDirCandidate || latestBundleManifestCandidate) {
+        selectedBundleDir = latestBundleDirCandidate;
+        selectedManifestPath = latestBundleManifestCandidate;
+        latestAliasFallbackUsed = true;
       }
     }
   }
@@ -189,6 +206,7 @@ async function main() {
     if (candidateFromValidation) {
       selectedManifestPath = candidateFromValidation;
       selectedBundleDir = path.dirname(candidateFromValidation);
+      validationManifestResolved = true;
     }
   }
   if (!selectedBundleDir && !selectedManifestPath) {
@@ -209,8 +227,11 @@ async function main() {
   const checks = {
     manifestSchemaValid: false,
     bundleManifestPass: false,
-    validationManifestResolved: false,
-    latestAliasResolved: false,
+    latestRequested: requestedLatest,
+    validationManifestResolved,
+    latestAliasResolved,
+    latestAliasFallbackUsed,
+    latestRequestedFallbackToTimestamp: requestedLatest && latestAliasFallbackUsed,
     releaseReadinessSchemaValid: false,
     releaseReadinessPass: false,
     releaseGoalPolicyValidationReported: false,
@@ -232,13 +253,14 @@ async function main() {
   }
 
   let bundleManifest = null;
-  checks.validationManifestResolved = Boolean(
-    requestedValidationManifestPath && selectedManifestPath,
-  );
-  checks.latestAliasResolved =
+  if (
     requestedLatest &&
     selectedBundleDir === latestBundleAliasDir &&
-    selectedManifestPath === latestBundleAliasManifestPath;
+    selectedManifestPath === latestBundleAliasManifestPath
+  ) {
+    checks.latestAliasResolved = true;
+    checks.latestAliasFallbackUsed = false;
+  }
   if (await isFile(selectedManifestPath)) {
     bundleManifest = await readJson(selectedManifestPath);
     const schema = validateManifestSchema("merge-bundle", bundleManifest);

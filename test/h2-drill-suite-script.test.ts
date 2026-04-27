@@ -163,7 +163,23 @@ async function seedEvidence(
   );
   await writeFile(
     path.join(evidenceDir, `stage-promotion-readiness-${stamp}.json`),
-    JSON.stringify({ pass: options?.stagePromotionPass !== false }, null, 2),
+    JSON.stringify(
+      {
+        pass: options?.stagePromotionPass !== false,
+        checks: {
+          mergeBundleGoalPolicyValidationReported: true,
+          mergeBundleGoalPolicyValidationPassed: true,
+          mergeBundleInitialScopeGoalPolicyValidationReported: true,
+          mergeBundleInitialScopeGoalPolicyValidationPassed: true,
+          bundleVerificationGoalPolicyValidationReported: true,
+          bundleVerificationGoalPolicyValidationPassed: true,
+          bundleVerificationInitialScopeGoalPolicyValidationReported: true,
+          bundleVerificationInitialScopeGoalPolicyValidationPassed: true,
+        },
+      },
+      null,
+      2,
+    ),
     "utf8",
   );
 

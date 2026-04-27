@@ -28,6 +28,10 @@ async function seedEvidence(
     createFailingLatestRelease?: boolean;
     createFailingLatestStagePromotion?: boolean;
     goalPolicyValidationPass?: boolean;
+    stagePromotionMergeBundleGoalPolicyValidationPass?: boolean;
+    stagePromotionMergeBundleInitialScopeGoalPolicyValidationPass?: boolean;
+    stagePromotionBundleVerificationGoalPolicyValidationPass?: boolean;
+    stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPass?: boolean;
   },
 ): Promise<{
   validationPath: string;
@@ -170,6 +174,22 @@ async function seedEvidence(
           cutoverReadinessPassed: options?.cutoverPass !== false,
           releaseReadinessPassed: options?.releasePass !== false,
           releaseReadinessGoalPolicyValidationPassed: options?.goalPolicyValidationPass !== false,
+          mergeBundleGoalPolicyValidationReported:
+            options?.stagePromotionMergeBundleGoalPolicyValidationPass !== null,
+          mergeBundleGoalPolicyValidationPassed:
+            options?.stagePromotionMergeBundleGoalPolicyValidationPass !== false,
+          mergeBundleInitialScopeGoalPolicyValidationReported:
+            options?.stagePromotionMergeBundleInitialScopeGoalPolicyValidationPass !== null,
+          mergeBundleInitialScopeGoalPolicyValidationPassed:
+            options?.stagePromotionMergeBundleInitialScopeGoalPolicyValidationPass !== false,
+          bundleVerificationGoalPolicyValidationReported:
+            options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== null,
+          bundleVerificationGoalPolicyValidationPassed:
+            options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== false,
+          bundleVerificationInitialScopeGoalPolicyValidationReported:
+            options?.stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPass !== null,
+          bundleVerificationInitialScopeGoalPolicyValidationPassed:
+            options?.stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPass !== false,
           mergeBundleValidationPassed: true,
           bundleVerificationPassed: true,
           horizonValidationPass: true,
@@ -271,6 +291,14 @@ async function seedEvidence(
             validationSummaryPassed: false,
             cutoverReadinessPassed: false,
             releaseReadinessPassed: false,
+            mergeBundleGoalPolicyValidationReported: false,
+            mergeBundleGoalPolicyValidationPassed: false,
+            mergeBundleInitialScopeGoalPolicyValidationReported: false,
+            mergeBundleInitialScopeGoalPolicyValidationPassed: false,
+            bundleVerificationGoalPolicyValidationReported: false,
+            bundleVerificationGoalPolicyValidationPassed: false,
+            bundleVerificationInitialScopeGoalPolicyValidationReported: false,
+            bundleVerificationInitialScopeGoalPolicyValidationPassed: false,
             mergeBundleValidationPassed: false,
             bundleVerificationPassed: false,
             horizonValidationPass: false,

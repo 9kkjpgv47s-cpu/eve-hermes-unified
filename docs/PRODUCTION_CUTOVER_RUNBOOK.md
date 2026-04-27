@@ -209,6 +209,9 @@ Policy expectations:
   - missing trace rate above threshold
   - any unclassified failures
   - evidence/cutover/release/merge verification gate failures
+- fail-closed stage-promotion propagation checks:
+  - selected `stage-promotion-readiness` evidence must report/pass merge-bundle release + initial-scope goal-policy propagation checks
+  - selected `stage-promotion-readiness` evidence must report/pass bundle-verification release + initial-scope goal-policy propagation checks
 - Majority/full add:
   - failure scenario pass-count threshold
 

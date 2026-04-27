@@ -200,6 +200,49 @@ function evaluateThresholds(stage, metrics, thresholds) {
   return reasons;
 }
 
+function resolveStagePromotionGoalPolicySignals(stagePromotionPayload) {
+  const checks =
+    stagePromotionPayload?.checks && typeof stagePromotionPayload.checks === "object"
+      ? stagePromotionPayload.checks
+      : {};
+  const resolveBooleanCandidate = (keys) => {
+    for (const key of keys) {
+      if (checks[key] === true) {
+        return true;
+      }
+    }
+    return false;
+  };
+  return {
+    mergeBundleReleaseReported: resolveBooleanCandidate([
+      "mergeBundleReleaseGoalPolicyValidationReported",
+      "mergeBundleGoalPolicyValidationReported",
+    ]),
+    mergeBundleReleasePassed: resolveBooleanCandidate([
+      "mergeBundleReleaseGoalPolicyValidationPassed",
+      "mergeBundleGoalPolicyValidationPassed",
+    ]),
+    mergeBundleInitialScopeReported:
+      resolveBooleanCandidate(["mergeBundleInitialScopeGoalPolicyValidationReported"]),
+    mergeBundleInitialScopePassed:
+      resolveBooleanCandidate(["mergeBundleInitialScopeGoalPolicyValidationPassed"]),
+    bundleVerificationReleaseReported:
+      resolveBooleanCandidate([
+        "bundleVerificationReleaseGoalPolicyValidationReported",
+        "bundleVerificationGoalPolicyValidationReported",
+      ]),
+    bundleVerificationReleasePassed:
+      resolveBooleanCandidate([
+        "bundleVerificationReleaseGoalPolicyValidationPassed",
+        "bundleVerificationGoalPolicyValidationPassed",
+      ]),
+    bundleVerificationInitialScopeReported:
+      resolveBooleanCandidate(["bundleVerificationInitialScopeGoalPolicyValidationReported"]),
+    bundleVerificationInitialScopePassed:
+      resolveBooleanCandidate(["bundleVerificationInitialScopeGoalPolicyValidationPassed"]),
+  };
+}
+
 async function runRollbackCommand(envFile) {
   const argv = ["bash", "scripts/prod-rollback-eve-safe-lane.sh"];
   const startedAt = new Date().toISOString();
@@ -271,7 +314,22 @@ async function main() {
     evidenceDir,
     prefix: "stage-promotion-readiness-",
     evidenceSelectionMode,
-    passingSelector: (payload) => payload?.pass === true,
+    passingSelector: (payload) => {
+      if (payload?.pass !== true) {
+        return false;
+      }
+      const stageGoalPolicySignals = resolveStagePromotionGoalPolicySignals(payload);
+      return (
+        stageGoalPolicySignals.mergeBundleReleaseReported
+        && stageGoalPolicySignals.mergeBundleReleasePassed
+        && stageGoalPolicySignals.mergeBundleInitialScopeReported
+        && stageGoalPolicySignals.mergeBundleInitialScopePassed
+        && stageGoalPolicySignals.bundleVerificationReleaseReported
+        && stageGoalPolicySignals.bundleVerificationReleasePassed
+        && stageGoalPolicySignals.bundleVerificationInitialScopeReported
+        && stageGoalPolicySignals.bundleVerificationInitialScopePassed
+      );
+    },
   });
 
   const failures = [];
@@ -323,6 +381,9 @@ async function main() {
   const stagePromotion = await exists(stagePromotionPath)
     ? await readJson(stagePromotionPath)
     : null;
+  const stagePromotionGoalPolicySignals = resolveStagePromotionGoalPolicySignals(
+    stagePromotion,
+  );
 
   if (validationSummary?.gates?.passed !== true) {
     failures.push("validation_summary_gate_failed");
@@ -338,6 +399,31 @@ async function main() {
   }
   if (stagePromotion?.pass !== true) {
     failures.push("stage_promotion_readiness_failed");
+  } else {
+    if (!stagePromotionGoalPolicySignals.mergeBundleReleaseReported) {
+      failures.push("stage_promotion_merge_bundle_release_goal_policy_validation_not_reported");
+    } else if (!stagePromotionGoalPolicySignals.mergeBundleReleasePassed) {
+      failures.push("stage_promotion_merge_bundle_release_goal_policy_validation_not_passed");
+    }
+    if (!stagePromotionGoalPolicySignals.mergeBundleInitialScopeReported) {
+      failures.push("stage_promotion_merge_bundle_initial_scope_goal_policy_validation_not_reported");
+    } else if (!stagePromotionGoalPolicySignals.mergeBundleInitialScopePassed) {
+      failures.push("stage_promotion_merge_bundle_initial_scope_goal_policy_validation_not_passed");
+    }
+    if (!stagePromotionGoalPolicySignals.bundleVerificationReleaseReported) {
+      failures.push("stage_promotion_bundle_verification_release_goal_policy_validation_not_reported");
+    } else if (!stagePromotionGoalPolicySignals.bundleVerificationReleasePassed) {
+      failures.push("stage_promotion_bundle_verification_release_goal_policy_validation_not_passed");
+    }
+    if (!stagePromotionGoalPolicySignals.bundleVerificationInitialScopeReported) {
+      failures.push(
+        "stage_promotion_bundle_verification_initial_scope_goal_policy_validation_not_reported",
+      );
+    } else if (!stagePromotionGoalPolicySignals.bundleVerificationInitialScopePassed) {
+      failures.push(
+        "stage_promotion_bundle_verification_initial_scope_goal_policy_validation_not_passed",
+      );
+    }
   }
 
   const metrics = {
@@ -421,6 +507,22 @@ async function main() {
       releaseGoalPolicyFileValidationPassed:
         releaseReadiness?.checks?.goalPolicyFileValidationPassed === true,
       stagePromotionReadinessPassed: stagePromotion?.pass === true,
+      stagePromotionMergeBundleGoalPolicyValidationReported:
+        stagePromotionGoalPolicySignals.mergeBundleReleaseReported,
+      stagePromotionMergeBundleGoalPolicyValidationPassed:
+        stagePromotionGoalPolicySignals.mergeBundleReleasePassed,
+      stagePromotionMergeBundleInitialScopeGoalPolicyValidationReported:
+        stagePromotionGoalPolicySignals.mergeBundleInitialScopeReported,
+      stagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed:
+        stagePromotionGoalPolicySignals.mergeBundleInitialScopePassed,
+      stagePromotionBundleVerificationGoalPolicyValidationReported:
+        stagePromotionGoalPolicySignals.bundleVerificationReleaseReported,
+      stagePromotionBundleVerificationGoalPolicyValidationPassed:
+        stagePromotionGoalPolicySignals.bundleVerificationReleasePassed,
+      stagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported:
+        stagePromotionGoalPolicySignals.bundleVerificationInitialScopeReported,
+      stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed:
+        stagePromotionGoalPolicySignals.bundleVerificationInitialScopePassed,
     },
     rollbackExecution,
   };

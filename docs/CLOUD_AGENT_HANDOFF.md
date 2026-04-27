@@ -190,6 +190,15 @@ Schema validation expectations:
 - auto-rollback policy decisions can be machine-evaluated with:
   - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
   - fail-closed enforcement: selected release-readiness evidence must report `checks.goalPolicyFileValidationPassed=true`
+  - fail-closed enforcement: selected stage-promotion-readiness evidence must report and pass all propagated bundle goal-policy checks:
+    - `checks.mergeBundleGoalPolicyValidationReported=true`
+    - `checks.mergeBundleGoalPolicyValidationPassed=true`
+    - `checks.mergeBundleInitialScopeGoalPolicyValidationReported=true`
+    - `checks.mergeBundleInitialScopeGoalPolicyValidationPassed=true`
+    - `checks.bundleVerificationGoalPolicyValidationReported=true`
+    - `checks.bundleVerificationGoalPolicyValidationPassed=true`
+    - `checks.bundleVerificationInitialScopeGoalPolicyValidationReported=true`
+    - `checks.bundleVerificationInitialScopeGoalPolicyValidationPassed=true`
   - optional explicit artifact pinning flags:
     - `--validation-summary-file <path>`
     - `--cutover-readiness-file <path>`

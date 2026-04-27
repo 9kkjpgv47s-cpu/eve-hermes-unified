@@ -312,12 +312,16 @@ function resolveCloseoutRunCloseoutArtifactPath(closeoutRunPayload) {
     closeoutRunPayload?.files && typeof closeoutRunPayload.files === "object"
       ? closeoutRunPayload.files
       : {};
-  const resolved = firstNonEmptyString([
-    files.closeoutOut,
-    files.closeoutFile,
-    closeoutRunPayload?.closeoutOut,
-  ]);
-  return isNonEmptyString(resolved) ? path.resolve(resolved) : "";
+  const rawCandidates = [files.closeoutOut, files.closeoutFile, closeoutRunPayload?.closeoutOut]
+    .map((value) => (isNonEmptyString(value) ? String(value).trim() : ""))
+    .filter((value) => value.length > 0);
+  const resolvedCandidates = Array.from(new Set(rawCandidates.map((candidate) => path.resolve(candidate))));
+  return {
+    path: resolvedCandidates[0] ?? "",
+    reported: resolvedCandidates.length > 0,
+    conflict: resolvedCandidates.length > 1,
+    resolvedCandidates,
+  };
 }
 
 function resolveCloseoutArtifactTransition(closeoutPayload) {
@@ -553,7 +557,12 @@ async function main() {
     sourceMatches: false,
     nextMatches: false,
   };
-  let closeoutArtifactPath = "";
+  let closeoutArtifactReference = {
+    path: "",
+    reported: false,
+    conflict: false,
+    resolvedCandidates: [],
+  };
   let closeoutArtifactPayload = null;
   let closeoutArtifactPass = false;
   let closeoutArtifactTransition = {
@@ -679,7 +688,7 @@ async function main() {
       };
     }
     closeoutRunTransition = resolveCloseoutRunTransition(closeoutRunPayload, "H2", nextHorizon);
-    closeoutArtifactPath = resolveCloseoutRunCloseoutArtifactPath(closeoutRunPayload);
+    closeoutArtifactReference = resolveCloseoutRunCloseoutArtifactPath(closeoutRunPayload);
     closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
       failures.push("h2_closeout_run_failed");
@@ -691,10 +700,12 @@ async function main() {
       failures.push("h2_closeout_run_horizon_next_not_reported");
     } else if (!closeoutRunTransition.nextMatches) {
       failures.push("h2_closeout_run_horizon_next_mismatch");
-    } else if (!isNonEmptyString(closeoutArtifactPath)) {
+    } else if (closeoutArtifactReference.conflict) {
+      failures.push("h2_closeout_run_conflicting_closeout_out_paths");
+    } else if (!closeoutArtifactReference.reported) {
       failures.push("h2_closeout_run_missing_closeout_out");
     } else {
-      closeoutArtifactPayload = await readJsonMaybe(closeoutArtifactPath);
+      closeoutArtifactPayload = await readJsonMaybe(closeoutArtifactReference.path);
       closeoutArtifactPass = closeoutArtifactPayload?.pass === true;
       const closeoutArtifactResolved = resolveCloseoutArtifactTransition(closeoutArtifactPayload);
       closeoutArtifactTransition = {
@@ -862,7 +873,7 @@ async function main() {
       envFile,
       outPath,
       closeoutRunOut,
-      closeoutRunCloseoutOut: closeoutArtifactPath || null,
+      closeoutRunCloseoutOut: closeoutArtifactReference.path || null,
       horizonPromotionOut,
       progressiveGoalsOut,
       goalPolicyValidationOut: options.requireGoalPolicyValidation ? goalPolicyValidationOut : null,
@@ -883,6 +894,12 @@ async function main() {
         closeoutRunTransition.sourceReported ? closeoutRunTransition.sourceMatches : null,
       closeoutRunHorizonNextMatches:
         closeoutRunTransition.nextReported ? closeoutRunTransition.nextMatches : null,
+      closeoutRunCloseoutOutReported: closeoutArtifactReference.reported,
+      closeoutRunCloseoutOutConflict: closeoutArtifactReference.conflict,
+      closeoutRunCloseoutOutCandidates:
+        closeoutArtifactReference.resolvedCandidates.length > 0
+          ? closeoutArtifactReference.resolvedCandidates
+          : null,
       closeoutRunCloseoutArtifactPass:
         closeoutArtifactPayload ? closeoutArtifactPass : null,
       closeoutRunCloseoutArtifactSourceHorizon:

@@ -284,6 +284,37 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
   };
 }
 
+function resolveCloseoutRunCloseoutPathSignals(closeoutRunPayload) {
+  const files =
+    closeoutRunPayload?.files && typeof closeoutRunPayload.files === "object"
+      ? closeoutRunPayload.files
+      : {};
+  const candidates = [
+    { key: "files.closeoutOut", value: files.closeoutOut },
+    { key: "files.closeoutFile", value: files.closeoutFile },
+    { key: "closeoutOut", value: closeoutRunPayload?.closeoutOut },
+  ]
+    .map((entry) => {
+      const trimmed = typeof entry.value === "string" ? entry.value.trim() : "";
+      if (!isNonEmptyString(trimmed)) {
+        return null;
+      }
+      return {
+        key: entry.key,
+        raw: trimmed,
+        resolved: path.resolve(trimmed),
+      };
+    })
+    .filter(Boolean);
+  const uniqueResolved = new Set(candidates.map((entry) => entry.resolved));
+  return {
+    candidates,
+    hasAny: candidates.length > 0,
+    allAligned: uniqueResolved.size <= 1,
+    resolvedPath: candidates.length > 0 ? candidates[0].resolved : "",
+  };
+}
+
 function resolveCloseoutTransition(closeoutPayload, expectedSource, expectedNext) {
   const closeout =
     closeoutPayload?.closeout && typeof closeoutPayload.closeout === "object"
@@ -547,6 +578,12 @@ async function main() {
     sourceMatches: false,
     nextMatches: false,
   };
+  let closeoutRunPathSignals = {
+    candidates: [],
+    hasAny: false,
+    allAligned: false,
+    resolvedPath: "",
+  };
   let closeoutRunH2CloseoutGate = { reported: false, pass: false };
   let closeoutRunStageGoalPolicySignals = { reported: false, pass: false };
   if (failures.length === 0 && closeoutRunFile.length > 0) {
@@ -559,6 +596,7 @@ async function main() {
         sourceHorizon,
         nextHorizon,
       );
+      closeoutRunPathSignals = resolveCloseoutRunCloseoutPathSignals(closeoutRunPayload);
       closeoutRunH2CloseoutGate = resolveCloseoutRunH2CloseoutGate(closeoutRunPayload);
       closeoutRunStageGoalPolicySignals = resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload);
       if (closeoutRunPayload?.pass !== true) {
@@ -591,11 +629,12 @@ async function main() {
           failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_passed");
         }
       }
-      const derivedCloseoutFile = String(closeoutRunPayload?.files?.closeoutOut ?? "").trim();
-      if (!isNonEmptyString(derivedCloseoutFile)) {
+      if (!closeoutRunPathSignals.hasAny) {
         failures.push("closeout_run_missing_closeout_out");
+      } else if (!closeoutRunPathSignals.allAligned) {
+        failures.push("closeout_run_closeout_out_alias_conflict");
       } else {
-        closeoutFile = path.resolve(derivedCloseoutFile);
+        closeoutFile = closeoutRunPathSignals.resolvedPath;
       }
     }
   }
@@ -949,6 +988,8 @@ async function main() {
       closeoutRunHorizonNextReported: closeoutRunTransition.nextReported,
       closeoutRunHorizonSourceMatches: closeoutRunTransition.sourceMatches,
       closeoutRunHorizonNextMatches: closeoutRunTransition.nextMatches,
+      closeoutRunCloseoutOutAliasesConsistent:
+        closeoutRunPathSignals.hasAny ? closeoutRunPathSignals.allAligned : null,
       closeoutRunCloseoutTransitionSourceMatches:
         closeoutRunTransition.sourceReported && closeoutTransition.sourceReported
           ? closeoutRunTransition.source === closeoutTransition.source

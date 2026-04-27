@@ -133,6 +133,7 @@ Schema validation expectations:
       - legacy fallback accepted: `checks.nextHorizon.selectedNextHorizon` must equal `--next-horizon`
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
   - fail-closed enforcement for `--closeout-run-file`:
+    - if closeout artifact path aliases are reported, they must resolve to a single consistent path (`files.closeoutOut`, `files.closeoutFile`, top-level `closeoutOut`)
     - closeout run must report matching transition scope:
       - `horizon.source` must equal requested `--horizon`
       - `horizon.next` must equal requested `--next-horizon`
@@ -194,6 +195,7 @@ Schema validation expectations:
   - optional `--require-positive-pending-policy-min` to require positive pending-action floors in covered policies
   - optional `--strict-goal-policy-gates` (alias: `--require-strict-goal-policy-gates`) to enforce the full strict policy profile with one flag
   - fail-closed pre-promotion closeout artifact checks:
+    - runner rejects closeout-run manifests that report conflicting closeout artifact path aliases
     - runner validates `closeoutOut` referenced by closeout-run before invoking `promote:horizon`
     - rejects when pinned closeout artifact file is missing
     - rejects when pinned closeout artifact `pass !== true`

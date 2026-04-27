@@ -117,6 +117,9 @@ async function seedBundleFixture(rootDir: string): Promise<{
         pass: true,
         generatedAtIso: new Date().toISOString(),
         checklistPath,
+            checks: {
+              releaseReadinessGoalPolicyValidationPassed: true,
+            },
         failures: [],
       },
       null,

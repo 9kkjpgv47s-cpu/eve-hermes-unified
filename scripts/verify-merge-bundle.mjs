@@ -159,7 +159,11 @@ async function main() {
     bundleManifestPass: false,
     releaseReadinessSchemaValid: false,
     releaseReadinessPass: false,
+    releaseGoalPolicyValidationReported: false,
+    releaseGoalPolicyValidationPassed: false,
     initialScopePass: false,
+    initialScopeGoalPolicyValidationReported: false,
+    initialScopeGoalPolicyValidationPassed: false,
     requiredBundleFilesMissing: [],
     copiedArtifactsMissing: [],
     archiveChecked: false,
@@ -243,6 +247,14 @@ async function main() {
     if (!releasePayload?.pass) {
       failures.push("release_manifest_not_passed");
     }
+    const releaseGoalPolicyValue = releasePayload?.checks?.goalPolicyFileValidationPassed;
+    checks.releaseGoalPolicyValidationReported = typeof releaseGoalPolicyValue === "boolean";
+    checks.releaseGoalPolicyValidationPassed = releaseGoalPolicyValue === true;
+    if (!checks.releaseGoalPolicyValidationReported) {
+      failures.push("release_manifest_goal_policy_validation_not_reported");
+    } else if (!checks.releaseGoalPolicyValidationPassed) {
+      failures.push("release_manifest_goal_policy_validation_not_passed");
+    }
   } else {
     failures.push("missing_bundled_release_manifest");
   }
@@ -255,6 +267,21 @@ async function main() {
     checks.initialScopePass = Boolean(initialScopePayload?.pass);
     if (!initialScopePayload?.pass) {
       failures.push("initial_scope_manifest_not_passed");
+    }
+    const initialScopeGoalPolicyCandidates = [
+      initialScopePayload?.releaseReadinessGoalPolicyValidationPass,
+      initialScopePayload?.checks?.releaseReadinessGoalPolicyValidationPassed,
+      initialScopePayload?.checks?.releaseReadinessGoalPolicyFileValidationPassed,
+    ];
+    const reportedInitialScopeValue = initialScopeGoalPolicyCandidates.find(
+      (candidate) => typeof candidate === "boolean",
+    );
+    checks.initialScopeGoalPolicyValidationReported = typeof reportedInitialScopeValue === "boolean";
+    checks.initialScopeGoalPolicyValidationPassed = reportedInitialScopeValue === true;
+    if (!checks.initialScopeGoalPolicyValidationReported) {
+      failures.push("initial_scope_manifest_goal_policy_validation_not_reported");
+    } else if (!checks.initialScopeGoalPolicyValidationPassed) {
+      failures.push("initial_scope_manifest_goal_policy_validation_not_passed");
     }
   } else {
     failures.push("missing_bundled_initial_scope_manifest");

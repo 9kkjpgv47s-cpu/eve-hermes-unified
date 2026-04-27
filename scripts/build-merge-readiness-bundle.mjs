@@ -64,6 +64,41 @@ function resolveMaybePath(rawPath) {
   return path.resolve(normalized);
 }
 
+function resolveReleaseGoalPolicyValidationState(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    checks.goalPolicyFileValidationPassed,
+    checks.goalPolicyValidationPassed,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
+function resolveInitialScopeGoalPolicyValidationState(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    payload.releaseReadinessGoalPolicyValidationPass,
+    checks.releaseReadinessGoalPolicyValidationPassed,
+    checks.releaseReadinessGoalPolicyFileValidationPassed,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
 async function isFilePath(targetPath) {
   if (!(await exists(targetPath))) {
     return false;
@@ -163,6 +198,10 @@ async function main() {
 
   const failures = [];
   const copiedArtifacts = [];
+  const allowMissingGoalPolicyValidation =
+    String(process.env.UNIFIED_MERGE_BUNDLE_ALLOW_MISSING_GOAL_POLICY_VALIDATION_CHECK ?? "0")
+      .trim()
+      .toLowerCase() === "1";
 
   let releaseReadiness = null;
   if (!(await isFilePath(releaseReadinessPath))) {
@@ -182,6 +221,21 @@ async function main() {
     if (!initialScope?.pass) {
       failures.push("initial_scope_not_passed");
     }
+  }
+  const releaseGoalPolicyValidation = resolveReleaseGoalPolicyValidationState(releaseReadiness);
+  const initialScopeGoalPolicyValidation =
+    resolveInitialScopeGoalPolicyValidationState(initialScope);
+  if (!allowMissingGoalPolicyValidation && !releaseGoalPolicyValidation.reported) {
+    failures.push("missing_release_goal_policy_validation_check");
+  }
+  if (releaseGoalPolicyValidation.reported && !releaseGoalPolicyValidation.pass) {
+    failures.push("release_goal_policy_validation_not_passed");
+  }
+  if (!allowMissingGoalPolicyValidation && !initialScopeGoalPolicyValidation.reported) {
+    failures.push("missing_initial_scope_goal_policy_validation_check");
+  }
+  if (initialScopeGoalPolicyValidation.reported && !initialScopeGoalPolicyValidation.pass) {
+    failures.push("initial_scope_goal_policy_validation_not_passed");
   }
 
   const requiredInputs = [];
@@ -297,6 +351,11 @@ async function main() {
       releaseReadinessPassed: Boolean(releaseReadiness?.pass),
       initialScopePassed: Boolean(initialScope?.pass),
       releaseValidationCommandsPassed: Boolean(releaseReadiness?.checks?.validationCommandsPassed),
+      allowMissingGoalPolicyValidation,
+      releaseGoalPolicyValidationReported: releaseGoalPolicyValidation.reported,
+      releaseGoalPolicyValidationPassed: releaseGoalPolicyValidation.pass,
+      initialScopeGoalPolicyValidationReported: initialScopeGoalPolicyValidation.reported,
+      initialScopeGoalPolicyValidationPassed: initialScopeGoalPolicyValidation.pass,
       releaseFailures: Array.isArray(releaseReadiness?.failures) ? releaseReadiness.failures : [],
       initialScopeFailures: Array.isArray(initialScope?.failures) ? initialScope.failures : [],
       missingRequiredInputs,

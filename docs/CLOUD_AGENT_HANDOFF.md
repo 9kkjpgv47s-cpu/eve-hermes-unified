@@ -224,3 +224,7 @@ to force regeneration before packaging.
 The merge-bundle validation wrapper also enforces initial-scope goal-policy propagation:
 - initial-scope manifest must report `checks.releaseReadinessGoalPolicyValidationPassed === true`
 - failure is surfaced as `initial_scope_goal_policy_validation_not_passed` in `merge-bundle-validation-*` output
+- release-readiness manifest must report `checks.goalPolicyFileValidationPassed === true`
+- missing/failed release signal surfaces as:
+  - `missing_release_goal_policy_validation_check`
+  - `release_goal_policy_validation_not_passed`

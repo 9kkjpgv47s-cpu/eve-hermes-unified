@@ -206,6 +206,8 @@ export function validateMergeBundleManifest(payload) {
       "releaseReadinessPassed",
       "initialScopePassed",
       "releaseValidationCommandsPassed",
+      "releaseGoalPolicyValidationPassed",
+      "initialScopeGoalPolicyValidationPassed",
     ];
     for (const key of requiredBooleanChecks) {
       pushError(errors, typeof checks[key] === "boolean", `checks.${key} must be boolean`);

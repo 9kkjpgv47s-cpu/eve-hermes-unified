@@ -158,6 +158,8 @@ describe("validate-manifest-schema.mjs", () => {
               bundleManifestPresent: true,
               bundleManifestPass: true,
               bundleFailures: [],
+              releaseReadinessGoalPolicyValidationPassed: true,
+              initialScopeGoalPolicyValidationPassed: true,
             },
             failures: [],
           },

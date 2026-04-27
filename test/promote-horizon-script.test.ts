@@ -744,6 +744,57 @@ describe("promote-horizon.mjs", () => {
     });
   });
 
+  it("fails when pinned closeout report transition does not match promotion request", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      const closeoutPath = await seedCloseoutReport(evidenceDir, {
+        pass: true,
+        horizon: "H1",
+        nextHorizon: "H2",
+      });
+      await seedHorizonStatus(statusPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-file",
+          closeoutPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          closeoutSourceHorizon: string | null;
+          closeoutNextHorizon: string | null;
+          closeoutHorizonSourceMatches: boolean | null;
+          closeoutHorizonNextMatches: boolean | null;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutSourceHorizon).toBe("H1");
+      expect(payload.checks.closeoutNextHorizon).toBe("H2");
+      expect(payload.checks.closeoutHorizonSourceMatches).toBe(false);
+      expect(payload.checks.closeoutHorizonNextMatches).toBe(false);
+      expect(payload.failures).toContain("closeout_horizon_source_mismatch:H1!=H2");
+      expect(payload.failures).toContain("closeout_horizon_next_mismatch:H2!=H3");
+    });
+  });
+
   it("enforces goal policy key during progressive-goals gate", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");

@@ -126,6 +126,11 @@ Schema validation expectations:
   - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force an explicit policy source
   - when `--goal-policy-file` is omitted, promotion auto-detects a sibling `GOAL_POLICIES.json` next to `--horizon-status-file`; if not present, it falls back to `goalPolicies` in horizon status
   - optional `--closeout-file <path>` to consume a pinned closeout artifact instead of running `validate:horizon-closeout`
+  - fail-closed enforcement for `--closeout-file`:
+    - pinned closeout must report matching transition scope:
+      - `closeout.horizon` must equal requested `--horizon`
+      - `closeout.nextHorizon` must equal requested `--next-horizon`
+      - legacy fallback accepted: `checks.nextHorizon.selectedNextHorizon` must equal `--next-horizon`
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
   - fail-closed enforcement for `--closeout-run-file`:
     - closeout run must report matching transition scope:

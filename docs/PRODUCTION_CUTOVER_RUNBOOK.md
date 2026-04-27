@@ -395,8 +395,10 @@ Behavior:
 - runs `validate:horizon-closeout` (unless `--closeout-file` is explicitly provided)
 - can consume deterministic closeout-run evidence with:
   - `--closeout-run-file evidence/h2-closeout-run-*.json`
+  - fail-closed gate: promotion rejects closeout-run manifests with transition metadata that does not match requested `--horizon/--next-horizon`
   - fail-closed gate: promotion rejects `run:h2-closeout` manifests that do not report and pass supervised-simulation drill-level goal-policy propagation checks
   - fail-closed gate: promotion rejects `run:h2-closeout` manifests that do not report `checks.h2CloseoutGatePass=true`
+  - fail-closed gate: promotion rejects pinned closeout artifacts whose `closeout.horizon` / `closeout.nextHorizon` does not match requested `--horizon/--next-horizon`
   - validates that closeout run `"pass": true` and then uses `files.closeoutOut` as the pinned closeout artifact
 - requires closeout payload `"pass": true`
 - on success updates horizon status atomically:

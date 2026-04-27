@@ -66,6 +66,9 @@ Before marking a phase complete, include artifacts from:
 - `npm test`
 - `npm run validate:failure-injection`
 - `npm run validate:soak`
+- Both commands are cloud-self-priming:
+  - they set lane/runtime defaults internally so host-specific Eve/Hermes paths do not block evidence generation
+  - override only when needed via `UNIFIED_SOAK_EVE_DISPATCH_SCRIPT`, `UNIFIED_SOAK_HERMES_LAUNCH_COMMAND`, and `UNIFIED_SOAK_EVE_DISPATCH_RESULT_PATH`
 - `UNIFIED_EVIDENCE_REQUIRE_FAILURE_SCENARIOS=1 npm run validate:evidence-summary`
 - `npm run validate:regression-eve-primary`
 - `npm run validate:cutover-readiness`
@@ -75,8 +78,9 @@ Before marking a phase complete, include artifacts from:
 - strict release-readiness policy-file evidence gate:
   - `UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_FILE_VALIDATION=1 npm run validate:release-readiness`
 - `npm run validate:merge-bundle`
+- `npm run bundle:merge-readiness` (writes timestamped `merge-readiness-bundle-*` dir + archive)
 - `npm run validate:manifest-schemas`
-- `npm run verify:merge-bundle -- --evidence-dir evidence --latest`
+- `npm run verify:merge-bundle -- --bundle-manifest evidence/merge-readiness-bundle-<timestamp>/merge-readiness-manifest.json`
 - `npm run validate:horizon-status`
 - `npm run validate:horizon-closeout -- --horizon H1 --target-next H2`
 - `npm run validate:h2-closeout`

@@ -113,6 +113,13 @@ npm run verify:merge-bundle -- \
   --archive /tmp/unified-evidence/evidence/merge-readiness-bundle-<stamp>.tar.gz
 ```
 
+Shortcut for local operator reruns:
+
+```bash
+npm run verify:merge-bundle -- \
+  --bundle-manifest /workspace/evidence/merge-readiness-bundle-<stamp>/merge-readiness-manifest.json
+```
+
 Expected result:
 - Exit code `0`
 - JSON output with:

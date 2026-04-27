@@ -293,6 +293,10 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
     next: nextReported ? normalizedNext : null,
     sourceReported,
     nextReported,
+    sourceInvalid: sourceSignals.invalid,
+    nextInvalid: nextSignals.invalid,
+    sourceInvalidValues: sourceSignals.invalidValues,
+    nextInvalidValues: nextSignals.invalidValues,
     sourceAliasConflict: sourceSignals.conflict,
     nextAliasConflict: nextSignals.conflict,
     sourceCandidates: sourceSignals.values,
@@ -303,15 +307,32 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
 }
 
 function resolveHorizonAliasSignals(entries) {
-  const normalizedValues = entries
-    .map((value) => normalizeHorizon(value, ""))
+  const rawValues = entries
+    .filter((value) => typeof value === "string" || typeof value === "number")
+    .map((value) => String(value ?? "").trim())
     .filter((value) => value.length > 0);
+  const normalizedPairs = rawValues.map((raw) => ({
+    raw,
+    normalized: normalizeHorizon(raw, ""),
+  }));
+  const normalizedValues = normalizedPairs
+    .map((entry) => entry.normalized)
+    .filter((value) => value.length > 0);
+  const invalidValues = Array.from(
+    new Set(
+      normalizedPairs
+        .filter((entry) => entry.normalized.length === 0)
+        .map((entry) => entry.raw),
+    ),
+  );
   const uniqueValues = Array.from(new Set(normalizedValues));
   return {
     reported: uniqueValues.length > 0,
     value: uniqueValues[0] ?? "",
     conflict: uniqueValues.length > 1,
     values: uniqueValues,
+    invalid: invalidValues.length > 0,
+    invalidValues,
   };
 }
 
@@ -369,6 +390,10 @@ function resolveCloseoutArtifactTransition(closeoutPayload) {
     next: nextSignals.value,
     sourceReported: sourceSignals.reported,
     nextReported: nextSignals.reported,
+    sourceInvalid: sourceSignals.invalid,
+    nextInvalid: nextSignals.invalid,
+    sourceInvalidValues: sourceSignals.invalidValues,
+    nextInvalidValues: nextSignals.invalidValues,
     sourceAliasConflict: sourceSignals.conflict,
     nextAliasConflict: nextSignals.conflict,
     sourceCandidates: sourceSignals.values,
@@ -569,6 +594,10 @@ async function main() {
     next: null,
     sourceReported: false,
     nextReported: false,
+    sourceInvalid: false,
+    nextInvalid: false,
+    sourceInvalidValues: [],
+    nextInvalidValues: [],
     sourceAliasConflict: false,
     nextAliasConflict: false,
     sourceCandidates: [],
@@ -589,6 +618,10 @@ async function main() {
     next: "",
     sourceReported: false,
     nextReported: false,
+    sourceInvalid: false,
+    nextInvalid: false,
+    sourceInvalidValues: [],
+    nextInvalidValues: [],
     sourceAliasConflict: false,
     nextAliasConflict: false,
     sourceCandidates: [],
@@ -718,12 +751,16 @@ async function main() {
     closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
       failures.push("h2_closeout_run_failed");
+    } else if (closeoutRunTransition.sourceInvalid) {
+      failures.push("h2_closeout_run_horizon_source_invalid");
     } else if (!closeoutRunTransition.sourceReported) {
       failures.push("h2_closeout_run_horizon_source_not_reported");
     } else if (closeoutRunTransition.sourceAliasConflict) {
       failures.push("h2_closeout_run_horizon_source_alias_conflict");
     } else if (!closeoutRunTransition.sourceMatches) {
       failures.push("h2_closeout_run_horizon_source_mismatch");
+    } else if (closeoutRunTransition.nextInvalid) {
+      failures.push("h2_closeout_run_horizon_next_invalid");
     } else if (!closeoutRunTransition.nextReported) {
       failures.push("h2_closeout_run_horizon_next_not_reported");
     } else if (closeoutRunTransition.nextAliasConflict) {
@@ -755,12 +792,16 @@ async function main() {
         failures.push("h2_closeout_run_closeout_artifact_missing");
       } else if (!closeoutArtifactPass) {
         failures.push("h2_closeout_run_closeout_artifact_not_passed");
+      } else if (closeoutArtifactTransition.sourceInvalid) {
+        failures.push("h2_closeout_run_closeout_artifact_horizon_source_invalid");
       } else if (!closeoutArtifactTransition.sourceReported) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_source_not_reported");
       } else if (closeoutArtifactTransition.sourceAliasConflict) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_source_alias_conflict");
       } else if (!closeoutArtifactTransition.sourceMatches) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_source_mismatch");
+      } else if (closeoutArtifactTransition.nextInvalid) {
+        failures.push("h2_closeout_run_closeout_artifact_horizon_next_invalid");
       } else if (!closeoutArtifactTransition.nextReported) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_next_not_reported");
       } else if (closeoutArtifactTransition.nextAliasConflict) {
@@ -928,6 +969,16 @@ async function main() {
         closeoutRunTransition.nextCandidates.length > 0 ? closeoutRunTransition.nextCandidates : null,
       closeoutRunHorizonSourceReported: closeoutRunTransition.sourceReported,
       closeoutRunHorizonNextReported: closeoutRunTransition.nextReported,
+      closeoutRunHorizonSourceInvalid: closeoutRunTransition.sourceInvalid,
+      closeoutRunHorizonNextInvalid: closeoutRunTransition.nextInvalid,
+      closeoutRunHorizonSourceInvalidValues:
+        closeoutRunTransition.sourceInvalidValues.length > 0
+          ? closeoutRunTransition.sourceInvalidValues
+          : null,
+      closeoutRunHorizonNextInvalidValues:
+        closeoutRunTransition.nextInvalidValues.length > 0
+          ? closeoutRunTransition.nextInvalidValues
+          : null,
       closeoutRunHorizonSourceAliasConflict: closeoutRunTransition.sourceAliasConflict,
       closeoutRunHorizonNextAliasConflict: closeoutRunTransition.nextAliasConflict,
       closeoutRunHorizonSourceMatches:
@@ -950,6 +1001,17 @@ async function main() {
         closeoutArtifactTransition.sourceAliasConflict,
       closeoutRunCloseoutArtifactHorizonNextAliasConflict:
         closeoutArtifactTransition.nextAliasConflict,
+      closeoutRunCloseoutArtifactHorizonSourceInvalid:
+        closeoutArtifactTransition.sourceInvalid,
+      closeoutRunCloseoutArtifactHorizonNextInvalid: closeoutArtifactTransition.nextInvalid,
+      closeoutRunCloseoutArtifactHorizonSourceInvalidValues:
+        closeoutArtifactTransition.sourceInvalidValues.length > 0
+          ? closeoutArtifactTransition.sourceInvalidValues
+          : null,
+      closeoutRunCloseoutArtifactHorizonNextInvalidValues:
+        closeoutArtifactTransition.nextInvalidValues.length > 0
+          ? closeoutArtifactTransition.nextInvalidValues
+          : null,
       closeoutRunCloseoutArtifactHorizonSourceMatches:
         closeoutArtifactTransition.sourceReported ? closeoutArtifactTransition.sourceMatches : null,
       closeoutRunCloseoutArtifactHorizonNextMatches:

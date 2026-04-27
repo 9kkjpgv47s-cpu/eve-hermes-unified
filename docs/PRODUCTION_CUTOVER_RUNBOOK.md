@@ -397,10 +397,12 @@ Behavior:
   - `--closeout-run-file evidence/h2-closeout-run-*.json`
   - fail-closed gate: if closeout-run reports multiple closeout artifact path aliases (`files.closeoutOut`, `files.closeoutFile`, top-level `closeoutOut`), all reported values must resolve to the same path
   - fail-closed gate: promotion rejects closeout-run manifests with transition metadata that does not match requested `--horizon/--next-horizon`
+  - fail-closed gate: promotion rejects closeout-run manifests that contain non-empty but invalid horizon tokens in transition aliases (`horizon.source`, `horizon.next`, `checks.sourceHorizon`, `checks.nextHorizon`)
   - fail-closed gate: promotion rejects closeout-run manifests when transition aliases disagree internally (`horizon.source` vs `checks.sourceHorizon`, `horizon.next` vs `checks.nextHorizon`) even if one alias individually matches requested horizons
   - fail-closed gate: promotion rejects `run:h2-closeout` manifests that do not report and pass supervised-simulation drill-level goal-policy propagation checks
   - fail-closed gate: promotion rejects `run:h2-closeout` manifests that do not report `checks.h2CloseoutGatePass=true`
   - fail-closed gate: promotion rejects pinned closeout artifacts whose `closeout.horizon` / `closeout.nextHorizon` does not match requested `--horizon/--next-horizon`
+  - fail-closed gate: promotion rejects pinned closeout artifacts that contain non-empty but invalid horizon tokens in transition aliases (`closeout.nextHorizon`, `closeout.targetNextHorizon`, `checks.nextHorizon.selectedNextHorizon`)
   - fail-closed gate: promotion rejects pinned closeout artifacts when transition aliases disagree internally (`closeout.nextHorizon` vs `closeout.targetNextHorizon` vs `checks.nextHorizon.selectedNextHorizon`)
   - fail-closed gate: promotion rejects `--closeout-run-file` inputs when closeout-run transition metadata and pinned closeout-artifact transition metadata disagree
   - validates that closeout run `"pass": true` and then uses `files.closeoutOut` as the pinned closeout artifact
@@ -435,7 +437,9 @@ Behavior:
 - runs `promote:horizon --closeout-run-file <h2-closeout-run>` second
 - fail-closed pre-promotion gate: runner verifies `files.closeoutOut` exists and points to a passing closeout artifact aligned to `H2 -> --next-horizon`
   - fails when closeout-run reports conflicting closeout artifact path aliases (`files.closeoutOut` vs `files.closeoutFile` vs top-level `closeoutOut`)
+  - fails when closeout-run contains non-empty but invalid horizon tokens in transition aliases (`horizon.source`, `horizon.next`, `checks.sourceHorizon`, `checks.nextHorizon`)
   - fails when closeout-run transition aliases disagree internally (`horizon.source` vs `checks.sourceHorizon`; `horizon.next` vs `checks.nextHorizon`)
+  - fails when pinned closeout artifact contains non-empty but invalid horizon tokens in transition aliases (`closeout.nextHorizon`, `closeout.targetNextHorizon`, `checks.nextHorizon.selectedNextHorizon`)
   - fails when pinned closeout artifact transition aliases disagree internally (`closeout.nextHorizon` vs `closeout.targetNextHorizon` vs `checks.nextHorizon.selectedNextHorizon`)
   - fails if closeout-run transition metadata and closeout artifact transition metadata disagree, even when both independently match expected values via fallback aliases
   - transition metadata from closeout-run must be reported and aligned (legacy fallback accepted):

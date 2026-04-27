@@ -203,11 +203,13 @@ Schema validation expectations:
   - fail-closed pre-promotion closeout artifact checks:
     - runner rejects closeout-run manifests that report conflicting closeout artifact path aliases
     - runner rejects closeout-run manifests that report conflicting source/next transition aliases
+    - runner rejects closeout-run manifests that report non-empty but invalid horizon tokens in transition aliases
     - runner resolves relative closeout artifact aliases relative to the closeout-run manifest directory
     - runner validates `closeoutOut` referenced by closeout-run before invoking `promote:horizon`
     - rejects when pinned closeout artifact file is missing
     - rejects when pinned closeout artifact `pass !== true`
     - rejects when pinned closeout artifact reports conflicting source/next transition aliases
+    - rejects when pinned closeout artifact reports non-empty but invalid horizon tokens in transition aliases
     - rejects when pinned closeout artifact transition metadata does not match expected `H2-><next>`
     - rejects when closeout-run and pinned closeout artifact transitions disagree, even if each individually appears valid
   - fail-closed pre-promotion closeout-run transition checks:

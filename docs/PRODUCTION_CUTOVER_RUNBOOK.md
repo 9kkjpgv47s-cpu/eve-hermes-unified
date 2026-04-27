@@ -399,6 +399,7 @@ Behavior:
   - fail-closed gate: promotion rejects `run:h2-closeout` manifests that do not report and pass supervised-simulation drill-level goal-policy propagation checks
   - fail-closed gate: promotion rejects `run:h2-closeout` manifests that do not report `checks.h2CloseoutGatePass=true`
   - fail-closed gate: promotion rejects pinned closeout artifacts whose `closeout.horizon` / `closeout.nextHorizon` does not match requested `--horizon/--next-horizon`
+  - fail-closed gate: promotion rejects `--closeout-run-file` inputs when closeout-run transition metadata and pinned closeout-artifact transition metadata disagree
   - validates that closeout run `"pass": true` and then uses `files.closeoutOut` as the pinned closeout artifact
 - requires closeout payload `"pass": true`
 - on success updates horizon status atomically:

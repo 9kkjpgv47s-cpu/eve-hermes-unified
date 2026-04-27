@@ -216,7 +216,7 @@ function resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload) {
   const propagationReported = resolveBooleanCandidate(checks, [
     "supervisedSimulationStageGoalPolicyPropagationReported",
     "supervisedSimulationStagePolicySignalsReported",
-  ]) || propagationPass;
+  ]);
   return {
     supervisedSimulationPass,
     reported: propagationReported,
@@ -669,6 +669,26 @@ async function main() {
   if (closeoutCommand && closeoutCommand.code !== 0) {
     failures.push(`closeout_command_failed:${String(closeoutCommand.code)}`);
   }
+  if (
+    closeoutRunPayload &&
+    closeoutRunTransition.sourceReported &&
+    closeoutTransition.sourceReported &&
+    closeoutRunTransition.source !== closeoutTransition.source
+  ) {
+    failures.push(
+      `closeout_run_closeout_horizon_source_disagreement:${String(closeoutRunTransition.source)}!=${String(closeoutTransition.source)}`,
+    );
+  }
+  if (
+    closeoutRunPayload &&
+    closeoutRunTransition.nextReported &&
+    closeoutTransition.nextReported &&
+    closeoutRunTransition.next !== closeoutTransition.next
+  ) {
+    failures.push(
+      `closeout_run_closeout_horizon_next_disagreement:${String(closeoutRunTransition.next)}!=${String(closeoutTransition.next)}`,
+    );
+  }
   if (failures.length === 0 && options.requireGoalPolicyFileValidation) {
     const policyValidationUntilHorizon = normalizeHorizon(
       options.goalPolicyFileValidationUntilHorizon,
@@ -929,6 +949,14 @@ async function main() {
       closeoutRunHorizonNextReported: closeoutRunTransition.nextReported,
       closeoutRunHorizonSourceMatches: closeoutRunTransition.sourceMatches,
       closeoutRunHorizonNextMatches: closeoutRunTransition.nextMatches,
+      closeoutRunCloseoutTransitionSourceMatches:
+        closeoutRunTransition.sourceReported && closeoutTransition.sourceReported
+          ? closeoutRunTransition.source === closeoutTransition.source
+          : null,
+      closeoutRunCloseoutTransitionNextMatches:
+        closeoutRunTransition.nextReported && closeoutTransition.nextReported
+          ? closeoutRunTransition.next === closeoutTransition.next
+          : null,
       closeoutRunH2CloseoutGateReported: closeoutRunH2CloseoutGate.reported,
       closeoutRunH2CloseoutGatePass: closeoutRunH2CloseoutGate.pass,
       closeoutRunSupervisedSimulationPass:

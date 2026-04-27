@@ -141,6 +141,7 @@ Schema validation expectations:
     - closeout run must report `checks.h2CloseoutGatePass=true`
     - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationReported=true`
     - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationPassed=true`
+    - closeout run transition and resolved closeout artifact transition must agree (source + next), even when each independently matches requested transition via compatibility aliases
   - optional `--require-progressive-goals --minimum-goal-increase <n>` to require the next horizon to have at least `<n>` more planned actions than the source horizon
   - optional `--goal-policy-key <Hn->Hm>` to enforce a named transition policy from `goalPolicies` (for tagged action mix and stricter thresholds)
   - optional `--require-goal-policy-coverage` to require transition policy coverage from the source horizon through `--until-horizon` before promotion

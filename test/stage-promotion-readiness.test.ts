@@ -332,6 +332,48 @@ describe("check-stage-promotion-readiness.mjs", () => {
     });
   });
 
+  it("fails when release readiness goal-policy validation is not passed", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "stage-promotion-readiness.json");
+      const seeded = await seedEvidence(evidenceDir);
+      const releasePayload = JSON.parse(await readFile(seeded.releasePath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      releasePayload.checks = {
+        ...(releasePayload.checks ?? {}),
+        goalPolicyFileValidationPassed: false,
+      };
+      await writeFile(seeded.releasePath, JSON.stringify(releasePayload, null, 2), "utf8");
+      await seedHorizonStatus(horizonPath, "canary", "H2");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "canary",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("release_goal_policy_validation_not_passed");
+    });
+  });
+
   it("fails when required evidence artifact is missing", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");

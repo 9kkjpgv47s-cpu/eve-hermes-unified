@@ -27,6 +27,7 @@ async function seedEvidence(
     createFailingLatestSummary?: boolean;
     createFailingLatestRelease?: boolean;
     createFailingLatestStagePromotion?: boolean;
+    goalPolicyValidationPass?: boolean;
   },
 ): Promise<{
   validationPath: string;
@@ -122,7 +123,7 @@ async function seedEvidence(
           validationSummaryPassed: true,
           regressionPassed: true,
           cutoverReadinessPassed: options?.cutoverPass !== false,
-          goalPolicyFileValidationPassed: true,
+          goalPolicyFileValidationPassed: options?.goalPolicyValidationPass !== false,
           commandLogsMissing: [],
           discoveredCommandLogs: [],
           requiredReleaseCommands: [],
@@ -168,6 +169,7 @@ async function seedEvidence(
           validationSummaryPassed: true,
           cutoverReadinessPassed: options?.cutoverPass !== false,
           releaseReadinessPassed: options?.releasePass !== false,
+          releaseReadinessGoalPolicyValidationPassed: options?.goalPolicyValidationPass !== false,
           mergeBundleValidationPassed: true,
           bundleVerificationPassed: true,
           horizonValidationPass: true,
@@ -498,6 +500,49 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
       expect(payload.reasons).toContain("release_readiness_failed");
       expect(payload.reasons).toContain("cutover_readiness_failed");
       expect(payload.reasons).toContain("stage_promotion_readiness_failed");
+    });
+  });
+
+  it("triggers rollback when goal-policy validation check fails", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.999,
+        p95LatencyMs: 200,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        goalPolicyValidationPass: false,
+        includeCooldownSignals: false,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        decision: { action: string };
+        reasons: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.decision.action).toBe("rollback");
+      expect(payload.reasons).toContain("release_goal_policy_file_validation_not_passed");
     });
   });
 

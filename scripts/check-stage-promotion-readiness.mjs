@@ -31,6 +31,7 @@ function parseArgs(argv) {
     bundleVerificationFile: "",
     evidenceSelection: "",
     allowHorizonMismatch: false,
+    requireReleaseReadinessGoalPolicyValidation: true,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -70,6 +71,13 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--allow-horizon-mismatch" || arg === "--ignore-horizon-target") {
       options.allowHorizonMismatch = true;
+    } else if (arg === "--require-release-readiness-goal-policy-validation") {
+      options.requireReleaseReadinessGoalPolicyValidation = true;
+    } else if (
+      arg === "--allow-missing-release-readiness-goal-policy-validation" ||
+      arg === "--allow-release-readiness-goal-policy-validation-missing"
+    ) {
+      options.requireReleaseReadinessGoalPolicyValidation = false;
     }
   }
   return options;
@@ -91,6 +99,20 @@ function normalizeEvidenceSelection(value, fallback = "latest") {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (EVIDENCE_SELECTION_MODES.includes(normalized)) {
     return normalized;
+  }
+  return fallback;
+}
+
+function parseBooleanOption(value, fallback) {
+  if (!isNonEmptyString(value)) {
+    return fallback;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
   }
   return fallback;
 }
@@ -269,6 +291,10 @@ async function main() {
   const currentStage = normalizeStage(options.currentStage, "shadow");
   const allowHorizonMismatch = options.allowHorizonMismatch === true;
   const evidenceSelectionMode = normalizeEvidenceSelection(options.evidenceSelection, "latest");
+  const requireReleaseReadinessGoalPolicyValidation = parseBooleanOption(
+    process.env.UNIFIED_STAGE_PROMOTION_REQUIRE_RELEASE_GOAL_POLICY_VALIDATION,
+    options.requireReleaseReadinessGoalPolicyValidation,
+  );
   const horizonStatusFile = path.resolve(
     options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
   );
@@ -309,6 +335,8 @@ async function main() {
   let releaseReadiness = null;
   let mergeBundleValidation = null;
   let bundleVerification = null;
+  let releaseGoalPolicyValidationReported = false;
+  let releaseGoalPolicyValidationPassed = false;
   let horizonStatus = null;
   let horizonValidation = { valid: false, errors: ["horizon_status_not_loaded"] };
 
@@ -334,6 +362,17 @@ async function main() {
       failures.push(
         ...releaseSchema.errors.map((error) => `release_schema_invalid:${error}`),
       );
+    }
+    releaseGoalPolicyValidationReported =
+      typeof releaseReadiness?.checks?.goalPolicyFileValidationPassed === "boolean";
+    releaseGoalPolicyValidationPassed =
+      releaseReadiness?.checks?.goalPolicyFileValidationPassed === true;
+    if (requireReleaseReadinessGoalPolicyValidation) {
+      if (!releaseGoalPolicyValidationReported) {
+        failures.push("release_goal_policy_validation_not_reported");
+      } else if (!releaseGoalPolicyValidationPassed) {
+        failures.push("release_goal_policy_validation_not_passed");
+      }
     }
   }
   if (await exists(evidencePaths.mergeBundleValidationPath)) {
@@ -466,6 +505,9 @@ async function main() {
       validationSummaryPassed: Boolean(validationSummary?.gates?.passed),
       cutoverReadinessPassed: Boolean(cutoverReadiness?.pass),
       releaseReadinessPassed: Boolean(releaseReadiness?.pass),
+      requireReleaseReadinessGoalPolicyValidation,
+      releaseGoalPolicyValidationReported,
+      releaseGoalPolicyValidationPassed,
       mergeBundleValidationPassed: Boolean(mergeBundleValidation?.pass),
       bundleVerificationPassed: Boolean(bundleVerification?.pass),
       horizonValidationPass: horizonValidation.valid,

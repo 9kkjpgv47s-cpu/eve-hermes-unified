@@ -180,8 +180,10 @@ Schema validation expectations:
   - writes readiness matrix: `evidence/goal-policy-readiness-*.json`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
+  - fail-closed enforcement: selected release-readiness evidence must report `checks.goalPolicyFileValidationPassed=true`
 - auto-rollback policy decisions can be machine-evaluated with:
   - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
+  - fail-closed enforcement: selected release-readiness evidence must report `checks.goalPolicyFileValidationPassed=true`
   - optional explicit artifact pinning flags:
     - `--validation-summary-file <path>`
     - `--cutover-readiness-file <path>`

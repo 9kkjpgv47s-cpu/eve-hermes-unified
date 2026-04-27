@@ -63,7 +63,10 @@ async function seedSharedEvidence(evidenceDir: string): Promise<void> {
           cutoverReadiness: path.join(evidenceDir, `cutover-readiness-${stamp}.json`),
           failureInjection: null,
           soak: null,
-          goalPolicyFileValidation: null,
+          goalPolicyFileValidation: path.join(
+            evidenceDir,
+            `goal-policy-file-validation-${stamp}.json`,
+          ),
           commandLogDir: null,
           commandsFile: null,
         },
@@ -73,7 +76,7 @@ async function seedSharedEvidence(evidenceDir: string): Promise<void> {
           validationSummaryPassed: true,
           regressionPassed: true,
           cutoverReadinessPassed: true,
-          goalPolicyFileValidationPassed: false,
+          goalPolicyFileValidationPassed: true,
           commandLogsMissing: [],
           discoveredCommandLogs: [],
           requiredReleaseCommands: [],
@@ -88,6 +91,11 @@ async function seedSharedEvidence(evidenceDir: string): Promise<void> {
       null,
       2,
     ),
+    "utf8",
+  );
+  await writeFile(
+    path.join(evidenceDir, `goal-policy-file-validation-${stamp}.json`),
+    JSON.stringify({ pass: true, failures: [] }, null, 2),
     "utf8",
   );
   await writeFile(

@@ -333,6 +333,9 @@ async function main() {
   if (releaseReadiness?.pass !== true) {
     failures.push("release_readiness_failed");
   }
+  if (releaseReadiness?.checks?.goalPolicyFileValidationPassed !== true) {
+    failures.push("release_goal_policy_file_validation_not_passed");
+  }
   if (stagePromotion?.pass !== true) {
     failures.push("stage_promotion_readiness_failed");
   }
@@ -415,6 +418,8 @@ async function main() {
       validationSummaryPassed: validationSummary?.gates?.passed === true,
       cutoverReadinessPassed: cutoverReadiness?.pass === true,
       releaseReadinessPassed: releaseReadiness?.pass === true,
+      releaseGoalPolicyFileValidationPassed:
+        releaseReadiness?.checks?.goalPolicyFileValidationPassed === true,
       stagePromotionReadinessPassed: stagePromotion?.pass === true,
     },
     rollbackExecution,

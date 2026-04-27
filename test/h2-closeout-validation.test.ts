@@ -108,6 +108,10 @@ async function seedRequiredEvidence(evidenceDir: string): Promise<void> {
           buildExitCode: 0,
           bundleManifestPresent: true,
           bundleManifestPass: true,
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
           bundleFailures: [],
         },
         failures: [],
@@ -123,6 +127,12 @@ async function seedRequiredEvidence(evidenceDir: string): Promise<void> {
       {
         generatedAtIso: new Date().toISOString(),
         pass: true,
+        checks: {
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
+        },
       },
       null,
       2,
@@ -497,6 +507,67 @@ describe("validate-horizon-closeout.mjs (H2)", () => {
             id: "h1-release-readiness",
             pass: false,
             checks: expect.arrayContaining(["release_goal_policy_validation_not_passed"]),
+          }),
+        ]),
+      );
+    });
+  });
+
+  it("fails when bundle verification goal-policy propagation is missing", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "h2-closeout.json");
+      await seedRequiredEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath);
+
+      const verifyPath = path.join(evidenceDir, "bundle-verification-20260426-000000.json");
+      const verificationPayload = JSON.parse(await readFile(verifyPath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      verificationPayload.checks = {
+        ...(verificationPayload.checks ?? {}),
+      };
+      delete verificationPayload.checks.releaseGoalPolicyValidationReported;
+      delete verificationPayload.checks.releaseGoalPolicyValidationPassed;
+      delete verificationPayload.checks.initialScopeGoalPolicyValidationReported;
+      delete verificationPayload.checks.initialScopeGoalPolicyValidationPassed;
+      await writeFile(verifyPath, `${JSON.stringify(verificationPayload, null, 2)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: { requiredEvidence: Array<{ id: string; pass: boolean; checks: string[] }> };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("required_evidence_failed:h1-bundle-verification");
+      expect(payload.checks.requiredEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "h1-bundle-verification",
+            pass: false,
+            checks: expect.arrayContaining([
+              "bundle_verify_release_goal_policy_validation_not_reported",
+              "bundle_verify_initial_scope_goal_policy_validation_not_reported",
+            ]),
           }),
         ]),
       );

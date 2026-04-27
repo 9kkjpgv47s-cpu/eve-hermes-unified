@@ -127,6 +127,10 @@ async function seedReadinessArtifacts(evidenceDir: string): Promise<void> {
           buildExitCode: 0,
           bundleManifestPresent: true,
           bundleManifestPass: true,
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
           bundleFailures: [],
         },
         failures: [],
@@ -138,7 +142,20 @@ async function seedReadinessArtifacts(evidenceDir: string): Promise<void> {
   );
   await writeFile(
     path.join(evidenceDir, `bundle-verification-${stamp}.json`),
-    JSON.stringify({ generatedAtIso: new Date().toISOString(), pass: true }, null, 2),
+    JSON.stringify(
+      {
+        generatedAtIso: new Date().toISOString(),
+        pass: true,
+        checks: {
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
+        },
+      },
+      null,
+      2,
+    ),
     "utf8",
   );
   await writeFile(

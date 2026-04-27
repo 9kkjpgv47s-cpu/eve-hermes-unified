@@ -181,7 +181,7 @@ function commandVerificationType(command) {
     return "merge-bundle-validation";
   }
   if (command === "npm run verify:merge-bundle") {
-    return "pass-only";
+    return "bundle-verification";
   }
   if (command === "npm run validate:cutover-readiness") {
     return "pass-only";
@@ -233,6 +233,20 @@ function resolveReleaseGoalPolicyValidationStatus(payload) {
   return { reported: false, pass: false };
 }
 
+function resolveGoalPolicyValidationState(payload, checkKeys) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  for (const key of checkKeys) {
+    const candidate = checks[key];
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
 function evaluateCommandPayload(command, payload) {
   const verificationType = commandVerificationType(command);
   if (verificationType === "existence-only") {
@@ -272,6 +286,45 @@ function evaluateCommandPayload(command, payload) {
     }
     if (payload.pass !== true) {
       checks.push("merge_bundle_validation_not_passed");
+    }
+    const releaseGoalPolicyValidation = resolveGoalPolicyValidationState(payload, [
+      "releaseGoalPolicyValidationPassed",
+    ]);
+    if (!releaseGoalPolicyValidation.reported) {
+      checks.push("merge_bundle_release_goal_policy_validation_not_reported");
+    } else if (!releaseGoalPolicyValidation.pass) {
+      checks.push("merge_bundle_release_goal_policy_validation_not_passed");
+    }
+    const initialScopeGoalPolicyValidation = resolveGoalPolicyValidationState(payload, [
+      "initialScopeGoalPolicyValidationPassed",
+    ]);
+    if (!initialScopeGoalPolicyValidation.reported) {
+      checks.push("merge_bundle_initial_scope_goal_policy_validation_not_reported");
+    } else if (!initialScopeGoalPolicyValidation.pass) {
+      checks.push("merge_bundle_initial_scope_goal_policy_validation_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "bundle-verification") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("bundle_verification_not_passed");
+    }
+    const releaseGoalPolicyValidation = resolveGoalPolicyValidationState(payload, [
+      "releaseGoalPolicyValidationPassed",
+    ]);
+    if (!releaseGoalPolicyValidation.reported) {
+      checks.push("bundle_verify_release_goal_policy_validation_not_reported");
+    } else if (!releaseGoalPolicyValidation.pass) {
+      checks.push("bundle_verify_release_goal_policy_validation_not_passed");
+    }
+    const initialScopeGoalPolicyValidation = resolveGoalPolicyValidationState(payload, [
+      "initialScopeGoalPolicyValidationPassed",
+    ]);
+    if (!initialScopeGoalPolicyValidation.reported) {
+      checks.push("bundle_verify_initial_scope_goal_policy_validation_not_reported");
+    } else if (!initialScopeGoalPolicyValidation.pass) {
+      checks.push("bundle_verify_initial_scope_goal_policy_validation_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }

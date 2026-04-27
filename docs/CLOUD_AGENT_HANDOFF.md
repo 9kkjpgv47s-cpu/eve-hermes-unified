@@ -112,6 +112,8 @@ Schema validation expectations:
   - closeout release evidence now fail-closes on goal-policy signals:
     - `validate:release-readiness` evidence must report and pass `checks.goalPolicyFileValidationPassed`
     - `validate:initial-scope` evidence must report and pass propagated release goal-policy status
+    - `validate:merge-bundle` evidence must report and pass both release + initial-scope goal-policy propagation checks
+    - `verify:merge-bundle` evidence must report and pass both release + initial-scope goal-policy propagation checks
 - dedicated H2 closeout gate:
   - `npm run validate:h2-closeout`
   - enforces H2-scoped required evidence (`h2-drill-suite`, rollback threshold calibration, supervised rollback simulation) when listed in `requiredEvidence`

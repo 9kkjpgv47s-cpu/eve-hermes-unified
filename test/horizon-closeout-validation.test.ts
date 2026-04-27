@@ -143,6 +143,10 @@ async function seedEvidence(evidenceDir: string): Promise<{
           buildExitCode: 0,
           bundleManifestPresent: true,
           bundleManifestPass: true,
+              releaseGoalPolicyValidationReported: true,
+              releaseGoalPolicyValidationPassed: true,
+              initialScopeGoalPolicyValidationReported: true,
+              initialScopeGoalPolicyValidationPassed: true,
           bundleFailures: [],
         },
         failures: [],
@@ -171,7 +175,11 @@ async function seedEvidence(evidenceDir: string): Promise<{
           bundleManifestPass: true,
           releaseReadinessSchemaValid: true,
           releaseReadinessPass: true,
+              releaseGoalPolicyValidationReported: true,
+              releaseGoalPolicyValidationPassed: true,
           initialScopePass: true,
+              initialScopeGoalPolicyValidationReported: true,
+              initialScopeGoalPolicyValidationPassed: true,
           requiredBundleFilesMissing: [],
           copiedArtifactsMissing: [],
           archiveChecked: true,
@@ -476,6 +484,59 @@ describe("validate-horizon-closeout.mjs", () => {
             id: "h1-initial-scope",
             pass: false,
             checks: expect.arrayContaining(["initial_scope_goal_policy_validation_not_passed"]),
+          }),
+        ]),
+      );
+    });
+  });
+
+  it("fails when merge-bundle validation evidence omits goal-policy propagation checks", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "horizon-closeout.json");
+      const seeded = await seedEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath, "h1-in-progress");
+
+      const mergePayload = JSON.parse(await readFile(seeded.mergeValidationPath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      mergePayload.checks = {
+        ...(mergePayload.checks ?? {}),
+        releaseGoalPolicyValidationPassed: false,
+        initialScopeGoalPolicyValidationPassed: false,
+      };
+      await writeFile(seeded.mergeValidationPath, `${JSON.stringify(mergePayload, null, 2)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H1",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: { requiredEvidence: Array<{ id: string; pass: boolean; checks: string[] }> };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("required_evidence_failed:h1-merge-bundle");
+      expect(payload.checks.requiredEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "h1-merge-bundle",
+            pass: false,
+            checks: expect.arrayContaining(["merge_bundle_release_goal_policy_validation_not_passed"]),
           }),
         ]),
       );

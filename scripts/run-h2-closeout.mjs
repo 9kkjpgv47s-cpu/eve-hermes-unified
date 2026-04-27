@@ -119,6 +119,88 @@ function normalizeHorizon(value, fallback = "H3") {
     : fallback;
 }
 
+function resolveBooleanCandidate(checks, keys) {
+  for (const key of keys) {
+    if (checks?.[key] === true) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveSimulationStageGoalPolicySignals(simulationPayload) {
+  const checks =
+    simulationPayload?.checks && typeof simulationPayload.checks === "object"
+      ? simulationPayload.checks
+      : {};
+  const directPropagationReported = resolveBooleanCandidate(checks, [
+    "stageDrillGoalPolicyPropagationReported",
+    "stageDrillStageSignalsReported",
+    "stageDrillStagePolicySignalsReported",
+  ]);
+  const directPropagationPassed = resolveBooleanCandidate(checks, [
+    "stageDrillGoalPolicyPropagationPassed",
+    "stageDrillStageSignalsPass",
+    "stageDrillStagePolicySignalsPass",
+  ]);
+  const mergeBundleReleaseReported = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionMergeBundleGoalPolicyValidationReported",
+    "stageDrillRollbackStagePromotionMergeBundleReleaseGoalPolicyValidationReported",
+    "stageDrillMergeBundleGoalPolicyValidationReported",
+    "stageDrillRollbackPolicyStageSignalsReported",
+  ]);
+  const mergeBundleReleasePassed = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionMergeBundleGoalPolicyValidationPassed",
+    "stageDrillRollbackStagePromotionMergeBundleReleaseGoalPolicyValidationPassed",
+    "stageDrillMergeBundleGoalPolicyValidationPassed",
+    "stageDrillRollbackPolicyStageSignalsPass",
+  ]);
+  const mergeBundleInitialScopeReported = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationReported",
+  ]);
+  const mergeBundleInitialScopePassed = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed",
+  ]);
+  const bundleVerificationReleaseReported = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionBundleVerificationGoalPolicyValidationReported",
+    "stageDrillRollbackStagePromotionBundleVerificationReleaseGoalPolicyValidationReported",
+  ]);
+  const bundleVerificationReleasePassed = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionBundleVerificationGoalPolicyValidationPassed",
+    "stageDrillRollbackStagePromotionBundleVerificationReleaseGoalPolicyValidationPassed",
+  ]);
+  const bundleVerificationInitialScopeReported = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported",
+  ]);
+  const bundleVerificationInitialScopePassed = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed",
+  ]);
+  const propagationReported = directPropagationReported || (
+    mergeBundleReleaseReported
+    && mergeBundleInitialScopeReported
+    && bundleVerificationReleaseReported
+    && bundleVerificationInitialScopeReported
+  );
+  const propagationPassed = directPropagationPassed || (
+    mergeBundleReleasePassed
+    && mergeBundleInitialScopePassed
+    && bundleVerificationReleasePassed
+    && bundleVerificationInitialScopePassed
+  );
+  return {
+    mergeBundleReleaseReported,
+    mergeBundleReleasePassed,
+    mergeBundleInitialScopeReported,
+    mergeBundleInitialScopePassed,
+    bundleVerificationReleaseReported,
+    bundleVerificationReleasePassed,
+    bundleVerificationInitialScopeReported,
+    bundleVerificationInitialScopePassed,
+    propagationReported,
+    propagationPassed,
+  };
+}
+
 function stamp() {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
 }
@@ -325,8 +407,16 @@ async function main() {
       },
     });
     simulationPayload = await readJsonMaybe(simulationOut);
+    const simulationStageSignals = resolveSimulationStageGoalPolicySignals(
+      simulationPayload,
+    );
     if (simulationCommand.code !== 0 || simulationPayload?.pass !== true) {
       failures.push("supervised_simulation_step_failed");
+    }
+    if (!simulationStageSignals.propagationReported) {
+      failures.push("supervised_simulation_stage_goal_policy_propagation_not_reported");
+    } else if (!simulationStageSignals.propagationPassed) {
+      failures.push("supervised_simulation_stage_goal_policy_propagation_not_passed");
     }
 
     const closeoutArgv = [
@@ -377,6 +467,12 @@ async function main() {
       evidenceSelectionMode,
       calibrationPass: calibrationPayload?.pass === true,
       supervisedSimulationPass: simulationPayload?.pass === true,
+      supervisedSimulationStageGoalPolicyPropagationReported:
+        resolveSimulationStageGoalPolicySignals(simulationPayload).propagationReported,
+      supervisedSimulationStageGoalPolicyPropagationPassed:
+        resolveSimulationStageGoalPolicySignals(simulationPayload).propagationPassed,
+      supervisedSimulationStagePolicySignalsPass:
+        resolveSimulationStageGoalPolicySignals(simulationPayload).propagationPassed,
       h2CloseoutGatePass: closeoutPayload?.pass === true,
       rollbackTriggered: simulationPayload?.checks?.rollbackTriggered === true,
       rollbackApplied: simulationPayload?.checks?.rollbackApplied === true,

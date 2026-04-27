@@ -194,6 +194,108 @@ function resolveRollbackForcingThresholds(calibrationPayload, options) {
   };
 }
 
+function resolveBooleanCandidate(checks, keys) {
+  for (const key of keys) {
+    if (typeof checks?.[key] === "boolean") {
+      return checks[key] === true;
+    }
+  }
+  return false;
+}
+
+function parseBooleanEnv(value, fallback = false) {
+  if (!isNonEmptyString(value)) {
+    return fallback;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  return fallback;
+}
+
+function resolveStageDrillGoalPolicySignals(stageDrillPayload) {
+  const checks =
+    stageDrillPayload?.checks && typeof stageDrillPayload.checks === "object"
+      ? stageDrillPayload.checks
+      : {};
+  const mergeBundleReleaseReported = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionMergeBundleGoalPolicyValidationReported",
+  ]);
+  const mergeBundleReleasePassed = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionMergeBundleGoalPolicyValidationPassed",
+  ]);
+  const mergeBundleInitialScopeReported = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationReported",
+  ]);
+  const mergeBundleInitialScopePassed = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed",
+  ]);
+  const bundleVerificationReleaseReported = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionBundleVerificationGoalPolicyValidationReported",
+  ]);
+  const bundleVerificationReleasePassed = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionBundleVerificationGoalPolicyValidationPassed",
+  ]);
+  const bundleVerificationInitialScopeReported = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported",
+  ]);
+  const bundleVerificationInitialScopePassed = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed",
+  ]);
+  const propagationReported = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionGoalPolicyPropagationReported",
+    "rollbackPolicyStageSignalsReported",
+  ]) || (
+    mergeBundleReleaseReported &&
+    mergeBundleInitialScopeReported &&
+    bundleVerificationReleaseReported &&
+    bundleVerificationInitialScopeReported
+  );
+  const propagationPassed = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionGoalPolicyPropagationPassed",
+    "rollbackPolicyStageSignalsPass",
+  ]) || (
+    mergeBundleReleasePassed &&
+    mergeBundleInitialScopePassed &&
+    bundleVerificationReleasePassed &&
+    bundleVerificationInitialScopePassed
+  );
+  return {
+    mergeBundleReleaseReported,
+    mergeBundleReleasePassed,
+    mergeBundleInitialScopeReported,
+    mergeBundleInitialScopePassed,
+    bundleVerificationReleaseReported,
+    bundleVerificationReleasePassed,
+    bundleVerificationInitialScopeReported,
+    bundleVerificationInitialScopePassed,
+    propagationReported,
+    propagationPassed,
+  };
+}
+
+function extractJsonObjectFromText(text) {
+  const raw = String(text ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+  const firstBrace = raw.indexOf("{");
+  const lastBrace = raw.lastIndexOf("}");
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    return null;
+  }
+  const candidate = raw.slice(firstBrace, lastBrace + 1);
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const evidenceDir = path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
@@ -381,9 +483,38 @@ async function main() {
     timeoutMs: options.timeoutMs,
     env: { UNIFIED_RUNTIME_ENV_FILE: envFile },
   });
-  const stageDrillPayload = await readJsonMaybe(stageDrillOut);
+  let stageDrillPayload = await readJsonMaybe(stageDrillOut);
+  if (!stageDrillPayload) {
+    stageDrillPayload = extractJsonObjectFromText(stageDrillCommand.stdout);
+  }
+  const stageDrillGoalPolicySignals = resolveStageDrillGoalPolicySignals(stageDrillPayload);
+  const forceMissingStageDrillSignals = parseBooleanEnv(
+    process.env.UNIFIED_FORCE_MISSING_STAGE_DRILL_SIGNALS,
+    false,
+  );
+  const effectiveStageDrillGoalPolicySignals = forceMissingStageDrillSignals
+    ? {
+        ...stageDrillGoalPolicySignals,
+        mergeBundleReleaseReported: false,
+        mergeBundleReleasePassed: false,
+        mergeBundleInitialScopeReported: false,
+        mergeBundleInitialScopePassed: false,
+        bundleVerificationReleaseReported: false,
+        bundleVerificationReleasePassed: false,
+        bundleVerificationInitialScopeReported: false,
+        bundleVerificationInitialScopePassed: false,
+        propagationReported: false,
+        propagationPassed: false,
+      }
+    : stageDrillGoalPolicySignals;
   if (!stageDrillPayload) {
     failures.push("stage_drill_payload_missing");
+  } else if (!effectiveStageDrillGoalPolicySignals.propagationReported) {
+    failures.push("stage_drill_goal_policy_propagation_not_reported");
+    failures.push("stage_drill_goal_policy_signals_not_reported");
+  } else if (!effectiveStageDrillGoalPolicySignals.propagationPassed) {
+    failures.push("stage_drill_goal_policy_propagation_not_passed");
+    failures.push("stage_drill_goal_policy_signals_not_passed");
   }
 
   const rollbackTriggered = stageDrillPayload?.decision?.action === "rollback";
@@ -447,6 +578,28 @@ async function main() {
     checks: {
       calibrationPass: calibrationPayload?.pass === true,
       stageDrillEvaluated: stageDrillCommand.code === 0 || stageDrillCommand.code === 2,
+      stageDrillGoalPolicyPropagationReported: effectiveStageDrillGoalPolicySignals.propagationReported,
+      stageDrillGoalPolicyPropagationPassed: effectiveStageDrillGoalPolicySignals.propagationPassed,
+      stageDrillStageSignalsReported: effectiveStageDrillGoalPolicySignals.propagationReported,
+      stageDrillStageSignalsPassed: effectiveStageDrillGoalPolicySignals.propagationPassed,
+      stageDrillStagePolicySignalsReported: effectiveStageDrillGoalPolicySignals.propagationReported,
+      stageDrillStagePolicySignalsPass: effectiveStageDrillGoalPolicySignals.propagationPassed,
+      stageDrillMergeBundleGoalPolicyValidationReported:
+        effectiveStageDrillGoalPolicySignals.mergeBundleReleaseReported,
+      stageDrillMergeBundleGoalPolicyValidationPassed:
+        effectiveStageDrillGoalPolicySignals.mergeBundleReleasePassed,
+      stageDrillMergeBundleInitialScopeGoalPolicyValidationReported:
+        effectiveStageDrillGoalPolicySignals.mergeBundleInitialScopeReported,
+      stageDrillMergeBundleInitialScopeGoalPolicyValidationPassed:
+        effectiveStageDrillGoalPolicySignals.mergeBundleInitialScopePassed,
+      stageDrillBundleVerificationGoalPolicyValidationReported:
+        effectiveStageDrillGoalPolicySignals.bundleVerificationReleaseReported,
+      stageDrillBundleVerificationGoalPolicyValidationPassed:
+        effectiveStageDrillGoalPolicySignals.bundleVerificationReleasePassed,
+      stageDrillBundleVerificationInitialScopeGoalPolicyValidationReported:
+        effectiveStageDrillGoalPolicySignals.bundleVerificationInitialScopeReported,
+      stageDrillBundleVerificationInitialScopeGoalPolicyValidationPassed:
+        effectiveStageDrillGoalPolicySignals.bundleVerificationInitialScopePassed,
       rollbackTriggered,
       rollbackApplied,
       cutoverReadinessSkipped: options.skipCutoverReadiness,

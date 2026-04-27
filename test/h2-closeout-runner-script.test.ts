@@ -175,6 +175,14 @@ async function seedReadinessArtifacts(evidenceDir: string): Promise<void> {
           validationSummaryPassed: true,
           cutoverReadinessPassed: true,
           releaseReadinessPassed: true,
+          mergeBundleGoalPolicyValidationReported: true,
+          mergeBundleGoalPolicyValidationPassed: true,
+          mergeBundleInitialScopeGoalPolicyValidationReported: true,
+          mergeBundleInitialScopeGoalPolicyValidationPassed: true,
+          bundleVerificationGoalPolicyValidationReported: true,
+          bundleVerificationGoalPolicyValidationPassed: true,
+          bundleVerificationInitialScopeGoalPolicyValidationReported: true,
+          bundleVerificationInitialScopeGoalPolicyValidationPassed: true,
           mergeBundleValidationPassed: true,
           bundleVerificationPassed: true,
           horizonValidationPass: true,
@@ -381,6 +389,7 @@ describe("run-h2-closeout.mjs", () => {
         checks: {
           calibrationPass: boolean;
           supervisedSimulationPass: boolean;
+          supervisedSimulationStageGoalPolicyPropagationPassed: boolean;
           h2CloseoutGatePass: boolean;
         };
         failures: string[];
@@ -388,8 +397,90 @@ describe("run-h2-closeout.mjs", () => {
       expect(payload.pass).toBe(true);
       expect(payload.checks.calibrationPass).toBe(true);
       expect(payload.checks.supervisedSimulationPass).toBe(true);
+      expect(payload.checks.supervisedSimulationStageGoalPolicyPropagationPassed).toBe(true);
       expect(payload.checks.h2CloseoutGatePass).toBe(true);
       expect(payload.failures).toEqual([]);
+    });
+  });
+
+  it("fails when supervised simulation omits drill stage policy propagation checks", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-closeout-runner.json");
+
+      await seedValidationSummaries(evidenceDir);
+      await seedReadinessArtifacts(evidenceDir);
+      await seedH2DrillSuiteEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      const simulationPath = path.join(
+        evidenceDir,
+        "supervised-rollback-simulation-20260426-999999.json",
+      );
+      await writeFile(
+        simulationPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            checks: {
+              calibrationPass: true,
+              stageDrillEvaluated: true,
+              rollbackTriggered: true,
+              rollbackApplied: true,
+              cutoverReadinessSkipped: true,
+              cutoverReadinessPass: null,
+              shadowRestored: true,
+              stageDrillGoalPolicyPropagationReported: false,
+              stageDrillGoalPolicyPropagationPassed: false,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-closeout.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--simulation-out",
+          simulationPath,
+        ],
+        {
+          timeoutMs: 180_000,
+          env: {
+            ...process.env,
+            UNIFIED_FORCE_MISSING_STAGE_DRILL_SIGNALS: "1",
+          },
+        },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          supervisedSimulationStageGoalPolicyPropagationPassed: boolean;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.supervisedSimulationStageGoalPolicyPropagationPassed).toBe(false);
+      expect(payload.failures).toContain("supervised_simulation_stage_goal_policy_propagation_not_reported");
     });
   });
 

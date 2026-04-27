@@ -111,12 +111,50 @@ async function seedReadinessArtifacts(evidenceDir: string): Promise<void> {
   );
   await writeFile(
     path.join(evidenceDir, `merge-bundle-validation-${stamp}.json`),
-    JSON.stringify({ generatedAtIso: new Date().toISOString(), pass: true }, null, 2),
+    JSON.stringify(
+      {
+        generatedAtIso: new Date().toISOString(),
+        pass: true,
+        files: {
+          validationManifestPath: path.join(evidenceDir, `merge-bundle-validation-${stamp}.json`),
+          bundleManifestPath: "/tmp/merge-readiness-manifest.json",
+          releaseReadinessPath: path.join(evidenceDir, `release-readiness-${stamp}.json`),
+          initialScopePath: "/tmp/initial-scope-validation.json",
+          bundleArchivePath: "/tmp/merge-readiness-bundle.tar.gz",
+        },
+        checks: {
+          buildExitCode: 0,
+          bundleManifestPresent: true,
+          bundleManifestPass: true,
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
+          bundleFailures: [],
+        },
+        failures: [],
+      },
+      null,
+      2,
+    ),
     "utf8",
   );
   await writeFile(
     path.join(evidenceDir, `bundle-verification-${stamp}.json`),
-    JSON.stringify({ generatedAtIso: new Date().toISOString(), pass: true }, null, 2),
+    JSON.stringify(
+      {
+        generatedAtIso: new Date().toISOString(),
+        pass: true,
+        checks: {
+          releaseGoalPolicyValidationReported: true,
+          releaseGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicyValidationReported: true,
+          initialScopeGoalPolicyValidationPassed: true,
+        },
+      },
+      null,
+      2,
+    ),
     "utf8",
   );
   await writeFile(
@@ -136,6 +174,18 @@ async function seedReadinessArtifacts(evidenceDir: string): Promise<void> {
           validationSummaryPassed: true,
           cutoverReadinessPassed: true,
           releaseReadinessPassed: true,
+          mergeBundleReleaseGoalPolicyValidationReported: true,
+          mergeBundleReleaseGoalPolicyValidationPassed: true,
+          mergeBundleInitialScopeGoalPolicyValidationReported: true,
+          mergeBundleInitialScopeGoalPolicyValidationPassed: true,
+          bundleVerificationReleaseGoalPolicyValidationReported: true,
+          bundleVerificationReleaseGoalPolicyValidationPassed: true,
+          bundleVerificationInitialScopeGoalPolicyValidationReported: true,
+          bundleVerificationInitialScopeGoalPolicyValidationPassed: true,
+          mergeBundleGoalPolicyValidationReported: true,
+          mergeBundleGoalPolicyValidationPassed: true,
+          bundleVerificationGoalPolicyValidationReported: true,
+          bundleVerificationGoalPolicyValidationPassed: true,
           mergeBundleValidationPassed: true,
           bundleVerificationPassed: true,
           horizonValidationPass: true,
@@ -202,6 +252,18 @@ async function seedReadinessArtifacts(evidenceDir: string): Promise<void> {
           validationSummaryPassed: false,
           cutoverReadinessPassed: false,
           releaseReadinessPassed: false,
+          mergeBundleReleaseGoalPolicyValidationReported: false,
+          mergeBundleReleaseGoalPolicyValidationPassed: false,
+          mergeBundleInitialScopeGoalPolicyValidationReported: false,
+          mergeBundleInitialScopeGoalPolicyValidationPassed: false,
+          bundleVerificationReleaseGoalPolicyValidationReported: false,
+          bundleVerificationReleaseGoalPolicyValidationPassed: false,
+          bundleVerificationInitialScopeGoalPolicyValidationReported: false,
+          bundleVerificationInitialScopeGoalPolicyValidationPassed: false,
+          mergeBundleGoalPolicyValidationReported: false,
+          mergeBundleGoalPolicyValidationPassed: false,
+          bundleVerificationGoalPolicyValidationReported: false,
+          bundleVerificationGoalPolicyValidationPassed: false,
           mergeBundleValidationPassed: false,
           bundleVerificationPassed: false,
           horizonValidationPass: false,
@@ -380,6 +442,8 @@ describe("run-supervised-rollback-simulation.mjs", () => {
           rollbackApplied: boolean;
           shadowRestored: boolean;
           cutoverReadinessSkipped: boolean;
+          stageDrillStageSignalsReported: boolean;
+          stageDrillStageSignalsPassed: boolean;
         };
         failures: string[];
       };
@@ -389,7 +453,71 @@ describe("run-supervised-rollback-simulation.mjs", () => {
       expect(payload.checks.rollbackApplied).toBe(true);
       expect(payload.checks.shadowRestored).toBe(true);
       expect(payload.checks.cutoverReadinessSkipped).toBe(true);
+      expect(payload.checks.stageDrillStageSignalsReported).toBe(true);
+      expect(payload.checks.stageDrillStageSignalsPassed).toBe(true);
       expect(payload.failures).toEqual([]);
+    });
+  });
+
+  it("fails when stage drill output omits rollback stage signal checks", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "supervised-rollback-simulation.json");
+
+      await seedValidationSummaries(evidenceDir);
+      await seedReadinessArtifacts(evidenceDir);
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-supervised-rollback-simulation.mjs",
+          "--stage",
+          "majority",
+          "--current-stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--majority-percent",
+          "90",
+          "--force-rollback-min-success-rate",
+          "1.01",
+          "--timeout-ms",
+          "120000",
+        ],
+        {
+          timeoutMs: 130_000,
+          env: {
+            ...process.env,
+            UNIFIED_FORCE_MISSING_STAGE_DRILL_SIGNALS: "1",
+          },
+        },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          stageDrillGoalPolicyPropagationReported: boolean;
+          stageDrillGoalPolicyPropagationPassed: boolean;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.stageDrillGoalPolicyPropagationReported).toBe(false);
+      expect(payload.checks.stageDrillGoalPolicyPropagationPassed).toBe(false);
+      expect(payload.failures).toContain("stage_drill_goal_policy_propagation_not_reported");
     });
   });
 });

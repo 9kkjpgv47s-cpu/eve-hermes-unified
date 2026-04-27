@@ -330,6 +330,7 @@ npm run run:supervised-rollback-simulation -- \
 Behavior:
 - generates calibration report if one is not provided
 - executes `run:stage-drill` with `--auto-apply-rollback` and rollback-forcing thresholds (default force min success rate `1.01`)
+- fail-closed gate: simulation fails unless embedded `run:stage-drill` output reports and passes rollback-policy stage goal-policy propagation checks
 - verifies post-action rollback state in gateway env:
   - `UNIFIED_ROUTER_CUTOVER_STAGE=shadow`
   - `UNIFIED_ROUTER_DEFAULT_PRIMARY=eve`
@@ -369,6 +370,7 @@ npm run run:h2-closeout -- \
 
 Runner behavior:
 - executes rollback-threshold calibration, supervised rollback simulation, and H2 closeout validation in sequence
+- fail-closed gate: runner fails unless supervised rollback simulation reports/passes drill-level rollback-policy stage goal-policy propagation checks
 - writes consolidated manifest:
   - `evidence/h2-closeout-run-*.json`
 - references step artifacts:

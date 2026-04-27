@@ -228,7 +228,13 @@ Schema validation expectations:
   - emits `evidence/rollback-threshold-calibration-<stage>-*.json` with `recommendedPolicyArgs`
 - supervised rollback auto-apply simulation can run one gated drill + restoration verification:
   - `npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
+  - fail-closed enforcement: selected `supervised-stage-drill-*` output must report and pass rollback-policy stage-promotion goal-policy propagation checks
+    - requires `checks.rollbackStagePromotionGoalPolicyPropagationReported=true`
+    - requires `checks.rollbackStagePromotionGoalPolicyPropagationPassed=true`
   - emits `evidence/supervised-rollback-simulation-*.json`
+- h2 closeout orchestration fail-closes unless supervised rollback simulation reports stage-drill propagation checks:
+  - `checks.stageDrillGoalPolicyPropagationReported=true`
+  - `checks.stageDrillGoalPolicyPropagationPassed=true`
   - add `--skip-cutover-readiness` only for CI/test harnesses that use synthetic gateway env files
 - validate a single file with:
   - `npm run validate:manifest-schema -- --type release-readiness --file <path>`

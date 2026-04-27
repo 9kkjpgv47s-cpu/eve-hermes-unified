@@ -233,6 +233,7 @@ function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
     closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
       ? closeoutRunPayload.checks
       : {};
+  const h2CloseoutGateReported = typeof checks.h2CloseoutGatePass === "boolean";
   const h2CloseoutGatePass = resolveBooleanCandidate(checks, [
     "h2CloseoutGatePass",
   ]);
@@ -249,6 +250,7 @@ function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
     "supervisedSimulationStagePolicySignalsPass",
   ]);
   return {
+    h2CloseoutGateReported,
     h2CloseoutGatePass,
     propagationReported,
     propagationPassed,
@@ -549,6 +551,7 @@ async function main() {
     nextMatches: false,
   };
   let closeoutRunSimulationSignals = {
+    h2CloseoutGateReported: false,
     h2CloseoutGatePass: false,
     propagationReported: false,
     propagationPassed: false,
@@ -695,6 +698,8 @@ async function main() {
         failures.push("h2_closeout_run_closeout_artifact_horizon_next_not_reported");
       } else if (!closeoutArtifactTransition.nextMatches) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_next_mismatch");
+      } else if (!closeoutRunSimulationSignals.h2CloseoutGateReported) {
+        failures.push("h2_closeout_run_gate_not_reported");
       } else if (!closeoutRunSimulationSignals.h2CloseoutGatePass) {
         failures.push("h2_closeout_run_gate_not_passed");
       } else if (!closeoutRunSimulationSignals.propagationReported) {
@@ -856,6 +861,7 @@ async function main() {
         closeoutArtifactTransition.sourceReported ? closeoutArtifactTransition.sourceMatches : null,
       closeoutRunCloseoutArtifactHorizonNextMatches:
         closeoutArtifactTransition.nextReported ? closeoutArtifactTransition.nextMatches : null,
+      closeoutRunH2CloseoutGateReported: closeoutRunSimulationSignals.h2CloseoutGateReported,
       closeoutRunH2CloseoutGatePass: closeoutRunSimulationSignals.h2CloseoutGatePass,
       closeoutRunSupervisedSimulationPass: closeoutRunSimulationSignals.supervisedSimulationPass,
       closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported:

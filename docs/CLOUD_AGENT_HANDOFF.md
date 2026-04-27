@@ -131,6 +131,9 @@ Schema validation expectations:
       - `closeout.horizon` must equal requested `--horizon`
       - `closeout.nextHorizon` must equal requested `--next-horizon`
       - legacy fallback accepted: `checks.nextHorizon.selectedNextHorizon` must equal `--next-horizon`
+    - pinned closeout transition aliases must be internally consistent:
+      - source aliases (`closeout.horizon`, `closeout.sourceHorizon`, `horizon.source`, etc.) must resolve to one value
+      - next aliases (`closeout.nextHorizon`, `closeout.targetNextHorizon`, `checks.nextHorizon.*`, etc.) must resolve to one value
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
   - fail-closed enforcement for `--closeout-run-file`:
     - if closeout artifact path aliases are reported, they must resolve to a single consistent path (`files.closeoutOut`, `files.closeoutFile`, top-level `closeoutOut`)
@@ -139,6 +142,9 @@ Schema validation expectations:
       - `horizon.next` must equal requested `--next-horizon`
       - if `horizon` block is omitted (legacy manifests), inferred `checks.nextHorizon` must match `--next-horizon`
       - source mismatch can be bypassed only with `--allow-inactive-source-horizon` (replay-only)
+    - closeout-run transition aliases must be internally consistent:
+      - source aliases (`horizon.source`, `sourceHorizon`, `checks.sourceHorizon`, etc.) must resolve to one value
+      - next aliases (`horizon.next`, `nextHorizon`, `checks.nextHorizon`, etc.) must resolve to one value
     - closeout run must report `checks.h2CloseoutGatePass=true`
     - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationReported=true`
     - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationPassed=true`
@@ -196,10 +202,12 @@ Schema validation expectations:
   - optional `--strict-goal-policy-gates` (alias: `--require-strict-goal-policy-gates`) to enforce the full strict policy profile with one flag
   - fail-closed pre-promotion closeout artifact checks:
     - runner rejects closeout-run manifests that report conflicting closeout artifact path aliases
+    - runner rejects closeout-run manifests that report conflicting source/next transition aliases
     - runner resolves relative closeout artifact aliases relative to the closeout-run manifest directory
     - runner validates `closeoutOut` referenced by closeout-run before invoking `promote:horizon`
     - rejects when pinned closeout artifact file is missing
     - rejects when pinned closeout artifact `pass !== true`
+    - rejects when pinned closeout artifact reports conflicting source/next transition aliases
     - rejects when pinned closeout artifact transition metadata does not match expected `H2-><next>`
     - rejects when closeout-run and pinned closeout artifact transitions disagree, even if each individually appears valid
   - fail-closed pre-promotion closeout-run transition checks:

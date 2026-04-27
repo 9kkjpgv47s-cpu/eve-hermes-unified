@@ -267,44 +267,52 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
     closeoutRunPayload?.horizon && typeof closeoutRunPayload.horizon === "object"
       ? closeoutRunPayload.horizon
       : {};
-  const sourceRaw = firstNonEmptyString([
+  const sourceSignals = resolveHorizonAliasSignals([
     horizonPayload.source,
     horizonPayload.current,
     horizonPayload.from,
     closeoutRunPayload?.sourceHorizon,
     checks.sourceHorizon,
   ]);
-  const nextRaw = firstNonEmptyString([
+  const nextSignals = resolveHorizonAliasSignals([
     horizonPayload.next,
     horizonPayload.nextHorizon,
     horizonPayload.to,
     closeoutRunPayload?.nextHorizon,
     checks.nextHorizon,
   ]);
-  const normalizedSource = normalizeHorizon(sourceRaw, "");
+  const normalizedSource = sourceSignals.value;
   const inferredH2Source =
     !normalizedSource && typeof checks.h2CloseoutGatePass === "boolean" ? "H2" : "";
   const effectiveSource = normalizedSource || inferredH2Source;
-  const normalizedNext = normalizeHorizon(nextRaw, "");
+  const normalizedNext = nextSignals.value;
   const sourceReported = isNonEmptyString(effectiveSource);
-  const nextReported = isNonEmptyString(normalizedNext);
+  const nextReported = nextSignals.reported;
   return {
     source: sourceReported ? effectiveSource : null,
     next: nextReported ? normalizedNext : null,
     sourceReported,
     nextReported,
+    sourceAliasConflict: sourceSignals.conflict,
+    nextAliasConflict: nextSignals.conflict,
+    sourceCandidates: sourceSignals.values,
+    nextCandidates: nextSignals.values,
     sourceMatches: sourceReported && effectiveSource === expectedSource,
     nextMatches: nextReported && normalizedNext === expectedNext,
   };
 }
 
-function firstNonEmptyString(values) {
-  for (const value of values) {
-    if (isNonEmptyString(value)) {
-      return String(value).trim();
-    }
-  }
-  return "";
+function resolveHorizonAliasSignals(entries) {
+  const normalizedValues = entries
+    .map((value) => normalizeHorizon(value, ""))
+    .filter((value) => value.length > 0);
+  const uniqueValues = Array.from(new Set(normalizedValues));
+  return {
+    reported: uniqueValues.length > 0,
+    value: uniqueValues[0] ?? "",
+    conflict: uniqueValues.length > 1,
+    values: uniqueValues,
+  };
 }
 
 function resolveCloseoutRunCloseoutArtifactPath(closeoutRunPayload, closeoutRunManifestPath = "") {
@@ -344,25 +352,27 @@ function resolveCloseoutArtifactTransition(closeoutPayload) {
       : {};
   const nextHorizonCheck =
     checks?.nextHorizon && typeof checks.nextHorizon === "object" ? checks.nextHorizon : {};
-  const source = normalizeHorizon(
-    firstNonEmptyString([closeout.horizon, closeout.sourceHorizon, payloadHorizon.source]),
-    "",
-  );
-  const next = normalizeHorizon(
-    firstNonEmptyString([
-      closeout.nextHorizon,
-      closeout.targetNextHorizon,
-      payloadHorizon.next,
-      nextHorizonCheck.selectedNextHorizon,
-      checks.nextHorizon,
-    ]),
-    "",
-  );
+  const sourceSignals = resolveHorizonAliasSignals([
+    closeout.horizon,
+    closeout.sourceHorizon,
+    payloadHorizon.source,
+  ]);
+  const nextSignals = resolveHorizonAliasSignals([
+    closeout.nextHorizon,
+    closeout.targetNextHorizon,
+    payloadHorizon.next,
+    nextHorizonCheck.selectedNextHorizon,
+    checks.nextHorizon,
+  ]);
   return {
-    source,
-    next,
-    sourceReported: source.length > 0,
-    nextReported: next.length > 0,
+    source: sourceSignals.value,
+    next: nextSignals.value,
+    sourceReported: sourceSignals.reported,
+    nextReported: nextSignals.reported,
+    sourceAliasConflict: sourceSignals.conflict,
+    nextAliasConflict: nextSignals.conflict,
+    sourceCandidates: sourceSignals.values,
+    nextCandidates: nextSignals.values,
   };
 }
 
@@ -559,6 +569,10 @@ async function main() {
     next: null,
     sourceReported: false,
     nextReported: false,
+    sourceAliasConflict: false,
+    nextAliasConflict: false,
+    sourceCandidates: [],
+    nextCandidates: [],
     sourceMatches: false,
     nextMatches: false,
   };
@@ -575,6 +589,10 @@ async function main() {
     next: "",
     sourceReported: false,
     nextReported: false,
+    sourceAliasConflict: false,
+    nextAliasConflict: false,
+    sourceCandidates: [],
+    nextCandidates: [],
     sourceMatches: false,
     nextMatches: false,
   };
@@ -702,10 +720,14 @@ async function main() {
       failures.push("h2_closeout_run_failed");
     } else if (!closeoutRunTransition.sourceReported) {
       failures.push("h2_closeout_run_horizon_source_not_reported");
+    } else if (closeoutRunTransition.sourceAliasConflict) {
+      failures.push("h2_closeout_run_horizon_source_alias_conflict");
     } else if (!closeoutRunTransition.sourceMatches) {
       failures.push("h2_closeout_run_horizon_source_mismatch");
     } else if (!closeoutRunTransition.nextReported) {
       failures.push("h2_closeout_run_horizon_next_not_reported");
+    } else if (closeoutRunTransition.nextAliasConflict) {
+      failures.push("h2_closeout_run_horizon_next_alias_conflict");
     } else if (!closeoutRunTransition.nextMatches) {
       failures.push("h2_closeout_run_horizon_next_mismatch");
     } else if (closeoutArtifactReference.conflict) {
@@ -735,10 +757,14 @@ async function main() {
         failures.push("h2_closeout_run_closeout_artifact_not_passed");
       } else if (!closeoutArtifactTransition.sourceReported) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_source_not_reported");
+      } else if (closeoutArtifactTransition.sourceAliasConflict) {
+        failures.push("h2_closeout_run_closeout_artifact_horizon_source_alias_conflict");
       } else if (!closeoutArtifactTransition.sourceMatches) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_source_mismatch");
       } else if (!closeoutArtifactTransition.nextReported) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_next_not_reported");
+      } else if (closeoutArtifactTransition.nextAliasConflict) {
+        failures.push("h2_closeout_run_closeout_artifact_horizon_next_alias_conflict");
       } else if (!closeoutArtifactTransition.nextMatches) {
         failures.push("h2_closeout_run_closeout_artifact_horizon_next_mismatch");
       } else if (!closeoutTransitionAlignment.sourceComparable) {
@@ -896,8 +922,14 @@ async function main() {
       closeoutGatePass: closeoutRunPayload?.checks?.h2CloseoutGatePass === true,
       closeoutRunSourceHorizon: closeoutRunTransition.source,
       closeoutRunNextHorizon: closeoutRunTransition.next,
+      closeoutRunSourceHorizonCandidates:
+        closeoutRunTransition.sourceCandidates.length > 0 ? closeoutRunTransition.sourceCandidates : null,
+      closeoutRunNextHorizonCandidates:
+        closeoutRunTransition.nextCandidates.length > 0 ? closeoutRunTransition.nextCandidates : null,
       closeoutRunHorizonSourceReported: closeoutRunTransition.sourceReported,
       closeoutRunHorizonNextReported: closeoutRunTransition.nextReported,
+      closeoutRunHorizonSourceAliasConflict: closeoutRunTransition.sourceAliasConflict,
+      closeoutRunHorizonNextAliasConflict: closeoutRunTransition.nextAliasConflict,
       closeoutRunHorizonSourceMatches:
         closeoutRunTransition.sourceReported ? closeoutRunTransition.sourceMatches : null,
       closeoutRunHorizonNextMatches:
@@ -914,6 +946,10 @@ async function main() {
         closeoutArtifactTransition.source.length > 0 ? closeoutArtifactTransition.source : null,
       closeoutRunCloseoutArtifactNextHorizon:
         closeoutArtifactTransition.next.length > 0 ? closeoutArtifactTransition.next : null,
+      closeoutRunCloseoutArtifactHorizonSourceAliasConflict:
+        closeoutArtifactTransition.sourceAliasConflict,
+      closeoutRunCloseoutArtifactHorizonNextAliasConflict:
+        closeoutArtifactTransition.nextAliasConflict,
       closeoutRunCloseoutArtifactHorizonSourceMatches:
         closeoutArtifactTransition.sourceReported ? closeoutArtifactTransition.sourceMatches : null,
       closeoutRunCloseoutArtifactHorizonNextMatches:

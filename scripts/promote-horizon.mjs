@@ -235,13 +235,17 @@ function resolveCloseoutRunH2CloseoutGate(closeoutRunPayload) {
   };
 }
 
-function firstNonEmptyString(values) {
-  for (const value of values) {
-    if (isNonEmptyString(value)) {
-      return String(value).trim();
-    }
-  }
-  return "";
+function resolveHorizonAliasSignals(entries) {
+  const normalizedValues = entries
+    .map((value) => normalizeHorizon(value, ""))
+    .filter((value) => value.length > 0);
+  const uniqueValues = Array.from(new Set(normalizedValues));
+  return {
+    reported: uniqueValues.length > 0,
+    value: uniqueValues[0] ?? "",
+    conflict: uniqueValues.length > 1,
+    values: uniqueValues,
+  };
 }
 
 function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expectedNext) {
@@ -253,25 +257,27 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
     closeoutRunPayload?.horizon && typeof closeoutRunPayload.horizon === "object"
       ? closeoutRunPayload.horizon
       : {};
-  const sourceRaw = firstNonEmptyString([
-    horizon.source,
-    horizon.current,
-    horizon.from,
-    closeoutRunPayload?.sourceHorizon,
-    checks.sourceHorizon,
-  ]);
-  const nextRaw = firstNonEmptyString([
-    horizon.next,
-    horizon.nextHorizon,
-    horizon.to,
-    closeoutRunPayload?.nextHorizon,
-    checks.nextHorizon,
-  ]);
-  const normalizedSource = normalizeHorizon(sourceRaw, "");
+  const sourceAliases = [
+    normalizeHorizon(String(horizon.source ?? ""), ""),
+    normalizeHorizon(String(horizon.current ?? ""), ""),
+    normalizeHorizon(String(horizon.from ?? ""), ""),
+    normalizeHorizon(String(closeoutRunPayload?.sourceHorizon ?? ""), ""),
+    normalizeHorizon(String(checks.sourceHorizon ?? ""), ""),
+  ].filter((value) => value.length > 0);
+  const nextAliases = [
+    normalizeHorizon(String(horizon.next ?? ""), ""),
+    normalizeHorizon(String(horizon.nextHorizon ?? ""), ""),
+    normalizeHorizon(String(horizon.to ?? ""), ""),
+    normalizeHorizon(String(closeoutRunPayload?.nextHorizon ?? ""), ""),
+    normalizeHorizon(String(checks.nextHorizon ?? ""), ""),
+  ].filter((value) => value.length > 0);
+  const sourceAliasSet = Array.from(new Set(sourceAliases));
+  const nextAliasSet = Array.from(new Set(nextAliases));
+  const normalizedSource = sourceAliasSet[0] ?? "";
   const inferredH2Source =
     !normalizedSource && typeof checks.h2CloseoutGatePass === "boolean" ? "H2" : "";
   const effectiveSource = normalizedSource || inferredH2Source;
-  const normalizedNext = normalizeHorizon(nextRaw, "");
+  const normalizedNext = nextAliasSet[0] ?? "";
   const sourceReported = isNonEmptyString(effectiveSource);
   const nextReported = isNonEmptyString(normalizedNext);
   return {
@@ -279,6 +285,10 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
     next: nextReported ? normalizedNext : null,
     sourceReported,
     nextReported,
+    sourceAliasConflict: sourceAliasSet.length > 1,
+    nextAliasConflict: nextAliasSet.length > 1,
+    sourceAliases: sourceAliasSet,
+    nextAliases: nextAliasSet,
     sourceMatches: sourceReported && effectiveSource === expectedSource,
     nextMatches: nextReported && normalizedNext === expectedNext,
   };
@@ -333,31 +343,37 @@ function resolveCloseoutTransition(closeoutPayload, expectedSource, expectedNext
       : {};
   const nextHorizonChecks =
     checks.nextHorizon && typeof checks.nextHorizon === "object" ? checks.nextHorizon : {};
-  const sourceRaw = firstNonEmptyString([
-    closeout.horizon,
-    closeout.currentHorizon,
-    closeout.sourceHorizon,
-    horizon.source,
-    closeoutPayload?.sourceHorizon,
-    checks.sourceHorizon,
-  ]);
-  const nextRaw = firstNonEmptyString([
-    closeout.nextHorizon,
-    closeout.next,
-    closeout.targetNextHorizon,
-    horizon.next,
-    closeoutPayload?.nextHorizon,
-    checks.nextHorizon,
-    nextHorizonChecks.selectedNextHorizon,
-    nextHorizonChecks.nextHorizon,
-  ]);
-  const source = normalizeHorizon(sourceRaw, "");
-  const next = normalizeHorizon(nextRaw, "");
+  const sourceAliases = [
+    normalizeHorizon(String(closeout.horizon ?? ""), ""),
+    normalizeHorizon(String(closeout.currentHorizon ?? ""), ""),
+    normalizeHorizon(String(closeout.sourceHorizon ?? ""), ""),
+    normalizeHorizon(String(horizon.source ?? ""), ""),
+    normalizeHorizon(String(closeoutPayload?.sourceHorizon ?? ""), ""),
+    normalizeHorizon(String(checks.sourceHorizon ?? ""), ""),
+  ].filter((value) => value.length > 0);
+  const nextAliases = [
+    normalizeHorizon(String(closeout.nextHorizon ?? ""), ""),
+    normalizeHorizon(String(closeout.next ?? ""), ""),
+    normalizeHorizon(String(closeout.targetNextHorizon ?? ""), ""),
+    normalizeHorizon(String(horizon.next ?? ""), ""),
+    normalizeHorizon(String(closeoutPayload?.nextHorizon ?? ""), ""),
+    normalizeHorizon(String(checks.nextHorizon ?? ""), ""),
+    normalizeHorizon(String(nextHorizonChecks.selectedNextHorizon ?? ""), ""),
+    normalizeHorizon(String(nextHorizonChecks.nextHorizon ?? ""), ""),
+  ].filter((value) => value.length > 0);
+  const sourceAliasSet = Array.from(new Set(sourceAliases));
+  const nextAliasSet = Array.from(new Set(nextAliases));
+  const source = sourceAliasSet[0] ?? "";
+  const next = nextAliasSet[0] ?? "";
   return {
     source: source || null,
     next: next || null,
     sourceReported: source.length > 0,
     nextReported: next.length > 0,
+    sourceAliasConflict: sourceAliasSet.length > 1,
+    nextAliasConflict: nextAliasSet.length > 1,
+    sourceAliases: sourceAliasSet,
+    nextAliases: nextAliasSet,
     sourceMatches: source.length > 0 && source === expectedSource,
     nextMatches: next.length > 0 && next === expectedNext,
   };
@@ -578,6 +594,10 @@ async function main() {
     next: null,
     sourceReported: false,
     nextReported: false,
+    sourceAliasConflict: false,
+    nextAliasConflict: false,
+    sourceAliases: [],
+    nextAliases: [],
     sourceMatches: false,
     nextMatches: false,
   };
@@ -608,6 +628,8 @@ async function main() {
       if (sourceHorizon && nextHorizon) {
         if (!closeoutRunTransition.sourceReported) {
           failures.push("closeout_run_horizon_source_not_reported");
+        } else if (closeoutRunTransition.sourceAliasConflict) {
+          failures.push("closeout_run_horizon_source_alias_conflict");
         } else if (!closeoutRunTransition.sourceMatches) {
           failures.push(
             `closeout_run_horizon_source_mismatch:${String(closeoutRunTransition.source)}!=${sourceHorizon}`,
@@ -615,6 +637,8 @@ async function main() {
         }
         if (!closeoutRunTransition.nextReported) {
           failures.push("closeout_run_horizon_next_not_reported");
+        } else if (closeoutRunTransition.nextAliasConflict) {
+          failures.push("closeout_run_horizon_next_alias_conflict");
         } else if (!closeoutRunTransition.nextMatches) {
           failures.push(
             `closeout_run_horizon_next_mismatch:${String(closeoutRunTransition.next)}!=${nextHorizon}`,
@@ -657,6 +681,10 @@ async function main() {
     next: null,
     sourceReported: false,
     nextReported: false,
+    sourceAliasConflict: false,
+    nextAliasConflict: false,
+    sourceAliases: [],
+    nextAliases: [],
     sourceMatches: false,
     nextMatches: false,
   };
@@ -698,11 +726,15 @@ async function main() {
     if (sourceHorizon && nextHorizon) {
       if (!closeoutTransition.sourceReported) {
         failures.push("closeout_horizon_source_not_reported");
+      } else if (closeoutTransition.sourceAliasConflict) {
+        failures.push("closeout_horizon_source_alias_conflict");
       } else if (!closeoutTransition.sourceMatches) {
         failures.push(`closeout_horizon_source_mismatch:${String(closeoutTransition.source)}!=${sourceHorizon}`);
       }
       if (!closeoutTransition.nextReported) {
         failures.push("closeout_horizon_next_not_reported");
+      } else if (closeoutTransition.nextAliasConflict) {
+        failures.push("closeout_horizon_next_alias_conflict");
       } else if (!closeoutTransition.nextMatches) {
         failures.push(`closeout_horizon_next_mismatch:${String(closeoutTransition.next)}!=${nextHorizon}`);
       }
@@ -989,8 +1021,12 @@ async function main() {
       closeoutRunNextHorizon: closeoutRunTransition.next,
       closeoutRunHorizonSourceReported: closeoutRunTransition.sourceReported,
       closeoutRunHorizonNextReported: closeoutRunTransition.nextReported,
+      closeoutRunHorizonSourceAliasConflict: closeoutRunTransition.sourceAliasConflict,
+      closeoutRunHorizonNextAliasConflict: closeoutRunTransition.nextAliasConflict,
       closeoutRunHorizonSourceMatches: closeoutRunTransition.sourceMatches,
       closeoutRunHorizonNextMatches: closeoutRunTransition.nextMatches,
+      closeoutHorizonSourceAliasConflict: closeoutTransition.sourceAliasConflict,
+      closeoutHorizonNextAliasConflict: closeoutTransition.nextAliasConflict,
       closeoutRunCloseoutOutAliasesConsistent:
         closeoutRunPathSignals.hasAny ? closeoutRunPathSignals.allAligned : null,
       closeoutRunCloseoutTransitionSourceMatches:

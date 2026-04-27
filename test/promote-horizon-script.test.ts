@@ -744,6 +744,148 @@ describe("promote-horizon.mjs", () => {
     });
   });
 
+it("fails when closeout run reports conflicting source horizon aliases via checks", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      const closeoutPath = await seedCloseoutReport(evidenceDir, {
+        pass: true,
+        horizon: "H2",
+        nextHorizon: "H3",
+      });
+      await seedHorizonStatus(statusPath);
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-20260426-201000.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H2",
+              next: "H3",
+            },
+            checks: {
+              sourceHorizon: "H1",
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+            },
+            files: {
+              closeoutOut: closeoutPath,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-run-file",
+          closeoutRunPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          closeoutRunHorizonSourceAliasConflict: boolean;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunHorizonSourceAliasConflict).toBe(true);
+      expect(payload.failures).toContain("closeout_run_horizon_source_alias_conflict");
+    });
+  });
+
+  it("fails when closeout run reports conflicting source horizon aliases via top-level sourceHorizon", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      const closeoutPath = await seedCloseoutReport(evidenceDir, {
+        pass: true,
+        horizon: "H2",
+        nextHorizon: "H3",
+      });
+      await seedHorizonStatus(statusPath);
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-20260426-201050.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H2",
+              next: "H3",
+            },
+            sourceHorizon: "H1",
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+            },
+            files: {
+              closeoutOut: closeoutPath,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-run-file",
+          closeoutRunPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          closeoutRunHorizonSourceAliasConflict: boolean;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunHorizonSourceAliasConflict).toBe(true);
+      expect(payload.failures).toContain("closeout_run_horizon_source_alias_conflict");
+    });
+  });
+
   it("fails when closeout run and closeout artifact transitions disagree", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");
@@ -830,6 +972,88 @@ describe("promote-horizon.mjs", () => {
       expect(payload.checks.closeoutRunHorizonNextMatches).toBe(true);
       expect(payload.checks.closeoutHorizonNextMatches).toBe(false);
       expect(payload.failures).toContain("closeout_run_closeout_horizon_next_disagreement:H3!=H4");
+    });
+  });
+
+  it("fails when closeout artifact reports conflicting next horizon aliases", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+
+      await mkdir(evidenceDir, { recursive: true });
+      const conflictingCloseoutPath = path.join(evidenceDir, "horizon-closeout-H2-20260426-conflicting-next.json");
+      await writeFile(
+        conflictingCloseoutPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            closeout: {
+              horizon: "H2",
+              nextHorizon: "H3",
+              targetNextHorizon: "H4",
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-20260426-201100.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H2",
+              next: "H3",
+            },
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+            },
+            files: {
+              closeoutOut: conflictingCloseoutPath,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-run-file",
+          closeoutRunPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          closeoutHorizonNextAliasConflict: boolean;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutHorizonNextAliasConflict).toBe(true);
+      expect(payload.failures).toContain("closeout_horizon_next_alias_conflict");
     });
   });
 

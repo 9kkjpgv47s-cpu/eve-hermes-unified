@@ -249,7 +249,8 @@ function isHoldStepPassing(step) {
     step.payload?.pass === true &&
     step.payload?.decision?.action === "hold" &&
     step.payload?.checks?.promotionPassed === true &&
-    step.payload?.checks?.rollbackPolicyPassed === true
+    step.payload?.checks?.rollbackPolicyPassed === true &&
+    step.payload?.checks?.rollbackPolicyStageSignalsPass === true
   );
 }
 
@@ -261,6 +262,9 @@ function isRollbackSimulationPassing(step, autoApplyRollback) {
     return false;
   }
   if (step.payload?.checks?.rollbackPolicyEvaluated !== true) {
+    return false;
+  }
+  if (step.payload?.checks?.rollbackPolicyStageSignalsPass !== true) {
     return false;
   }
   if (autoApplyRollback && step.payload?.decision?.rollbackApplied !== true) {
@@ -449,6 +453,11 @@ async function main() {
         options.skipRollbackSimulation || !steps.rollbackSimulation
           ? false
           : true,
+      rollbackPolicyStageSignalsPass:
+        steps.canary?.payload?.checks?.rollbackPolicyStageSignalsPass === true &&
+        (options.skipMajority || steps.majority?.payload?.checks?.rollbackPolicyStageSignalsPass === true) &&
+        (options.skipRollbackSimulation ||
+          steps.rollbackSimulation?.payload?.checks?.rollbackPolicyStageSignalsPass === true),
     },
     steps: {
       canary: steps.canary,

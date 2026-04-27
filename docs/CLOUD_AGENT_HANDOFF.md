@@ -216,11 +216,13 @@ Schema validation expectations:
 - staged drill orchestration can evaluate promotion + rollback policy in one command:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence`
   - add `--auto-apply-rollback` only for supervised incident simulation
+  - fail-closed enforcement: rollback-policy output must report and pass all propagated stage-promotion bundle goal-policy checks (merge-bundle + bundle-verification, release + initial-scope)
 - h2 suite orchestration can run canary + majority + rollback-trigger simulation in one command:
   - `npm run run:h2-drill-suite -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json`
   - adds suite manifest: `evidence/h2-drill-suite-*.json`
   - add `--evidence-selection-mode latest-passing` to reduce stale-failing artifact pickup during replay runs
   - use `--strict-horizon-target` when enforcing active-horizon stage matching during suite runs
+  - fail-closed enforcement: hold-path and rollback-simulation steps require rollback-policy stage-promotion goal-policy propagation checks to be reported and passed
 - rollback threshold calibration can produce policy inputs from recent validation summaries:
   - `npm run calibrate:rollback-thresholds -- --stage <canary|majority|full> --evidence-dir evidence`
   - emits `evidence/rollback-threshold-calibration-<stage>-*.json` with `recommendedPolicyArgs`

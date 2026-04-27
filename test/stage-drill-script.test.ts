@@ -246,10 +246,39 @@ async function seedEvidence(
     );
   }
 
+  const stagePromotionPath = path.join(evidenceDir, `stage-promotion-readiness-${stamp}.json`);
+  await writeFile(
+    stagePromotionPath,
+    JSON.stringify(
+      {
+        generatedAtIso: new Date().toISOString(),
+        pass: options?.stagePromotionPass !== false,
+        checks: {
+          mergeBundleReleaseGoalPolicyValidationReported: true,
+          mergeBundleReleaseGoalPolicyValidationPassed: true,
+          mergeBundleInitialScopeGoalPolicyValidationReported: true,
+          mergeBundleInitialScopeGoalPolicyValidationPassed: true,
+          bundleVerificationReleaseGoalPolicyValidationReported: true,
+          bundleVerificationReleaseGoalPolicyValidationPassed: true,
+          bundleVerificationInitialScopeGoalPolicyValidationReported: true,
+          bundleVerificationInitialScopeGoalPolicyValidationPassed: true,
+          mergeBundleGoalPolicyValidationReported: true,
+          mergeBundleGoalPolicyValidationPassed: true,
+          bundleVerificationGoalPolicyValidationReported: true,
+          bundleVerificationGoalPolicyValidationPassed: true,
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
   return {
     summaryPath,
     cutoverPath,
     releasePath,
+    stagePromotionPath,
   };
 }
 
@@ -612,6 +641,86 @@ describe("run-stage-drill.mjs", () => {
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks.rollbackPolicyPassed).toBe(true);
+    });
+  });
+
+  it("re-evaluates rollback policy and enforces propagated stage checks", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "stage-drill.json");
+
+      const seeded = await seedEvidence(evidenceDir, { successRate: 1 });
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      if (!seeded.stagePromotionPath) {
+        throw new Error("missing stage-promotion fixture path");
+      }
+      const rollbackPolicyPath = path.join(evidenceDir, "broken-rollback-policy.json");
+      await writeFile(
+        rollbackPolicyPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            decision: {
+              action: "hold",
+              shouldRollback: false,
+              autoApplyRollbackRequested: false,
+              rollbackApplied: false,
+            },
+            checks: {
+              stagePromotionMergeBundleGoalPolicyValidationPassed: false,
+              stagePromotionBundleVerificationGoalPolicyValidationPassed: false,
+            },
+            reasons: [],
+            triggers: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-stage-drill.mjs",
+          "--target-stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--rollback-policy-out",
+          rollbackPolicyPath,
+          "--canary-chats",
+          "101,202",
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          rollbackPolicyPassed: boolean;
+          rollbackStagePromotionGoalPolicyPropagationReported: boolean;
+          rollbackStagePromotionGoalPolicyPropagationPassed: boolean;
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.failures).toEqual([]);
+      expect(payload.checks.rollbackPolicyPassed).toBe(true);
+      expect(payload.checks.rollbackStagePromotionGoalPolicyPropagationReported).toBe(true);
+      expect(payload.checks.rollbackStagePromotionGoalPolicyPropagationPassed).toBe(true);
     });
   });
 });

@@ -167,6 +167,16 @@ async function seedEvidence(
       {
         pass: options?.stagePromotionPass !== false,
         checks: {
+          rollbackStagePromotionGoalPolicyPropagationReported: true,
+          rollbackStagePromotionGoalPolicyPropagationPassed: true,
+          stagePromotionMergeBundleGoalPolicyValidationReported: true,
+          stagePromotionMergeBundleGoalPolicyValidationPassed: true,
+          stagePromotionMergeBundleInitialScopeGoalPolicyValidationReported: true,
+          stagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed: true,
+          stagePromotionBundleVerificationGoalPolicyValidationReported: true,
+          stagePromotionBundleVerificationGoalPolicyValidationPassed: true,
+          stagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported: true,
+          stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed: true,
           mergeBundleGoalPolicyValidationReported: true,
           mergeBundleGoalPolicyValidationPassed: true,
           mergeBundleInitialScopeGoalPolicyValidationReported: true,

@@ -137,6 +137,72 @@ async function readJsonMaybe(targetPath) {
   }
 }
 
+function resolveBooleanCandidate(checks, keys) {
+  for (const key of keys) {
+    if (checks?.[key] === true) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function resolveRollbackStagePromotionGoalPolicySignals(rollbackPolicyPayload) {
+  const checks =
+    rollbackPolicyPayload?.checks && typeof rollbackPolicyPayload.checks === "object"
+      ? rollbackPolicyPayload.checks
+      : {};
+  const mergeBundleReleaseReported = resolveBooleanCandidate(checks, [
+    "stagePromotionMergeBundleGoalPolicyValidationReported",
+    "stagePromotionMergeBundleReleaseGoalPolicyValidationReported",
+  ]);
+  const mergeBundleReleasePassed = resolveBooleanCandidate(checks, [
+    "stagePromotionMergeBundleGoalPolicyValidationPassed",
+    "stagePromotionMergeBundleReleaseGoalPolicyValidationPassed",
+  ]);
+  const mergeBundleInitialScopeReported = resolveBooleanCandidate(checks, [
+    "stagePromotionMergeBundleInitialScopeGoalPolicyValidationReported",
+  ]);
+  const mergeBundleInitialScopePassed = resolveBooleanCandidate(checks, [
+    "stagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed",
+  ]);
+  const bundleVerificationReleaseReported = resolveBooleanCandidate(checks, [
+    "stagePromotionBundleVerificationGoalPolicyValidationReported",
+    "stagePromotionBundleVerificationReleaseGoalPolicyValidationReported",
+  ]);
+  const bundleVerificationReleasePassed = resolveBooleanCandidate(checks, [
+    "stagePromotionBundleVerificationGoalPolicyValidationPassed",
+    "stagePromotionBundleVerificationReleaseGoalPolicyValidationPassed",
+  ]);
+  const bundleVerificationInitialScopeReported = resolveBooleanCandidate(checks, [
+    "stagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported",
+  ]);
+  const bundleVerificationInitialScopePassed = resolveBooleanCandidate(checks, [
+    "stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed",
+  ]);
+  const propagationReported =
+    mergeBundleReleaseReported
+    && mergeBundleInitialScopeReported
+    && bundleVerificationReleaseReported
+    && bundleVerificationInitialScopeReported;
+  const propagationPassed =
+    mergeBundleReleasePassed
+    && mergeBundleInitialScopePassed
+    && bundleVerificationReleasePassed
+    && bundleVerificationInitialScopePassed;
+  return {
+    mergeBundleReleaseReported,
+    mergeBundleReleasePassed,
+    mergeBundleInitialScopeReported,
+    mergeBundleInitialScopePassed,
+    bundleVerificationReleaseReported,
+    bundleVerificationReleasePassed,
+    bundleVerificationInitialScopeReported,
+    bundleVerificationInitialScopePassed,
+    propagationReported,
+    propagationPassed,
+  };
+}
+
 function maybePushFileArg(argv, flag, filePath) {
   if (isNonEmptyString(filePath)) {
     argv.push(flag, filePath);
@@ -346,6 +412,9 @@ async function main() {
     },
   });
   const rollbackPolicyPayload = await readJsonMaybe(rollbackPolicyOut);
+  const rollbackStagePolicySignals = resolveRollbackStagePromotionGoalPolicySignals(
+    rollbackPolicyPayload,
+  );
   const rollbackAction = String(rollbackPolicyPayload?.decision?.action ?? "");
   const rollbackPolicyPassed =
     rollbackPolicyCommand.code === 0 &&
@@ -358,6 +427,10 @@ async function main() {
   }
   if (!rollbackPolicyPayload) {
     failures.push("auto_rollback_policy_output_missing");
+  } else if (!rollbackStagePolicySignals.propagationReported) {
+    failures.push("rollback_stage_promotion_goal_policy_propagation_not_reported");
+  } else if (!rollbackStagePolicySignals.propagationPassed) {
+    failures.push("rollback_stage_promotion_goal_policy_propagation_not_passed");
   } else if (rollbackAction === "rollback") {
     failures.push("rollback_policy_triggered");
   }
@@ -387,6 +460,31 @@ async function main() {
       rollbackPolicyPassed,
       rollbackPolicyAction: rollbackAction || null,
       rollbackApplied: rollbackPolicyPayload?.decision?.rollbackApplied === true,
+      rollbackPolicyStageSignalsReported:
+        rollbackStagePolicySignals.propagationReported,
+      rollbackPolicyStageSignalsPass:
+        rollbackStagePolicySignals.propagationReported
+        && rollbackStagePolicySignals.propagationPassed,
+      rollbackStagePromotionGoalPolicyPropagationReported:
+        rollbackStagePolicySignals.propagationReported,
+      rollbackStagePromotionGoalPolicyPropagationPassed:
+        rollbackStagePolicySignals.propagationPassed,
+      rollbackStagePromotionMergeBundleGoalPolicyValidationReported:
+        rollbackStagePolicySignals.mergeBundleReleaseReported,
+      rollbackStagePromotionMergeBundleGoalPolicyValidationPassed:
+        rollbackStagePolicySignals.mergeBundleReleasePassed,
+      rollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationReported:
+        rollbackStagePolicySignals.mergeBundleInitialScopeReported,
+      rollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed:
+        rollbackStagePolicySignals.mergeBundleInitialScopePassed,
+      rollbackStagePromotionBundleVerificationGoalPolicyValidationReported:
+        rollbackStagePolicySignals.bundleVerificationReleaseReported,
+      rollbackStagePromotionBundleVerificationGoalPolicyValidationPassed:
+        rollbackStagePolicySignals.bundleVerificationReleasePassed,
+      rollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported:
+        rollbackStagePolicySignals.bundleVerificationInitialScopeReported,
+      rollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed:
+        rollbackStagePolicySignals.bundleVerificationInitialScopePassed,
       autoApplyRollbackRequested: options.autoApplyRollback,
       dryRun: options.dryRun,
       allowHorizonMismatch: options.allowHorizonMismatch,

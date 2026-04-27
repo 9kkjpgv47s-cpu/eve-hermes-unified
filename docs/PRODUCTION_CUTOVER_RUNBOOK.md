@@ -247,6 +247,9 @@ Behavior:
 - Always writes a unified drill report: `evidence/stage-drill-<stage>-*.json`
 - Captures child command execution details for both promotion and rollback-policy checks.
 - Pins rollback-policy evaluation to the exact evidence files selected during promotion/readiness whenever available.
+- Fail-closes if rollback-policy output does not explicitly report/passed stage-promotion propagated goal-policy checks:
+  - merge-bundle release + initial-scope propagation
+  - bundle-verification release + initial-scope propagation
 - Fails the drill when:
   - stage promotion step fails, or
   - rollback policy output is missing/unreadable, or

@@ -2,6 +2,7 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 
 function parseArgs(argv) {
   const options = {
@@ -267,6 +268,13 @@ async function main() {
   const stage = normalizeStage(options.stage, "majority");
   const currentStage = normalizeStage(options.currentStage, "canary");
   const nextHorizon = normalizeHorizon(options.nextHorizon, "H3");
+  const goalPolicySource = await resolveGoalPolicySource({
+    goalPolicyFile: options.goalPolicyFile,
+    horizonStatusFile,
+  });
+  const resolvedGoalPolicyFile = isNonEmptyString(goalPolicySource.goalPolicyFile)
+    ? path.resolve(goalPolicySource.goalPolicyFile)
+    : null;
   const evidenceSelectionMode = normalizeEvidenceSelectionMode(
     options.evidenceSelectionMode,
     "latest-passing",
@@ -549,9 +557,7 @@ async function main() {
         ? options.minimumGoalIncrease
         : null,
       goalPolicyKey: isNonEmptyString(options.goalPolicyKey) ? options.goalPolicyKey : null,
-      goalPolicyFile: isNonEmptyString(options.goalPolicyFile)
-        ? path.resolve(options.goalPolicyFile)
-        : null,
+      goalPolicyFile: resolvedGoalPolicyFile,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
       requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
       goalPolicyCoveragePass:

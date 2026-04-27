@@ -115,7 +115,8 @@ Schema validation expectations:
   - emits unified manifest: `evidence/h2-closeout-run-*.json`
 - horizon state promotion after passing closeout:
   - `npm run promote:horizon -- --horizon <H1|H2|H3|H4> --next-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence`
-  - optional `--goal-policy-file docs/GOAL_POLICIES.json` to read transition policies from a dedicated policy source (falls back to `goalPolicies` inside horizon status when omitted)
+  - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force an explicit policy source
+  - when `--goal-policy-file` is omitted, promotion auto-detects a sibling `GOAL_POLICIES.json` next to `--horizon-status-file`; if not present, it falls back to `goalPolicies` in horizon status
   - optional `--closeout-file <path>` to consume a pinned closeout artifact instead of running `validate:horizon-closeout`
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
   - optional `--require-progressive-goals --minimum-goal-increase <n>` to require the next horizon to have at least `<n>` more planned actions than the source horizon
@@ -140,7 +141,8 @@ Schema validation expectations:
   - writes promotion manifest: `evidence/horizon-promotion-<source>-to-<next>-*.json`
 - one-command H2 promotion flow (closeout + promotion):
   - `npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
-  - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force policy checks to use dedicated policy definitions
+  - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force policy checks to use a dedicated policy document
+  - when omitted, runner inherits the same auto-discovery order as `promote:horizon` (`GOAL_POLICIES.json` sibling first, then horizon-status fallback)
   - executes `run:h2-closeout` then `promote:horizon --closeout-run-file ...` in one command
   - optional `--require-progressive-goals --minimum-goal-increase <n>` to enforce longer next-horizon action runway before promotion
   - optional `--goal-policy-key <Hn->Hm>` to require transition-specific action-tag minimums from `goalPolicies`
@@ -154,6 +156,7 @@ Schema validation expectations:
   - writes unified run manifest: `evidence/h2-promotion-run-*.json`
 - goal-policy readiness can be audited independently (without promotion):
   - `npm run audit:goal-policy-readiness -- --source-horizon <H1|H2|H3|H4> --until-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json`
+  - when `--goal-policy-file` is omitted, audit auto-detects a sibling `GOAL_POLICIES.json` before falling back to horizon-status policy definitions
   - writes readiness matrix: `evidence/goal-policy-readiness-*.json`
 - stage promotion readiness can be machine-checked with:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`

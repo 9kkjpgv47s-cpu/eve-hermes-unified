@@ -114,6 +114,7 @@ async function main() {
   const validation = validateHorizonStatus(horizonStatus);
   const policySource = await loadGoalPolicyTransitions({
     horizonStatus,
+    horizonStatusFile,
     goalPolicyFile,
   });
 

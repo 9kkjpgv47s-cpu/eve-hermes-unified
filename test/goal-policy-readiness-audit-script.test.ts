@@ -271,4 +271,39 @@ describe("audit-goal-policy-readiness.mjs", () => {
       expect(payload.files.goalPolicyFile).toBe(path.resolve(goalPolicyPath));
     });
   });
+
+  it("auto-detects GOAL_POLICIES.json next to horizon status", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "goal-policy-readiness.json");
+      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, tagged: false });
+      await seedGoalPolicyFile(goalPolicyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/audit-goal-policy-readiness.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--source-horizon",
+          "H2",
+          "--until-horizon",
+          "H5",
+          "--require-tagged-requirements",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { goalPolicyFile: string | null; goalPolicySource: string | null };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.goalPolicySource).toBe("file");
+      expect(payload.files.goalPolicyFile).toBe(path.resolve(goalPolicyPath));
+    });
+  });
 });

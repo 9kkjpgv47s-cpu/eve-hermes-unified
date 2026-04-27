@@ -368,6 +368,12 @@ async function seedGoalPolicyFile(goalPolicyPath: string): Promise<void> {
   );
 }
 
+async function seedDefaultGoalPolicyFileForStatus(statusPath: string): Promise<string> {
+  const defaultGoalPolicyPath = path.join(path.dirname(statusPath), "GOAL_POLICIES.json");
+  await seedGoalPolicyFile(defaultGoalPolicyPath);
+  return defaultGoalPolicyPath;
+}
+
 describe("run-h2-promotion.mjs", () => {
   it("passes progressive gate with goal policy key and tagged actions", async () => {
     await withTempDir(async (dir) => {
@@ -702,6 +708,55 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.pass).toBe(true);
       expect(payload.checks.strictGoalPolicyGates).toBe(true);
       expect(payload.checks.goalPolicyFile).toBe(goalPolicyPath);
+      expect(payload.checks.progressiveGoalsPass).toBe(true);
+      expect(payload.checks.goalPolicyCoveragePass).toBe(true);
+      expect(payload.checks.goalPolicyReadinessAuditPass).toBe(true);
+    });
+  });
+
+  it("auto-loads co-located GOAL_POLICIES.json when explicit flag is omitted", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-default-goal-policy-file.json");
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+      const defaultGoalPolicyPath = await seedDefaultGoalPolicyFileForStatus(statusPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--strict-goal-policy-gates",
+          "--goal-policy-key",
+          "H2->H3",
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          goalPolicyFile: string | null;
+          progressiveGoalsPass: boolean;
+          goalPolicyCoveragePass: boolean;
+          goalPolicyReadinessAuditPass: boolean;
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.goalPolicyFile).toBe(path.resolve(defaultGoalPolicyPath));
       expect(payload.checks.progressiveGoalsPass).toBe(true);
       expect(payload.checks.goalPolicyCoveragePass).toBe(true);
       expect(payload.checks.goalPolicyReadinessAuditPass).toBe(true);

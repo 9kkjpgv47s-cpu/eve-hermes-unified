@@ -179,6 +179,15 @@ async function seedGoalPolicyFile(
   await writeFile(policyPath, JSON.stringify({ transitions }, null, 2), "utf8");
 }
 
+async function seedAutoGoalPolicyFile(
+  statusPath: string,
+  options?: { includeH3H4?: boolean; includeH4H5?: boolean; includeTaggedCounts?: boolean },
+): Promise<string> {
+  const autoPath = path.join(path.dirname(statusPath), "GOAL_POLICIES.json");
+  await seedGoalPolicyFile(autoPath, options);
+  return autoPath;
+}
+
 describe("check-goal-policy-coverage.mjs", () => {
   it("passes when required transitions are covered with tagged policy requirements", async () => {
     await withTempDir(async (dir) => {
@@ -323,6 +332,47 @@ describe("check-goal-policy-coverage.mjs", () => {
       };
       expect(payload.pass).toBe(true);
       expect(payload.files.goalPolicyFile).toBe(policyPath);
+      expect(payload.checks.transitionCount).toBe(3);
+      expect(payload.checks.coverageRate).toBe(1);
+    });
+  });
+
+  it("auto-loads co-located GOAL_POLICIES.json when explicit file is not provided", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(dir, "goal-policy-coverage.json");
+      const autoPolicyPath = await seedAutoGoalPolicyFile(statusPath, {
+        includeH3H4: true,
+        includeH4H5: true,
+        includeTaggedCounts: true,
+      });
+      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, includeTaggedCounts: false });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-goal-policy-coverage.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--source-horizon",
+          "H2",
+          "--max-target-horizon",
+          "H5",
+          "--require-tagged-requirements",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { goalPolicyFile: string | null; goalPolicySource: string | null };
+        checks: { transitionCount: number; coverageRate: number };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.goalPolicySource).toBe("file");
+      expect(payload.files.goalPolicyFile).toBe(path.resolve(autoPolicyPath));
       expect(payload.checks.transitionCount).toBe(3);
       expect(payload.checks.coverageRate).toBe(1);
     });

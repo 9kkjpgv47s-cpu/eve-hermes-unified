@@ -194,8 +194,9 @@ Mitigations:
    - optionally enable strict one-flag policy gating for the immediate transition:
      - `--strict-goal-policy-gates`
      - this enables progressive-goals + coverage + readiness-audit gates and requires tagged targets + positive pending minimums
-   - optionally source transition policies from a dedicated policy manifest:
-     - `--goal-policy-file docs/GOAL_POLICIES.json`
+  - optionally source transition policies from a dedicated policy manifest:
+    - `--goal-policy-file docs/GOAL_POLICIES.json`
+    - when omitted, promotion checks auto-discover `GOAL_POLICIES.json` adjacent to the selected `--horizon-status-file` when present
   - optionally require policy coverage from current to future horizons:
     - `--require-goal-policy-coverage --goal-policy-coverage-until-horizon H5 --required-policy-transitions H2->H3,H3->H4,H4->H5 --require-policy-tagged-targets`
   - optionally require a passing policy readiness audit gate during promotion:
@@ -205,6 +206,7 @@ Mitigations:
    - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json --closeout-run-file evidence/h2-closeout-run-*.json --require-progressive-goals --minimum-goal-increase 1 --goal-policy-key H2->H3 --require-goal-policy-coverage --goal-policy-coverage-until-horizon H5 --required-policy-transitions H2->H3,H3->H4,H4->H5 --require-policy-tagged-targets`
 10. Generate a machine-readable multi-horizon policy readiness audit before promotion:
    - `npm run audit:goal-policy-readiness -- --source-horizon H2 --max-target-horizon H5 --horizon-status-file docs/HORIZON_STATUS.json`
+   - optional explicit source pinning: `--goal-policy-file docs/GOAL_POLICIES.json`
 
 ## Horizon Closeout Gate
 

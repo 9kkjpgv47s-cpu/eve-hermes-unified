@@ -25,8 +25,18 @@ function extractGoalPolicies(payload) {
   return {};
 }
 
+async function pathExists(targetPath) {
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function emptySourceResult({
   source = "horizon-status",
+  sourceSelection = "horizon-status",
   pathValue = null,
   goalPolicyFile = null,
   reason = "",
@@ -38,6 +48,7 @@ function emptySourceResult({
     errors: reason.length > 0 ? [reason] : [],
     fromFile: source === "file",
     source,
+    sourceSelection,
     path: pathValue,
     goalPolicyFile,
     transitions: {},
@@ -50,6 +61,27 @@ export function normalizeGoalPolicyFilePath(goalPolicyFile, fallbackCwd = proces
     return "";
   }
   return path.resolve(fallbackCwd, rawValue);
+}
+
+export function resolveGoalPolicyFilePath({
+  goalPolicyFile = "",
+  horizonStatusFile = "",
+  cwd = process.cwd(),
+} = {}) {
+  const explicitGoalPolicyFile = normalizeGoalPolicyFilePath(goalPolicyFile, cwd);
+  if (explicitGoalPolicyFile.length > 0) {
+    return explicitGoalPolicyFile;
+  }
+  const adjacentDefaultGoalPolicyFile = resolveAdjacentDefaultGoalPolicyPath(horizonStatusFile, cwd);
+  return adjacentDefaultGoalPolicyFile.length > 0 ? adjacentDefaultGoalPolicyFile : "";
+}
+
+function resolveAdjacentDefaultGoalPolicyPath(horizonStatusFile, cwd = process.cwd()) {
+  const resolvedStatusPath = normalizeGoalPolicyFilePath(horizonStatusFile, cwd);
+  if (resolvedStatusPath.length === 0) {
+    return "";
+  }
+  return path.join(path.dirname(resolvedStatusPath), "GOAL_POLICIES.json");
 }
 
 export function validateGoalPolicySourceOption(goalPolicyFile) {
@@ -71,24 +103,38 @@ export async function loadGoalPolicyTransitions({
   horizonStatusFile = "",
   cwd = process.cwd(),
 }) {
-  const resolvedGoalPolicyFile = normalizeGoalPolicyFilePath(goalPolicyFile, cwd);
+  const explicitGoalPolicyFile = normalizeGoalPolicyFilePath(goalPolicyFile, cwd);
+  const adjacentDefaultGoalPolicyFile =
+    explicitGoalPolicyFile.length === 0
+      ? resolveAdjacentDefaultGoalPolicyPath(horizonStatusFile, cwd)
+      : "";
+  const useAdjacentDefault =
+    explicitGoalPolicyFile.length === 0 &&
+    adjacentDefaultGoalPolicyFile.length > 0 &&
+    (await pathExists(adjacentDefaultGoalPolicyFile));
+  const resolvedGoalPolicyFile = explicitGoalPolicyFile.length > 0
+    ? explicitGoalPolicyFile
+    : useAdjacentDefault
+      ? adjacentDefaultGoalPolicyFile
+      : "";
   if (resolvedGoalPolicyFile.length === 0) {
     const fallbackTransitions = normalizeTransitionsContainer(horizonStatus?.goalPolicies);
     return {
       ...emptySourceResult({
         source: "horizon-status",
+        sourceSelection: "horizon-status-fallback",
         pathValue: horizonStatusFile ? path.resolve(cwd, horizonStatusFile) : null,
         goalPolicyFile: null,
       }),
       transitions: fallbackTransitions,
     };
   }
+  const sourceSelection = explicitGoalPolicyFile.length > 0 ? "explicit" : "adjacent-default";
 
-  try {
-    await access(resolvedGoalPolicyFile);
-  } catch {
+  if (!(await pathExists(resolvedGoalPolicyFile))) {
     return emptySourceResult({
       source: "file",
+      sourceSelection,
       pathValue: resolvedGoalPolicyFile,
       goalPolicyFile: resolvedGoalPolicyFile,
       reason: `goal_policy_file_not_found:${resolvedGoalPolicyFile}`,
@@ -101,6 +147,7 @@ export async function loadGoalPolicyTransitions({
   } catch (error) {
     return emptySourceResult({
       source: "file",
+      sourceSelection,
       pathValue: resolvedGoalPolicyFile,
       goalPolicyFile: resolvedGoalPolicyFile,
       reason: `goal_policy_file_invalid_json:${resolvedGoalPolicyFile}:${String(error?.message ?? error)}`,
@@ -111,6 +158,7 @@ export async function loadGoalPolicyTransitions({
   if (!isPlainObject(extractedGoalPolicies)) {
     return emptySourceResult({
       source: "file",
+      sourceSelection,
       pathValue: resolvedGoalPolicyFile,
       goalPolicyFile: resolvedGoalPolicyFile,
       reason: `goal_policy_file_invalid_structure:${resolvedGoalPolicyFile}`,
@@ -121,6 +169,7 @@ export async function loadGoalPolicyTransitions({
   return {
     ...emptySourceResult({
       source: "file",
+      sourceSelection,
       pathValue: resolvedGoalPolicyFile,
       goalPolicyFile: resolvedGoalPolicyFile,
     }),
@@ -133,6 +182,7 @@ export async function resolveGoalPolicySource(options = {}) {
   return {
     transitions: result.transitions,
     source: result.source,
+    sourceSelection: result.sourceSelection,
     goalPolicyFile: result.goalPolicyFile,
     ok: result.ok,
     reason: result.reason,
@@ -145,6 +195,7 @@ export async function loadGoalPolicies(options = {}) {
   return {
     policies: result.transitions,
     source: result.source,
+    sourceSelection: result.sourceSelection,
     goalPolicyFile: result.goalPolicyFile,
     ok: result.ok,
     reason: result.reason,

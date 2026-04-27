@@ -3,6 +3,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
+import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 
 const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
 
@@ -219,6 +220,14 @@ async function main() {
   const evidenceDir = path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
   const statusPayload = await readJson(horizonStatusFile);
   const statusValidation = validateHorizonStatus(statusPayload);
+  const goalPolicySource = await resolveGoalPolicySource({
+    horizonStatus: statusPayload,
+    horizonStatusFile,
+    goalPolicyFile: options.goalPolicyFile,
+  });
+  const resolvedGoalPolicyFile = isNonEmptyString(goalPolicySource.goalPolicyFile)
+    ? path.resolve(goalPolicySource.goalPolicyFile)
+    : null;
 
   const sourceHorizon = normalizeHorizon(options.horizon, statusPayload?.activeHorizon ?? "");
   const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
@@ -261,6 +270,9 @@ async function main() {
   if (!statusValidation.valid) {
     failures.push(...statusValidation.errors.map((error) => `horizon_status_invalid:${error}`));
   }
+  if (!goalPolicySource.ok) {
+    failures.push(...goalPolicySource.errors.map((error) => `goal_policy_source_invalid:${error}`));
+  }
   if (!(await exists(horizonStatusFile))) {
     failures.push(`missing_horizon_status_file:${horizonStatusFile}`);
   }
@@ -290,16 +302,7 @@ async function main() {
   }
   const goalPolicyKey = String(options.goalPolicyKey ?? "").trim();
   if (isNonEmptyString(goalPolicyKey)) {
-    const goalPolicies =
-      statusPayload?.goalPolicies && typeof statusPayload.goalPolicies === "object"
-        ? statusPayload.goalPolicies
-        : {};
-    const transitions =
-      goalPolicies?.transitions &&
-      typeof goalPolicies.transitions === "object" &&
-      !Array.isArray(goalPolicies.transitions)
-        ? goalPolicies.transitions
-        : goalPolicies;
+    const transitions = goalPolicySource.transitions;
     const policy = transitions?.[goalPolicyKey];
     if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
       failures.push(`missing_goal_policy_key:${goalPolicyKey}`);
@@ -436,8 +439,8 @@ async function main() {
       "--out",
       progressiveGoalsOut,
     ];
-    if (isNonEmptyString(options.goalPolicyFile)) {
-      progressiveGoalsArgv.push("--goal-policy-file", options.goalPolicyFile);
+    if (isNonEmptyString(resolvedGoalPolicyFile)) {
+      progressiveGoalsArgv.push("--goal-policy-file", resolvedGoalPolicyFile);
     }
     progressiveGoalsCommand = await runCommand(progressiveGoalsArgv, { timeoutMs: options.timeoutMs });
     progressiveGoalsPayload = await readJson(progressiveGoalsOut);
@@ -462,8 +465,8 @@ async function main() {
       "--out",
       goalPolicyCoverageOut,
     ];
-    if (isNonEmptyString(options.goalPolicyFile)) {
-      goalPolicyCoverageArgv.push("--goal-policy-file", options.goalPolicyFile);
+    if (isNonEmptyString(resolvedGoalPolicyFile)) {
+      goalPolicyCoverageArgv.push("--goal-policy-file", resolvedGoalPolicyFile);
     }
     if (isNonEmptyString(options.goalPolicyKey)) {
       goalPolicyCoverageArgv.push("--required-policy-key", options.goalPolicyKey);
@@ -500,8 +503,8 @@ async function main() {
       "--out",
       goalPolicyReadinessAuditOut,
     ];
-    if (isNonEmptyString(options.goalPolicyFile)) {
-      goalPolicyReadinessAuditArgv.push("--goal-policy-file", options.goalPolicyFile);
+    if (isNonEmptyString(resolvedGoalPolicyFile)) {
+      goalPolicyReadinessAuditArgv.push("--goal-policy-file", resolvedGoalPolicyFile);
     }
     if (options.requireGoalPolicyReadinessTaggedTargets) {
       goalPolicyReadinessAuditArgv.push("--require-tagged-requirements");
@@ -593,7 +596,8 @@ async function main() {
     },
     files: {
       horizonStatusFile,
-      goalPolicyFile: isNonEmptyString(options.goalPolicyFile) ? path.resolve(options.goalPolicyFile) : null,
+      goalPolicySource: goalPolicySource.source,
+      goalPolicyFile: resolvedGoalPolicyFile,
       evidenceDir: options.closeoutFile ? null : evidenceDir,
       closeoutFile,
       closeoutOut: options.closeoutFile ? null : closeoutOut,
@@ -621,7 +625,8 @@ async function main() {
       closeoutRunPass: closeoutRunPayload?.pass === true,
       requireProgressiveGoals: options.requireProgressiveGoals,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
-      goalPolicyFile: isNonEmptyString(options.goalPolicyFile) ? path.resolve(options.goalPolicyFile) : null,
+      goalPolicySource: goalPolicySource.source,
+      goalPolicyFile: resolvedGoalPolicyFile,
       goalPolicyKey:
         options.requireProgressiveGoals === true
           ? String(options.goalPolicyKey ?? "").trim() || null

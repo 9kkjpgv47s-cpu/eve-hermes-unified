@@ -392,7 +392,7 @@ describe("check-progressive-horizon-goals.mjs", () => {
         failures: string[];
       };
       expect(payload.pass).toBe(false);
-      expect(payload.files.goalPolicyFile).toBe(policyPath);
+      expect(payload.files.goalPolicyFile).toBe(path.resolve(policyPath));
       expect(payload.checks.policyKey).toBe("H2->H3");
       expect(payload.checks.minimumGoalIncrease).toBe(3);
       expect(

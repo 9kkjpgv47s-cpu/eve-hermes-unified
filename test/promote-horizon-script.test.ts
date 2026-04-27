@@ -235,6 +235,12 @@ async function seedGoalPolicyFile(
   );
 }
 
+async function removeGoalPoliciesFromStatus(statusPath: string): Promise<void> {
+  const payload = JSON.parse(await readFile(statusPath, "utf8")) as { goalPolicies?: unknown };
+  delete payload.goalPolicies;
+  await writeFile(statusPath, JSON.stringify(payload, null, 2), "utf8");
+}
+
 describe("promote-horizon.mjs", () => {
   it("enforces goal policy readiness audit gate when required", async () => {
     await withTempDir(async (dir) => {
@@ -691,6 +697,44 @@ describe("promote-horizon.mjs", () => {
       expect(payload.files.goalPolicyFile).toBe(goalPolicyPath);
       expect(payload.checks.strictGoalPolicyGates).toBe(true);
       expect(payload.checks.progressiveGoalsPass).toBe(true);
+    });
+  });
+
+  it("auto-discovers GOAL_POLICIES.json near horizon status when explicit file is omitted", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await removeGoalPoliciesFromStatus(statusPath);
+      await seedGoalPolicyFile(goalPolicyPath, { includeH2H3: true });
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--strict-goal-policy-gates",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { goalPolicyFile: string | null };
+        checks: { goalPolicyFile: string | null; strictGoalPolicyGates: boolean };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.goalPolicyFile).toBe(path.resolve(goalPolicyPath));
+      expect(payload.checks.goalPolicyFile).toBe(path.resolve(goalPolicyPath));
+      expect(payload.checks.strictGoalPolicyGates).toBe(true);
     });
   });
 });

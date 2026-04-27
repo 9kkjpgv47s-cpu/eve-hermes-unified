@@ -431,10 +431,74 @@ describe("validate-horizon-closeout.mjs (H2)", () => {
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
         failures: string[];
+        checks: {
+          requiredEvidence: Array<{ id: string; pass: boolean; checks: string[] }>;
+        };
       };
       expect(payload.pass).toBe(false);
       expect(payload.failures).toContain(
         "missing_required_evidence:h2-supervised-rollback-simulation",
+      );
+    });
+  });
+
+  it("fails when release readiness goal-policy validation is not passed", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "h2-closeout.json");
+      await seedRequiredEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath);
+
+      const releasePath = path.join(evidenceDir, "release-readiness-20260426-000000.json");
+      const releasePayload = JSON.parse(await readFile(releasePath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      if (!releasePayload.checks || typeof releasePayload.checks !== "object") {
+        throw new Error("missing release readiness checks fixture");
+      }
+      releasePayload.checks.goalPolicyFileValidationPassed = false;
+      await writeFile(releasePath, `${JSON.stringify(releasePayload, null, 2)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          requiredEvidence: Array<{
+            id: string;
+            pass: boolean;
+            checks: string[];
+          }>;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("required_evidence_failed:h1-release-readiness");
+      expect(payload.checks.requiredEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "h1-release-readiness",
+            pass: false,
+            checks: expect.arrayContaining(["release_goal_policy_validation_not_passed"]),
+          }),
+        ]),
       );
     });
   });

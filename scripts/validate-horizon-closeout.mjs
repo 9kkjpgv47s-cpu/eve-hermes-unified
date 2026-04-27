@@ -201,6 +201,20 @@ function commandVerificationType(command) {
   return "existence-only";
 }
 
+function resolveReleaseGoalPolicyValidationStatus(payload) {
+  const checks = payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    checks.goalPolicyFileValidationPassed,
+    checks.goalPolicyValidationPassed,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
 function evaluateCommandPayload(command, payload) {
   const verificationType = commandVerificationType(command);
   if (verificationType === "existence-only") {
@@ -223,6 +237,12 @@ function evaluateCommandPayload(command, payload) {
     }
     if (payload.pass !== true) {
       checks.push("release_readiness_not_passed");
+    }
+    const releaseGoalPolicyValidation = resolveReleaseGoalPolicyValidationStatus(payload);
+    if (!releaseGoalPolicyValidation.reported) {
+      checks.push("release_goal_policy_validation_not_reported");
+    } else if (!releaseGoalPolicyValidation.pass) {
+      checks.push("release_goal_policy_validation_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -513,6 +533,18 @@ async function main() {
       horizonStatusValid: horizonValidation.valid,
       releaseReadinessPassed: requiredEvidenceResults.some(
         (item) => item.command === "npm run validate:release-readiness" && item.pass === true,
+      ),
+      releaseReadinessGoalPolicyValidationReported: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run validate:release-readiness"
+          && item.pass === true
+          && !item.checks.includes("release_goal_policy_validation_not_reported"),
+      ),
+      releaseReadinessGoalPolicyValidationPassed: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run validate:release-readiness"
+          && item.pass === true
+          && !item.checks.includes("release_goal_policy_validation_not_passed"),
       ),
       stagePromotionPassed: stagePromotionEvidence.pass,
       stagePromotionEvidence,

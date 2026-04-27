@@ -762,4 +762,64 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.goalPolicyReadinessAuditPass).toBe(true);
     });
   });
+
+  it("fails when required goal policy validation gate fails", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-validation-failure.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICY.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+      await seedGoalPolicyFile(goalPolicyPath);
+
+      const policyPayload = JSON.parse(await readFile(goalPolicyPath, "utf8")) as {
+        transitions?: Record<string, unknown>;
+      };
+      delete policyPayload.transitions?.["H2->H3"];
+      await writeFile(goalPolicyPath, JSON.stringify(policyPayload, null, 2), "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--strict-goal-policy-gates",
+          "--goal-policy-key",
+          "H2->H3",
+          "--require-goal-policy-validation",
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          goalPolicyValidationPass: boolean | null;
+          requireGoalPolicyValidation: boolean;
+          horizonPromotionPass: boolean;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.requireGoalPolicyValidation).toBe(true);
+      expect(payload.checks.goalPolicyValidationPass).toBe(false);
+      expect(payload.checks.horizonPromotionPass).toBe(false);
+      expect(payload.failures).toContain("horizon_promotion_failed");
+    });
+  });
 });

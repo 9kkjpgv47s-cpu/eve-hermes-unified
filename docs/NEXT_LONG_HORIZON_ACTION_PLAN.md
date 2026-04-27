@@ -211,6 +211,9 @@ Mitigations:
    - `npm run validate:goal-policy-file -- --horizon-status-file docs/HORIZON_STATUS.json`
    - optional explicit policy source: `--goal-policy-file docs/GOAL_POLICIES.json`
    - optional strict transition window override: `--source-horizon H2 --until-horizon H5 --require-tagged-requirements --require-positive-pending-min`
+12. Require promotion to run the goal-policy file gate inline (no separate preflight command needed):
+   - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --closeout-run-file evidence/h2-closeout-run-*.json --strict-goal-policy-gates --require-goal-policy-file-validation`
+   - optional explicit gate output path: `--goal-policy-file-validation-out evidence/goal-policy-file-validation-H2-to-H3.json`
 
 ## Horizon Closeout Gate
 

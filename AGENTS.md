@@ -67,6 +67,8 @@ npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/H
 #   --require-goal-policy-readiness-audit --goal-policy-readiness-audit-max-target-horizon H5 --require-goal-policy-readiness-tagged-targets
 # strict one-flag policy hardening mode (progressive + coverage + readiness audit + tagged + positive pending mins):
 #   --strict-goal-policy-gates --goal-policy-key H2->H3
+# optional: require dedicated goal-policy file validation during promotion:
+#   --require-goal-policy-file-validation --goal-policy-file-validation-out evidence/goal-policy-file-validation.json
 # optional dedicated goal-policy source:
 #   --goal-policy-file docs/GOAL_POLICIES.json
 # or omit the flag and auto-discovery will load GOAL_POLICIES.json next to HORIZON_STATUS.json when present

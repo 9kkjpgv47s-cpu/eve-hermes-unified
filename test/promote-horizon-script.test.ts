@@ -737,4 +737,83 @@ describe("promote-horizon.mjs", () => {
       expect(payload.checks.strictGoalPolicyGates).toBe(true);
     });
   });
+
+  it("runs goal policy file validation gate when required", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      const goalPolicyValidationOut = path.join(evidenceDir, "goal-policy-file-validation.json");
+      await seedHorizonStatus(statusPath);
+      await removeGoalPoliciesFromStatus(statusPath);
+      await seedGoalPolicyFile(goalPolicyPath, { includeH2H3: true });
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--strict-goal-policy-gates",
+          "--require-goal-policy-file-validation",
+          "--goal-policy-file-validation-out",
+          goalPolicyValidationOut,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        files: { goalPolicyFileValidationOut: string | null };
+        checks: { requireGoalPolicyFileValidation: boolean; goalPolicyFileValidationPass: boolean };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.files.goalPolicyFileValidationOut).toBe(goalPolicyValidationOut);
+      expect(payload.checks.requireGoalPolicyFileValidation).toBe(true);
+      expect(payload.checks.goalPolicyFileValidationPass).toBe(true);
+    });
+  });
+
+  it("fails when required goal policy file validation gate fails", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      await seedHorizonStatus(statusPath);
+      await removeGoalPoliciesFromStatus(statusPath);
+      await seedGoalPolicyFile(goalPolicyPath, { includeH2H3: false });
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--require-goal-policy-file-validation",
+          "--goal-policy-validation-until-horizon",
+          "H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("goal_policy_file_validation_gate_failed");
+    });
+  });
 });

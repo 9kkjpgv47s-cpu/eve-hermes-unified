@@ -434,6 +434,11 @@ Useful flags:
 - `--goal-policy-file <path>` to load transition policies from a dedicated policy document
   - when omitted, policy sourcing auto-detects `<horizon-status-dir>/GOAL_POLICIES.json` first
   - run `npm run validate:goal-policy-file` to enforce dedicated file validity before promotion
+  - `--require-goal-policy-file-validation` to run this validation gate inline during promotion
+  - `--goal-policy-file-validation-out <path>` to pin the validation artifact path
+  - `--goal-policy-file-validation-until-horizon <H3|H4|H5>` to set validation transition scope
+  - `--allow-goal-policy-file-validation-fallback` only for compatibility replays that intentionally allow horizon-status fallback
+  - run `npm run validate:goal-policy-file` to enforce dedicated file validity before promotion
   - if no co-located file exists, it falls back to `goalPolicies` inside `docs/HORIZON_STATUS.json`
 - `--require-goal-policy-coverage` to require machine-checkable transition policy coverage before promotion
   - default scope checks from source horizon through `--goal-policy-coverage-until-horizon` (default `H5`)

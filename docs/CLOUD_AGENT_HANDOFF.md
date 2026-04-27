@@ -130,6 +130,10 @@ Schema validation expectations:
   - optional `--require-goal-policy-readiness-tagged-targets` to require tagged requirements in readiness audit
   - optional `--require-goal-policy-readiness-positive-pending-min` to require positive pending minimum targets in readiness audit
   - optional `--require-positive-pending-policy-min` to require each covered transition policy to set `minPendingNextActions > 0`
+  - optional `--require-goal-policy-file-validation` to run dedicated policy-file validation before progressive/coverage/readiness gates
+  - optional `--goal-policy-file-validation-out <path>` to pin validation artifact path
+  - optional `--goal-policy-file-validation-until-horizon <H3|H4|H5>` to set validation window
+  - optional `--allow-goal-policy-file-validation-fallback` to allow non-file policy source (CI/backfill only)
   - optional `--strict-goal-policy-gates` (alias: `--require-strict-goal-policy-gates`) to enable a one-flag strict profile:
     - enables progressive goals + goal-policy coverage + goal-policy readiness audit gates
     - enforces tagged targets + positive pending mins in both coverage and readiness gates
@@ -154,6 +158,10 @@ Schema validation expectations:
   - optional `--goal-policy-key <Hn->Hm>` to require transition-specific action-tag minimums from `goalPolicies`
   - optional `--require-goal-policy-coverage --goal-policy-coverage-until-horizon <H3|H4|H5>` to require policy coverage beyond the immediate transition
   - optional `--required-policy-transitions <csv>` and `--require-policy-tagged-targets` for strict multi-transition policy gating
+  - optional `--require-goal-policy-validation` to run `validate:goal-policy-file` as a pre-promotion gate
+  - optional `--goal-policy-validation-out <path>` to pin validator output artifact
+  - optional `--goal-policy-validation-until-horizon <H3|H4|H5>` to set validation transition window
+  - optional `--allow-goal-policy-validation-fallback` to allow fallback source in validator (CI/backfill only)
   - optional `--require-goal-policy-readiness-audit` to run readiness audit gate as part of promotion
   - optional `--goal-policy-readiness-audit-max-target-horizon <H3|H4|H5>` to set readiness audit horizon window
   - optional `--require-goal-policy-readiness-tagged-targets` and `--require-goal-policy-readiness-positive-pending-min` for stricter readiness criteria

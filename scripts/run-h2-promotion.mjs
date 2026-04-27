@@ -33,6 +33,11 @@ function parseArgs(argv) {
     goalPolicyKey: "",
     goalPolicyFile: "",
     strictGoalPolicyGates: false,
+    requireGoalPolicyValidation: false,
+    goalPolicyValidationOut: "",
+    goalPolicyValidationUntilHorizon: "H5",
+    goalPolicyValidationUntilExplicit: false,
+    allowGoalPolicyValidationFallback: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
     goalPolicyCoverageUntilHorizon: "H5",
@@ -122,6 +127,30 @@ function parseArgs(argv) {
     } else if (arg === "--goal-policy-file") {
       options.goalPolicyFile = value ?? "";
       index += 1;
+    } else if (
+      arg === "--require-goal-policy-validation" ||
+      arg === "--require-goal-policy-file-validation"
+    ) {
+      options.requireGoalPolicyValidation = true;
+    } else if (
+      arg === "--goal-policy-validation-out" ||
+      arg === "--goal-policy-file-validation-out"
+    ) {
+      options.goalPolicyValidationOut = value ?? "";
+      index += 1;
+    } else if (
+      arg === "--goal-policy-validation-until-horizon" ||
+      arg === "--goal-policy-file-validation-until-horizon" ||
+      arg === "--goal-policy-file-validation-max-target-horizon"
+    ) {
+      options.goalPolicyValidationUntilHorizon = value ?? "";
+      options.goalPolicyValidationUntilExplicit = true;
+      index += 1;
+    } else if (
+      arg === "--allow-goal-policy-validation-fallback" ||
+      arg === "--allow-goal-policy-file-validation-fallback"
+    ) {
+      options.allowGoalPolicyValidationFallback = true;
     } else if (arg === "--strict-goal-policy-gates" || arg === "--require-strict-goal-policy-gates") {
       options.strictGoalPolicyGates = true;
     } else if (arg === "--require-goal-policy-coverage") {
@@ -302,6 +331,10 @@ async function main() {
     options.goalPolicyReadinessAuditOut ||
       path.join(evidenceDir, `goal-policy-readiness-H2-to-${nextHorizon}-${runStamp}.json`),
   );
+  const goalPolicyValidationOut = path.resolve(
+    options.goalPolicyValidationOut ||
+      path.join(evidenceDir, `goal-policy-file-validation-H2-to-${nextHorizon}-${runStamp}.json`),
+  );
 
   const failures = [];
   if (!(await exists(evidenceDir))) {
@@ -335,6 +368,8 @@ async function main() {
     failures.push(`invalid_minimum_goal_increase:${String(options.minimumGoalIncrease)}`);
   }
   if (options.strictGoalPolicyGates) {
+    options.requireGoalPolicyValidation = true;
+    options.allowGoalPolicyValidationFallback = true;
     options.requireProgressiveGoals = true;
     options.requireGoalPolicyCoverage = true;
     options.requireGoalPolicyReadinessAudit = true;
@@ -347,6 +382,9 @@ async function main() {
     }
     if (!options.goalPolicyReadinessAuditUntilExplicit) {
       options.goalPolicyReadinessAuditUntilHorizon = nextHorizon;
+    }
+    if (!options.goalPolicyValidationUntilExplicit) {
+      options.goalPolicyValidationUntilHorizon = nextHorizon;
     }
     if (!isNonEmptyString(options.requiredPolicyTransitions)) {
       options.requiredPolicyTransitions = `H2->${nextHorizon}`;
@@ -468,6 +506,19 @@ async function main() {
     if (isNonEmptyString(options.goalPolicyFile)) {
       promoteArgv.push("--goal-policy-file", options.goalPolicyFile);
     }
+    if (options.requireGoalPolicyValidation) {
+      promoteArgv.push("--require-goal-policy-validation");
+      promoteArgv.push("--goal-policy-validation-out", goalPolicyValidationOut);
+      if (isNonEmptyString(options.goalPolicyValidationUntilHorizon)) {
+        promoteArgv.push(
+          "--goal-policy-validation-until-horizon",
+          options.goalPolicyValidationUntilHorizon,
+        );
+      }
+      if (options.allowGoalPolicyValidationFallback) {
+        promoteArgv.push("--allow-goal-policy-validation-fallback");
+      }
+    }
     if (options.strictGoalPolicyGates) {
       promoteArgv.push("--strict-goal-policy-gates");
     }
@@ -536,6 +587,7 @@ async function main() {
       closeoutRunOut,
       horizonPromotionOut,
       progressiveGoalsOut,
+      goalPolicyValidationOut: options.requireGoalPolicyValidation ? goalPolicyValidationOut : null,
       goalPolicyCoverageOut: options.requireGoalPolicyCoverage ? goalPolicyCoverageOut : null,
       goalPolicyReadinessAuditOut: options.requireGoalPolicyReadinessAudit
         ? goalPolicyReadinessAuditOut
@@ -559,6 +611,11 @@ async function main() {
       goalPolicyKey: isNonEmptyString(options.goalPolicyKey) ? options.goalPolicyKey : null,
       goalPolicyFile: resolvedGoalPolicyFile,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
+      requireGoalPolicyValidation: options.requireGoalPolicyValidation,
+      goalPolicyValidationPass:
+        options.requireGoalPolicyValidation === true
+          ? horizonPromotionPayload?.checks?.goalPolicyValidationPass === true
+          : null,
       requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
       goalPolicyCoveragePass:
         options.requireGoalPolicyCoverage === true

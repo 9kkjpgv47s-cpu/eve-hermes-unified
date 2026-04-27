@@ -430,6 +430,10 @@ Behavior:
 - runs `run:h2-closeout` first and writes `evidence/h2-closeout-run-*.json`
 - runs `promote:horizon --closeout-run-file <h2-closeout-run>` second
 - fail-closed pre-promotion gate: runner verifies `files.closeoutOut` exists and points to a passing closeout artifact aligned to `H2 -> --next-horizon`
+  - transition metadata from closeout-run must be reported and aligned (legacy fallback accepted):
+    - source inferred as `H2` only when `checks.h2CloseoutGatePass` is present
+    - next inferred from `checks.nextHorizon` when `horizon.next` is omitted
+  - runner rejects missing transition metadata before evaluating downstream promotion gates
 - writes unified promotion-run artifact:
   - `evidence/h2-promotion-run-*.json`
 - returns non-zero when either closeout or promotion step fails

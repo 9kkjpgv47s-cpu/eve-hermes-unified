@@ -197,6 +197,10 @@ Schema validation expectations:
     - rejects when pinned closeout artifact file is missing
     - rejects when pinned closeout artifact `pass !== true`
     - rejects when pinned closeout artifact transition metadata does not match expected `H2-><next>`
+  - fail-closed pre-promotion closeout-run transition checks:
+    - rejects when closeout-run does not report resolvable source horizon metadata
+    - rejects when closeout-run does not report resolvable next-horizon metadata
+    - accepts legacy fallback fields (`checks.sourceHorizon`, `checks.nextHorizon`) when top-level `horizon` block is absent
   - writes unified run manifest: `evidence/h2-promotion-run-*.json`
 - goal-policy readiness can be audited independently (without promotion):
   - `npm run audit:goal-policy-readiness -- --source-horizon <H1|H2|H3|H4> --until-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json`

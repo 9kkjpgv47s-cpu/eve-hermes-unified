@@ -256,14 +256,43 @@ function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
   };
 }
 
-function resolveCloseoutRunHorizon(closeoutRunPayload) {
+function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expectedNext) {
+  const checks =
+    closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
+      ? closeoutRunPayload.checks
+      : {};
   const horizonPayload =
     closeoutRunPayload?.horizon && typeof closeoutRunPayload.horizon === "object"
       ? closeoutRunPayload.horizon
       : {};
+  const sourceRaw = firstNonEmptyString([
+    horizonPayload.source,
+    horizonPayload.current,
+    horizonPayload.from,
+    closeoutRunPayload?.sourceHorizon,
+    checks.sourceHorizon,
+  ]);
+  const nextRaw = firstNonEmptyString([
+    horizonPayload.next,
+    horizonPayload.nextHorizon,
+    horizonPayload.to,
+    closeoutRunPayload?.nextHorizon,
+    checks.nextHorizon,
+  ]);
+  const normalizedSource = normalizeHorizon(sourceRaw, "");
+  const inferredH2Source =
+    !normalizedSource && typeof checks.h2CloseoutGatePass === "boolean" ? "H2" : "";
+  const effectiveSource = normalizedSource || inferredH2Source;
+  const normalizedNext = normalizeHorizon(nextRaw, "");
+  const sourceReported = isNonEmptyString(effectiveSource);
+  const nextReported = isNonEmptyString(normalizedNext);
   return {
-    source: normalizeHorizon(horizonPayload.source, ""),
-    next: normalizeHorizon(horizonPayload.next, ""),
+    source: sourceReported ? effectiveSource : null,
+    next: nextReported ? normalizedNext : null,
+    sourceReported,
+    nextReported,
+    sourceMatches: sourceReported && effectiveSource === expectedSource,
+    nextMatches: nextReported && normalizedNext === expectedNext,
   };
 }
 
@@ -500,7 +529,14 @@ async function main() {
 
   let closeoutRunCommand = null;
   let closeoutRunPayload = null;
-  let closeoutRunHorizon = { source: "", next: "" };
+  let closeoutRunTransition = {
+    source: null,
+    next: null,
+    sourceReported: false,
+    nextReported: false,
+    sourceMatches: false,
+    nextMatches: false,
+  };
   let closeoutArtifactPath = "";
   let closeoutArtifactPayload = null;
   let closeoutArtifactPass = false;
@@ -619,14 +655,18 @@ async function main() {
         },
       };
     }
-    closeoutRunHorizon = resolveCloseoutRunHorizon(closeoutRunPayload);
+    closeoutRunTransition = resolveCloseoutRunTransition(closeoutRunPayload, "H2", nextHorizon);
     closeoutArtifactPath = resolveCloseoutRunCloseoutArtifactPath(closeoutRunPayload);
     closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
       failures.push("h2_closeout_run_failed");
-    } else if (closeoutRunHorizon.source && closeoutRunHorizon.source !== "H2") {
+    } else if (!closeoutRunTransition.sourceReported) {
+      failures.push("h2_closeout_run_horizon_source_not_reported");
+    } else if (!closeoutRunTransition.sourceMatches) {
       failures.push("h2_closeout_run_horizon_source_mismatch");
-    } else if (closeoutRunHorizon.next && closeoutRunHorizon.next !== nextHorizon) {
+    } else if (!closeoutRunTransition.nextReported) {
+      failures.push("h2_closeout_run_horizon_next_not_reported");
+    } else if (!closeoutRunTransition.nextMatches) {
       failures.push("h2_closeout_run_horizon_next_mismatch");
     } else if (!isNonEmptyString(closeoutArtifactPath)) {
       failures.push("h2_closeout_run_missing_closeout_out");
@@ -798,12 +838,14 @@ async function main() {
       evidenceSelectionMode,
       closeoutRunPass: closeoutRunPayload?.pass === true,
       closeoutGatePass: closeoutRunPayload?.checks?.h2CloseoutGatePass === true,
-      closeoutRunSourceHorizon: closeoutRunHorizon.source || null,
-      closeoutRunNextHorizon: closeoutRunHorizon.next || null,
+      closeoutRunSourceHorizon: closeoutRunTransition.source,
+      closeoutRunNextHorizon: closeoutRunTransition.next,
+      closeoutRunHorizonSourceReported: closeoutRunTransition.sourceReported,
+      closeoutRunHorizonNextReported: closeoutRunTransition.nextReported,
       closeoutRunHorizonSourceMatches:
-        closeoutRunHorizon.source.length > 0 ? closeoutRunHorizon.source === "H2" : null,
+        closeoutRunTransition.sourceReported ? closeoutRunTransition.sourceMatches : null,
       closeoutRunHorizonNextMatches:
-        closeoutRunHorizon.next.length > 0 ? closeoutRunHorizon.next === nextHorizon : null,
+        closeoutRunTransition.nextReported ? closeoutRunTransition.nextMatches : null,
       closeoutRunCloseoutArtifactPass:
         closeoutArtifactPayload ? closeoutArtifactPass : null,
       closeoutRunCloseoutArtifactSourceHorizon:

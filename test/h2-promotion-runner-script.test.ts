@@ -808,6 +808,10 @@ describe("run-h2-promotion.mjs", () => {
           {
             generatedAtIso: new Date().toISOString(),
             pass: true,
+            horizon: {
+              source: "H2",
+              next: "H3",
+            },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
             },
@@ -905,6 +909,10 @@ describe("run-h2-promotion.mjs", () => {
           {
             generatedAtIso: new Date().toISOString(),
             pass: true,
+            horizon: {
+              source: "H2",
+              next: "H3",
+            },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
             },
@@ -1047,6 +1055,94 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.closeoutRunHorizonSourceMatches).toBe(true);
       expect(payload.checks.closeoutRunHorizonNextMatches).toBe(false);
       expect(payload.failures).toContain("h2_closeout_run_horizon_next_mismatch");
+      expect(payload.failures).not.toContain("horizon_promotion_failed");
+    });
+  });
+
+  it("fails when closeout run omits horizon metadata for requested transition", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-missing-closeout-run-horizon.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+      await writeFile(
+        path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            closeout: {
+              horizon: "H2",
+              nextHorizon: "H3",
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-99999999999994.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+            },
+            files: {
+              closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--closeout-run-out",
+          closeoutRunPath,
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          closeoutRunHorizonSourceMatches: boolean | null;
+          closeoutRunHorizonNextMatches: boolean | null;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunHorizonSourceMatches).toBe(true);
+      expect(payload.checks.closeoutRunHorizonNextMatches).toBe(null);
+      expect(payload.failures).toContain("h2_closeout_run_horizon_next_not_reported");
       expect(payload.failures).not.toContain("horizon_promotion_failed");
     });
   });

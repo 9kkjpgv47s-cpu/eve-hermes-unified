@@ -128,6 +128,11 @@ Schema validation expectations:
   - optional `--closeout-file <path>` to consume a pinned closeout artifact instead of running `validate:horizon-closeout`
   - optional `--closeout-run-file <path>` to consume a pinned `run:h2-closeout` manifest and reuse its exact closeout artifact snapshot
   - fail-closed enforcement for `--closeout-run-file`:
+    - closeout run must report matching transition scope:
+      - `horizon.source` must equal requested `--horizon`
+      - `horizon.next` must equal requested `--next-horizon`
+      - if `horizon` block is omitted (legacy manifests), inferred `checks.nextHorizon` must match `--next-horizon`
+      - source mismatch can be bypassed only with `--allow-inactive-source-horizon` (replay-only)
     - closeout run must report `checks.h2CloseoutGatePass=true`
     - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationReported=true`
     - closeout run must report `checks.supervisedSimulationStageGoalPolicyPropagationPassed=true`

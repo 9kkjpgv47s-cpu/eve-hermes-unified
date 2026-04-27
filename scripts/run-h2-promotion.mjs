@@ -256,6 +256,17 @@ function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
   };
 }
 
+function resolveCloseoutRunHorizon(closeoutRunPayload) {
+  const horizonPayload =
+    closeoutRunPayload?.horizon && typeof closeoutRunPayload.horizon === "object"
+      ? closeoutRunPayload.horizon
+      : {};
+  return {
+    source: normalizeHorizon(horizonPayload.source, ""),
+    next: normalizeHorizon(horizonPayload.next, ""),
+  };
+}
+
 function stamp() {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
 }
@@ -430,7 +441,9 @@ async function main() {
 
   let closeoutRunCommand = null;
   let closeoutRunPayload = null;
+  let closeoutRunHorizon = { source: "", next: "" };
   let closeoutRunSimulationSignals = {
+    h2CloseoutGatePass: false,
     propagationReported: false,
     propagationPassed: false,
     supervisedSimulationPass: false,
@@ -536,9 +549,14 @@ async function main() {
         },
       };
     }
+    closeoutRunHorizon = resolveCloseoutRunHorizon(closeoutRunPayload);
     closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
       failures.push("h2_closeout_run_failed");
+    } else if (closeoutRunHorizon.source && closeoutRunHorizon.source !== "H2") {
+      failures.push("h2_closeout_run_horizon_source_mismatch");
+    } else if (closeoutRunHorizon.next && closeoutRunHorizon.next !== nextHorizon) {
+      failures.push("h2_closeout_run_horizon_next_mismatch");
     } else if (!closeoutRunSimulationSignals.h2CloseoutGatePass) {
       failures.push("h2_closeout_run_gate_not_passed");
     } else if (!closeoutRunSimulationSignals.propagationReported) {
@@ -680,6 +698,12 @@ async function main() {
       evidenceSelectionMode,
       closeoutRunPass: closeoutRunPayload?.pass === true,
       closeoutGatePass: closeoutRunPayload?.checks?.h2CloseoutGatePass === true,
+      closeoutRunSourceHorizon: closeoutRunHorizon.source || null,
+      closeoutRunNextHorizon: closeoutRunHorizon.next || null,
+      closeoutRunHorizonSourceMatches:
+        closeoutRunHorizon.source.length > 0 ? closeoutRunHorizon.source === "H2" : null,
+      closeoutRunHorizonNextMatches:
+        closeoutRunHorizon.next.length > 0 ? closeoutRunHorizon.next === nextHorizon : null,
       closeoutRunH2CloseoutGatePass: closeoutRunSimulationSignals.h2CloseoutGatePass,
       closeoutRunSupervisedSimulationPass: closeoutRunSimulationSignals.supervisedSimulationPass,
       closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported:

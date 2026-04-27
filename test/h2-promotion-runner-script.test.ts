@@ -894,6 +894,82 @@ describe("run-h2-promotion.mjs", () => {
     });
   });
 
+  it("fails when closeout run horizon metadata mismatches requested transition", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-mismatched-closeout-run-horizon.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+
+      const closeoutRunPath = path.join(evidenceDir, "h2-closeout-run-99999999999997.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H2",
+              next: "H4",
+            },
+            checks: {
+              h2CloseoutGatePass: true,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+            },
+            files: {
+              closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--closeout-run-out",
+          closeoutRunPath,
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          closeoutRunHorizonSourceMatches: boolean | null;
+          closeoutRunHorizonNextMatches: boolean | null;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunHorizonSourceMatches).toBe(true);
+      expect(payload.checks.closeoutRunHorizonNextMatches).toBe(false);
+      expect(payload.failures).toContain("h2_closeout_run_horizon_next_mismatch");
+      expect(payload.failures).not.toContain("horizon_promotion_failed");
+    });
+  });
+
   it("auto-loads co-located GOAL_POLICIES.json when explicit flag is omitted", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");

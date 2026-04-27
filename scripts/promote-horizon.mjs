@@ -235,6 +235,71 @@ function resolveCloseoutRunH2CloseoutGate(closeoutRunPayload) {
   };
 }
 
+function firstNonEmptyString(values) {
+  for (const value of values) {
+    if (isNonEmptyString(value)) {
+      return String(value).trim();
+    }
+  }
+  return "";
+}
+
+function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expectedNext) {
+  const checks =
+    closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
+      ? closeoutRunPayload.checks
+      : {};
+  const horizon =
+    closeoutRunPayload?.horizon && typeof closeoutRunPayload.horizon === "object"
+      ? closeoutRunPayload.horizon
+      : {};
+  const sourceRaw = firstNonEmptyString([
+    horizon.source,
+    horizon.current,
+    horizon.from,
+    closeoutRunPayload?.sourceHorizon,
+    checks.sourceHorizon,
+  ]);
+  const nextRaw = firstNonEmptyString([
+    horizon.next,
+    horizon.nextHorizon,
+    horizon.to,
+    closeoutRunPayload?.nextHorizon,
+    checks.nextHorizon,
+  ]);
+  const normalizedSource = normalizeHorizon(sourceRaw, "");
+  const inferredH2Source =
+    !normalizedSource && typeof checks.h2CloseoutGatePass === "boolean" ? "H2" : "";
+  const effectiveSource = normalizedSource || inferredH2Source;
+  const normalizedNext = normalizeHorizon(nextRaw, "");
+  const sourceReported = isNonEmptyString(effectiveSource);
+  const nextReported = isNonEmptyString(normalizedNext);
+  return {
+    source: sourceReported ? effectiveSource : null,
+    next: nextReported ? normalizedNext : null,
+    sourceReported,
+    nextReported,
+    sourceMatches: sourceReported && effectiveSource === expectedSource,
+    nextMatches: nextReported && normalizedNext === expectedNext,
+  };
+}
+
+function resolveCloseoutRunHorizon(closeoutRunPayload) {
+  const horizon =
+    closeoutRunPayload?.horizon && typeof closeoutRunPayload.horizon === "object"
+      ? closeoutRunPayload.horizon
+      : {};
+  const sourceRaw = String(horizon.source ?? "").trim().toUpperCase();
+  const nextRaw = String(horizon.next ?? "").trim().toUpperCase();
+  const source = HORIZON_SEQUENCE.includes(sourceRaw) ? sourceRaw : "";
+  const next = HORIZON_SEQUENCE.includes(nextRaw) ? nextRaw : "";
+  return {
+    source,
+    next,
+    reported: source.length > 0 && next.length > 0,
+  };
+}
+
 async function exists(targetPath) {
   if (!isNonEmptyString(targetPath)) {
     return false;
@@ -445,6 +510,14 @@ async function main() {
   }
 
   let closeoutRunPayload = null;
+  let closeoutRunTransition = {
+    source: null,
+    next: null,
+    sourceReported: false,
+    nextReported: false,
+    sourceMatches: false,
+    nextMatches: false,
+  };
   let closeoutRunH2CloseoutGate = { reported: false, pass: false };
   let closeoutRunStageGoalPolicySignals = { reported: false, pass: false };
   if (failures.length === 0 && closeoutRunFile.length > 0) {
@@ -452,12 +525,33 @@ async function main() {
       failures.push(`missing_closeout_run_file:${closeoutRunFile}`);
     } else {
       closeoutRunPayload = await readJson(closeoutRunFile);
+      closeoutRunTransition = resolveCloseoutRunTransition(
+        closeoutRunPayload,
+        sourceHorizon,
+        nextHorizon,
+      );
       closeoutRunH2CloseoutGate = resolveCloseoutRunH2CloseoutGate(closeoutRunPayload);
       closeoutRunStageGoalPolicySignals = resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload);
       if (closeoutRunPayload?.pass !== true) {
         failures.push("closeout_run_not_passed");
       }
-      if (sourceHorizon === "H2") {
+      if (sourceHorizon && nextHorizon) {
+        if (!closeoutRunTransition.sourceReported) {
+          failures.push("closeout_run_horizon_source_not_reported");
+        } else if (!closeoutRunTransition.sourceMatches) {
+          failures.push(
+            `closeout_run_horizon_source_mismatch:${String(closeoutRunTransition.source)}!=${sourceHorizon}`,
+          );
+        }
+        if (!closeoutRunTransition.nextReported) {
+          failures.push("closeout_run_horizon_next_not_reported");
+        } else if (!closeoutRunTransition.nextMatches) {
+          failures.push(
+            `closeout_run_horizon_next_mismatch:${String(closeoutRunTransition.next)}!=${nextHorizon}`,
+          );
+        }
+      }
+      if (sourceHorizon === "H2" && failures.length === 0) {
         if (!closeoutRunH2CloseoutGate.reported) {
           failures.push("closeout_run_h2_closeout_gate_not_reported");
         } else if (!closeoutRunH2CloseoutGate.pass) {
@@ -773,6 +867,12 @@ async function main() {
       requireActiveNextHorizon: options.requireActiveNextHorizon,
       allowHorizonMismatch: options.allowHorizonMismatch,
       closeoutRunPass: closeoutRunPayload?.pass === true,
+      closeoutRunSourceHorizon: closeoutRunTransition.source,
+      closeoutRunNextHorizon: closeoutRunTransition.next,
+      closeoutRunHorizonSourceReported: closeoutRunTransition.sourceReported,
+      closeoutRunHorizonNextReported: closeoutRunTransition.nextReported,
+      closeoutRunHorizonSourceMatches: closeoutRunTransition.sourceMatches,
+      closeoutRunHorizonNextMatches: closeoutRunTransition.nextMatches,
       closeoutRunH2CloseoutGateReported: closeoutRunH2CloseoutGate.reported,
       closeoutRunH2CloseoutGatePass: closeoutRunH2CloseoutGate.pass,
       closeoutRunSupervisedSimulationPass:

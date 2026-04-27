@@ -62,11 +62,59 @@ const buildExitCode = Number(process.argv[4] || "0");
 const releaseReadinessPath = process.argv[5];
 const initialScopePath = process.argv[6];
 const archivePath = process.argv[7];
+const allowMissingGoalPolicyValidation =
+  String(process.env.UNIFIED_MERGE_BUNDLE_ALLOW_MISSING_GOAL_POLICY_VALIDATION_CHECK || "0") === "1";
 
 let bundleManifest = null;
 if (bundleManifestPath && fs.existsSync(bundleManifestPath)) {
   bundleManifest = JSON.parse(fs.readFileSync(bundleManifestPath, "utf8"));
 }
+let releaseReadiness = null;
+if (releaseReadinessPath && fs.existsSync(releaseReadinessPath)) {
+  releaseReadiness = JSON.parse(fs.readFileSync(releaseReadinessPath, "utf8"));
+}
+let initialScope = null;
+if (initialScopePath && fs.existsSync(initialScopePath)) {
+  initialScope = JSON.parse(fs.readFileSync(initialScopePath, "utf8"));
+}
+
+function resolveReleaseGoalPolicyValidationPass(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    checks.goalPolicyFileValidationPassed,
+    checks.goalPolicyValidationPassed,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
+function resolveInitialScopeGoalPolicyValidationPass(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    payload.releaseReadinessGoalPolicyValidationPass,
+    checks.releaseReadinessGoalPolicyValidationPassed,
+    checks.releaseReadinessGoalPolicyFileValidationPassed,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
+const releaseGoalPolicyValidation = resolveReleaseGoalPolicyValidationPass(releaseReadiness);
+const initialScopeGoalPolicyValidation = resolveInitialScopeGoalPolicyValidationPass(initialScope);
 
 const failures = [];
 if (buildExitCode !== 0) {
@@ -84,6 +132,18 @@ if (!bundleManifest) {
 if (bundleManifest && bundleManifest.pass !== true) {
   failures.push("bundle_manifest_failed");
 }
+if (!allowMissingGoalPolicyValidation && !releaseGoalPolicyValidation.reported) {
+  failures.push("missing_release_goal_policy_validation_check");
+}
+if (releaseGoalPolicyValidation.reported && !releaseGoalPolicyValidation.pass) {
+  failures.push("release_goal_policy_validation_not_passed");
+}
+if (!allowMissingGoalPolicyValidation && !initialScopeGoalPolicyValidation.reported) {
+  failures.push("missing_initial_scope_goal_policy_validation_check");
+}
+if (initialScopeGoalPolicyValidation.reported && !initialScopeGoalPolicyValidation.pass) {
+  failures.push("initial_scope_goal_policy_validation_not_passed");
+}
 
 const payload = {
   generatedAtIso: new Date().toISOString(),
@@ -100,6 +160,11 @@ const payload = {
     bundleManifestPresent: Boolean(bundleManifest),
     bundleManifestPass: Boolean(bundleManifest?.pass),
     bundleFailures: Array.isArray(bundleManifest?.failures) ? bundleManifest.failures : [],
+    allowMissingGoalPolicyValidation,
+    releaseGoalPolicyValidationReported: releaseGoalPolicyValidation.reported,
+    releaseGoalPolicyValidationPassed: releaseGoalPolicyValidation.pass,
+    initialScopeGoalPolicyValidationReported: initialScopeGoalPolicyValidation.reported,
+    initialScopeGoalPolicyValidationPassed: initialScopeGoalPolicyValidation.pass,
   },
   failures,
 };

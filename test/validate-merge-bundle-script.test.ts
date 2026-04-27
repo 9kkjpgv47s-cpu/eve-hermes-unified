@@ -59,6 +59,9 @@ describe("validate-merge-bundle.sh", () => {
         releaseReadinessPath,
         JSON.stringify(
           {
+            readinessVersion: "v1",
+            generatedAtIso: new Date().toISOString(),
+            defaultValidationCommand: "validate:all",
             pass: true,
             failures: [],
             files: {
@@ -71,7 +74,20 @@ describe("validate-merge-bundle.sh", () => {
               commandsFile: commandsFilePath,
               commandLogDir,
             },
+            requiredArtifacts: [],
+            releaseCommandLogs: [],
             checks: {
+              validationSummaryPassed: true,
+              regressionPassed: true,
+              cutoverReadinessPassed: true,
+              goalPolicyFileValidationPassed: true,
+              commandLogsMissing: [],
+              discoveredCommandLogs: [],
+              requiredReleaseCommands: [],
+              missingRequiredCommands: [],
+              executedReleaseCommands: [],
+              missingCommandLogFiles: [],
+              commandFailures: [],
               validationCommandsPassed: true,
             },
           },
@@ -118,10 +134,140 @@ describe("validate-merge-bundle.sh", () => {
 
       const validationManifest = JSON.parse(await readFile(validationManifestPath, "utf8")) as {
         pass: boolean;
-        checks?: { bundleManifestPass?: boolean };
+        checks?: { bundleManifestPass?: boolean; initialScopeGoalPolicyValidationPassed?: boolean };
+        failures?: string[];
       };
+      if (!validationManifest.pass) {
+        throw new Error(
+          `expected merge-bundle validation pass\npayload:\n${JSON.stringify(validationManifest, null, 2)}`,
+        );
+      }
       expect(validationManifest.pass).toBe(true);
       expect(validationManifest.checks?.bundleManifestPass).toBe(true);
+      expect(validationManifest.checks?.initialScopeGoalPolicyValidationPassed).toBe(true);
+    });
+  });
+
+  it("fails when initial-scope report does not carry goal-policy validation pass", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const releaseReadinessPath = path.join(evidenceDir, "release-readiness-1.json");
+      const initialScopePath = path.join(evidenceDir, "initial-scope-validation-1.json");
+      const validationSummaryPath = path.join(evidenceDir, "validation-summary-1.json");
+      const regressionPath = path.join(evidenceDir, "regression-eve-primary-1.json");
+      const cutoverPath = path.join(evidenceDir, "cutover-readiness-1.json");
+      const failureInjectionPath = path.join(evidenceDir, "failure-injection-1.txt");
+      const soakPath = path.join(evidenceDir, "soak-1.jsonl");
+      const goalPolicyValidationPath = path.join(evidenceDir, "goal-policy-file-validation-1.json");
+      const commandsFilePath = path.join(evidenceDir, "commands.json");
+      const commandLogDir = path.join(evidenceDir, "release-command-logs");
+      const checklistPath = path.join(dir, "MASTER_EXECUTION_CHECKLIST.md");
+      const validationManifestPath = path.join(evidenceDir, "merge-bundle-validation.json");
+
+      await mkdir(evidenceDir, { recursive: true });
+      await mkdir(commandLogDir, { recursive: true });
+      await writeFile(checklistPath, "# Master Execution Checklist\n\n- [x] done\n", "utf8");
+      await writeFile(validationSummaryPath, JSON.stringify({ gates: { passed: true } }), "utf8");
+      await writeFile(regressionPath, JSON.stringify({ pass: true }), "utf8");
+      await writeFile(cutoverPath, JSON.stringify({ pass: true }), "utf8");
+      await writeFile(failureInjectionPath, "failure report\n", "utf8");
+      await writeFile(soakPath, "{}\n", "utf8");
+      await writeFile(
+        goalPolicyValidationPath,
+        JSON.stringify({ pass: true, failures: [] }, null, 2),
+        "utf8",
+      );
+      await writeFile(path.join(commandLogDir, "check.log"), "ok\n", "utf8");
+      await writeFile(
+        commandsFilePath,
+        JSON.stringify(
+          [{ name: "check", command: "check", logFile: "check.log", status: "passed", exitCode: 0 }],
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      await writeFile(
+        releaseReadinessPath,
+        JSON.stringify(
+          {
+            readinessVersion: "v1",
+            generatedAtIso: new Date().toISOString(),
+            defaultValidationCommand: "validate:all",
+            pass: true,
+            failures: [],
+            files: {
+              validationSummary: validationSummaryPath,
+              regression: regressionPath,
+              cutoverReadiness: cutoverPath,
+              failureInjection: failureInjectionPath,
+              soak: soakPath,
+              goalPolicyFileValidation: goalPolicyValidationPath,
+              commandsFile: commandsFilePath,
+              commandLogDir,
+            },
+            requiredArtifacts: [],
+            releaseCommandLogs: [],
+            checks: {
+              validationSummaryPassed: true,
+              regressionPassed: true,
+              cutoverReadinessPassed: true,
+              goalPolicyFileValidationPassed: true,
+              commandLogsMissing: [],
+              discoveredCommandLogs: [],
+              requiredReleaseCommands: [],
+              missingRequiredCommands: [],
+              executedReleaseCommands: [],
+              missingCommandLogFiles: [],
+              commandFailures: [],
+              validationCommandsPassed: true,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      await writeFile(
+        initialScopePath,
+        JSON.stringify(
+          {
+            pass: true,
+            checklistPath,
+            checks: {
+              releaseReadinessGoalPolicyValidationPassed: false,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        ["bash", "scripts/validate-merge-bundle.sh"],
+        {
+          timeoutMs: 20_000,
+          env: {
+            ...process.env,
+            UNIFIED_EVIDENCE_DIR: evidenceDir,
+            UNIFIED_MERGE_BUNDLE_RUN_RELEASE_READINESS: "0",
+            UNIFIED_MERGE_BUNDLE_RUN_INITIAL_SCOPE: "0",
+            UNIFIED_RELEASE_READINESS_PATH: releaseReadinessPath,
+            UNIFIED_INITIAL_SCOPE_REPORT_PATH: initialScopePath,
+            UNIFIED_MERGE_BUNDLE_VALIDATION_MANIFEST_PATH: validationManifestPath,
+          },
+        },
+      );
+      expect(result.code).toBe(0);
+
+      const validationManifest = JSON.parse(await readFile(validationManifestPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(validationManifest.pass).toBe(false);
+      expect(validationManifest.failures).toContain("initial_scope_goal_policy_validation_not_passed");
     });
   });
 

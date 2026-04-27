@@ -221,3 +221,6 @@ Schema validation expectations:
 By default, `npm run validate:merge-bundle` consumes latest existing passing release-readiness + initial-scope reports.
 Set `UNIFIED_MERGE_BUNDLE_RUN_RELEASE_READINESS=1` and/or `UNIFIED_MERGE_BUNDLE_RUN_INITIAL_SCOPE=1`
 to force regeneration before packaging.
+The merge-bundle validation wrapper also enforces initial-scope goal-policy propagation:
+- initial-scope manifest must report `checks.releaseReadinessGoalPolicyValidationPassed === true`
+- failure is surfaced as `initial_scope_goal_policy_validation_not_passed` in `merge-bundle-validation-*` output

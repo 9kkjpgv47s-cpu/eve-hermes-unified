@@ -179,6 +179,58 @@ async function seedGoalPolicyFile(
   await writeFile(policyPath, JSON.stringify({ transitions }, null, 2), "utf8");
 }
 
+async function seedHorizonStatusWithExternalPolicyBaseline(statusPath: string): Promise<void> {
+  await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, includeTaggedCounts: false });
+  const payload = JSON.parse(await readFile(statusPath, "utf8")) as {
+    goalPolicies?: { transitions?: Record<string, unknown> };
+  };
+  payload.goalPolicies = payload.goalPolicies ?? {};
+  payload.goalPolicies.transitions = {};
+  await writeFile(statusPath, JSON.stringify(payload, null, 2), "utf8");
+}
+
+async function seedConflictingGoalPolicyFile(policyPath: string): Promise<void> {
+  await writeFile(
+    policyPath,
+    JSON.stringify(
+      {
+        transitions: {
+          "H2->H3": {
+            minimumGoalIncrease: 9,
+            minActionGrowthFactor: 9,
+            minPendingNextActions: 9,
+            requiredTaggedActionCounts: {
+              conflicting: {
+                minCount: 9,
+                minPendingCount: 9,
+              },
+            },
+          },
+          "H3->H4": {
+            minimumGoalIncrease: 1,
+            minActionGrowthFactor: 1.05,
+            minPendingNextActions: 1,
+            requiredTaggedActionCounts: {
+              policy: 1,
+            },
+          },
+          "H4->H5": {
+            minimumGoalIncrease: 1,
+            minActionGrowthFactor: 1.05,
+            minPendingNextActions: 1,
+            requiredTaggedActionCounts: {
+              automation: 1,
+            },
+          },
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
 async function seedGoalPolicyFileWithDuplicateTransition(policyPath: string): Promise<void> {
   const payload = `{
   "schemaVersion": "v1",
@@ -325,7 +377,7 @@ describe("check-goal-policy-coverage.mjs", () => {
       const statusPath = path.join(dir, "HORIZON_STATUS.json");
       const policyPath = path.join(dir, "GOAL_POLICIES.json");
       const outPath = path.join(dir, "goal-policy-coverage.json");
-      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, includeTaggedCounts: false });
+      await seedHorizonStatusWithExternalPolicyBaseline(statusPath);
       await seedGoalPolicyFile(policyPath, {
         includeH3H4: true,
         includeH4H5: true,
@@ -372,7 +424,7 @@ describe("check-goal-policy-coverage.mjs", () => {
         includeH4H5: true,
         includeTaggedCounts: true,
       });
-      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, includeTaggedCounts: false });
+      await seedHorizonStatusWithExternalPolicyBaseline(statusPath);
 
       const result = await runCommandWithTimeout(
         [
@@ -438,6 +490,45 @@ describe("check-goal-policy-coverage.mjs", () => {
       expect(
         payload.failures.some((failure) =>
           failure.startsWith("goal_policy_source_invalid:goal_policy_file_duplicate_transition_keys:"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("fails when explicit goal policy conflicts with horizon-status transitions", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const policyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "goal-policy-coverage-conflict.json");
+      await seedHorizonStatus(statusPath, { withH3H4: true, withH4H5: true, includeTaggedCounts: true });
+      await seedConflictingGoalPolicyFile(policyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-goal-policy-coverage.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          policyPath,
+          "--source-horizon",
+          "H2",
+          "--max-target-horizon",
+          "H5",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith("goal_policy_source_invalid:goal_policy_source_transition_conflicts:H2->H3"),
         ),
       ).toBe(true);
     });

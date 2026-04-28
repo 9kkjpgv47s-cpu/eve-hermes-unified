@@ -116,6 +116,7 @@ async function main() {
     horizonStatus,
     horizonStatusFile,
     goalPolicyFile,
+    requireGoalPolicySourceConsistency: true,
   });
 
   const sourceHorizon = normalizeHorizon(options.sourceHorizon, horizonStatus?.activeHorizon ?? "");

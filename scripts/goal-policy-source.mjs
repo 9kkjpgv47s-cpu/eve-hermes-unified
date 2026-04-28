@@ -9,6 +9,55 @@ function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function normalizeComparableJsonValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeComparableJsonValue(item));
+  }
+  if (isPlainObject(value)) {
+    const normalized = {};
+    for (const key of Object.keys(value).sort()) {
+      normalized[key] = normalizeComparableJsonValue(value[key]);
+    }
+    return normalized;
+  }
+  return value;
+}
+
+function comparePolicyValues(left, right) {
+  const normalizedLeft = normalizeComparableJsonValue(left);
+  const normalizedRight = normalizeComparableJsonValue(right);
+  return JSON.stringify(normalizedLeft) === JSON.stringify(normalizedRight);
+}
+
+function resolveCrossSourcePolicyConsistencySignals({
+  fileTransitions = {},
+  statusTransitions = {},
+  checked = false,
+} = {}) {
+  if (!checked) {
+    return {
+      checked: false,
+      overlapTransitionKeys: [],
+      conflictTransitionKeys: [],
+      pass: true,
+    };
+  }
+  const fileTransitionKeys = Object.keys(fileTransitions);
+  const overlapTransitionKeys = fileTransitionKeys.filter((transitionKey) =>
+    Object.prototype.hasOwnProperty.call(statusTransitions, transitionKey),
+  );
+  const conflictTransitionKeys = overlapTransitionKeys.filter(
+    (transitionKey) =>
+      !comparePolicyValues(fileTransitions[transitionKey], statusTransitions[transitionKey]),
+  );
+  return {
+    checked: true,
+    overlapTransitionKeys,
+    conflictTransitionKeys,
+    pass: conflictTransitionKeys.length === 0,
+  };
+}
+
 function normalizeTransitionsContainer(goalPolicies) {
   if (!isPlainObject(goalPolicies)) {
     return {};
@@ -213,7 +262,12 @@ function emptySourceResult({
   pathValue = null,
   goalPolicyFile = null,
   reason = "",
+  crossSourceConsistencyChecked = false,
+  crossSourceOverlapTransitionKeys = [],
+  crossSourceConflictTransitionKeys = [],
 } = {}) {
+  const consistencyPass =
+    crossSourceConsistencyChecked !== true || crossSourceConflictTransitionKeys.length === 0;
   return {
     ok: reason.length === 0,
     reason: reason.length > 0 ? reason : null,
@@ -225,6 +279,10 @@ function emptySourceResult({
     path: pathValue,
     goalPolicyFile,
     transitions: {},
+    crossSourceConsistencyChecked,
+    crossSourceOverlapTransitionKeys,
+    crossSourceConflictTransitionKeys,
+    crossSourceConsistencyPass: consistencyPass,
   };
 }
 
@@ -275,7 +333,14 @@ export async function loadGoalPolicyTransitions({
   horizonStatus = null,
   horizonStatusFile = "",
   cwd = process.cwd(),
+  requireGoalPolicySourceConsistency = false,
+  requireCrossSourceConsistency = false,
+  requireSourceConsistency = false,
 }) {
+  const requireConsistencyCheck =
+    requireGoalPolicySourceConsistency === true ||
+    requireCrossSourceConsistency === true ||
+    requireSourceConsistency === true;
   const explicitGoalPolicyFile = normalizeGoalPolicyFilePath(goalPolicyFile, cwd);
   const adjacentDefaultGoalPolicyFile =
     explicitGoalPolicyFile.length === 0
@@ -378,12 +443,71 @@ export async function loadGoalPolicyTransitions({
   }
 
   const transitions = normalizeTransitionsContainer(extractedGoalPolicies);
+  let crossSourceConsistency = resolveCrossSourcePolicyConsistencySignals({
+    checked: false,
+  });
+  if (requireConsistencyCheck) {
+    let statusPayload = isPlainObject(horizonStatus) ? horizonStatus : null;
+    const resolvedStatusPath = normalizeGoalPolicyFilePath(horizonStatusFile, cwd);
+    if (!statusPayload) {
+      if (!isNonEmptyString(resolvedStatusPath)) {
+        return emptySourceResult({
+          source: "file",
+          sourceSelection,
+          pathValue: resolvedGoalPolicyFile,
+          goalPolicyFile: resolvedGoalPolicyFile,
+          reason: "goal_policy_source_consistency_missing_horizon_status_file",
+        });
+      }
+      if (!(await pathExists(resolvedStatusPath))) {
+        return emptySourceResult({
+          source: "file",
+          sourceSelection,
+          pathValue: resolvedGoalPolicyFile,
+          goalPolicyFile: resolvedGoalPolicyFile,
+          reason: `goal_policy_source_consistency_horizon_status_not_found:${resolvedStatusPath}`,
+        });
+      }
+      try {
+        statusPayload = JSON.parse(await readFile(resolvedStatusPath, "utf8"));
+      } catch (error) {
+        return emptySourceResult({
+          source: "file",
+          sourceSelection,
+          pathValue: resolvedGoalPolicyFile,
+          goalPolicyFile: resolvedGoalPolicyFile,
+          reason: `goal_policy_source_consistency_horizon_status_invalid_json:${resolvedStatusPath}:${String(error?.message ?? error)}`,
+        });
+      }
+    }
+    const statusTransitions = normalizeTransitionsContainer(statusPayload?.goalPolicies);
+    crossSourceConsistency = resolveCrossSourcePolicyConsistencySignals({
+      fileTransitions: transitions,
+      statusTransitions,
+      checked: true,
+    });
+    if (!crossSourceConsistency.pass) {
+      return emptySourceResult({
+        source: "file",
+        sourceSelection,
+        pathValue: resolvedGoalPolicyFile,
+        goalPolicyFile: resolvedGoalPolicyFile,
+        reason: `goal_policy_source_transition_conflicts:${crossSourceConsistency.conflictTransitionKeys.join(",")}`,
+        crossSourceConsistencyChecked: crossSourceConsistency.checked,
+        crossSourceOverlapTransitionKeys: crossSourceConsistency.overlapTransitionKeys,
+        crossSourceConflictTransitionKeys: crossSourceConsistency.conflictTransitionKeys,
+      });
+    }
+  }
   return {
     ...emptySourceResult({
       source: "file",
       sourceSelection,
       pathValue: resolvedGoalPolicyFile,
       goalPolicyFile: resolvedGoalPolicyFile,
+      crossSourceConsistencyChecked: crossSourceConsistency.checked,
+      crossSourceOverlapTransitionKeys: crossSourceConsistency.overlapTransitionKeys,
+      crossSourceConflictTransitionKeys: crossSourceConsistency.conflictTransitionKeys,
     }),
     transitions,
   };
@@ -396,6 +520,10 @@ export async function resolveGoalPolicySource(options = {}) {
     source: result.source,
     sourceSelection: result.sourceSelection,
     goalPolicyFile: result.goalPolicyFile,
+    crossSourceConsistencyChecked: result.crossSourceConsistencyChecked,
+    crossSourceOverlapTransitionKeys: result.crossSourceOverlapTransitionKeys,
+    crossSourceConflictTransitionKeys: result.crossSourceConflictTransitionKeys,
+    crossSourceConsistencyPass: result.crossSourceConsistencyPass,
     ok: result.ok,
     reason: result.reason,
     errors: result.errors,
@@ -409,6 +537,10 @@ export async function loadGoalPolicies(options = {}) {
     source: result.source,
     sourceSelection: result.sourceSelection,
     goalPolicyFile: result.goalPolicyFile,
+    crossSourceConsistencyChecked: result.crossSourceConsistencyChecked,
+    crossSourceOverlapTransitionKeys: result.crossSourceOverlapTransitionKeys,
+    crossSourceConflictTransitionKeys: result.crossSourceConflictTransitionKeys,
+    crossSourceConsistencyPass: result.crossSourceConsistencyPass,
     ok: result.ok,
     reason: result.reason,
     errors: result.errors,

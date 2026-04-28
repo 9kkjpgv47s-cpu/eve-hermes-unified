@@ -221,6 +221,42 @@ async function seedGoalPolicyFileWithDuplicateTransitionKey(policyPath: string):
   await writeFile(policyPath, duplicateJson, "utf8");
 }
 
+async function removeGoalPoliciesFromStatus(statusPath: string): Promise<void> {
+  const payload = JSON.parse(await readFile(statusPath, "utf8")) as {
+    goalPolicies?: unknown;
+  };
+  delete payload.goalPolicies;
+  await writeFile(statusPath, JSON.stringify(payload, null, 2), "utf8");
+}
+
+async function seedConflictingGoalPolicyFile(policyPath: string): Promise<void> {
+  await writeFile(
+    policyPath,
+    JSON.stringify(
+      {
+        schemaVersion: "v1",
+        owner: "cloud-agent",
+        transitions: {
+          "H2->H3": {
+            minimumGoalIncrease: 4,
+            minActionGrowthFactor: 1.8,
+            minPendingNextActions: 3,
+            requiredTaggedActionCounts: {
+              capability: {
+                minCount: 4,
+                minPendingCount: 2,
+              },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
 describe("check-progressive-horizon-goals.mjs", () => {
   it("passes when next horizon has larger goal runway", async () => {
     await withTempDir(async (dir) => {
@@ -396,6 +432,7 @@ describe("check-progressive-horizon-goals.mjs", () => {
       const outPath = path.join(dir, "progressive-goals.json");
       await seedHorizonStatus(statusPath, { h2GoalCount: 2, h3GoalCount: 3, activeHorizon: "H2" });
       await seedGoalPolicyFile(policyPath, { includeTransition: true, minimumGoalIncrease: 3 });
+      await removeGoalPoliciesFromStatus(statusPath);
 
       const result = await runCommandWithTimeout(
         [
@@ -470,6 +507,49 @@ describe("check-progressive-horizon-goals.mjs", () => {
         payload.failures.some((failure) =>
           failure.startsWith(
             "goal_policy_source_invalid:goal_policy_file_duplicate_transition_keys:H2->H3",
+          ),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("fails when external goal policy file conflicts with horizon fallback transition policy", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const policyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "progressive-goals.json");
+      await seedHorizonStatus(statusPath, { h2GoalCount: 2, h3GoalCount: 6, activeHorizon: "H2" });
+      await seedConflictingGoalPolicyFile(policyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-progressive-horizon-goals.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          policyPath,
+          "--source-horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--policy-key",
+          "H2->H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith(
+            "goal_policy_source_invalid:goal_policy_source_transition_conflicts:H2->H3",
           ),
         ),
       ).toBe(true);

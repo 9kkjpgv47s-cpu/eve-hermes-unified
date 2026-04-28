@@ -29,6 +29,7 @@ function parseArgs(argv) {
     goalPolicyKey: "",
     goalPolicyFile: "",
     strictGoalPolicyGates: false,
+    requireGoalPolicySourceConsistency: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
     goalPolicyCoverageUntilHorizon: "H5",
@@ -105,6 +106,11 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--strict-goal-policy-gates" || arg === "--require-strict-goal-policy-gates") {
       options.strictGoalPolicyGates = true;
+    } else if (
+      arg === "--require-goal-policy-source-consistency" ||
+      arg === "--require-goal-policy-source-integrity"
+    ) {
+      options.requireGoalPolicySourceConsistency = true;
     } else if (arg === "--require-goal-policy-coverage") {
       options.requireGoalPolicyCoverage = true;
     } else if (arg === "--goal-policy-coverage-out") {
@@ -463,6 +469,8 @@ async function main() {
     horizonStatus: statusPayload,
     horizonStatusFile,
     goalPolicyFile: options.goalPolicyFile,
+    requireGoalPolicySourceConsistency:
+      options.requireGoalPolicySourceConsistency || options.strictGoalPolicyGates,
   });
   const resolvedGoalPolicyFile = isNonEmptyString(goalPolicySource.goalPolicyFile)
     ? path.resolve(goalPolicySource.goalPolicyFile)
@@ -582,6 +590,7 @@ async function main() {
     }
   }
   if (options.strictGoalPolicyGates) {
+    options.requireGoalPolicySourceConsistency = true;
     options.requireProgressiveGoals = true;
     options.requireGoalPolicyFileValidation = true;
     options.allowGoalPolicyFileValidationFallback = true;
@@ -1105,8 +1114,24 @@ async function main() {
         closeoutRunStageGoalPolicySignals.pass,
       requireProgressiveGoals: options.requireProgressiveGoals,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
+      requireGoalPolicySourceConsistency: options.requireGoalPolicySourceConsistency,
       goalPolicySource: goalPolicySource.source,
       goalPolicyFile: resolvedGoalPolicyFile,
+      goalPolicySourceConsistencyChecked: goalPolicySource.crossSourceConsistencyChecked === true,
+      goalPolicySourceConsistencyPass:
+        goalPolicySource.crossSourceConsistencyChecked === true
+          ? goalPolicySource.crossSourceConsistencyPass === true
+          : null,
+      goalPolicySourceConsistencyOverlapTransitions:
+        Array.isArray(goalPolicySource.crossSourceOverlapTransitionKeys) &&
+        goalPolicySource.crossSourceOverlapTransitionKeys.length > 0
+          ? goalPolicySource.crossSourceOverlapTransitionKeys
+          : null,
+      goalPolicySourceConsistencyConflictTransitions:
+        Array.isArray(goalPolicySource.crossSourceConflictTransitionKeys) &&
+        goalPolicySource.crossSourceConflictTransitionKeys.length > 0
+          ? goalPolicySource.crossSourceConflictTransitionKeys
+          : null,
       goalPolicyKey:
         options.requireProgressiveGoals === true
           ? String(options.goalPolicyKey ?? "").trim() || null

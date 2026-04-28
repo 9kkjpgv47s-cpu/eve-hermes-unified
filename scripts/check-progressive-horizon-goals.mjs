@@ -120,6 +120,7 @@ async function main() {
     horizonStatus,
     horizonStatusFile,
     goalPolicyFile: options.goalPolicyFile,
+    requireGoalPolicySourceConsistency: true,
   });
   const sourceHorizon = normalizeHorizon(options.sourceHorizon, horizonStatus?.activeHorizon ?? "");
   const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);

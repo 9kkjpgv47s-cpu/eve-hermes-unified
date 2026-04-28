@@ -191,6 +191,7 @@ async function main() {
     horizonStatus,
     horizonStatusFile,
     goalPolicyFile: options.goalPolicyFile,
+    requireGoalPolicySourceConsistency: true,
   });
   if (!goalPolicySourceResult.ok) {
     failures.push(

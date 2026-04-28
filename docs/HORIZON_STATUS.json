@@ -199,45 +199,45 @@
   "goalPolicies": {
     "transitions": {
       "H2->H3": {
-        "minimumGoalIncrease": 2,
-        "minActionGrowthFactor": 1.5,
-        "minPendingNextActions": 3,
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.2,
+        "minPendingNextActions": 2,
         "requiredTaggedActionCounts": {
           "durability": {
             "minCount": 2,
             "minPendingCount": 1
           },
           "policy-hardening": {
-            "minCount": 2,
+            "minCount": 1,
             "minPendingCount": 1
           }
         }
       },
       "H3->H4": {
-        "minimumGoalIncrease": 2,
-        "minActionGrowthFactor": 1.35,
-        "minPendingNextActions": 3,
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.15,
+        "minPendingNextActions": 2,
         "requiredTaggedActionCounts": {
-          "policy-hardening": {
-            "minCount": 2,
+          "capability": {
+            "minCount": 1,
             "minPendingCount": 1
           },
-          "contract-tightening": {
+          "memory": {
             "minCount": 1,
             "minPendingCount": 1
           }
         }
       },
       "H4->H5": {
-        "minimumGoalIncrease": 2,
-        "minActionGrowthFactor": 1.25,
-        "minPendingNextActions": 3,
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.1,
+        "minPendingNextActions": 2,
         "requiredTaggedActionCounts": {
-          "automation": {
+          "validation": {
             "minCount": 2,
             "minPendingCount": 1
           },
-          "scale": {
+          "rollback": {
             "minCount": 1,
             "minPendingCount": 1
           }

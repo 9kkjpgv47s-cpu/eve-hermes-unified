@@ -235,6 +235,31 @@ async function seedGoalPolicyFile(
   );
 }
 
+async function seedConflictingGoalPolicyAndHorizonStatus(
+  statusPath: string,
+  goalPolicyPath: string,
+): Promise<void> {
+  const statusPayload = JSON.parse(await readFile(statusPath, "utf8")) as {
+    goalPolicies?: { transitions?: Record<string, unknown> };
+  };
+  statusPayload.goalPolicies = statusPayload.goalPolicies ?? { transitions: {} };
+  statusPayload.goalPolicies.transitions = statusPayload.goalPolicies.transitions ?? {};
+  statusPayload.goalPolicies.transitions["H2->H3"] = {
+    minimumGoalIncrease: 7,
+    minActionGrowthFactor: 2.5,
+    minPendingNextActions: 5,
+    requiredTaggedActionCounts: {
+      durability: {
+        minCount: 7,
+        minPendingCount: 5,
+      },
+    },
+  };
+  await writeFile(statusPath, JSON.stringify(statusPayload, null, 2), "utf8");
+
+  await seedGoalPolicyFile(goalPolicyPath, { includeH2H3: true });
+}
+
 async function seedGoalPolicyFileWithDuplicateTransition(goalPolicyPath: string): Promise<void> {
   const duplicateTransitionPayload = `{
   "schemaVersion": "v1",
@@ -1916,6 +1941,54 @@ it("fails when closeout run reports conflicting source horizon aliases via check
           failure.startsWith(
             "goal_policy_source_invalid:goal_policy_file_duplicate_transition_keys:",
           ),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("fails strict promotion when external goal policy conflicts with horizon status fallback transition", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICY_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion-conflicting-policy-source.json");
+      await seedHorizonStatus(statusPath);
+      await seedConflictingGoalPolicyAndHorizonStatus(statusPath, goalPolicyPath);
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--strict-goal-policy-gates",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          goalPolicySourceConsistencyChecked: boolean;
+          goalPolicySourceConsistencyPass: boolean | null;
+          goalPolicySourceConsistencyConflictTransitions: string[] | null;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.goalPolicySourceConsistencyChecked).toBe(true);
+      expect(payload.checks.goalPolicySourceConsistencyPass).toBe(false);
+      expect(payload.checks.goalPolicySourceConsistencyConflictTransitions).toEqual(["H2->H3"]);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith("goal_policy_source_invalid:goal_policy_source_transition_conflicts:H2->H3"),
         ),
       ).toBe(true);
     });

@@ -169,6 +169,83 @@ async function seedGoalPolicyFile(goalPolicyPath: string): Promise<void> {
   );
 }
 
+async function seedConflictingGoalPolicyFile(goalPolicyPath: string): Promise<void> {
+  await writeFile(
+    goalPolicyPath,
+    JSON.stringify(
+      {
+        transitions: {
+          "H2->H3": {
+            minimumGoalIncrease: 99,
+            minActionGrowthFactor: 4.2,
+            minPendingNextActions: 7,
+            requiredTaggedActionCounts: {
+              conflicting: { minCount: 5, minPendingCount: 4 },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
+async function seedMatchingGoalPolicyAndHorizonStatus(
+  statusPath: string,
+  goalPolicyPath: string,
+): Promise<void> {
+  const statusPayload = JSON.parse(await readFile(statusPath, "utf8")) as {
+    goalPolicies?: { transitions?: Record<string, unknown> };
+  };
+  const sharedTransition = {
+    minimumGoalIncrease: 1,
+    minActionGrowthFactor: 1.1,
+    minPendingNextActions: 2,
+    requiredTaggedActionCounts: {
+      durability: 1,
+    },
+  };
+  if (!statusPayload.goalPolicies || typeof statusPayload.goalPolicies !== "object") {
+    statusPayload.goalPolicies = { transitions: {} };
+  }
+  if (!statusPayload.goalPolicies.transitions || typeof statusPayload.goalPolicies.transitions !== "object") {
+    statusPayload.goalPolicies.transitions = {};
+  }
+  statusPayload.goalPolicies.transitions["H2->H3"] = sharedTransition;
+  await writeFile(statusPath, JSON.stringify(statusPayload, null, 2), "utf8");
+  await writeFile(
+    goalPolicyPath,
+    JSON.stringify(
+      {
+        transitions: {
+          "H2->H3": sharedTransition,
+          "H3->H4": {
+            minimumGoalIncrease: 1,
+            minActionGrowthFactor: 1.05,
+            minPendingNextActions: 2,
+            requiredTaggedActionCounts: {
+              policy: { minCount: 1, minPendingCount: 1 },
+            },
+          },
+          "H4->H5": {
+            minimumGoalIncrease: 1,
+            minActionGrowthFactor: 1.05,
+            minPendingNextActions: 1,
+            requiredTaggedActionCounts: {
+              automation: 1,
+            },
+          },
+        },
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
 describe("audit-goal-policy-readiness.mjs", () => {
   it("passes with complete future coverage and tagged requirements", async () => {
     await withTempDir(async (dir) => {
@@ -241,7 +318,7 @@ describe("audit-goal-policy-readiness.mjs", () => {
       const goalPolicyPath = path.join(dir, "GOAL_POLICY.json");
       const outPath = path.join(dir, "goal-policy-readiness.json");
       await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, tagged: false });
-      await seedGoalPolicyFile(goalPolicyPath);
+      await seedMatchingGoalPolicyAndHorizonStatus(statusPath, goalPolicyPath);
 
       const result = await runCommandWithTimeout(
         [
@@ -278,7 +355,7 @@ describe("audit-goal-policy-readiness.mjs", () => {
       const goalPolicyPath = path.join(dir, "GOAL_POLICIES.json");
       const outPath = path.join(dir, "goal-policy-readiness.json");
       await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, tagged: false });
-      await seedGoalPolicyFile(goalPolicyPath);
+      await seedMatchingGoalPolicyAndHorizonStatus(statusPath, goalPolicyPath);
 
       const result = await runCommandWithTimeout(
         [
@@ -359,6 +436,45 @@ describe("audit-goal-policy-readiness.mjs", () => {
       expect(
         payload.failures.some((failure) =>
           failure.includes("goal_policy_source_error:goal_policy_file_duplicate_transition_keys:H2->H3"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("fails when explicit goal policy file conflicts with horizon-status overlapping transition policy", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "goal-policy-readiness.json");
+      await seedHorizonStatus(statusPath, { withH3H4: true, withH4H5: true, tagged: true });
+      await seedConflictingGoalPolicyFile(goalPolicyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/audit-goal-policy-readiness.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--source-horizon",
+          "H2",
+          "--until-horizon",
+          "H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.includes("goal_policy_source_error:goal_policy_source_transition_conflicts:H2->H3"),
         ),
       ).toBe(true);
     });

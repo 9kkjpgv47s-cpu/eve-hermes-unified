@@ -136,6 +136,7 @@ async function main() {
     horizonStatus,
     horizonStatusFile,
     goalPolicyFile: options.goalPolicyFile,
+    requireGoalPolicySourceConsistency: true,
   });
 
   const outPath = path.resolve(
@@ -260,6 +261,14 @@ async function main() {
       missingTransitions,
       sourceWasFile: policySource.source === "file",
       sourceSelection: policySource.sourceSelection ?? null,
+      crossSourceConsistencyChecked: policySource.crossSourceConsistencyChecked === true,
+      crossSourceConsistencyPass: policySource.crossSourceConsistencyPass !== false,
+      crossSourceOverlapTransitionKeys: Array.isArray(policySource.crossSourceOverlapTransitionKeys)
+        ? policySource.crossSourceOverlapTransitionKeys
+        : [],
+      crossSourceConflictTransitionKeys: Array.isArray(policySource.crossSourceConflictTransitionKeys)
+        ? policySource.crossSourceConflictTransitionKeys
+        : [],
       coveragePass: transitions.length > 0 && missingTransitions.length === 0,
       allowFallbackSource: options.allowFallbackSource,
       requireTaggedRequirements: options.requireTaggedRequirements,

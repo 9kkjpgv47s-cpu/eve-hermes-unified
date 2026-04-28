@@ -496,6 +496,7 @@ async function main() {
   const goalPolicySource = await resolveGoalPolicySource({
     goalPolicyFile: options.goalPolicyFile,
     horizonStatusFile,
+    requireGoalPolicySourceConsistency: options.strictGoalPolicyGates,
   });
   const resolvedGoalPolicyFile = isNonEmptyString(goalPolicySource.goalPolicyFile)
     ? path.resolve(goalPolicySource.goalPolicyFile)
@@ -1048,6 +1049,20 @@ async function main() {
         : null,
       goalPolicyKey: isNonEmptyString(options.goalPolicyKey) ? options.goalPolicyKey : null,
       goalPolicyFile: resolvedGoalPolicyFile,
+      goalPolicySourceConsistencyChecked:
+        goalPolicySource.crossSourceConsistencyChecked === true,
+      goalPolicySourceConsistencyPass:
+        goalPolicySource.crossSourceConsistencyPass !== false,
+      goalPolicySourceConsistencyOverlapTransitions:
+        Array.isArray(goalPolicySource.crossSourceOverlapTransitionKeys) &&
+        goalPolicySource.crossSourceOverlapTransitionKeys.length > 0
+          ? goalPolicySource.crossSourceOverlapTransitionKeys
+          : null,
+      goalPolicySourceConsistencyConflictTransitions:
+        Array.isArray(goalPolicySource.crossSourceConflictTransitionKeys) &&
+        goalPolicySource.crossSourceConflictTransitionKeys.length > 0
+          ? goalPolicySource.crossSourceConflictTransitionKeys
+          : null,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
       requireGoalPolicyValidation: options.requireGoalPolicyValidation,
       goalPolicyValidationPass:

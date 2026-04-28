@@ -435,6 +435,30 @@ async function seedGoalPolicyFile(goalPolicyPath: string): Promise<void> {
   );
 }
 
+async function seedMismatchedHorizonGoalPolicies(statusPath: string): Promise<void> {
+  const payload = JSON.parse(await readFile(statusPath, "utf8")) as {
+    goalPolicies?: { transitions?: Record<string, unknown> };
+  };
+  if (!payload.goalPolicies || typeof payload.goalPolicies !== "object") {
+    payload.goalPolicies = { transitions: {} };
+  }
+  if (
+    !payload.goalPolicies.transitions ||
+    typeof payload.goalPolicies.transitions !== "object"
+  ) {
+    payload.goalPolicies.transitions = {};
+  }
+  payload.goalPolicies.transitions["H2->H3"] = {
+    minimumGoalIncrease: 4,
+    minActionGrowthFactor: 2,
+    minPendingNextActions: 4,
+    requiredTaggedActionCounts: {
+      conflict: { minCount: 3, minPendingCount: 2 },
+    },
+  };
+  await writeFile(statusPath, JSON.stringify(payload, null, 2), "utf8");
+}
+
 async function seedGoalPolicyFileWithDuplicateTransition(goalPolicyPath: string): Promise<void> {
   await writeFile(
     goalPolicyPath,
@@ -461,6 +485,30 @@ async function seedGoalPolicyFileWithDuplicateTransition(goalPolicyPath: string)
   }
 }
 `,
+    "utf8",
+  );
+}
+
+async function seedMismatchedGoalPolicyFile(goalPolicyPath: string): Promise<void> {
+  await writeFile(
+    goalPolicyPath,
+    JSON.stringify(
+      {
+        schemaVersion: "v1",
+        transitions: {
+          "H2->H3": {
+            minimumGoalIncrease: 2,
+            minActionGrowthFactor: 1.3,
+            minPendingNextActions: 3,
+            requiredTaggedActionCounts: {
+              conflict: 2,
+            },
+          },
+        },
+      },
+      null,
+      2,
+    ),
     "utf8",
   );
 }
@@ -2573,6 +2621,62 @@ describe("run-h2-promotion.mjs", () => {
         failures: string[];
       };
       expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("horizon_promotion_failed");
+    });
+  });
+
+  it("fails strict promotion when goal policy file conflicts with horizon fallback policy", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-source-consistency-conflict.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICY_CONFLICT.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedMismatchedHorizonGoalPolicies(statusPath);
+      await seedEnvFile(envPath);
+      await seedMismatchedGoalPolicyFile(goalPolicyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--strict-goal-policy-gates",
+          "--goal-policy-key",
+          "H2->H3",
+          "--require-goal-policy-validation",
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          goalPolicySourceConsistencyChecked: boolean;
+          goalPolicySourceConsistencyPass: boolean;
+          goalPolicySourceConsistencyConflictTransitions: string[] | null;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.goalPolicySourceConsistencyChecked).toBe(true);
+      expect(payload.checks.goalPolicySourceConsistencyPass).toBe(false);
+      expect(payload.checks.goalPolicySourceConsistencyConflictTransitions).toContain("H2->H3");
       expect(payload.failures).toContain("horizon_promotion_failed");
     });
   });

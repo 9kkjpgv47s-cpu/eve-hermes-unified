@@ -149,6 +149,45 @@ export class InMemoryUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 }
 
+/**
+ * Serializes all operations against an underlying store so concurrent callers observe a total order.
+ * Intended for the in-memory backend when durability-sensitive workloads require stable write ordering.
+ */
+export class SerializedUnifiedMemoryStore implements UnifiedMemoryStore {
+  private chain: Promise<unknown> = Promise.resolve();
+
+  constructor(private readonly inner: UnifiedMemoryStore) {}
+
+  private queueOp<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.chain.then(() => fn());
+    this.chain = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  get(target: UnifiedMemoryKey): Promise<UnifiedMemoryEntry | undefined> {
+    return this.queueOp(() => this.inner.get(target));
+  }
+
+  set(
+    target: UnifiedMemoryKey,
+    value: string,
+    metadata?: Record<string, string>,
+  ): Promise<UnifiedMemoryEntry> {
+    return this.queueOp(() => this.inner.set(target, value, metadata));
+  }
+
+  delete(target: UnifiedMemoryKey): Promise<boolean> {
+    return this.queueOp(() => this.inner.delete(target));
+  }
+
+  list(query?: UnifiedMemoryListQuery): Promise<UnifiedMemoryEntry[]> {
+    return this.queueOp(() => this.inner.list(query));
+  }
+}
+
 export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   private readonly records = new Map<string, UnifiedMemoryEntry>();
   private loaded = false;
@@ -248,9 +287,12 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
 export function createUnifiedMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
+  options?: { serializeWrites?: boolean },
 ): UnifiedMemoryStore {
-  if (kind === "file") {
-    return new FileUnifiedMemoryStore(filePath);
+  const base =
+    kind === "file" ? new FileUnifiedMemoryStore(filePath) : new InMemoryUnifiedMemoryStore();
+  if (options?.serializeWrites && kind === "memory") {
+    return new SerializedUnifiedMemoryStore(base);
   }
-  return new InMemoryUnifiedMemoryStore();
+  return base;
 }

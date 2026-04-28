@@ -3,6 +3,7 @@ import type {
   CapabilityExecutionResult,
   DispatchFallbackInfo,
   DispatchState,
+  FailureClass,
   LaneId,
   RoutingDecision,
   UnifiedCapabilityDecision,
@@ -70,6 +71,22 @@ function toDispatchStateFromCapability(
     sourceMessageId: envelope.messageId,
     traceId: envelope.traceId,
   });
+}
+
+function shouldSkipFallback(
+  routing: RoutingDecision,
+  routerConfig: RouterPolicyConfig,
+  primaryState: DispatchState,
+): boolean {
+  if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed) {
+    return true;
+  }
+  const blocked = routerConfig.noFallbackOnFailureClasses;
+  if (!blocked?.length) {
+    return false;
+  }
+  const set = new Set<FailureClass>(blocked);
+  return set.has(primaryState.failureClass);
 }
 
 function buildResult(
@@ -149,7 +166,11 @@ export async function dispatchUnifiedMessage(
     }),
     envelope.traceId,
   );
-  if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed) {
+  if (shouldSkipFallback(routing, runtime.routerConfig, primaryState)) {
+    return buildResult(envelope, routing, primaryState, primaryState);
+  }
+
+  if (routing.fallbackLane === "none") {
     return buildResult(envelope, routing, primaryState, primaryState);
   }
 

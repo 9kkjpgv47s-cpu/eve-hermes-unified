@@ -123,6 +123,52 @@ describe("UnifiedCapabilityEngine", () => {
     }
   });
 
+  it("fails capability execution when executor exceeds configured timeout budget", async () => {
+    const registry = new CapabilityRegistry();
+    registry.register(
+      {
+        id: "slow_echo",
+        description: "slow capability",
+        owner: "eve",
+      },
+      async () => {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 300);
+        });
+        return buildCapabilityResult("should not reach");
+      },
+    );
+
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore: new FileUnifiedMemoryStore(path.join(os.tmpdir(), "unified-cap-timeout.json")),
+      dispatchLane: async () => fakeLaneState("eve", "lane_should_not_run"),
+      executionTimeoutMs: 50,
+    });
+
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "hermes" as const,
+        failClosed: false,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@cap slow_echo",
+    });
+
+    expect(result.capabilityExecution?.status).toBe("failed");
+    expect(result.capabilityExecution?.reason).toBe("capability_execution_timeout");
+    expect(result.capabilityExecution?.failureClass).toBe("policy_failure");
+  });
+
   it("falls back to lane dispatch when capability command is unknown", async () => {
     const runtime = {
       eveAdapter: new FakeLaneAdapter("eve", {

@@ -39,14 +39,14 @@ jobs:
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: H12 sustainment assurance bundle (dispatch queue replay limit + H11 gates)
-        run: npm run run:h12-assurance-bundle
+      - name: H13 sustainment assurance bundle (soak SLO drift gate + H12 gates)
+        run: npm run run:h13-assurance-bundle
 
-      - name: Post-H12 sustainment loop (horizon + closeout gate)
+      - name: Post-H13 sustainment loop (horizon + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H12 sustainment manifest
-        run: npm run validate:post-h12-sustainment-manifest
+      - name: Validate post-H13 sustainment manifest
+        run: npm run validate:post-h13-sustainment-manifest
 
       - name: Build
         run: npm run build

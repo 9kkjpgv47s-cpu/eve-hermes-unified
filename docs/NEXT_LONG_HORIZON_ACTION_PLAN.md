@@ -286,7 +286,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h11-assurance-bundle`** passes and artifact matches **`evidence/h11-assurance-bundle-*.json`** (includes **`capabilityPolicyAuditRotationPass`**).
-- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H12**).
+- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H13**).
 
 Primary risks:
 
@@ -309,7 +309,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h12-assurance-bundle`** passes and artifact matches **`evidence/h12-assurance-bundle-*.json`**.
-- **`npm run validate:h12-closeout`** passes when evidence is present (**H12** is terminal: stage-promotion readiness skipped in closeout validator).
+- **`npm run validate:h12-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H13**).
 
 Primary risks:
 
@@ -319,9 +319,32 @@ Mitigations:
 
 - Default **`0`** (unbounded retries); document tuning against **`attempts`** telemetry from queue JSON.
 
-### Post-H12 operations (terminal sustainment)
+### Horizon H13 - CI soak SLO drift gate (reliability observability)
 
-After **H12** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h12-closeout`**. Optionally **`npm run validate:post-h12-sustainment-manifest`** checks the latest **`evidence/post-h12-sustainment-loop-*.json`**. Legacy prior chains: **`verify:sustainment-loop:h11-legacy`** / **`validate:post-h11-sustainment-manifest`**, **`verify:sustainment-loop:h10-legacy`** … **`h6-legacy`**.
+Goal: align **north-star** reliability/latency expectations with **executable CI enforcement** by failing closed when soak simulation output drifts below trace presence, success rate, or P95 latency thresholds (`summarize-soak-report.mjs`).
+
+Workstreams:
+
+- **`scripts/run-ci-soak-slo-gate.mjs`**: run **`soak-simulate.sh`** (iteration count via **`UNIFIED_CI_SOAK_ITERATIONS`**, default **25**), then **`summarize-soak-report.mjs`** with **`UNIFIED_SOAK_FAIL_ON_DRIFT=1`**.
+- **`npm run run:h13-assurance-bundle`**: **`run-h12-assurance-bundle`** plus CI soak gate; artifact **`evidence/h13-assurance-bundle-*.json`** includes **`ciSoakSloDriftGatePass`**.
+- **`unified-ci`**: runs **`run:h13-assurance-bundle`** early in the validate job so regressions surface before **`validate:all`**.
+
+Exit evidence:
+
+- **`npm run run:h13-assurance-bundle`** passes and artifact matches **`evidence/h13-assurance-bundle-*.json`**.
+- **`npm run validate:h13-closeout`** passes when evidence is present (**H13** is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- CI runners are slower than laptop soak runs; P95 threshold default (**60s**) may need tuning via **`UNIFIED_SOAK_MAX_P95_ELAPSED_MS`**.
+
+Mitigations:
+
+- Keep soak iterations modest in CI; document env overrides for noisy hosts.
+
+### Post-H13 operations (terminal sustainment)
+
+After **H13** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h13-closeout`**. Optionally **`npm run validate:post-h13-sustainment-manifest`** checks the latest **`evidence/post-h13-sustainment-loop-*.json`**. Legacy prior chains: **`verify:sustainment-loop:h12-legacy`** / **`validate:post-h12-sustainment-manifest`**, **`verify:sustainment-loop:h11-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 
@@ -332,7 +355,7 @@ After **H12** is marked completed, use **`npm run verify:sustainment-loop`** (se
 
 ## Immediate Next Actions (archived H2 drill checklist)
 
-The roadmap horizons **H1–H12** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h12-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
+The roadmap horizons **H1–H13** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h13-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
 
 1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report.
 2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:

@@ -6,14 +6,14 @@ import { runCommandWithTimeout } from "../src/process/exec.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-describe("run-post-h12-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop npm script", async () => {
+describe("run-post-h12-sustainment-loop.mjs (legacy)", () => {
+  it("exposes verify:sustainment-loop:h12-legacy npm script", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h12-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop:h12-legacy"]).toContain("run-post-h12-sustainment-loop.mjs");
   });
 
-  it("emits pass and structured checks in sustainment loop manifest", async () => {
+  it("emits pass and structured checks in legacy sustainment loop manifest", async () => {
     const result = await runCommandWithTimeout(
       ["node", path.join(repoRoot, "scripts/run-post-h12-sustainment-loop.mjs")],
       { timeoutMs: 120_000 },

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-30T18:15:00Z",
+  "updatedAtIso": "2026-05-01T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H12",
+  "activeHorizon": "H13",
   "activeStatus": "completed",
-  "summary": "Horizon H12 (dispatch durability queue replay attempt bound): optional UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY marks pending entries failed with replay_max_attempts_exceeded before replay dispatch when attempts reach cap; 0 = unlimited (default); run-h12-assurance-bundle adds replay-limit vitest on top of H11 gates; terminal sustainment via verify:sustainment-loop (post-H12 + validate:h12-closeout).",
+  "summary": "Horizon H13 (CI soak SLO drift gate): soak-simulate + summarize-soak-report with UNIFIED_SOAK_FAIL_ON_DRIFT=1; evidence/ci-soak-slo-gate-*.json; run-h13-assurance-bundle chains H12 bundle + ci soak gate; unified-ci runs soak SLO step; terminal sustainment verify:sustainment-loop (post-H13 + validate:h13-closeout); legacy verify:sustainment-loop:h12-legacy.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -118,6 +118,13 @@
       "artifactPattern": "evidence/h12-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H12"]
+    },
+    {
+      "id": "h13-assurance-bundle",
+      "command": "node ./scripts/run-h13-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h13-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H13"]
     }
   ],
   "nextActions": [
@@ -447,6 +454,27 @@
       "targetHorizon": "H12",
       "status": "completed",
       "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h13-action-1",
+      "summary": "CI soak SLO drift gate: scripts/run-ci-soak-slo-gate.mjs runs soak-simulate then summarize-soak-report with UNIFIED_SOAK_FAIL_ON_DRIFT=1; writes evidence/ci-soak-slo-gate-*.json.",
+      "targetHorizon": "H13",
+      "status": "completed",
+      "tags": ["observability", "validation", "ci"]
+    },
+    {
+      "id": "h13-action-2",
+      "summary": "H13 assurance bundle chains run-h12-assurance-bundle + ci soak gate; validate:h13-closeout and post-H13 sustainment loop manifest.",
+      "targetHorizon": "H13",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h13-action-3",
+      "summary": "Goal policy H12→H13 transition; unified-ci soak SLO step; verify:sustainment-loop post-H13; verify:sustainment-loop:h12-legacy for prior chain.",
+      "targetHorizon": "H13",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -600,6 +628,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H12->H13": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "observability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -660,7 +703,11 @@
     },
     "H12": {
       "status": "completed",
-      "summary": "Durability queue replay guardrail: optional max replay attempts per pending entry; H12 assurance adds replay-limit tests; terminal sustainment post-H12 via verify:sustainment-loop."
+      "summary": "Durability queue replay guardrail: optional max replay attempts per pending entry; H12 assurance adds replay-limit tests; sustainment superseded by post-H13 terminal loop."
+    },
+    "H13": {
+      "status": "completed",
+      "summary": "CI soak SLO drift gate: fail-closed summarize-soak-report after soak-simulate; H13 assurance bundles H12 + ci soak gate; unified-ci enforces soak thresholds."
     }
   },
   "history": [
@@ -855,6 +902,12 @@
       "horizon": "H12",
       "status": "completed",
       "note": "Roadmap merged to main: H12 terminal horizon documented in NEXT_LONG_HORIZON_ACTION_PLAN (H12 section + post-H12 sustainment); CLOUD_AGENT_HANDOFF terminal closeout wording aligned (H5 retroactive skip references H12)."
+    },
+    {
+      "timestamp": "2026-05-01T12:00:00Z",
+      "horizon": "H13",
+      "status": "completed",
+      "note": "H13 CI soak SLO gate: run-ci-soak-slo-gate.mjs + run-h13-assurance-bundle; unified-ci soak drift step; terminal sustainment post-H13 via verify:sustainment-loop; H12->H13 goal policy."
     }
   ]
 }

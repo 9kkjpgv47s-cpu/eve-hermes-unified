@@ -34,15 +34,55 @@ function normalizeCommand(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
+function splitNormalizedCommand(command) {
+  return normalizeCommand(command)
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+}
+
+function readCommandOptionValue(tokens, optionNames) {
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    for (const optionName of optionNames) {
+      if (token === optionName) {
+        return tokens[index + 1] ?? "";
+      }
+      if (token.startsWith(`${optionName}=`)) {
+        return token.slice(optionName.length + 1);
+      }
+    }
+  }
+  return "";
+}
+
 function parseHorizonRunnerCommand(command) {
   const normalized = normalizeCommand(command);
   const match = normalized.match(/^npm run run:h([1-5])-(closeout|promotion)(?:\s+.*)?$/);
-  if (!match) {
+  if (match) {
+    const source = normalizeHorizon(`H${String(match[1])}`);
+    const kind = String(match[2]);
+    const next = deriveNextHorizon(source);
+    return {
+      source,
+      kind,
+      next,
+    };
+  }
+
+  const genericMatch = normalized.match(/^npm run run:horizon-(closeout|promotion)(?:\s+.*)?$/);
+  if (!genericMatch) {
     return null;
   }
-  const source = normalizeHorizon(`H${String(match[1])}`);
-  const kind = String(match[2]);
-  const next = deriveNextHorizon(source);
+  const tokens = splitNormalizedCommand(normalized);
+  const kind = String(genericMatch[1]);
+  const source = normalizeHorizon(
+    readCommandOptionValue(tokens, ["--horizon", "--source-horizon"]),
+  );
+  const nextFromOption = normalizeHorizon(
+    readCommandOptionValue(tokens, ["--next-horizon", "--target-next-horizon"]),
+  );
+  const next = nextFromOption || deriveNextHorizon(source);
   return {
     source,
     kind,

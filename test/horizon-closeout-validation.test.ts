@@ -1193,4 +1193,286 @@ describe("validate-horizon-closeout.mjs", () => {
       );
     });
   });
+
+  it("passes when H3 closeout requires generic horizon runner command artifacts", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "h3-closeout-generic-runner.json");
+      await seedEvidence(evidenceDir);
+      await seedH3H4SpecificEvidence(evidenceDir);
+
+      await writeFile(
+        horizonPath,
+        JSON.stringify(
+          {
+            schemaVersion: "v1",
+            updatedAtIso: new Date().toISOString(),
+            owner: "cloud-agent",
+            activeHorizon: "H3",
+            activeStatus: "in_progress",
+            summary: "H3 closeout fixture with generic runner commands",
+            blockers: [],
+            requiredEvidence: [
+              {
+                id: "h1-release-readiness",
+                command: "npm run validate:release-readiness",
+                artifactPattern: "evidence/release-readiness-*.json",
+                required: true,
+              },
+              {
+                id: "h1-cutover-readiness",
+                command: "npm run validate:cutover-readiness",
+                artifactPattern: "evidence/cutover-readiness-*.json",
+                required: true,
+              },
+              {
+                id: "h1-merge-bundle",
+                command: "npm run validate:merge-bundle",
+                artifactPattern: "evidence/merge-bundle-validation-*.json",
+                required: true,
+              },
+              {
+                id: "h1-bundle-verification",
+                command: "npm run verify:merge-bundle",
+                artifactPattern: "evidence/bundle-verification-*.json",
+                required: true,
+              },
+              {
+                id: "h1-evidence-summary",
+                command: "npm run validate:evidence-summary",
+                artifactPattern: "evidence/validation-summary-*.json",
+                required: true,
+              },
+              {
+                id: "h3-closeout-run-generic",
+                command: "npm run run:horizon-closeout -- --horizon H3 --next-horizon H4",
+                artifactPattern: "evidence/horizon-closeout-run-H3-*.json",
+                required: true,
+                horizons: ["H3"],
+              },
+              {
+                id: "h3-promotion-run-generic",
+                command: "npm run run:horizon-promotion -- --horizon H3 --next-horizon H4",
+                artifactPattern: "evidence/horizon-promotion-run-H3-*.json",
+                required: true,
+                horizons: ["H3"],
+              },
+            ],
+            nextActions: [
+              {
+                id: "h3-action-1",
+                summary: "closeout fixture action",
+                targetHorizon: "H3",
+                status: "completed",
+              },
+            ],
+            promotionReadiness: {
+              targetStage: "full",
+              gates: {
+                releaseReadinessPass: true,
+                mergeBundlePass: true,
+                bundleVerificationPass: true,
+                cutoverReadinessPass: true,
+                evidenceSummaryPass: true,
+              },
+            },
+            horizonStates: {
+              H1: { status: "completed", summary: "H1 complete" },
+              H2: { status: "completed", summary: "H2 complete" },
+              H3: { status: "in_progress", summary: "H3 active" },
+              H4: { status: "planned", summary: "H4 planned" },
+              H5: { status: "planned", summary: "H5 planned" },
+            },
+            history: [
+              {
+                timestamp: new Date().toISOString(),
+                horizon: "H3",
+                status: "in_progress",
+                note: "seed fixture",
+              },
+            ],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H3",
+          "--next-horizon",
+          "H4",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--allow-horizon-mismatch",
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        checks: { requiredEvidence: Array<{ id: string; pass: boolean }> };
+      };
+      expect(payload.pass).toBe(true);
+      expect(
+        payload.checks.requiredEvidence.some(
+          (item) => item.id === "h3-closeout-run-generic" && item.pass === true,
+        ),
+      ).toBe(true);
+      expect(
+        payload.checks.requiredEvidence.some(
+          (item) => item.id === "h3-promotion-run-generic" && item.pass === true,
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("fails when generic horizon runner command transition mismatches required horizon", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "h3-closeout-generic-runner-mismatch.json");
+      await seedEvidence(evidenceDir);
+      await seedH3H4SpecificEvidence(evidenceDir);
+
+      await writeFile(
+        horizonPath,
+        JSON.stringify(
+          {
+            schemaVersion: "v1",
+            updatedAtIso: new Date().toISOString(),
+            owner: "cloud-agent",
+            activeHorizon: "H3",
+            activeStatus: "in_progress",
+            summary: "H3 closeout fixture with generic runner mismatch",
+            blockers: [],
+            requiredEvidence: [
+              {
+                id: "h1-release-readiness",
+                command: "npm run validate:release-readiness",
+                artifactPattern: "evidence/release-readiness-*.json",
+                required: true,
+              },
+              {
+                id: "h1-cutover-readiness",
+                command: "npm run validate:cutover-readiness",
+                artifactPattern: "evidence/cutover-readiness-*.json",
+                required: true,
+              },
+              {
+                id: "h1-merge-bundle",
+                command: "npm run validate:merge-bundle",
+                artifactPattern: "evidence/merge-bundle-validation-*.json",
+                required: true,
+              },
+              {
+                id: "h1-bundle-verification",
+                command: "npm run verify:merge-bundle",
+                artifactPattern: "evidence/bundle-verification-*.json",
+                required: true,
+              },
+              {
+                id: "h1-evidence-summary",
+                command: "npm run validate:evidence-summary",
+                artifactPattern: "evidence/validation-summary-*.json",
+                required: true,
+              },
+              {
+                id: "h3-closeout-run-generic-mismatch",
+                command: "npm run run:horizon-closeout -- --horizon H3 --next-horizon H5",
+                artifactPattern: "evidence/horizon-closeout-run-H3-*.json",
+                required: true,
+                horizons: ["H3"],
+              },
+            ],
+            nextActions: [
+              {
+                id: "h3-action-1",
+                summary: "closeout fixture action",
+                targetHorizon: "H3",
+                status: "completed",
+              },
+            ],
+            promotionReadiness: {
+              targetStage: "full",
+              gates: {
+                releaseReadinessPass: true,
+                mergeBundlePass: true,
+                bundleVerificationPass: true,
+                cutoverReadinessPass: true,
+                evidenceSummaryPass: true,
+              },
+            },
+            horizonStates: {
+              H1: { status: "completed", summary: "H1 complete" },
+              H2: { status: "completed", summary: "H2 complete" },
+              H3: { status: "in_progress", summary: "H3 active" },
+              H4: { status: "planned", summary: "H4 planned" },
+              H5: { status: "planned", summary: "H5 planned" },
+            },
+            history: [
+              {
+                timestamp: new Date().toISOString(),
+                horizon: "H3",
+                status: "in_progress",
+                note: "seed fixture",
+              },
+            ],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H3",
+          "--next-horizon",
+          "H4",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--allow-horizon-mismatch",
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          requiredEvidence: Array<{ id: string; pass: boolean; checks: string[] }>;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("required_evidence_failed:h3-closeout-run-generic-mismatch");
+      expect(payload.checks.requiredEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "h3-closeout-run-generic-mismatch",
+            pass: false,
+            checks: expect.arrayContaining([
+              "horizon_closeout_run_next_horizon_mismatch:H4!=H5",
+            ]),
+          }),
+        ]),
+      );
+    });
+  });
 });

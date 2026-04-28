@@ -6,6 +6,7 @@ import path from "node:path";
 import { resolvePackageRoot } from "../config/package-root.js";
 import { loadDotEnvFile } from "../config/env.js";
 import { loadUnifiedConfigFile } from "../config/load-unified-config-file.js";
+import { hydrateTelegramTokenFromFile } from "../config/telegram-token-file.js";
 import { loadUnifiedControlPlaneEnv } from "../config/unified-control-plane-env.js";
 import { telegramSetWebhook } from "../telegram/bot-api.js";
 
@@ -22,6 +23,7 @@ async function main() {
   const rootDir = resolvePackageRoot(import.meta.url);
   await loadDotEnvFile(rootDir);
   await loadUnifiedConfigFile(rootDir);
+  await hydrateTelegramTokenFromFile();
   const c = loadUnifiedControlPlaneEnv();
   if (!c.telegramBotToken.trim()) {
     throw new Error("TELEGRAM_BOT_TOKEN is required.");

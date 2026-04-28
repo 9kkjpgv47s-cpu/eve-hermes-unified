@@ -1,4 +1,5 @@
 import type { LaneId } from "../contracts/types.js";
+import { validateUnifiedControlPlaneEnvZod } from "./unified-env-zod.js";
 
 export type UnifiedControlPlaneEnv = {
   eveTaskDispatchScript: string;
@@ -29,6 +30,9 @@ export type UnifiedControlPlaneEnv = {
   unifiedLaneIoRedact: boolean;
   /** Extra | or , separated regex sources for redaction. */
   unifiedLaneIoRedactCustom: string;
+  /** Path to PEM for optional HTTPS webhook server. */
+  telegramWebhookTlsCertPath: string;
+  telegramWebhookTlsKeyPath: string;
 };
 
 function parseIntBounded(raw: string, fallback: number, min: number, max: number): number {
@@ -113,6 +117,8 @@ export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
   const telegramWebhookPublicUrl = env("TELEGRAM_WEBHOOK_PUBLIC_URL", "").replace(/\/+$/, "");
   const unifiedLaneIoRedact = env("UNIFIED_LANE_IO_REDACT", "1") === "1";
   const unifiedLaneIoRedactCustom = env("UNIFIED_LANE_IO_REDACT_CUSTOM", "");
+  const telegramWebhookTlsCertPath = env("TELEGRAM_WEBHOOK_TLS_CERT", "");
+  const telegramWebhookTlsKeyPath = env("TELEGRAM_WEBHOOK_TLS_KEY", "");
 
   return {
     eveTaskDispatchScript: env(
@@ -144,6 +150,8 @@ export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
     telegramWebhookPublicUrl,
     unifiedLaneIoRedact,
     unifiedLaneIoRedactCustom,
+    telegramWebhookTlsCertPath,
+    telegramWebhookTlsKeyPath,
   };
 }
 
@@ -173,4 +181,10 @@ export function assertUnifiedControlPlaneEnv(c: UnifiedControlPlaneEnv): void {
       throw new Error("UNIFIED_ROUTER_DEFAULT_FALLBACK must be eve, hermes, or none.");
     }
   }
+  const tlsCert = c.telegramWebhookTlsCertPath.trim();
+  const tlsKey = c.telegramWebhookTlsKeyPath.trim();
+  if ((tlsCert && !tlsKey) || (!tlsCert && tlsKey)) {
+    throw new Error("Set both TELEGRAM_WEBHOOK_TLS_CERT and TELEGRAM_WEBHOOK_TLS_KEY for TLS, or neither.");
+  }
+  validateUnifiedControlPlaneEnvZod(c);
 }

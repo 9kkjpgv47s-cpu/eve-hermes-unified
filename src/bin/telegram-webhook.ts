@@ -2,14 +2,17 @@
 /**
  * Telegram Bot API webhook server: verifies secret path, maps `message` to unified dispatch,
  * optionally replies via sendMessage (TELEGRAM_WEBHOOK_SEND_REPLY=1).
+ * Optional TLS: TELEGRAM_WEBHOOK_TLS_CERT + TELEGRAM_WEBHOOK_TLS_KEY (PEM).
  */
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import path from "node:path";
+import { readFileSync } from "node:fs";
+import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
 import { resolvePackageRoot } from "../config/package-root.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { buildUnifiedRuntimeFromEnv } from "../runtime/build-unified-runtime.js";
 import { loadDotEnvFile } from "../config/env.js";
 import { loadUnifiedConfigFile } from "../config/load-unified-config-file.js";
+import { hydrateTelegramTokenFromFile } from "../config/telegram-token-file.js";
 import { loadUnifiedControlPlaneEnv } from "../config/unified-control-plane-env.js";
 import { telegramSendMessage } from "../telegram/bot-api.js";
 import { summarizeDispatch } from "../telegram/dispatch-reply-summary.js";
@@ -33,6 +36,7 @@ async function main() {
   const rootDir = resolvePackageRoot(import.meta.url);
   await loadDotEnvFile(rootDir);
   await loadUnifiedConfigFile(rootDir);
+  await hydrateTelegramTokenFromFile();
   const c = loadUnifiedControlPlaneEnv();
   if (!c.telegramBotToken.trim()) {
     throw new Error("TELEGRAM_BOT_TOKEN is required for telegram-webhook server.");
@@ -42,7 +46,7 @@ async function main() {
   const expectedPath = c.telegramWebhookPath.startsWith("/") ? c.telegramWebhookPath : `/${c.telegramWebhookPath}`;
   const secret = c.telegramWebhookSecret.trim();
 
-  const server = createServer(async (req, res) => {
+  const requestListener = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     try {
       if (req.method !== "POST") {
         sendJson(res, 405, { error: "method_not_allowed" });
@@ -101,15 +105,23 @@ async function main() {
     } catch (error) {
       sendJson(res, 500, { ok: false, error: String(error) });
     }
-  });
+  };
+
+  const certPath = c.telegramWebhookTlsCertPath.trim();
+  const keyPath = c.telegramWebhookTlsKeyPath.trim();
+  const useTls = certPath.length > 0 && keyPath.length > 0;
+  const server = useTls
+    ? createHttpsServer({ cert: readFileSync(certPath), key: readFileSync(keyPath) }, requestListener)
+    : createHttpServer(requestListener);
 
   await new Promise<void>((resolve, reject) => {
     server.listen(c.telegramWebhookPort, c.telegramWebhookHost, () => resolve());
     server.on("error", reject);
   });
 
+  const scheme = useTls ? "https" : "http";
   process.stderr.write(
-    `telegram-webhook listening on http://${c.telegramWebhookHost}:${c.telegramWebhookPort}${expectedPath}\n`,
+    `telegram-webhook listening on ${scheme}://${c.telegramWebhookHost}:${c.telegramWebhookPort}${expectedPath}\n`,
   );
 }
 

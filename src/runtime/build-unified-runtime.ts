@@ -8,6 +8,7 @@ import {
   loadUnifiedControlPlaneEnv,
 } from "../config/unified-control-plane-env.js";
 import { loadUnifiedConfigFile } from "../config/load-unified-config-file.js";
+import { hydrateTelegramTokenFromFile } from "../config/telegram-token-file.js";
 import { FileBackedUnifiedMemoryStore } from "../memory/file-backed-unified-memory-store.js";
 import { InMemoryUnifiedMemoryStore } from "../memory/unified-memory-store.js";
 import type { UnifiedRuntime } from "./unified-dispatch.js";
@@ -18,6 +19,7 @@ export async function buildUnifiedRuntimeFromEnv(rootDir: string): Promise<{
 }> {
   await loadDotEnvFile(rootDir);
   await loadUnifiedConfigFile(rootDir);
+  await hydrateTelegramTokenFromFile();
   const c = loadUnifiedControlPlaneEnv();
   assertUnifiedControlPlaneEnv(c);
 

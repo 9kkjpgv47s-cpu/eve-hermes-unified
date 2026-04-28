@@ -33,13 +33,14 @@ jobs:
       - name: Failure-injection matrix (post-build)
         run: npm run validate:failure-injection
 
-      - name: Soak simulation and metrics bundle
-        run: npm run validate:soak -- 12
-
-      - name: Soak SLO gate (success rate)
-        run: npm run validate:ci-slo
+      - name: Soak matrix (memory + file) and SLO gates
+        run: npm run validate:soak-matrix
         env:
+          SOAK_MATRIX_ITERATIONS: "10"
           UNIFIED_SOAK_MIN_SUCCESS_RATE: "0.99"
+          UNIFIED_SOAK_MAX_WALL_MS: "120000"
+          UNIFIED_SOAK_MAX_P95_WALL_MS: "60000"
+          UNIFIED_SOAK_MAX_P95_LANE_MS: "60000"
 
       - name: Gateway smoke and evidence transcript
         run: bash ./scripts/ci-record-dispatch-evidence.sh

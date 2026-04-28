@@ -29,6 +29,7 @@ function base(): UnifiedControlPlaneEnv {
     unifiedLaneIoRedactCustom: "",
     telegramWebhookTlsCertPath: "",
     telegramWebhookTlsKeyPath: "",
+    validatePathsExist: false,
   };
 }
 

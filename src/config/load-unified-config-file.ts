@@ -33,7 +33,11 @@ const ALLOWED_CONFIG_KEYS = new Set<string>([
   "TELEGRAM_WEBHOOK_TLS_KEY",
   "TELEGRAM_BOT_TOKEN_FILE",
   "UNIFIED_ZOD_VALIDATE",
+  "UNIFIED_VALIDATE_PATHS",
   "UNIFIED_SOAK_MIN_SUCCESS_RATE",
+  "UNIFIED_SOAK_MAX_WALL_MS",
+  "UNIFIED_SOAK_MAX_P95_WALL_MS",
+  "UNIFIED_SOAK_MAX_P95_LANE_MS",
 ]);
 
 export async function loadUnifiedConfigFile(rootDir: string): Promise<void> {

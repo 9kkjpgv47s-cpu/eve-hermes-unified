@@ -1,5 +1,6 @@
 import type { LaneId } from "../contracts/types.js";
 import { validateUnifiedControlPlaneEnvZod } from "./unified-env-zod.js";
+import { assertPathsExist } from "./path-exists.js";
 
 export type UnifiedControlPlaneEnv = {
   eveTaskDispatchScript: string;
@@ -33,6 +34,8 @@ export type UnifiedControlPlaneEnv = {
   /** Path to PEM for optional HTTPS webhook server. */
   telegramWebhookTlsCertPath: string;
   telegramWebhookTlsKeyPath: string;
+  /** When true, verify Eve script, Hermes command, TLS PEMs exist at startup. */
+  validatePathsExist: boolean;
 };
 
 function parseIntBounded(raw: string, fallback: number, min: number, max: number): number {
@@ -111,6 +114,7 @@ export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
   const memoryBackend = parseMemoryBackend(env("UNIFIED_MEMORY_BACKEND", "memory"));
   const memoryFilePath = env("UNIFIED_MEMORY_FILE_PATH", "memory/unified-memory.json");
   const strictConfig = env("UNIFIED_STRICT_CONFIG", "0") === "1";
+  const validatePathsExist = env("UNIFIED_VALIDATE_PATHS", "0") === "1";
 
   const telegramWebhookPort = parseIntBounded(env("TELEGRAM_WEBHOOK_PORT", "8787"), 8787, 1, 65_535);
   const telegramWebhookSendReply = env("TELEGRAM_WEBHOOK_SEND_REPLY", "0") === "1";
@@ -152,6 +156,7 @@ export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
     unifiedLaneIoRedactCustom,
     telegramWebhookTlsCertPath,
     telegramWebhookTlsKeyPath,
+    validatePathsExist,
   };
 }
 
@@ -187,4 +192,21 @@ export function assertUnifiedControlPlaneEnv(c: UnifiedControlPlaneEnv): void {
     throw new Error("Set both TELEGRAM_WEBHOOK_TLS_CERT and TELEGRAM_WEBHOOK_TLS_KEY for TLS, or neither.");
   }
   validateUnifiedControlPlaneEnvZod(c);
+}
+
+/** Async checks (path existence) when `UNIFIED_VALIDATE_PATHS=1`. */
+export async function assertUnifiedControlPlaneEnvAsync(c: UnifiedControlPlaneEnv): Promise<void> {
+  assertUnifiedControlPlaneEnv(c);
+  if (!c.validatePathsExist) {
+    return;
+  }
+  const checks: { label: string; path: string }[] = [
+    { label: "EVE_TASK_DISPATCH_SCRIPT", path: c.eveTaskDispatchScript },
+    { label: "HERMES_LAUNCH_COMMAND", path: c.hermesLaunchCommand },
+  ];
+  if (c.telegramWebhookTlsCertPath.trim()) {
+    checks.push({ label: "TELEGRAM_WEBHOOK_TLS_CERT", path: c.telegramWebhookTlsCertPath });
+    checks.push({ label: "TELEGRAM_WEBHOOK_TLS_KEY", path: c.telegramWebhookTlsKeyPath });
+  }
+  await assertPathsExist(checks);
 }

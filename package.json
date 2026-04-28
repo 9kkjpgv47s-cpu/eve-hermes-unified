@@ -16,6 +16,7 @@
     "validate:failure-injection": "bash ./scripts/failure-injection-smoke.sh",
     "validate:soak": "bash ./scripts/soak-simulate.sh",
     "validate:ci-slo": "tsx src/bin/ci-slo-gate-soak.ts",
+    "validate:soak-matrix": "bash ./scripts/soak-matrix-ci.sh",
     "telegram:set-webhook": "tsx src/bin/telegram-webhook-set.ts",
     "cutover:stage": "bash ./scripts/prod-cutover-stage.sh",
     "cutover:rollback": "bash ./scripts/prod-rollback-eve-safe-lane.sh"

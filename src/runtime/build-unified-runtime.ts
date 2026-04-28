@@ -5,6 +5,7 @@ import { CapabilityRegistry, defaultCapabilityCatalog } from "../capabilities/ca
 import { loadDotEnvFile } from "../config/env.js";
 import {
   assertUnifiedControlPlaneEnv,
+  assertUnifiedControlPlaneEnvAsync,
   loadUnifiedControlPlaneEnv,
 } from "../config/unified-control-plane-env.js";
 import { loadUnifiedConfigFile } from "../config/load-unified-config-file.js";
@@ -21,7 +22,7 @@ export async function buildUnifiedRuntimeFromEnv(rootDir: string): Promise<{
   await loadUnifiedConfigFile(rootDir);
   await hydrateTelegramTokenFromFile();
   const c = loadUnifiedControlPlaneEnv();
-  assertUnifiedControlPlaneEnv(c);
+  await assertUnifiedControlPlaneEnvAsync(c);
 
   const capabilityRegistry = new CapabilityRegistry();
   capabilityRegistry.registerAll(defaultCapabilityCatalog);

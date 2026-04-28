@@ -3,6 +3,7 @@ import { runCommandWithTimeout } from "../process/exec.js";
 import type { DispatchState } from "../contracts/types.js";
 import { truncateLaneIo, validateDispatchState } from "../contracts/validate.js";
 import { redactLaneIo } from "../config/lane-io-redact.js";
+import { applyHermesStructuredDiagnostics } from "./hermes-stderr-protocol.js";
 import type { LaneAdapter, LaneDispatchInput } from "./lane-adapter.js";
 
 function buildHermesEnv(input: LaneDispatchInput): Record<string, string> {
@@ -88,6 +89,6 @@ export class HermesAdapter implements LaneAdapter {
       traceId: input.envelope.traceId,
       ...this.capIo(result.stdout, result.stderr),
     };
-    return validateDispatchState(state);
+    return validateDispatchState(applyHermesStructuredDiagnostics(state, result.stderr));
   }
 }

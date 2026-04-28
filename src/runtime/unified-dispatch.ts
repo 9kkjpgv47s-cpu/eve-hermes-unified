@@ -17,6 +17,11 @@ export type UnifiedRuntime = {
   routerConfig: RouterPolicyConfig;
   memoryStore?: UnifiedMemoryStore;
   capabilityRegistry?: CapabilityRegistry;
+  /** Optional hooks for soak / telemetry (primary and fallback lane states). */
+  dispatchHooks?: {
+    afterPrimary?(state: DispatchState): void;
+    afterFallback?(state: DispatchState): void;
+  };
 };
 
 async function persistLaneMemoryIfPassed(
@@ -95,6 +100,8 @@ export async function dispatchUnifiedMessage(
     });
   }
 
+  runtime.dispatchHooks?.afterPrimary?.(primaryState);
+
   await persistLaneMemoryIfPassed(memoryStore, envelope.chatId, decision.primaryLane, primaryState);
 
   if (primaryState.status === "pass" || decision.fallbackLane === "none" || decision.failClosed) {
@@ -124,6 +131,8 @@ export async function dispatchUnifiedMessage(
       reason: fallbackState.reason,
     });
   }
+
+  runtime.dispatchHooks?.afterFallback?.(fallbackState);
 
   await persistLaneMemoryIfPassed(memoryStore, envelope.chatId, decision.fallbackLane, fallbackState);
 

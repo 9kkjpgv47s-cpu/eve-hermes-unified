@@ -8,6 +8,9 @@ const memoryBackend = z.enum(["memory", "file"]);
 const gatewayMode = z.enum(["unified", "legacy"]);
 
 const unifiedEnvSchema = z.object({
+  eveTaskDispatchScript: z.string().min(1).max(8192),
+  eveDispatchResultPath: z.string().min(1).max(8192),
+  hermesLaunchCommand: z.string().min(1).max(1024),
   eveLaneTimeoutMs: z.number().int().min(1_000).max(3_600_000),
   hermesLaneTimeoutMs: z.number().int().min(1_000).max(3_600_000),
   routerDefaultPrimary: laneId,
@@ -25,6 +28,9 @@ const unifiedEnvSchema = z.object({
 
 function envToZodInput(c: UnifiedControlPlaneEnv): z.infer<typeof unifiedEnvSchema> {
   return {
+    eveTaskDispatchScript: c.eveTaskDispatchScript,
+    eveDispatchResultPath: c.eveDispatchResultPath,
+    hermesLaunchCommand: c.hermesLaunchCommand,
     eveLaneTimeoutMs: c.eveLaneTimeoutMs,
     hermesLaneTimeoutMs: c.hermesLaneTimeoutMs,
     routerDefaultPrimary: c.routerDefaultPrimary as LaneId,

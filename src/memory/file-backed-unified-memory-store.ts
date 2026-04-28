@@ -79,6 +79,19 @@ export class FileBackedUnifiedMemoryStore implements UnifiedMemoryStore {
     await mkdir(path.dirname(this.filePath), { recursive: true });
     const tmp = `${this.filePath}.${process.pid}.${Date.now()}.tmp`;
     await writeFile(tmp, `${JSON.stringify(shape, null, 2)}\n`, "utf8");
-    await rename(tmp, this.filePath);
+    const maxAttempts = 5;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        await rename(tmp, this.filePath);
+        return;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if ((code === "EBUSY" || code === "EPERM" || code === "EXDEV") && attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 25 * attempt));
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 }

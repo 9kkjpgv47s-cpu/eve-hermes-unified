@@ -996,9 +996,7 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed).toBe(
         false,
       );
-      expect(payload.failures).toContain(
-        "h2_closeout_run_missing_supervised_stage_goal_policy_source_consistency",
-      );
+      expect(payload.failures).toContain("h2_closeout_run_missing_supervised_stage_goal_policy");
       expect(payload.failures).not.toContain("horizon_promotion_failed");
     });
   });

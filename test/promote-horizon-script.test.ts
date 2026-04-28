@@ -667,7 +667,7 @@ describe("promote-horizon.mjs", () => {
         false,
       );
       expect(payload.failures).toContain(
-        "closeout_run_supervised_simulation_stage_goal_policy_source_consistency_not_reported",
+        "closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported",
       );
     });
   });

@@ -652,6 +652,11 @@ describe("run-h2-promotion.mjs", () => {
         ],
         { timeoutMs: 180_000 },
       );
+      if (result.code !== 0) {
+        throw new Error(
+          `run-h2-promotion generalized flow failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        );
+      }
       expect(result.code).toBe(0);
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
@@ -693,6 +698,11 @@ describe("run-h2-promotion.mjs", () => {
         ],
         { timeoutMs: 180_000 },
       );
+      if (result.code !== 0) {
+        throw new Error(
+          `run-h2-promotion H3->H4 expected success\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        );
+      }
       expect(result.code).toBe(0);
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
@@ -897,6 +907,154 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.progressiveGoalsPass).toBe(true);
       expect(payload.checks.goalPolicyCoveragePass).toBe(true);
       expect(payload.checks.goalPolicyReadinessAuditPass).toBe(true);
+    });
+  });
+
+  it("supports generalized H3 to H4 dry-run promotion orchestration", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h3-promotion-runner.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+
+      const statusPayload = JSON.parse(await readFile(statusPath, "utf8")) as {
+        activeHorizon: string;
+        activeStatus: string;
+        horizonStates: Record<string, { status: string; summary: string }>;
+        nextActions: Array<{
+          id: string;
+          summary: string;
+          targetHorizon: string;
+          status: string;
+          tags?: string[];
+        }>;
+        goalPolicies?: {
+          transitions?: Record<string, unknown>;
+        };
+      };
+      statusPayload.activeHorizon = "H3";
+      statusPayload.activeStatus = "in_progress";
+      if (statusPayload.horizonStates && typeof statusPayload.horizonStates === "object") {
+        statusPayload.horizonStates.H2 = {
+          status: "completed",
+          summary: "H2 complete",
+        };
+        statusPayload.horizonStates.H3 = {
+          status: "in_progress",
+          summary: "H3 active",
+        };
+        statusPayload.horizonStates.H4 = {
+          status: "planned",
+          summary: "H4 planned",
+        };
+      }
+      statusPayload.nextActions = [
+        {
+          id: "h3-action-1",
+          summary: "h3 completion action",
+          targetHorizon: "H3",
+          status: "completed",
+          tags: ["durability"],
+        },
+        {
+          id: "h3-action-2",
+          summary: "h3 secondary completion action",
+          targetHorizon: "H3",
+          status: "completed",
+          tags: ["policy-hardening"],
+        },
+        {
+          id: "h4-action-1",
+          summary: "h4 next action one",
+          targetHorizon: "H4",
+          status: "planned",
+          tags: ["memory"],
+        },
+        {
+          id: "h4-action-2",
+          summary: "h4 next action two",
+          targetHorizon: "H4",
+          status: "planned",
+          tags: ["capability"],
+        },
+        {
+          id: "h4-action-3",
+          summary: "h4 next action three",
+          targetHorizon: "H4",
+          status: "planned",
+          tags: ["durability"],
+        },
+      ];
+      if (!statusPayload.goalPolicies || typeof statusPayload.goalPolicies !== "object") {
+        statusPayload.goalPolicies = { transitions: {} };
+      }
+      if (
+        !statusPayload.goalPolicies.transitions ||
+        typeof statusPayload.goalPolicies.transitions !== "object"
+      ) {
+        statusPayload.goalPolicies.transitions = {};
+      }
+      statusPayload.goalPolicies.transitions["H3->H4"] = {
+        minimumGoalIncrease: 1,
+        minActionGrowthFactor: 1.1,
+        minPendingNextActions: 2,
+        requiredTaggedActionCounts: {
+          memory: { minCount: 1, minPendingCount: 1 },
+          capability: { minCount: 1, minPendingCount: 1 },
+        },
+      };
+      await writeFile(statusPath, JSON.stringify(statusPayload, null, 2), "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--horizon",
+          "H3",
+          "--next-horizon",
+          "H4",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--dry-run",
+          "--require-progressive-goals",
+          "--goal-policy-key",
+          "H3->H4",
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(0);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        horizon: { source: string; next: string };
+        checks: {
+          sourceHorizon: string;
+          nextHorizon: string;
+          closeoutGatePass: boolean;
+          horizonPromotionPass: boolean;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.horizon.source).toBe("H3");
+      expect(payload.horizon.next).toBe("H4");
+      expect(payload.checks.sourceHorizon).toBe("H3");
+      expect(payload.checks.nextHorizon).toBe("H4");
+      expect(payload.checks.closeoutGatePass).toBe(true);
+      expect(payload.checks.horizonPromotionPass).toBe(true);
+      expect(payload.failures).toEqual([]);
     });
   });
 

@@ -2,6 +2,9 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
+
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
 
 function parseArgs(argv) {
   const options = {
@@ -9,6 +12,7 @@ function parseArgs(argv) {
     horizonStatusFile: "",
     envFile: "",
     out: "",
+    horizon: "H2",
     stage: "majority",
     currentStage: "canary",
     nextHorizon: "H3",
@@ -41,6 +45,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--out") {
       options.out = value ?? "";
+      index += 1;
+    } else if (arg === "--horizon") {
+      options.horizon = value ?? "";
       index += 1;
     } else if (arg === "--stage") {
       options.stage = value ?? "";
@@ -114,9 +121,17 @@ function normalizeStage(value, fallback = "majority") {
 
 function normalizeHorizon(value, fallback = "H3") {
   const normalized = String(value ?? "").trim().toUpperCase();
-  return normalized === "H2" || normalized === "H3" || normalized === "H4" || normalized === "H5"
+  return HORIZON_SEQUENCE.includes(normalized)
     ? normalized
     : fallback;
+}
+
+function deriveNextHorizon(sourceHorizon) {
+  const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
+  if (sourceIndex < 0 || sourceIndex >= HORIZON_SEQUENCE.length - 1) {
+    return "";
+  }
+  return HORIZON_SEQUENCE[sourceIndex + 1];
 }
 
 function resolveBooleanCandidate(checks, keys) {
@@ -330,14 +345,18 @@ async function main() {
   const stageStamp = stamp();
   const stage = normalizeStage(options.stage, "majority");
   const currentStage = normalizeStage(options.currentStage, "canary");
-  const nextHorizon = normalizeHorizon(options.nextHorizon, "H3");
+  const sourceHorizon = normalizeHorizon(options.horizon, "H2");
+  const derivedNextHorizon = deriveNextHorizon(sourceHorizon);
+  const nextHorizon = normalizeHorizon(options.nextHorizon, derivedNextHorizon || "H3");
   const evidenceSelectionMode = normalizeEvidenceSelectionMode(
     options.evidenceSelectionMode,
     "latest-passing",
   );
 
+  const closeoutRunPrefix =
+    sourceHorizon === "H2" ? "h2-closeout-run" : `horizon-closeout-run-${sourceHorizon}`;
   const outPath = path.resolve(
-    options.out || path.join(evidenceDir, `h2-closeout-run-${stageStamp}.json`),
+    options.out || path.join(evidenceDir, `${closeoutRunPrefix}-${stageStamp}.json`),
   );
   const calibrationOut = path.resolve(
     options.calibrationOut ||
@@ -347,7 +366,7 @@ async function main() {
     options.simulationOut || path.join(evidenceDir, `supervised-rollback-simulation-${stageStamp}.json`),
   );
   const closeoutOut = path.resolve(
-    options.closeoutOut || path.join(evidenceDir, `horizon-closeout-H2-${stageStamp}.json`),
+    options.closeoutOut || path.join(evidenceDir, `horizon-closeout-${sourceHorizon}-${stageStamp}.json`),
   );
 
   const failures = [];
@@ -359,6 +378,15 @@ async function main() {
   }
   if (!(await exists(envFile))) {
     failures.push(`missing_env_file:${envFile}`);
+  }
+  if (isNonEmptyString(options.horizon) && sourceHorizon !== String(options.horizon).trim().toUpperCase()) {
+    failures.push(`invalid_horizon:${String(options.horizon)}`);
+  }
+  if (!derivedNextHorizon) {
+    failures.push(`horizon_has_no_next:${sourceHorizon}`);
+  }
+  if (derivedNextHorizon && nextHorizon !== derivedNextHorizon) {
+    failures.push(`next_horizon_sequence_mismatch:${nextHorizon}!=${derivedNextHorizon}`);
   }
   if (isNonEmptyString(options.stage) && stage !== String(options.stage).trim().toLowerCase()) {
     failures.push(`invalid_stage:${String(options.stage)}`);
@@ -382,6 +410,9 @@ async function main() {
   let calibrationPayload = null;
   let simulationPayload = null;
   let closeoutPayload = null;
+  let calibrationSchema = { valid: false, errors: ["calibration_not_loaded"] };
+  let simulationSchema = { valid: false, errors: ["simulation_not_loaded"] };
+  let closeoutSchema = { valid: false, errors: ["closeout_not_loaded"] };
 
   if (failures.length === 0) {
     const calibrationArgv = [
@@ -398,6 +429,13 @@ async function main() {
     ];
     calibrationCommand = await runCommand(calibrationArgv, { timeoutMs: options.timeoutMs });
     calibrationPayload = await readJsonMaybe(calibrationOut);
+    calibrationSchema = validateManifestSchema(
+      "rollback-threshold-calibration",
+      calibrationPayload,
+    );
+    if (!calibrationSchema.valid) {
+      failures.push(...calibrationSchema.errors.map((error) => `calibration_schema_invalid:${error}`));
+    }
     if (calibrationCommand.code !== 0 || calibrationPayload?.pass !== true) {
       failures.push("calibration_step_failed");
     }
@@ -459,6 +497,13 @@ async function main() {
       },
     });
     simulationPayload = await readJsonMaybe(simulationOut);
+    simulationSchema = validateManifestSchema(
+      "supervised-rollback-simulation",
+      simulationPayload,
+    );
+    if (!simulationSchema.valid) {
+      failures.push(...simulationSchema.errors.map((error) => `simulation_schema_invalid:${error}`));
+    }
     const simulationStageSignals = resolveSimulationStageGoalPolicySignals(
       simulationPayload,
     );
@@ -479,7 +524,7 @@ async function main() {
       "node",
       "scripts/validate-horizon-closeout.mjs",
       "--horizon",
-      "H2",
+      sourceHorizon,
       "--next-horizon",
       nextHorizon,
       "--evidence-dir",
@@ -500,7 +545,29 @@ async function main() {
     }
     closeoutCommand = await runCommand(closeoutArgv, { timeoutMs: options.timeoutMs });
     closeoutPayload = await readJsonMaybe(closeoutOut);
+    closeoutSchema = validateManifestSchema("horizon-closeout", closeoutPayload);
+    if (!closeoutSchema.valid) {
+      failures.push(...closeoutSchema.errors.map((error) => `closeout_schema_invalid:${error}`));
+    }
+    const closeoutSource = normalizeHorizon(
+      closeoutPayload?.closeout?.horizon ?? closeoutPayload?.closeout?.sourceHorizon ?? "",
+      "",
+    );
+    const closeoutNext = normalizeHorizon(
+      closeoutPayload?.closeout?.nextHorizon ??
+        closeoutPayload?.closeout?.targetNextHorizon ??
+        closeoutPayload?.checks?.nextHorizon?.selectedNextHorizon ??
+        "",
+      "",
+    );
+    if (closeoutPayload && closeoutSource && closeoutSource !== sourceHorizon) {
+      failures.push(`closeout_horizon_mismatch:${closeoutSource}!=${sourceHorizon}`);
+    }
+    if (closeoutPayload && closeoutNext && closeoutNext !== nextHorizon) {
+      failures.push(`closeout_next_horizon_mismatch:${closeoutNext}!=${nextHorizon}`);
+    }
     if (closeoutCommand.code !== 0 || closeoutPayload?.pass !== true) {
+      failures.push("horizon_closeout_gate_failed");
       failures.push("h2_closeout_gate_failed");
     }
   }
@@ -509,6 +576,10 @@ async function main() {
     generatedAtIso: new Date().toISOString(),
     pass: failures.length === 0,
     stage,
+    horizon: {
+      source: sourceHorizon,
+      next: nextHorizon,
+    },
     dryRun: options.dryRun,
     files: {
       evidenceDir,
@@ -522,7 +593,17 @@ async function main() {
     checks: {
       evidenceSelectionMode,
       calibrationPass: calibrationPayload?.pass === true,
+      calibrationSchemaValid: calibrationSchema.valid,
+      calibrationSchemaErrors:
+        calibrationSchema.valid || calibrationSchema.errors.length === 0
+          ? null
+          : calibrationSchema.errors,
       supervisedSimulationPass: simulationPayload?.pass === true,
+      supervisedSimulationSchemaValid: simulationSchema.valid,
+      supervisedSimulationSchemaErrors:
+        simulationSchema.valid || simulationSchema.errors.length === 0
+          ? null
+          : simulationSchema.errors,
       supervisedSimulationStageGoalPolicyPropagationReported:
         resolveSimulationStageGoalPolicySignals(simulationPayload).propagationReported,
       supervisedSimulationStageGoalPolicyPropagationPassed:
@@ -551,6 +632,12 @@ async function main() {
       supervisedSimulationStageBundleVerificationGoalPolicySourceConsistencyPassed:
         resolveSimulationStageGoalPolicySignals(simulationPayload)
           .bundleVerificationReleaseSourceConsistencyPassed,
+      horizonCloseoutGatePass: closeoutPayload?.pass === true,
+      horizonCloseoutSchemaValid: closeoutSchema.valid,
+      horizonCloseoutSchemaErrors:
+        closeoutSchema.valid || closeoutSchema.errors.length === 0
+          ? null
+          : closeoutSchema.errors,
       h2CloseoutGatePass: closeoutPayload?.pass === true,
       rollbackTriggered: simulationPayload?.checks?.rollbackTriggered === true,
       rollbackApplied: simulationPayload?.checks?.rollbackApplied === true,
@@ -571,7 +658,9 @@ async function main() {
   await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   if (!payload.pass) {
-    process.stderr.write(`H2 closeout run failed:\n- ${failures.join("\n- ")}\n`);
+    process.stderr.write(
+      `Horizon closeout run failed (${sourceHorizon}->${nextHorizon}):\n- ${failures.join("\n- ")}\n`,
+    );
     process.exitCode = 2;
   }
 }

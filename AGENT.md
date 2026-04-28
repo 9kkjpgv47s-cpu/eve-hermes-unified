@@ -70,12 +70,13 @@ npm run verify:merge-bundle -- --evidence-dir evidence --latest
 - Preserve canonical failure classes and trace continuity.
 - Any routing/policy change must include tests and evidence.
 
-## Immediate Next Technical Targets (H2)
+## Immediate Next Technical Targets (H2+)
 
 1. Majority-stage drill hardening (pass + fail scenarios, stable thresholds).
 2. Auto-rollback simulation with optional `--auto-apply-rollback` under controlled test conditions.
 3. Evidence freshness rules so stage drill reliably selects latest passing artifacts for all dependent gates.
 4. Runbook tightening for operator replay of canary/majority incidents.
+5. Extend closeout/promotion orchestration to horizon-generic operation (H3/H4) while preserving H2 command compatibility.
 
 ## Done Signal for Each Iteration
 

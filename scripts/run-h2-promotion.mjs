@@ -5,15 +5,18 @@ import path from "node:path";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+
 function parseArgs(argv) {
   const options = {
     evidenceDir: "",
     horizonStatusFile: "",
     envFile: "",
     out: "",
-    stage: "majority",
-    currentStage: "canary",
-    nextHorizon: "H3",
+    horizon: "H2",
+    stage: "",
+    currentStage: "",
+    nextHorizon: "",
     canaryChats: "",
     majorityPercent: "",
     timeoutMs: 360_000,
@@ -71,6 +74,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--stage") {
       options.stage = value ?? "";
+      index += 1;
+    } else if (arg === "--horizon") {
+      options.horizon = value ?? "";
       index += 1;
     } else if (arg === "--current-stage") {
       options.currentStage = value ?? "";
@@ -215,9 +221,43 @@ function normalizeStage(value, fallback = "majority") {
 
 function normalizeHorizon(value, fallback = "H3") {
   const normalized = String(value ?? "").trim().toUpperCase();
-  return normalized === "H2" || normalized === "H3" || normalized === "H4" || normalized === "H5"
+  return HORIZON_SEQUENCE.includes(normalized)
     ? normalized
     : fallback;
+}
+
+function deriveNextHorizon(sourceHorizon) {
+  const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
+  if (sourceIndex < 0 || sourceIndex >= HORIZON_SEQUENCE.length - 1) {
+    return "";
+  }
+  return HORIZON_SEQUENCE[sourceIndex + 1];
+}
+
+function deriveDefaultTargetStage(sourceHorizon) {
+  if (sourceHorizon === "H2") {
+    return "majority";
+  }
+  if (sourceHorizon === "H3" || sourceHorizon === "H4") {
+    return "full";
+  }
+  return "majority";
+}
+
+function deriveDefaultCurrentStage(sourceHorizon) {
+  if (sourceHorizon === "H2") {
+    return "canary";
+  }
+  if (sourceHorizon === "H3") {
+    return "majority";
+  }
+  return "full";
+}
+
+function closeoutRunFailureCode(sourceHorizon, detail) {
+  return sourceHorizon === "H2"
+    ? `h2_closeout_run_${detail}`
+    : `horizon_closeout_run_${sourceHorizon.toLowerCase()}_${detail}`;
 }
 
 function resolveBooleanCandidate(checks, keys) {
@@ -234,9 +274,12 @@ function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
     closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
       ? closeoutRunPayload.checks
       : {};
-  const h2CloseoutGateReported = typeof checks.h2CloseoutGatePass === "boolean";
-  const h2CloseoutGatePass = resolveBooleanCandidate(checks, [
+  const closeoutGateReported =
+    typeof checks.h2CloseoutGatePass === "boolean" ||
+    typeof checks.horizonCloseoutGatePass === "boolean";
+  const closeoutGatePass = resolveBooleanCandidate(checks, [
     "h2CloseoutGatePass",
+    "horizonCloseoutGatePass",
   ]);
   const supervisedSimulationPass = resolveBooleanCandidate(checks, [
     "supervisedSimulationPass",
@@ -265,8 +308,11 @@ function resolveCloseoutRunSimulationSignals(closeoutRunPayload) {
   const propagationPassed =
     validationPropagationPassed && sourceConsistencyPropagationPassed;
   return {
-    h2CloseoutGateReported,
-    h2CloseoutGatePass,
+    closeoutGateReported,
+    closeoutGatePass,
+    // Backward-compatible aliases used by H2 checks/tests.
+    h2CloseoutGateReported: closeoutGateReported,
+    h2CloseoutGatePass: closeoutGatePass,
     validationPropagationReported,
     validationPropagationPassed,
     sourceConsistencyPropagationReported,
@@ -301,9 +347,13 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
     checks.nextHorizon,
   ]);
   const normalizedSource = sourceSignals.value;
-  const inferredH2Source =
-    !normalizedSource && typeof checks.h2CloseoutGatePass === "boolean" ? "H2" : "";
-  const effectiveSource = normalizedSource || inferredH2Source;
+  const inferredSource =
+    !normalizedSource &&
+    (typeof checks.h2CloseoutGatePass === "boolean" ||
+      typeof checks.horizonCloseoutGatePass === "boolean")
+      ? expectedSource
+      : "";
+  const effectiveSource = normalizedSource || inferredSource;
   const normalizedNext = nextSignals.value;
   const sourceReported = isNonEmptyString(effectiveSource);
   const nextReported = nextSignals.reported;
@@ -509,9 +559,11 @@ async function main() {
       path.join(process.env.HOME || "", ".openclaw/run/gateway.env"),
   );
   const runStamp = stamp();
-  const stage = normalizeStage(options.stage, "majority");
-  const currentStage = normalizeStage(options.currentStage, "canary");
-  const nextHorizon = normalizeHorizon(options.nextHorizon, "H3");
+  const sourceHorizon = normalizeHorizon(options.horizon, "H2");
+  const derivedNextHorizon = deriveNextHorizon(sourceHorizon);
+  const stage = normalizeStage(options.stage, deriveDefaultTargetStage(sourceHorizon));
+  const currentStage = normalizeStage(options.currentStage, deriveDefaultCurrentStage(sourceHorizon));
+  const nextHorizon = normalizeHorizon(options.nextHorizon, derivedNextHorizon || "H3");
   const goalPolicySource = await resolveGoalPolicySource({
     goalPolicyFile: options.goalPolicyFile,
     horizonStatusFile,
@@ -524,32 +576,37 @@ async function main() {
     options.evidenceSelectionMode,
     "latest-passing",
   );
+  const runPrefix =
+    sourceHorizon === "H2" ? "h2-promotion-run" : `horizon-promotion-run-${sourceHorizon}`;
+  const closeoutRunPrefix =
+    sourceHorizon === "H2" ? "h2-closeout-run" : `horizon-closeout-run-${sourceHorizon}`;
+  const closeoutRunManifestType = sourceHorizon === "H2" ? "h2-closeout-run" : "horizon-closeout-run";
 
   const outPath = path.resolve(
-    options.out || path.join(evidenceDir, `h2-promotion-run-${runStamp}.json`),
+    options.out || path.join(evidenceDir, `${runPrefix}-${runStamp}.json`),
   );
   const closeoutRunOut = path.resolve(
-    options.closeoutRunOut || path.join(evidenceDir, `h2-closeout-run-${runStamp}.json`),
+    options.closeoutRunOut || path.join(evidenceDir, `${closeoutRunPrefix}-${runStamp}.json`),
   );
   const horizonPromotionOut = path.resolve(
     options.horizonPromotionOut ||
-      path.join(evidenceDir, `horizon-promotion-H2-to-${nextHorizon}-${runStamp}.json`),
+      path.join(evidenceDir, `horizon-promotion-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
   );
   const progressiveGoalsOut = path.resolve(
     options.progressiveGoalsOut ||
-      path.join(evidenceDir, `progressive-horizon-goals-H2-to-${nextHorizon}-${runStamp}.json`),
+      path.join(evidenceDir, `progressive-horizon-goals-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
   );
   const goalPolicyCoverageOut = path.resolve(
     options.goalPolicyCoverageOut ||
-      path.join(evidenceDir, `goal-policy-coverage-H2-to-${nextHorizon}-${runStamp}.json`),
+      path.join(evidenceDir, `goal-policy-coverage-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
   );
   const goalPolicyReadinessAuditOut = path.resolve(
     options.goalPolicyReadinessAuditOut ||
-      path.join(evidenceDir, `goal-policy-readiness-H2-to-${nextHorizon}-${runStamp}.json`),
+      path.join(evidenceDir, `goal-policy-readiness-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
   );
   const goalPolicyValidationOut = path.resolve(
     options.goalPolicyValidationOut ||
-      path.join(evidenceDir, `goal-policy-file-validation-H2-to-${nextHorizon}-${runStamp}.json`),
+      path.join(evidenceDir, `goal-policy-file-validation-${sourceHorizon}-to-${nextHorizon}-${runStamp}.json`),
   );
 
   const failures = [];
@@ -561,6 +618,15 @@ async function main() {
   }
   if (!(await exists(envFile))) {
     failures.push(`missing_env_file:${envFile}`);
+  }
+  if (isNonEmptyString(options.horizon) && sourceHorizon !== String(options.horizon).trim().toUpperCase()) {
+    failures.push(`invalid_horizon:${String(options.horizon)}`);
+  }
+  if (!derivedNextHorizon) {
+    failures.push(`horizon_has_no_next:${sourceHorizon}`);
+  }
+  if (derivedNextHorizon && nextHorizon !== derivedNextHorizon) {
+    failures.push(`next_horizon_sequence_mismatch:${nextHorizon}!=${derivedNextHorizon}`);
   }
   if (isNonEmptyString(options.stage) && stage !== String(options.stage).trim().toLowerCase()) {
     failures.push(`invalid_stage:${String(options.stage)}`);
@@ -603,7 +669,10 @@ async function main() {
       options.goalPolicyValidationUntilHorizon = nextHorizon;
     }
     if (!isNonEmptyString(options.requiredPolicyTransitions)) {
-      options.requiredPolicyTransitions = `H2->${nextHorizon}`;
+      options.requiredPolicyTransitions = `${sourceHorizon}->${nextHorizon}`;
+    }
+    if (!isNonEmptyString(options.goalPolicyKey)) {
+      options.goalPolicyKey = `${sourceHorizon}->${nextHorizon}`;
     }
   }
 
@@ -673,6 +742,8 @@ async function main() {
     const closeoutRunArgv = [
       "node",
       "scripts/run-h2-closeout.mjs",
+      "--horizon",
+      sourceHorizon,
       "--stage",
       stage,
       "--current-stage",
@@ -745,10 +816,12 @@ async function main() {
       });
     }
     closeoutRunPayload = await readJsonMaybe(closeoutRunOut);
-    closeoutRunSchemaValidation = validateManifestSchema("h2-closeout-run", closeoutRunPayload);
+    closeoutRunSchemaValidation = validateManifestSchema(closeoutRunManifestType, closeoutRunPayload);
     if (!closeoutRunSchemaValidation.valid) {
       failures.push(
-        ...closeoutRunSchemaValidation.errors.map((error) => `h2_closeout_run_schema_invalid:${error}`),
+        ...closeoutRunSchemaValidation.errors.map(
+          (error) => `${closeoutRunFailureCode(sourceHorizon, "schema_invalid")}:${error}`,
+        ),
       );
     }
     const forceMissingCloseoutRunSimulationSignals = resolveBooleanCandidate(process.env, [
@@ -772,34 +845,34 @@ async function main() {
         },
       };
     }
-    closeoutRunTransition = resolveCloseoutRunTransition(closeoutRunPayload, "H2", nextHorizon);
+    closeoutRunTransition = resolveCloseoutRunTransition(closeoutRunPayload, sourceHorizon, nextHorizon);
     closeoutArtifactReference = resolveCloseoutRunCloseoutArtifactPath(
       closeoutRunPayload,
       closeoutRunOut,
     );
     closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
-      failures.push("h2_closeout_run_failed");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "failed"));
     } else if (closeoutRunTransition.sourceInvalid) {
-      failures.push("h2_closeout_run_horizon_source_invalid");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_source_invalid"));
     } else if (!closeoutRunTransition.sourceReported) {
-      failures.push("h2_closeout_run_horizon_source_not_reported");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_source_not_reported"));
     } else if (closeoutRunTransition.sourceAliasConflict) {
-      failures.push("h2_closeout_run_horizon_source_alias_conflict");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_source_alias_conflict"));
     } else if (!closeoutRunTransition.sourceMatches) {
-      failures.push("h2_closeout_run_horizon_source_mismatch");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_source_mismatch"));
     } else if (closeoutRunTransition.nextInvalid) {
-      failures.push("h2_closeout_run_horizon_next_invalid");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_next_invalid"));
     } else if (!closeoutRunTransition.nextReported) {
-      failures.push("h2_closeout_run_horizon_next_not_reported");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_next_not_reported"));
     } else if (closeoutRunTransition.nextAliasConflict) {
-      failures.push("h2_closeout_run_horizon_next_alias_conflict");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_next_alias_conflict"));
     } else if (!closeoutRunTransition.nextMatches) {
-      failures.push("h2_closeout_run_horizon_next_mismatch");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_next_mismatch"));
     } else if (closeoutArtifactReference.conflict) {
-      failures.push("h2_closeout_run_conflicting_closeout_out_paths");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "conflicting_closeout_out_paths"));
     } else if (!closeoutArtifactReference.reported) {
-      failures.push("h2_closeout_run_missing_closeout_out");
+      failures.push(closeoutRunFailureCode(sourceHorizon, "missing_closeout_out"));
     } else {
       closeoutArtifactPayload = await readJsonMaybe(closeoutArtifactReference.path);
       closeoutArtifactSchemaValidation = validateManifestSchema(
@@ -811,7 +884,7 @@ async function main() {
       closeoutArtifactTransition = {
         ...closeoutArtifactResolved,
         sourceMatches: closeoutArtifactResolved.sourceReported
-          ? closeoutArtifactResolved.source === "H2"
+          ? closeoutArtifactResolved.source === sourceHorizon
           : false,
         nextMatches: closeoutArtifactResolved.nextReported
           ? closeoutArtifactResolved.next === nextHorizon
@@ -822,51 +895,64 @@ async function main() {
         closeoutArtifactTransition,
       );
       if (!closeoutArtifactPayload) {
-        failures.push("h2_closeout_run_closeout_artifact_missing");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_missing"));
       } else if (!closeoutArtifactSchemaValidation.valid) {
         failures.push(
           ...closeoutArtifactSchemaValidation.errors.map(
-            (error) => `h2_closeout_run_closeout_artifact_schema_invalid:${error}`,
+            (error) =>
+              `${closeoutRunFailureCode(sourceHorizon, "closeout_artifact_schema_invalid")}:${error}`,
           ),
         );
       } else if (!closeoutArtifactPass) {
-        failures.push("h2_closeout_run_closeout_artifact_not_passed");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_not_passed"));
       } else if (closeoutArtifactTransition.sourceInvalid) {
-        failures.push("h2_closeout_run_closeout_artifact_horizon_source_invalid");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_source_invalid"));
       } else if (!closeoutArtifactTransition.sourceReported) {
-        failures.push("h2_closeout_run_closeout_artifact_horizon_source_not_reported");
+        failures.push(
+          closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_source_not_reported"),
+        );
       } else if (closeoutArtifactTransition.sourceAliasConflict) {
-        failures.push("h2_closeout_run_closeout_artifact_horizon_source_alias_conflict");
+        failures.push(
+          closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_source_alias_conflict"),
+        );
       } else if (!closeoutArtifactTransition.sourceMatches) {
-        failures.push("h2_closeout_run_closeout_artifact_horizon_source_mismatch");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_source_mismatch"));
       } else if (closeoutArtifactTransition.nextInvalid) {
-        failures.push("h2_closeout_run_closeout_artifact_horizon_next_invalid");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_next_invalid"));
       } else if (!closeoutArtifactTransition.nextReported) {
-        failures.push("h2_closeout_run_closeout_artifact_horizon_next_not_reported");
+        failures.push(
+          closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_next_not_reported"),
+        );
       } else if (closeoutArtifactTransition.nextAliasConflict) {
-        failures.push("h2_closeout_run_closeout_artifact_horizon_next_alias_conflict");
+        failures.push(
+          closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_next_alias_conflict"),
+        );
       } else if (!closeoutArtifactTransition.nextMatches) {
-        failures.push("h2_closeout_run_closeout_artifact_horizon_next_mismatch");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_next_mismatch"));
       } else if (!closeoutTransitionAlignment.sourceComparable) {
-        failures.push("h2_closeout_run_transition_source_alignment_not_comparable");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "transition_source_alignment_not_comparable"));
       } else if (!closeoutTransitionAlignment.sourceAligned) {
-        failures.push("h2_closeout_run_transition_source_misaligned");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "transition_source_misaligned"));
       } else if (!closeoutTransitionAlignment.nextComparable) {
-        failures.push("h2_closeout_run_transition_next_alignment_not_comparable");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "transition_next_alignment_not_comparable"));
       } else if (!closeoutTransitionAlignment.nextAligned) {
-        failures.push("h2_closeout_run_transition_next_misaligned");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "transition_next_misaligned"));
       } else if (!closeoutRunSimulationSignals.h2CloseoutGateReported) {
-        failures.push("h2_closeout_run_gate_not_reported");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "gate_not_reported"));
       } else if (!closeoutRunSimulationSignals.h2CloseoutGatePass) {
-        failures.push("h2_closeout_run_gate_not_passed");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "gate_not_passed"));
       } else if (!closeoutRunSimulationSignals.validationPropagationReported) {
-        failures.push("h2_closeout_run_missing_supervised_stage_goal_policy");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "missing_supervised_stage_goal_policy"));
       } else if (!closeoutRunSimulationSignals.sourceConsistencyPropagationReported) {
-        failures.push("h2_closeout_run_missing_supervised_stage_goal_policy_source_consistency");
+        failures.push(
+          closeoutRunFailureCode(sourceHorizon, "missing_supervised_stage_goal_policy_source_consistency"),
+        );
       } else if (!closeoutRunSimulationSignals.validationPropagationPassed) {
-        failures.push("h2_closeout_run_supervised_stage_goal_policy_not_passed");
+        failures.push(closeoutRunFailureCode(sourceHorizon, "supervised_stage_goal_policy_not_passed"));
       } else if (!closeoutRunSimulationSignals.sourceConsistencyPropagationPassed) {
-        failures.push("h2_closeout_run_supervised_stage_goal_policy_source_consistency_not_passed");
+        failures.push(
+          closeoutRunFailureCode(sourceHorizon, "supervised_stage_goal_policy_source_consistency_not_passed"),
+        );
       }
     }
   }
@@ -876,7 +962,7 @@ async function main() {
       "node",
       "scripts/promote-horizon.mjs",
       "--horizon",
-      "H2",
+      sourceHorizon,
       "--next-horizon",
       nextHorizon,
       "--horizon-status-file",
@@ -994,6 +1080,10 @@ async function main() {
   const payload = {
     generatedAtIso: new Date().toISOString(),
     pass: failures.length === 0,
+    horizon: {
+      source: sourceHorizon,
+      next: nextHorizon,
+    },
     stage,
     dryRun: options.dryRun,
     files: {
@@ -1014,7 +1104,9 @@ async function main() {
     checks: {
       evidenceSelectionMode,
       closeoutRunPass: closeoutRunPayload?.pass === true,
-      closeoutGatePass: closeoutRunPayload?.checks?.h2CloseoutGatePass === true,
+      closeoutGatePass:
+        closeoutRunPayload?.checks?.h2CloseoutGatePass === true ||
+        closeoutRunPayload?.checks?.horizonCloseoutGatePass === true,
       closeoutRunSourceHorizon: closeoutRunTransition.source,
       closeoutRunNextHorizon: closeoutRunTransition.next,
       closeoutRunSourceHorizonCandidates:
@@ -1115,6 +1207,7 @@ async function main() {
           : horizonPromotionSchemaValidation.errors,
       horizonAdvanced: horizonPromotionPayload?.checks?.activeAdvanced === true,
       statusUpdated: horizonPromotionPayload?.checks?.statusUpdated === true,
+      sourceHorizon,
       nextHorizon,
       requireCompletedActions: options.requireCompletedActions,
       requireActiveNextHorizon: options.requireActiveNextHorizon,
@@ -1167,7 +1260,9 @@ async function main() {
   await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
   if (!payload.pass) {
-    process.stderr.write(`H2 promotion run failed:\n- ${failures.join("\n- ")}\n`);
+    process.stderr.write(
+      `Horizon promotion run failed (${sourceHorizon}->${nextHorizon}):\n- ${failures.join("\n- ")}\n`,
+    );
     process.exitCode = 2;
   }
 }

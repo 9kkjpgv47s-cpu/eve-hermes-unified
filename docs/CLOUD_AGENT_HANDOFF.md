@@ -131,6 +131,10 @@ Schema validation expectations:
   - `npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
   - executes calibration + supervised rollback simulation + H2 closeout gate in one run
   - emits unified manifest: `evidence/h2-closeout-run-*.json`
+  - can also orchestrate later horizons with explicit scope:
+    - `npm run run:h2-closeout -- --horizon <H3|H4> --next-horizon <H4|H5> --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
+  - for non-H2 source horizons, emitted manifest prefix is:
+    - `evidence/horizon-closeout-run-<source>-*.json`
 - horizon state promotion after passing closeout:
   - `npm run promote:horizon -- --horizon <H1|H2|H3|H4> --next-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence`
   - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force an explicit policy source
@@ -234,6 +238,11 @@ Schema validation expectations:
     - rejects when closeout-run does not report resolvable next-horizon metadata
     - accepts legacy fallback fields (`checks.sourceHorizon`, `checks.nextHorizon`) when top-level `horizon` block is absent
   - writes unified run manifest: `evidence/h2-promotion-run-*.json`
+  - supports non-H2 source horizons with explicit `--horizon`/`--next-horizon`:
+    - `npm run run:h2-promotion -- --horizon H3 --next-horizon H4 --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch --dry-run`
+  - for non-H2 source horizons:
+    - closeout run schema/gating uses `horizon-closeout-run` manifests
+    - unified run manifest prefix becomes `evidence/horizon-promotion-run-<source>-*.json`
 - goal-policy readiness can be audited independently (without promotion):
   - `npm run audit:goal-policy-readiness -- --source-horizon <H1|H2|H3|H4> --until-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json`
   - when `--goal-policy-file` is omitted, audit auto-detects a sibling `GOAL_POLICIES.json` before falling back to horizon-status policy definitions

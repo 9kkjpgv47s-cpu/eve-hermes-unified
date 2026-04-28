@@ -253,6 +253,56 @@ describe("validate-manifest-schema.mjs", () => {
     });
   });
 
+  it("passes for valid horizon-closeout-run manifest", async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, "horizon-closeout-run-H3-20260426-000000.json");
+      await writeFile(
+        manifestPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H3",
+              next: "H4",
+            },
+            files: {
+              evidenceDir: path.join(dir, "evidence"),
+              horizonStatusFile: path.join(dir, "HORIZON_STATUS.json"),
+              envFile: path.join(dir, "gateway.env"),
+              outPath: manifestPath,
+              calibrationOut: path.join(dir, "rollback-threshold-calibration-majority-20260426.json"),
+              simulationOut: path.join(dir, "supervised-rollback-simulation-20260426.json"),
+              closeoutOut: path.join(dir, "horizon-closeout-H3-20260426.json"),
+            },
+            checks: {
+              calibrationPass: true,
+              supervisedSimulationPass: true,
+              horizonCloseoutGatePass: true,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "horizon-closeout-run",
+          "--file",
+          manifestPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
   it("passes for a valid stage-promotion-readiness manifest", async () => {
     await withTempDir(async (dir) => {
       const manifestPath = path.join(dir, "stage-promotion-readiness-20260426-000000.json");

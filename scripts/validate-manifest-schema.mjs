@@ -423,6 +423,68 @@ export function validateH2CloseoutRunManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
+export function validateHorizonCloseoutRunManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(
+    errors,
+    payload.horizon && typeof payload.horizon === "object",
+    "horizon must be an object",
+  );
+  if (payload.horizon && typeof payload.horizon === "object") {
+    pushError(
+      errors,
+      isStringOrNullOrUndefined(payload.horizon.source),
+      "horizon.source must be string, null, or undefined",
+    );
+    pushError(
+      errors,
+      isStringOrNullOrUndefined(payload.horizon.next),
+      "horizon.next must be string, null, or undefined",
+    );
+  }
+  pushError(
+    errors,
+    payload.files && typeof payload.files === "object",
+    "files must be an object",
+  );
+  if (payload.files && typeof payload.files === "object") {
+    for (const key of [
+      "evidenceDir",
+      "horizonStatusFile",
+      "envFile",
+      "outPath",
+      "calibrationOut",
+      "simulationOut",
+      "closeoutOut",
+      "closeoutFile",
+    ]) {
+      pushError(
+        errors,
+        isStringOrNullOrUndefined(payload.files[key]),
+        `files.${key} must be string, null, or undefined`,
+      );
+    }
+  }
+  pushError(
+    errors,
+    payload.checks && typeof payload.checks === "object",
+    "checks must be an object",
+  );
+  pushError(
+    errors,
+    payload.failures === undefined || Array.isArray(payload.failures),
+    "failures must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateHorizonPromotionManifest(payload) {
   const errors = [];
   pushError(errors, payload && typeof payload === "object", "payload must be an object");
@@ -471,6 +533,50 @@ export function validateH2PromotionRunManifest(payload) {
 
   pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
   pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(
+    errors,
+    payload.files && typeof payload.files === "object",
+    "files must be an object",
+  );
+  pushError(
+    errors,
+    payload.checks && typeof payload.checks === "object",
+    "checks must be an object",
+  );
+  pushError(
+    errors,
+    payload.failures === undefined || Array.isArray(payload.failures),
+    "failures must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateHorizonPromotionRunManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(
+    errors,
+    payload.horizon && typeof payload.horizon === "object",
+    "horizon must be an object",
+  );
+  if (payload.horizon && typeof payload.horizon === "object") {
+    pushError(
+      errors,
+      isStringOrNullOrUndefined(payload.horizon.source),
+      "horizon.source must be string, null, or undefined",
+    );
+    pushError(
+      errors,
+      isStringOrNullOrUndefined(payload.horizon.next),
+      "horizon.next must be string, null, or undefined",
+    );
+  }
   pushError(
     errors,
     payload.files && typeof payload.files === "object",
@@ -725,11 +831,17 @@ export function validateManifestSchema(type, payload) {
   if (type === "h2-closeout-run") {
     return validateH2CloseoutRunManifest(payload);
   }
+  if (type === "horizon-closeout-run") {
+    return validateHorizonCloseoutRunManifest(payload);
+  }
   if (type === "horizon-promotion") {
     return validateHorizonPromotionManifest(payload);
   }
   if (type === "h2-promotion-run") {
     return validateH2PromotionRunManifest(payload);
+  }
+  if (type === "horizon-promotion-run") {
+    return validateHorizonPromotionRunManifest(payload);
   }
   if (type === "stage-promotion-readiness") {
     return validateStagePromotionReadinessManifest(payload);
@@ -799,8 +911,10 @@ async function listAllManifestTargets(evidenceDir) {
   const mergeBundleValidationTargets = [];
   const horizonCloseoutTargets = [];
   const h2CloseoutRunTargets = [];
+  const horizonCloseoutRunTargets = [];
   const horizonPromotionTargets = [];
   const h2PromotionRunTargets = [];
+  const horizonPromotionRunTargets = [];
   const stagePromotionReadinessTargets = [];
   const h2DrillSuiteTargets = [];
   const supervisedRollbackSimulationTargets = [];
@@ -832,6 +946,14 @@ async function listAllManifestTargets(evidenceDir) {
         type: "h2-closeout-run",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (
+      entry.name.startsWith("horizon-closeout-run-") &&
+      entry.name.endsWith(".json")
+    ) {
+      horizonCloseoutRunTargets.push({
+        type: "horizon-closeout-run",
+        file: path.join(evidenceDir, entry.name),
+      });
     } else if (entry.name.startsWith("horizon-promotion-") && entry.name.endsWith(".json")) {
       horizonPromotionTargets.push({
         type: "horizon-promotion",
@@ -840,6 +962,14 @@ async function listAllManifestTargets(evidenceDir) {
     } else if (entry.name.startsWith("h2-promotion-run-") && entry.name.endsWith(".json")) {
       h2PromotionRunTargets.push({
         type: "h2-promotion-run",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (
+      entry.name.startsWith("horizon-promotion-run-") &&
+      entry.name.endsWith(".json")
+    ) {
+      horizonPromotionRunTargets.push({
+        type: "horizon-promotion-run",
         file: path.join(evidenceDir, entry.name),
       });
     } else if (entry.name.startsWith("stage-promotion-readiness-") && entry.name.endsWith(".json")) {
@@ -883,8 +1013,10 @@ async function listAllManifestTargets(evidenceDir) {
   mergeBundleValidationTargets.sort((a, b) => a.file.localeCompare(b.file));
   horizonCloseoutTargets.sort((a, b) => a.file.localeCompare(b.file));
   h2CloseoutRunTargets.sort((a, b) => a.file.localeCompare(b.file));
+  horizonCloseoutRunTargets.sort((a, b) => a.file.localeCompare(b.file));
   horizonPromotionTargets.sort((a, b) => a.file.localeCompare(b.file));
   h2PromotionRunTargets.sort((a, b) => a.file.localeCompare(b.file));
+  horizonPromotionRunTargets.sort((a, b) => a.file.localeCompare(b.file));
   stagePromotionReadinessTargets.sort((a, b) => a.file.localeCompare(b.file));
   h2DrillSuiteTargets.sort((a, b) => a.file.localeCompare(b.file));
   supervisedRollbackSimulationTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -897,8 +1029,10 @@ async function listAllManifestTargets(evidenceDir) {
     mergeBundleValidationTargets,
     horizonCloseoutTargets,
     h2CloseoutRunTargets,
+    horizonCloseoutRunTargets,
     horizonPromotionTargets,
     h2PromotionRunTargets,
+    horizonPromotionRunTargets,
     stagePromotionReadinessTargets,
     h2DrillSuiteTargets,
     supervisedRollbackSimulationTargets,
@@ -923,7 +1057,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-promotion|h2-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|all)",
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|all)",
     );
   }
 
@@ -951,11 +1085,25 @@ async function main() {
           ...(targetGroups.h2CloseoutRunTargets.length > 0
             ? [targetGroups.h2CloseoutRunTargets[targetGroups.h2CloseoutRunTargets.length - 1]]
             : []),
+          ...(targetGroups.horizonCloseoutRunTargets.length > 0
+            ? [
+                targetGroups.horizonCloseoutRunTargets[
+                  targetGroups.horizonCloseoutRunTargets.length - 1
+                ],
+              ]
+            : []),
           ...(targetGroups.horizonPromotionTargets.length > 0
             ? [targetGroups.horizonPromotionTargets[targetGroups.horizonPromotionTargets.length - 1]]
             : []),
           ...(targetGroups.h2PromotionRunTargets.length > 0
             ? [targetGroups.h2PromotionRunTargets[targetGroups.h2PromotionRunTargets.length - 1]]
+            : []),
+          ...(targetGroups.horizonPromotionRunTargets.length > 0
+            ? [
+                targetGroups.horizonPromotionRunTargets[
+                  targetGroups.horizonPromotionRunTargets.length - 1
+                ],
+              ]
             : []),
           ...(targetGroups.stagePromotionReadinessTargets.length > 0
             ? [
@@ -1000,8 +1148,10 @@ async function main() {
           ...targetGroups.mergeBundleValidationTargets,
           ...targetGroups.horizonCloseoutTargets,
           ...targetGroups.h2CloseoutRunTargets,
+          ...targetGroups.horizonCloseoutRunTargets,
           ...targetGroups.horizonPromotionTargets,
           ...targetGroups.h2PromotionRunTargets,
+          ...targetGroups.horizonPromotionRunTargets,
           ...targetGroups.stagePromotionReadinessTargets,
           ...targetGroups.h2DrillSuiteTargets,
           ...targetGroups.supervisedRollbackSimulationTargets,

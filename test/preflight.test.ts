@@ -71,4 +71,18 @@ describe("runRuntimePreflight", () => {
       );
     });
   });
+
+  it("fails when capability policy audit path parent is not writable", async () => {
+    await withTempDir(async (dir) => {
+      const blockedFile = path.join(dir, "blocked");
+      await writeFile(blockedFile, "x", "utf8");
+      const config = {
+        ...baseConfig(dir),
+        capabilityPolicyAuditLogPath: path.join(blockedFile, "policy-audit.jsonl"),
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "Capability policy audit log path is not writable",
+      );
+    });
+  });
 });

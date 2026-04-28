@@ -15,6 +15,7 @@ import {
   createCapabilityPolicy,
   type CapabilityPolicyConfig,
 } from "../src/runtime/capability-policy.js";
+import { capabilityPolicyFingerprint } from "../src/runtime/capability-policy-audit.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   constructor(
@@ -276,6 +277,75 @@ describe("UnifiedCapabilityEngine", () => {
     expect(result.capabilityExecution?.reason).toBe("capability_policy_denied");
     expect(result.capabilityExecution?.failureClass).toBe("policy_failure");
     expect(result.response.failureClass).toBe("policy_failure");
+  });
+
+  it("writes capability_policy_denial to policyAudit sink when configured", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "cap-policy-audit-engine-"));
+    try {
+      const auditPath = path.join(tempDir, "policy.jsonl");
+      const registry = new CapabilityRegistry();
+      const memoryStore = new FileUnifiedMemoryStore(path.join(tempDir, "mem.json"));
+      registerDefaultCapabilityExecutors(registry, {
+        dispatchLane: async () => fakeLaneState("eve", "should_not_run"),
+        memoryStore,
+      });
+      const policyConfig: CapabilityPolicyConfig = {
+        defaultMode: "deny",
+        allowCapabilities: [],
+        denyCapabilities: [],
+        allowedChatIds: [],
+        deniedChatIds: [],
+        allowCapabilityChats: {},
+        denyCapabilityChats: {},
+      };
+      const fingerprint = capabilityPolicyFingerprint(policyConfig);
+      const policy = buildCapabilityPolicyFromConfig(policyConfig);
+      const engine = new UnifiedCapabilityEngine(registry, {
+        memoryStore,
+        dispatchLane: async () => fakeLaneState("eve", "should_not_run"),
+        policy,
+        policyAudit: {
+          logPath: auditPath,
+          policyFingerprint: fingerprint,
+          logDenials: true,
+        },
+      });
+
+      const runtime = {
+        eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+        hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+        routerConfig: {
+          defaultPrimary: "eve" as const,
+          defaultFallback: "none" as const,
+          failClosed: true,
+          policyVersion: "v1",
+        },
+        capabilityEngine: engine,
+      };
+
+      const result = await dispatchUnifiedMessage(runtime, {
+        channel: "telegram",
+        chatId: "42",
+        messageId: "500",
+        text: "@cap status",
+      });
+      expect(result.capabilityExecution?.reason).toBe("capability_policy_denied");
+
+      const raw = await readFile(auditPath, "utf8");
+      const lines = raw
+        .trim()
+        .split("\n")
+        .filter((l) => l.length > 0);
+      expect(lines.length).toBeGreaterThanOrEqual(1);
+      const denial = JSON.parse(lines[lines.length - 1] ?? "{}");
+      expect(denial.kind).toBe("capability_policy_denial");
+      expect(denial.policyFingerprint).toBe(fingerprint);
+      expect(denial.reason).toBe("capability_policy_denied");
+      expect(denial.capabilityId).toBe("check_status");
+      expect(denial.chatId).toBe("42");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 
   it("allows capability execution when capability and chat are explicitly allowlisted", async () => {

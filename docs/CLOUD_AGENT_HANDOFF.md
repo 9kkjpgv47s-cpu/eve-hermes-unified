@@ -58,6 +58,15 @@ Rollback:
 npm run cutover:rollback
 ```
 
+## Capability policy audit (H3)
+
+Runtime **capability access policy** (allow/deny lists and chat scopes) can be audited to a separate append-only JSONL file:
+
+- **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** (alias `CAPABILITY_POLICY_AUDIT_LOG_PATH`): when set, `npm run dispatch` appends a **`capability_policy_bootstrap`** line on each process start with a **SHA-256 fingerprint** of the normalized policy snapshot (sorted lists, normalized capability ids). Operators can diff fingerprints across deploys or correlate with dispatch audit `traceId`.
+- **`UNIFIED_CAPABILITY_POLICY_AUDIT_DENIALS=1`** (alias `CAPABILITY_POLICY_AUDIT_DENIALS`): when the audit log path is set, also append **`capability_policy_denial`** lines (traceId, chatId, capabilityId, lane, reason) whenever the engine denies a capability before execution.
+
+Preflight checks that the policy audit log path’s parent directory is writable when dispatch audit is enabled.
+
 ## Evidence Expectations
 
 Before marking a phase complete, include artifacts from:

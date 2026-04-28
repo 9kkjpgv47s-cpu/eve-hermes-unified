@@ -18,6 +18,13 @@ import type {
 } from "../skills/capability-registry.js";
 import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
 import type { CapabilityPolicy } from "./capability-policy.js";
+import { appendCapabilityPolicyDenial } from "./capability-policy-audit.js";
+
+export type CapabilityPolicyAuditSink = {
+  logPath: string;
+  policyFingerprint: string;
+  logDenials: boolean;
+};
 
 export type CapabilityExecutionSelection = UnifiedCapabilityDecision;
 
@@ -38,6 +45,7 @@ export type CapabilityExecutionDependencies = {
   memoryStore: UnifiedMemoryStore;
   dispatchLane: CapabilityLaneDispatcher;
   policy?: CapabilityPolicy;
+  policyAudit?: CapabilityPolicyAuditSink;
 };
 
 function parseExplicitCapabilityText(text: string): { capabilityId: string; argsText: string } | undefined {
@@ -135,6 +143,18 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           started,
           authorization.reason ?? "capability_policy_denied",
         );
+        if (this.dependencies.policyAudit?.logDenials) {
+          await appendCapabilityPolicyDenial({
+            logPath: this.dependencies.policyAudit.logPath,
+            policyFingerprint: this.dependencies.policyAudit.policyFingerprint,
+            traceId: envelope.traceId,
+            chatId: envelope.chatId,
+            messageId: envelope.messageId,
+            capabilityId: selection.id,
+            lane: selection.lane,
+            reason: authorization.reason ?? "capability_policy_denied",
+          });
+        }
         await this.writeExecutionMemory(selection, envelope, denied);
         return denied;
       }

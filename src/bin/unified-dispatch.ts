@@ -11,6 +11,10 @@ import { UnifiedCapabilityEngine } from "../runtime/capability-engine.js";
 import { registerDefaultCapabilityExecutors } from "../runtime/default-capability-handlers.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { createCapabilityPolicy } from "../runtime/capability-policy.js";
+import {
+  appendCapabilityPolicyBootstrap,
+  capabilityPolicyFingerprint,
+} from "../runtime/capability-policy-audit.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
 
@@ -75,10 +79,23 @@ async function main() {
     memoryStore: sharedMemoryStore,
   });
   const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
+  const policyFingerprint = capabilityPolicyFingerprint(config.capabilityPolicy);
+  const policyAuditLogPath = config.capabilityPolicyAuditLogPath?.trim() ?? "";
+  if (policyAuditLogPath.length > 0) {
+    await appendCapabilityPolicyBootstrap(policyAuditLogPath, config.capabilityPolicy);
+  }
   const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
     memoryStore: sharedMemoryStore,
     dispatchLane,
     policy: capabilityPolicy,
+    policyAudit:
+      policyAuditLogPath.length > 0 && config.capabilityPolicyAuditDenials
+        ? {
+            logPath: policyAuditLogPath,
+            policyFingerprint,
+            logDenials: true,
+          }
+        : undefined,
   });
 
   const preflightIssues = await runRuntimePreflight({
@@ -91,6 +108,7 @@ async function main() {
     unifiedMemoryFilePath: config.unifiedMemoryFilePath,
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
+    capabilityPolicyAuditLogPath: policyAuditLogPath.length > 0 ? policyAuditLogPath : undefined,
   });
   if (preflightIssues.length > 0) {
     const reasons = preflightIssues.join("; ");

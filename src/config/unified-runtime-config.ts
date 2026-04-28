@@ -12,6 +12,8 @@ export type UnifiedRuntimeEnvConfig = {
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
   unifiedDispatchAuditLogPath: string;
+  capabilityPolicyAuditLogPath: string;
+  capabilityPolicyAuditDenials: boolean;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -129,6 +131,18 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const capabilityPolicyAuditLogPath =
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH",
+      "CAPABILITY_POLICY_AUDIT_LOG_PATH",
+    ]) ?? "";
+  const capabilityPolicyAuditDenials = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_DENIALS",
+      "CAPABILITY_POLICY_AUDIT_DENIALS",
+    ]),
+    false,
+  );
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -262,6 +276,8 @@ export function loadUnifiedRuntimeEnvConfig(
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
     unifiedDispatchAuditLogPath,
+    capabilityPolicyAuditLogPath,
+    capabilityPolicyAuditDenials,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

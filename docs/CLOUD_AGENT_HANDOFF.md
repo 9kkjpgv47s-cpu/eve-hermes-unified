@@ -191,6 +191,10 @@ Schema validation expectations:
   - fail-closed integrity check: duplicate transition keys in raw policy JSON fail validation (`goal_policy_file_duplicate_transition_keys:*`)
   - emits deterministic validation artifact:
     - `evidence/goal-policy-file-validation-*.json`
+- horizon-status schema gate also fail-closes duplicate transition keys in fallback policy definitions:
+  - `npm run validate:horizon-status`
+  - duplicate keys under `goalPolicies.transitions` fail with:
+    - `goalPolicies duplicate transition key: <transition>`
 - initial-scope gate can require release-readiness to include and pass goal-policy validation evidence:
   - `UNIFIED_INITIAL_SCOPE_REQUIRE_GOAL_POLICY_VALIDATION=1 npm run validate:initial-scope`
   - fails if `release-readiness.checks.goalPolicyFileValidationPassed !== true`

@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { collectDuplicateTransitionKeysFromRawJson } from "./goal-policy-source.mjs";
 
 const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5"];
 const VALID_STATUSES = ["planned", "in_progress", "blocked", "completed"];
@@ -403,20 +404,26 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const targetPath = path.resolve(options.file || path.join(process.cwd(), "docs/HORIZON_STATUS.json"));
   const raw = await readFile(targetPath, "utf8");
+  const duplicateTransitionKeys = collectDuplicateTransitionKeysFromRawJson(raw);
   const payload = JSON.parse(raw);
   const validation = validateHorizonStatus(payload);
+  const duplicateKeyErrors = duplicateTransitionKeys.map(
+    (transitionKey) => `goalPolicies duplicate transition key: ${transitionKey}`,
+  );
+  const allErrors = [...validation.errors, ...duplicateKeyErrors];
   const output = {
     file: targetPath,
-    valid: validation.valid,
-    errorCount: validation.errors.length,
-    errors: validation.errors,
+    valid: allErrors.length === 0,
+    errorCount: allErrors.length,
+    errors: allErrors,
     activeHorizon: payload?.activeHorizon ?? null,
     activeStatus: payload?.activeStatus ?? null,
     blockerCount: Array.isArray(payload?.blockers) ? payload.blockers.length : 0,
+    duplicateTransitionKeys,
   };
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-  if (!validation.valid) {
-    process.stderr.write(`Horizon status validation failed:\n- ${validation.errors.join("\n- ")}\n`);
+  if (!output.valid) {
+    process.stderr.write(`Horizon status validation failed:\n- ${allErrors.join("\n- ")}\n`);
     process.exitCode = 2;
   }
 }

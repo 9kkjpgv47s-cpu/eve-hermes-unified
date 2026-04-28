@@ -497,6 +497,7 @@ Useful flags:
   - when omitted, policy sourcing auto-detects `<horizon-status-dir>/GOAL_POLICIES.json` first
   - fail-closed: policy file loading rejects duplicate transition keys within `transitions` (for example duplicate `H2->H3` entries), even if JSON parsing would otherwise silently overwrite earlier keys
   - duplicate transition keys are surfaced as `goal_policy_file_duplicate_transition_keys:<csv>`
+  - fallback `goalPolicies` loaded from `docs/HORIZON_STATUS.json` is also fail-closed on duplicate transition keys (`horizon_status_duplicate_transition_keys:<csv>`)
   - run `npm run validate:goal-policy-file` to enforce dedicated file validity before promotion
   - `--require-goal-policy-file-validation` to run this validation gate inline during promotion
   - `--goal-policy-file-validation-out <path>` to pin the validation artifact path

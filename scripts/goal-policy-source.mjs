@@ -174,7 +174,7 @@ function collectDuplicateJsonKeyPaths(rawJson) {
   return Array.from(duplicatePaths).sort();
 }
 
-function collectDuplicateTransitionKeys(rawJson) {
+export function collectDuplicateTransitionKeysFromRawJson(rawJson) {
   const duplicatePaths = collectDuplicateJsonKeyPaths(rawJson);
   if (duplicatePaths.length === 0) {
     return [];
@@ -194,6 +194,9 @@ function collectDuplicateTransitionKeys(rawJson) {
   }
   return Array.from(new Set(transitionDuplicates)).sort();
 }
+
+// Backward-compatible alias used by existing validators.
+export const collectDuplicateTransitionKeys = collectDuplicateTransitionKeysFromRawJson;
 
 async function pathExists(targetPath) {
   try {
@@ -288,6 +291,32 @@ export async function loadGoalPolicyTransitions({
       ? adjacentDefaultGoalPolicyFile
       : "";
   if (resolvedGoalPolicyFile.length === 0) {
+    const resolvedStatusPath = horizonStatusFile
+      ? normalizeGoalPolicyFilePath(horizonStatusFile, cwd)
+      : "";
+    if (resolvedStatusPath.length > 0 && (await pathExists(resolvedStatusPath))) {
+      try {
+        const statusRaw = await readFile(resolvedStatusPath, "utf8");
+        const duplicateTransitionKeys = collectDuplicateTransitionKeysFromRawJson(statusRaw);
+        if (duplicateTransitionKeys.length > 0) {
+          return emptySourceResult({
+            source: "horizon-status",
+            sourceSelection: "horizon-status-fallback",
+            pathValue: resolvedStatusPath,
+            goalPolicyFile: null,
+            reason: `horizon_status_duplicate_transition_keys:${duplicateTransitionKeys.join(",")}`,
+          });
+        }
+      } catch (error) {
+        return emptySourceResult({
+          source: "horizon-status",
+          sourceSelection: "horizon-status-fallback",
+          pathValue: resolvedStatusPath,
+          goalPolicyFile: null,
+          reason: `horizon_status_unreadable_for_policy_source:${resolvedStatusPath}:${String(error?.message ?? error)}`,
+        });
+      }
+    }
     const fallbackTransitions = normalizeTransitionsContainer(horizonStatus?.goalPolicies);
     return {
       ...emptySourceResult({
@@ -326,7 +355,7 @@ export async function loadGoalPolicyTransitions({
     });
   }
 
-  const duplicateTransitionKeys = collectDuplicateTransitionKeys(fileRaw);
+  const duplicateTransitionKeys = collectDuplicateTransitionKeysFromRawJson(fileRaw);
   if (duplicateTransitionKeys.length > 0) {
     return emptySourceResult({
       source: "file",

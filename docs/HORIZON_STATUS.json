@@ -214,36 +214,6 @@
         }
       },
       "H3->H4": {
-        "minimumGoalIncrease": 1,
-        "minActionGrowthFactor": 1.2,
-        "minPendingNextActions": 2,
-        "requiredTaggedActionCounts": {
-          "policy-hardening": {
-            "minCount": 1,
-            "minPendingCount": 1
-          },
-          "retirement": {
-            "minCount": 1,
-            "minPendingCount": 1
-          }
-        }
-      },
-      "H4->H5": {
-        "minimumGoalIncrease": 1,
-        "minActionGrowthFactor": 1.1,
-        "minPendingNextActions": 2,
-        "requiredTaggedActionCounts": {
-          "automation": {
-            "minCount": 1,
-            "minPendingCount": 1
-          },
-          "operations": {
-            "minCount": 1,
-            "minPendingCount": 1
-          }
-        }
-      },
-      "H3->H4": {
         "minimumGoalIncrease": 2,
         "minActionGrowthFactor": 1.35,
         "minPendingNextActions": 3,

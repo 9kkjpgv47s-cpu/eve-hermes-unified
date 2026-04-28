@@ -314,4 +314,76 @@ describe("validate-goal-policy-file.mjs", () => {
       expect(payload.failures).toContain("missing_transition_policy:H3->H4");
     });
   });
+
+  it("fails when goal policy file has duplicate transition keys", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "goal-policy-file-validation.json");
+      await seedHorizonStatus(statusPath);
+      await writeFile(
+        goalPolicyPath,
+        `{
+  "schemaVersion": "v1",
+  "transitions": {
+    "H2->H3": {
+      "minimumGoalIncrease": 1,
+      "minActionGrowthFactor": 1.1,
+      "minPendingNextActions": 1,
+      "requiredTaggedActionCounts": {
+        "durability": {
+          "minCount": 1,
+          "minPendingCount": 1
+        }
+      }
+    },
+    "H2->H3": {
+      "minimumGoalIncrease": 2,
+      "minActionGrowthFactor": 1.2,
+      "minPendingNextActions": 2,
+      "requiredTaggedActionCounts": {
+        "durability": {
+          "minCount": 2,
+          "minPendingCount": 1
+        }
+      }
+    }
+  }
+}
+`,
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-goal-policy-file.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--source-horizon",
+          "H2",
+          "--until-horizon",
+          "H5",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith(
+            "goal_policy_source_invalid:goal_policy_file_duplicate_transition_keys:H2->H3",
+          ),
+        ),
+      ).toBe(true);
+    });
+  });
 });

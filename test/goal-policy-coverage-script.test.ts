@@ -179,6 +179,32 @@ async function seedGoalPolicyFile(
   await writeFile(policyPath, JSON.stringify({ transitions }, null, 2), "utf8");
 }
 
+async function seedGoalPolicyFileWithDuplicateTransition(policyPath: string): Promise<void> {
+  const payload = `{
+  "schemaVersion": "v1",
+  "transitions": {
+    "H2->H3": {
+      "minimumGoalIncrease": 1,
+      "minActionGrowthFactor": 1.1,
+      "minPendingNextActions": 1,
+      "requiredTaggedActionCounts": {
+        "durability": 1
+      }
+    },
+    "H2->H3": {
+      "minimumGoalIncrease": 2,
+      "minActionGrowthFactor": 1.2,
+      "minPendingNextActions": 2,
+      "requiredTaggedActionCounts": {
+        "durability": 2
+      }
+    }
+  }
+}
+`;
+  await writeFile(policyPath, payload, "utf8");
+}
+
 async function seedAutoGoalPolicyFile(
   statusPath: string,
   options?: { includeH3H4?: boolean; includeH4H5?: boolean; includeTaggedCounts?: boolean },
@@ -375,6 +401,45 @@ describe("check-goal-policy-coverage.mjs", () => {
       expect(payload.files.goalPolicyFile).toBe(path.resolve(autoPolicyPath));
       expect(payload.checks.transitionCount).toBe(3);
       expect(payload.checks.coverageRate).toBe(1);
+    });
+  });
+
+  it("fails when explicit goal policy file has duplicate transition keys", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const policyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "goal-policy-coverage.json");
+      await seedHorizonStatus(statusPath, { withH3H4: true, withH4H5: true, includeTaggedCounts: true });
+      await seedGoalPolicyFileWithDuplicateTransition(policyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-goal-policy-coverage.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          policyPath,
+          "--source-horizon",
+          "H2",
+          "--max-target-horizon",
+          "H5",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith("goal_policy_source_invalid:goal_policy_file_duplicate_transition_keys:"),
+        ),
+      ).toBe(true);
     });
   });
 });

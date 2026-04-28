@@ -135,6 +135,7 @@ Schema validation expectations:
   - `npm run promote:horizon -- --horizon <H1|H2|H3|H4> --next-horizon <H2|H3|H4|H5> --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence`
   - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force an explicit policy source
   - when `--goal-policy-file` is omitted, promotion auto-detects a sibling `GOAL_POLICIES.json` next to `--horizon-status-file`; if not present, it falls back to `goalPolicies` in horizon status
+  - fail-closed policy-source integrity: promotion rejects policy files that contain duplicate transition keys in raw JSON (for example duplicate `H2->H3` entries under `transitions`)
   - optional `--closeout-file <path>` to consume a pinned closeout artifact instead of running `validate:horizon-closeout`
   - fail-closed enforcement for `--closeout-file`:
     - pinned closeout must report matching transition scope:
@@ -187,6 +188,7 @@ Schema validation expectations:
   - `npm run validate:goal-policy-file -- --horizon-status-file docs/HORIZON_STATUS.json`
   - optional `--goal-policy-file <path>` to pin a specific policy file
   - validates transition-policy schema and required transition window defaults (`H2->H3`, `H3->H4`, `H4->H5`)
+  - fail-closed integrity check: duplicate transition keys in raw policy JSON fail validation (`goal_policy_file_duplicate_transition_keys:*`)
   - emits deterministic validation artifact:
     - `evidence/goal-policy-file-validation-*.json`
 - initial-scope gate can require release-readiness to include and pass goal-policy validation evidence:
@@ -196,6 +198,7 @@ Schema validation expectations:
   - `npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
   - optional `--goal-policy-file docs/GOAL_POLICIES.json` to force policy checks to use a dedicated policy document
   - when omitted, runner inherits the same auto-discovery order as `promote:horizon` (`GOAL_POLICIES.json` sibling first, then horizon-status fallback)
+  - fail-closed policy-source integrity: duplicate transition keys in external goal-policy files are rejected before promotion
   - executes `run:h2-closeout` then `promote:horizon --closeout-run-file ...` in one command
   - optional `--require-progressive-goals --minimum-goal-increase <n>` to enforce longer next-horizon action runway before promotion
   - optional `--goal-policy-key <Hn->Hm>` to require transition-specific action-tag minimums from `goalPolicies`

@@ -5,6 +5,10 @@ function isPlainObject(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function normalizeTransitionsContainer(goalPolicies) {
   if (!isPlainObject(goalPolicies)) {
     return {};
@@ -23,6 +27,172 @@ function extractGoalPolicies(payload) {
     return payload;
   }
   return {};
+}
+
+function collectDuplicateJsonKeyPaths(rawJson) {
+  if (typeof rawJson !== "string" || rawJson.trim().length === 0) {
+    return [];
+  }
+  const duplicatePaths = new Set();
+  const stack = [];
+  let inString = false;
+  let escapeNext = false;
+  let collectingKey = false;
+  let keyBuffer = "";
+  let pendingKey = null;
+  for (let index = 0; index < rawJson.length; index += 1) {
+    const char = rawJson[index];
+    if (inString) {
+      if (escapeNext) {
+        escapeNext = false;
+        if (collectingKey) {
+          keyBuffer += char;
+        }
+        continue;
+      }
+      if (char === "\\") {
+        escapeNext = true;
+        if (collectingKey) {
+          keyBuffer += char;
+        }
+        continue;
+      }
+      if (char === "\"") {
+        inString = false;
+        if (collectingKey) {
+          pendingKey = keyBuffer;
+          collectingKey = false;
+          keyBuffer = "";
+        }
+        continue;
+      }
+      if (collectingKey) {
+        keyBuffer += char;
+      }
+      continue;
+    }
+    if (char === "\"") {
+      inString = true;
+      if (stack.length > 0 && stack[stack.length - 1].type === "object") {
+        const frame = stack[stack.length - 1];
+        if (frame.expectingKey) {
+          collectingKey = true;
+          keyBuffer = "";
+        }
+      }
+      continue;
+    }
+    if (char === "{") {
+      const pathPrefix = stack
+        .filter((frame) => frame.type === "object" && typeof frame.pathSegment === "string")
+        .map((frame) => frame.pathSegment);
+      const frame = {
+        type: "object",
+        keys: new Set(),
+        expectingKey: true,
+        expectingValue: false,
+        pendingValueForKey: null,
+        pathSegment: null,
+      };
+      if (stack.length > 0) {
+        const parent = stack[stack.length - 1];
+        if (parent.type === "object" && typeof parent.pendingValueForKey === "string") {
+          frame.pathSegment = parent.pendingValueForKey;
+          parent.pendingValueForKey = null;
+          parent.expectingValue = false;
+          parent.expectingKey = false;
+        }
+      }
+      frame.pathPrefix = pathPrefix;
+      stack.push(frame);
+      pendingKey = null;
+      continue;
+    }
+    if (char === "}") {
+      const frame = stack.pop();
+      if (frame && frame.type === "object") {
+        frame.expectingKey = false;
+        frame.expectingValue = false;
+        frame.pendingValueForKey = null;
+      }
+      if (stack.length > 0) {
+        const parent = stack[stack.length - 1];
+        if (parent.type === "object") {
+          parent.expectingValue = false;
+        }
+      }
+      pendingKey = null;
+      continue;
+    }
+    if (char === "[") {
+      stack.push({ type: "array" });
+      pendingKey = null;
+      continue;
+    }
+    if (char === "]") {
+      stack.pop();
+      pendingKey = null;
+      continue;
+    }
+    if (char === ":" && pendingKey !== null) {
+      const frame = stack[stack.length - 1];
+      if (frame && frame.type === "object") {
+        const pathSegments = [...(frame.pathPrefix ?? [])];
+        if (frame.pathSegment) {
+          pathSegments.push(frame.pathSegment);
+        }
+        const fullPath = `$.${[...pathSegments, pendingKey].join(".")}`;
+        if (frame.keys.has(pendingKey)) {
+          duplicatePaths.add(fullPath);
+        } else {
+          frame.keys.add(pendingKey);
+        }
+        frame.pendingValueForKey = pendingKey;
+        frame.expectingKey = false;
+        frame.expectingValue = true;
+      }
+      pendingKey = null;
+      continue;
+    }
+    if (char === ",") {
+      const frame = stack[stack.length - 1];
+      if (frame && frame.type === "object") {
+        frame.expectingKey = true;
+        frame.expectingValue = false;
+        frame.pendingValueForKey = null;
+      }
+      pendingKey = null;
+      continue;
+    }
+    if (!/\s/.test(char)) {
+      const frame = stack[stack.length - 1];
+      if (frame && frame.type === "object" && frame.expectingValue) {
+        frame.expectingValue = false;
+      }
+    }
+  }
+  return Array.from(duplicatePaths).sort();
+}
+
+function collectDuplicateTransitionKeys(rawJson) {
+  const duplicatePaths = collectDuplicateJsonKeyPaths(rawJson);
+  if (duplicatePaths.length === 0) {
+    return [];
+  }
+  const transitionDuplicates = [];
+  for (const duplicatePath of duplicatePaths) {
+    const normalizedPath = String(duplicatePath).replace(/\["([^"]+)"\]/g, ".$1");
+    if (!normalizedPath.includes(".transitions.")) {
+      continue;
+    }
+    const duplicateKey = normalizedPath.split(".").pop();
+    if (isNonEmptyString(duplicateKey)) {
+      transitionDuplicates.push(String(duplicateKey));
+    } else if (normalizedPath.includes("->")) {
+      transitionDuplicates.push(normalizedPath.slice(normalizedPath.lastIndexOf(".") + 1));
+    }
+  }
+  return Array.from(new Set(transitionDuplicates)).sort();
 }
 
 async function pathExists(targetPath) {
@@ -142,8 +312,10 @@ export async function loadGoalPolicyTransitions({
   }
 
   let filePayload;
+  let fileRaw = "";
   try {
-    filePayload = JSON.parse(await readFile(resolvedGoalPolicyFile, "utf8"));
+    fileRaw = await readFile(resolvedGoalPolicyFile, "utf8");
+    filePayload = JSON.parse(fileRaw);
   } catch (error) {
     return emptySourceResult({
       source: "file",
@@ -151,6 +323,17 @@ export async function loadGoalPolicyTransitions({
       pathValue: resolvedGoalPolicyFile,
       goalPolicyFile: resolvedGoalPolicyFile,
       reason: `goal_policy_file_invalid_json:${resolvedGoalPolicyFile}:${String(error?.message ?? error)}`,
+    });
+  }
+
+  const duplicateTransitionKeys = collectDuplicateTransitionKeys(fileRaw);
+  if (duplicateTransitionKeys.length > 0) {
+    return emptySourceResult({
+      source: "file",
+      sourceSelection,
+      pathValue: resolvedGoalPolicyFile,
+      goalPolicyFile: resolvedGoalPolicyFile,
+      reason: `goal_policy_file_duplicate_transition_keys:${duplicateTransitionKeys.join(",")}`,
     });
   }
 

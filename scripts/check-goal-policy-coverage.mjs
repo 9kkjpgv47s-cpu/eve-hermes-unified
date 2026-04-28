@@ -192,6 +192,11 @@ async function main() {
     horizonStatusFile,
     goalPolicyFile: options.goalPolicyFile,
   });
+  if (!goalPolicySourceResult.ok) {
+    failures.push(
+      ...goalPolicySourceResult.errors.map((error) => `goal_policy_source_invalid:${error}`),
+    );
+  }
   const transitionsContainer = normalizeTransitionsContainer(goalPolicySourceResult.policies);
   const transitionChecks = {};
   for (const transitionKey of transitions) {
@@ -283,6 +288,8 @@ async function main() {
       transitionKeys: transitions,
       requiredPolicyTransitions,
       requiredPolicyKey: isNonEmptyString(requiredPolicyKey) ? requiredPolicyKey : null,
+      goalPolicySourceOk: goalPolicySourceResult.ok === true,
+      goalPolicySourceSelection: goalPolicySourceResult.sourceSelection ?? null,
       coverageRate,
       missingTransitions,
       taggedRequirementCount,

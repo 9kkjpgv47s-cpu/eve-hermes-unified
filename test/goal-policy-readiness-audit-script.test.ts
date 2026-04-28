@@ -306,4 +306,61 @@ describe("audit-goal-policy-readiness.mjs", () => {
       expect(payload.files.goalPolicyFile).toBe(path.resolve(goalPolicyPath));
     });
   });
+
+  it("fails when goal policy file has duplicate transition keys", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "goal-policy-readiness.json");
+      await seedHorizonStatus(statusPath, { withH3H4: false, withH4H5: false, tagged: false });
+      await writeFile(
+        goalPolicyPath,
+        `{
+  "transitions": {
+    "H2->H3": {
+      "minimumGoalIncrease": 1,
+      "minActionGrowthFactor": 1.1,
+      "minPendingNextActions": 2
+    },
+    "H2->H3": {
+      "minimumGoalIncrease": 2,
+      "minActionGrowthFactor": 1.2,
+      "minPendingNextActions": 3
+    }
+  }
+}
+`,
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/audit-goal-policy-readiness.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--source-horizon",
+          "H2",
+          "--until-horizon",
+          "H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.includes("goal_policy_source_error:goal_policy_file_duplicate_transition_keys:H2->H3"),
+        ),
+      ).toBe(true);
+    });
+  });
 });

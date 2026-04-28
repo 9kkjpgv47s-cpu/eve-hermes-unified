@@ -138,6 +138,9 @@ async function main() {
   if (!validation.valid) {
     failures.push(...validation.errors.map((error) => `horizon_status_invalid:${error}`));
   }
+  if (!goalPolicySource.ok) {
+    failures.push(...goalPolicySource.errors.map((error) => `goal_policy_source_invalid:${error}`));
+  }
   if (!sourceHorizon) {
     failures.push(`invalid_source_horizon:${String(options.sourceHorizon ?? "<empty>")}`);
   }

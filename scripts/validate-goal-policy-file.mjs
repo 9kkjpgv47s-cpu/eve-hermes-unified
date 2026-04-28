@@ -2,7 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
-import { loadGoalPolicyTransitions } from "./goal-policy-source.mjs";
+import { loadGoalPolicyTransitions, validateGoalPolicySourceOption } from "./goal-policy-source.mjs";
 
 const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
 
@@ -130,6 +130,7 @@ async function main() {
   const windowTransitions = buildTransitions(sourceHorizon, maxTargetHorizon);
   const requiredPolicyTransitions = parseRequiredTransitions(options.requiredPolicyTransitions);
   const transitions = requiredPolicyTransitions.length > 0 ? requiredPolicyTransitions : windowTransitions;
+  const goalPolicySourceValidation = validateGoalPolicySourceOption(options.goalPolicyFile);
 
   const policySource = await loadGoalPolicyTransitions({
     horizonStatus,
@@ -149,6 +150,9 @@ async function main() {
   const failures = [];
   if (!statusValidation.valid) {
     failures.push(...statusValidation.errors.map((error) => `horizon_status_invalid:${error}`));
+  }
+  if (!goalPolicySourceValidation.valid) {
+    failures.push(...goalPolicySourceValidation.errors);
   }
   if (!policySource.ok) {
     failures.push(...policySource.errors.map((error) => `goal_policy_source_invalid:${error}`));

@@ -235,6 +235,38 @@ async function seedGoalPolicyFile(
   );
 }
 
+async function seedGoalPolicyFileWithDuplicateTransition(goalPolicyPath: string): Promise<void> {
+  const duplicateTransitionPayload = `{
+  "schemaVersion": "v1",
+  "transitions": {
+    "H2->H3": {
+      "minimumGoalIncrease": 1,
+      "minActionGrowthFactor": 1.1,
+      "minPendingNextActions": 1,
+      "requiredTaggedActionCounts": {
+        "durability": {
+          "minCount": 1,
+          "minPendingCount": 1
+        }
+      }
+    },
+    "H2->H3": {
+      "minimumGoalIncrease": 2,
+      "minActionGrowthFactor": 1.25,
+      "minPendingNextActions": 2,
+      "requiredTaggedActionCounts": {
+        "durability": {
+          "minCount": 2,
+          "minPendingCount": 1
+        }
+      }
+    }
+  }
+}
+`;
+  await writeFile(goalPolicyPath, duplicateTransitionPayload, "utf8");
+}
+
 async function removeGoalPoliciesFromStatus(statusPath: string): Promise<void> {
   const payload = JSON.parse(await readFile(statusPath, "utf8")) as { goalPolicies?: unknown };
   delete payload.goalPolicies;
@@ -1844,6 +1876,48 @@ it("fails when closeout run reports conflicting source horizon aliases via check
       };
       expect(payload.pass).toBe(false);
       expect(payload.failures).toContain("goal_policy_file_validation_gate_failed");
+    });
+  });
+
+  it("fails strict promotion when goal policy file has duplicate transition keys", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICY_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion-duplicate-policy.json");
+      await seedHorizonStatus(statusPath);
+      await seedGoalPolicyFileWithDuplicateTransition(goalPolicyPath);
+      await seedCloseoutReport(evidenceDir, { pass: true, horizon: "H2", nextHorizon: "H3" });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--closeout-report",
+          path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
+          "--strict-goal-policy-gates",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith(
+            "goal_policy_source_invalid:goal_policy_file_duplicate_transition_keys:",
+          ),
+        ),
+      ).toBe(true);
     });
   });
 });

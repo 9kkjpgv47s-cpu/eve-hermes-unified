@@ -435,6 +435,36 @@ async function seedGoalPolicyFile(goalPolicyPath: string): Promise<void> {
   );
 }
 
+async function seedGoalPolicyFileWithDuplicateTransition(goalPolicyPath: string): Promise<void> {
+  await writeFile(
+    goalPolicyPath,
+    `{
+  "schemaVersion": "v1",
+  "updatedAtIso": "${new Date().toISOString()}",
+  "transitions": {
+    "H2->H3": {
+      "minimumGoalIncrease": 1,
+      "minActionGrowthFactor": 1.1,
+      "minPendingNextActions": 2,
+      "requiredTaggedActionCounts": {
+        "capability": 1
+      }
+    },
+    "H2->H3": {
+      "minimumGoalIncrease": 2,
+      "minActionGrowthFactor": 1.3,
+      "minPendingNextActions": 3,
+      "requiredTaggedActionCounts": {
+        "durability": 1
+      }
+    }
+  }
+}
+`,
+    "utf8",
+  );
+}
+
 async function seedDefaultGoalPolicyFileForStatus(statusPath: string): Promise<string> {
   const defaultGoalPolicyPath = path.join(path.dirname(statusPath), "GOAL_POLICIES.json");
   await seedGoalPolicyFile(defaultGoalPolicyPath);
@@ -2496,6 +2526,53 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.requireGoalPolicyValidation).toBe(true);
       expect(payload.checks.goalPolicyValidationPass).toBe(false);
       expect(payload.checks.horizonPromotionPass).toBe(false);
+      expect(payload.failures).toContain("horizon_promotion_failed");
+    });
+  });
+
+  it("fails strict promotion when goal policy file contains duplicate transition keys", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-promotion-duplicate-goal-policy-transitions.json");
+      const goalPolicyPath = path.join(dir, "GOAL_POLICY_DUPLICATE.json");
+
+      await seedSharedEvidence(evidenceDir);
+      await seedHorizonStatus(statusPath);
+      await seedEnvFile(envPath);
+      await seedGoalPolicyFileWithDuplicateTransition(goalPolicyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-promotion.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          statusPath,
+          "--env-file",
+          envPath,
+          "--goal-policy-file",
+          goalPolicyPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--strict-goal-policy-gates",
+          "--goal-policy-key",
+          "H2->H3",
+          "--require-goal-policy-validation",
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
       expect(payload.failures).toContain("horizon_promotion_failed");
     });
   });

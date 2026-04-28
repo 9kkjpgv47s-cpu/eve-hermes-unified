@@ -221,7 +221,7 @@ async function main() {
     pass: failures.length === 0,
     files: {
       horizonStatusFile,
-      goalPolicyFile: policySource.path,
+      goalPolicyFile: policySource.goalPolicyFile,
       goalPolicySource: policySource.source,
       outPath,
     },

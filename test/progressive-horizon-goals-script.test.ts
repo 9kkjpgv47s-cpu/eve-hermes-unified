@@ -189,6 +189,38 @@ async function seedGoalPolicyFile(
   );
 }
 
+async function seedGoalPolicyFileWithDuplicateTransitionKey(policyPath: string): Promise<void> {
+  const duplicateJson = `{
+  "schemaVersion": "v1",
+  "transitions": {
+    "H2->H3": {
+      "minimumGoalIncrease": 1,
+      "minActionGrowthFactor": 1.1,
+      "minPendingNextActions": 1,
+      "requiredTaggedActionCounts": {
+        "capability": {
+          "minCount": 1,
+          "minPendingCount": 1
+        }
+      }
+    },
+    "H2->H3": {
+      "minimumGoalIncrease": 3,
+      "minActionGrowthFactor": 2,
+      "minPendingNextActions": 2,
+      "requiredTaggedActionCounts": {
+        "capability": {
+          "minCount": 2,
+          "minPendingCount": 1
+        }
+      }
+    }
+  }
+}
+`;
+  await writeFile(policyPath, duplicateJson, "utf8");
+}
+
 describe("check-progressive-horizon-goals.mjs", () => {
   it("passes when next horizon has larger goal runway", async () => {
     await withTempDir(async (dir) => {
@@ -397,6 +429,49 @@ describe("check-progressive-horizon-goals.mjs", () => {
       expect(payload.checks.minimumGoalIncrease).toBe(3);
       expect(
         payload.failures.some((failure) => failure.startsWith("insufficient_goal_increase:")),
+      ).toBe(true);
+    });
+  });
+
+  it("fails when external goal policy file has duplicate transition keys", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const policyPath = path.join(dir, "GOAL_POLICIES.json");
+      const outPath = path.join(dir, "progressive-goals.json");
+      await seedHorizonStatus(statusPath, { h2GoalCount: 2, h3GoalCount: 5, activeHorizon: "H2" });
+      await seedGoalPolicyFileWithDuplicateTransitionKey(policyPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-progressive-horizon-goals.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--goal-policy-file",
+          policyPath,
+          "--source-horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--policy-key",
+          "H2->H3",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(
+        payload.failures.some((failure) =>
+          failure.startsWith(
+            "goal_policy_source_invalid:goal_policy_file_duplicate_transition_keys:H2->H3",
+          ),
+        ),
       ).toBe(true);
     });
   });

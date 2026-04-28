@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T23:26:00Z",
+  "updatedAtIso": "2026-04-28T12:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -194,6 +194,27 @@
       "targetHorizon": "H3",
       "status": "planned",
       "tags": ["rollback", "operations"]
+    },
+    {
+      "id": "h4-action-1",
+      "summary": "Extend legacy dispatch ingress scan to scripts and docs with explicit harness allowlist; wire npm run scan:legacy-dispatch-entrypoints into validate:all.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "validation"]
+    },
+    {
+      "id": "h4-action-2",
+      "summary": "Publish docs/H4_UNIFIED_DISPATCH_CONTRACT.md deprecation map for scripts/docs and operator bypass patterns.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "documentation"]
+    },
+    {
+      "id": "h4-action-3",
+      "summary": "Add Vitest coverage for scan-legacy-dispatch-entrypoints.sh failure mode; split default config strings so CI scan stays clean.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["contract", "validation"]
     }
   ],
   "goalPolicies": {
@@ -270,7 +291,7 @@
     },
     "H4": {
       "status": "planned",
-      "summary": "Legacy path retirement and contract tightening."
+      "summary": "First H4 slice: scan-legacy-dispatch-entrypoints covers src/, scripts/, and docs/ with harness allowlist; docs/H4_UNIFIED_DISPATCH_CONTRACT.md; validate:all runs the scan after build; Vitest exercises a synthetic violation."
     },
     "H5": {
       "status": "planned",
@@ -391,6 +412,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
+    },
+    {
+      "timestamp": "2026-04-28T12:00:00Z",
+      "horizon": "H4",
+      "status": "planned",
+      "note": "H4 ingress hardening: extended scan-legacy-dispatch-entrypoints to scripts/*.sh|*.mjs and docs/**/*.md with allowlisted harness files; added docs/H4_UNIFIED_DISPATCH_CONTRACT.md, npm run scan:legacy-dispatch-entrypoints in validate:all, Vitest for scan failure path, and split default Hermes/Eve path literals in unified-runtime-config for scan hygiene."
     }
   ]
 }

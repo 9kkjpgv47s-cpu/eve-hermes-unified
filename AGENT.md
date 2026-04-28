@@ -10,6 +10,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 - Horizon: `H2` (`docs/HORIZON_STATUS.json`)
 - Primary focus: staged promotion drills + rollback-policy enforcement with auditable artifacts
+- H4 ingress hygiene: `npm run scan:legacy-dispatch-entrypoints` (see `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`) runs after `npm run build` in `npm run validate:all`
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -22,9 +23,10 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 1. `README.md`
 2. `AGENTS.md`
 3. `docs/CLOUD_AGENT_HANDOFF.md`
-4. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
-5. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
-6. `docs/HORIZON_STATUS.json`
+4. `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`
+5. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
+6. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
+7. `docs/HORIZON_STATUS.json`
 
 ## High-Output Execution Loop
 
@@ -42,6 +44,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 ```bash
 npm run check
 npm test
+npm run scan:legacy-dispatch-entrypoints
 ```
 
 ### H2 Promotion/Policy Flow

@@ -22,6 +22,7 @@ Validation command set:
 npm run check
 npm test
 npm run build
+npm run scan:legacy-dispatch-entrypoints
 npm run validate:failure-injection
 npm run validate:soak
 npm run validate:evidence-summary

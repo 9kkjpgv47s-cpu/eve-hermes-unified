@@ -8,24 +8,18 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Branch (at handoff time): `cursor/h2-stage-drill-orchestrator-0f91`
-- Latest completed hardening slice:
-  - closeout taxonomy normalization toward horizon-neutral signals
-  - compatibility aliases preserved for H2-prefixed checks/failures
-  - full validation passing
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); **H4 ingress slice** landed (see `h4-action-1`–`h4-action-3` in horizon status).
+- Latest slice:
+  - **Extended legacy scan:** `scripts/scan-legacy-dispatch-entrypoints.sh` checks `src/`, `scripts/*.sh|*.mjs` (with harness allowlist), and `docs/**/*.md` for forbidden legacy shell strings.
+  - **Contract doc:** `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`.
+  - **`npm run scan:legacy-dispatch-entrypoints`** runs after build inside `npm run validate:all`.
+  - **Default config literals** in `unified-runtime-config.ts` split so CI grep does not false-positive on source defaults.
 
 ## What Was Just Completed
 
-1. Canonical closeout gate signal added and propagated:
-   - `horizon_closeout_gate_failed`
-   - `horizonCloseoutGatePass`
-2. Promotion/closeout gating now accepts canonical + legacy aliases:
-   - canonical: `horizonCloseoutGatePass`, `closeoutRunCloseoutGate*`
-   - legacy: `h2CloseoutGatePass`, `closeoutRunH2CloseoutGate*`
-3. `run-h2-promotion` closeout-run failures now dual-report:
-   - canonical: `horizon_closeout_run_*`
-   - legacy/scoped aliases retained (including `h2_closeout_run_*` for H2)
+1. **H4 ingress gate:** extended `scan-legacy-dispatch-entrypoints.sh` to scripts and docs, added harness allowlist, wired `npm run scan:legacy-dispatch-entrypoints` into `validate:all`.
+2. **Documentation:** `docs/H4_UNIFIED_DISPATCH_CONTRACT.md` plus `.env.example` / architecture wording that avoids forbidden literal shell examples in tracked files.
+3. **Tests:** `test/scan-legacy-dispatch-entrypoints.test.ts` exercises pass-on-repo and fail-on-synthetic violation; `unified-runtime-config` test uses split Hermes argv string for the same hygiene rules.
 
 ## Read Order (Zero-Context Startup)
 
@@ -33,21 +27,22 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 2. `AGENTS.md`
 3. `AGENT.md`
 4. `docs/CLOUD_AGENT_HANDOFF.md`
-5. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
-6. `docs/HORIZON_STATUS.json`
+5. `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`
+6. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
+7. `docs/HORIZON_STATUS.json`
 
 ## Immediate Next High-Output Targets
 
-1. Complete horizon-neutral taxonomy migration in `validate-horizon-closeout.mjs` for remaining H2-specific drill/check failure labels (keep compatibility aliases).
-2. Extend canonical naming propagation into any remaining H2-specific orchestrator outputs that feed closeout/promotion gates.
-3. Add targeted tests for canonical-first assertions with legacy alias compatibility.
-4. Keep artifacts and gate outputs schema-valid under `scripts/validate-manifest-schema.mjs`.
+1. **H4 continuation:** remove remaining compatibility shims only after parity evidence; consider stricter doc rules if operators need copy-paste runbooks audited.
+2. **H2 closeout (when ready):** operator evidence + `validate:h2-closeout` / promotion flows.
+3. **Horizon-neutral closeout taxonomy** (remaining H2-prefixed labels outside drill suite, if any).
 
 ## Validation Pack
 
 ```bash
 npm run check
 npm test
+npm run scan:legacy-dispatch-entrypoints
 npm run validate:all
 ```
 

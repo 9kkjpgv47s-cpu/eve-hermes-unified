@@ -14,6 +14,7 @@ Use this document when one cloud agent hands execution to another. The objective
    - `npm install`
    - `npm run check`
    - `npm test`
+   - `npm run scan:legacy-dispatch-entrypoints` (after `npm run build`, or as part of `npm run validate:all`)
 3. Confirm runtime command compiles and runs:
    - `npm run dispatch -- --text "startup verification" --chat-id 1 --message-id 1`
 

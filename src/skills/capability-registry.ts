@@ -16,6 +16,8 @@ export type CapabilityExecutionContext = {
   chatId: string;
   messageId: string;
   traceId: string;
+  tenantId?: string;
+  regionId?: string;
   dispatchLane: (input: CapabilityLaneDispatchInput) => Promise<DispatchState>;
   memoryStore: UnifiedMemoryStore;
 };
@@ -49,6 +51,8 @@ export type CapabilityLaneDispatcher = (
     chatId: string;
     messageId: string;
     traceId: string;
+    tenantId?: string;
+    regionId?: string;
   },
 ) => Promise<DispatchState>;
 

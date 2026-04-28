@@ -33,6 +33,9 @@ jobs:
       - name: Unified adapter entrypoints gate
         run: npm run validate:unified-entrypoints
 
+      - name: H5 tenant isolation and region failover gates
+        run: npm run validate:tenant-isolation && npm run rehearse:region-failover
+
       - name: Build
         run: npm run build
 

@@ -271,6 +271,62 @@ describe("UnifiedCapabilityEngine", () => {
     expect(result.capabilityExecution?.failureClass).toBe("policy_failure");
   });
 
+  it("denies capability when capability tenant allowlist is set and tenantId does not match", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(
+      path.join(os.tmpdir(), "unified-cap-tenant-allow.json"),
+    );
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => fakeLaneState("eve", "nope"),
+      memoryStore,
+    });
+    const policy = createCapabilityPolicy({
+      defaultMode: "allow",
+      allowCapabilities: [],
+      denyCapabilities: [],
+      allowedChatIds: [],
+      deniedChatIds: [],
+      allowedTenantIds: ["org-ok"],
+      deniedTenantIds: [],
+      allowCapabilityChats: {},
+      denyCapabilityChats: {},
+    });
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("eve", "nope"),
+      policy,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const denied = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@cap status",
+      tenantId: "other-org",
+    });
+    expect(denied.capabilityExecution?.reason).toBe("tenant_not_allowlisted");
+
+    const allowed = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "3",
+      text: "@cap status",
+      tenantId: "org-ok",
+    });
+    expect(allowed.capabilityExecution?.status).toBe("pass");
+  });
+
   it("denies capability execution when policy is default deny", async () => {
     const registry = new CapabilityRegistry();
     const memoryStore = new FileUnifiedMemoryStore(
@@ -286,6 +342,8 @@ describe("UnifiedCapabilityEngine", () => {
       denyCapabilities: [],
       allowedChatIds: [],
       deniedChatIds: [],
+      allowedTenantIds: [],
+      deniedTenantIds: [],
       allowCapabilityChats: {},
       denyCapabilityChats: {},
     });
@@ -335,6 +393,8 @@ describe("UnifiedCapabilityEngine", () => {
       denyCapabilities: [],
       allowedChatIds: ["chat-7"],
       deniedChatIds: [],
+      allowedTenantIds: [],
+      deniedTenantIds: [],
       allowCapabilityChats: {},
       denyCapabilityChats: {},
     };
@@ -382,6 +442,8 @@ describe("UnifiedCapabilityEngine", () => {
       denyCapabilities: [],
       allowedChatIds: [],
       deniedChatIds: [],
+      allowedTenantIds: [],
+      deniedTenantIds: [],
       allowCapabilityChats: {},
       denyCapabilityChats: {
         summarize_state: ["chat-9"],
@@ -431,6 +493,8 @@ describe("UnifiedCapabilityEngine", () => {
       denyCapabilities: [],
       allowedChatIds: [],
       deniedChatIds: [],
+      allowedTenantIds: [],
+      deniedTenantIds: [],
       allowCapabilityChats: {
         summarize_state: ["chat-42"],
       },

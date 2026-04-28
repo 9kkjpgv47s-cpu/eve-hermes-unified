@@ -51,6 +51,16 @@ Every PR should include:
 - **Contract**: `UNIFIED_DISPATCH_CONTRACT_VERSION` in `src/contracts/schema-version.ts`; fixtures under `test/fixtures/contracts/` validate with `validateUnifiedDispatchResult`.
 - **Deprecation map**: `docs/LEGACY_ENTRYPOINT_DEPRECATION_MAP.md`.
 
+## Tenant, region, and bounded automation (H5)
+
+- **Envelope fields**: optional `tenantId` and `regionId` on `UnifiedMessageEnvelope`; validated in `validateEnvelope` when set.
+- **Dispatch tenant gate**: `UNIFIED_TENANT_ALLOWLIST` / `UNIFIED_TENANT_DENYLIST` — evaluated before routing or capability execution; failures return `policy_failure` without touching lane adapters.
+- **Capability tenant gate**: `UNIFIED_CAPABILITY_ALLOWED_TENANT_IDS` / `UNIFIED_CAPABILITY_DENIED_TENANT_IDS` — applies to `@cap` flows via capability policy.
+- **Memory isolation**: capability execution uses `TenantScopedUnifiedMemoryStore` when `tenantId` is present (namespace prefix `tenantId::`).
+- **Standby region routing**: `UNIFIED_ROUTER_STANDBY_REGION` — when it equals `envelope.regionId`, primary and fallback lanes swap for failover drills (skipped when fallback is `none`).
+- **Lane env passthrough**: Eve receives `EVE_TASK_DISPATCH_TENANT_ID` / `EVE_TASK_DISPATCH_REGION_ID`; Hermes receives `HERMES_UNIFIED_TENANT_ID` / `HERMES_UNIFIED_REGION_ID` when set.
+- **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
+
 ## Cutover and Rollback Commands
 
 Stage:

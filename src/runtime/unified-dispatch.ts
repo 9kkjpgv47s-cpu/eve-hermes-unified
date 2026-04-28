@@ -16,6 +16,7 @@ import {
   validateCapabilityExecutionResult,
   validateDispatchState,
   validateEnvelope,
+  validateRoutingDecision,
   validateUnifiedResponse,
 } from "../contracts/validate.js";
 import type { LaneAdapter } from "../adapters/lane-adapter.js";
@@ -27,6 +28,9 @@ export type UnifiedRuntime = {
   hermesAdapter: LaneAdapter;
   routerConfig: RouterPolicyConfig;
   capabilityEngine?: CapabilityEngine;
+  /** When non-empty, envelopes without a matching tenantId are rejected before routing. */
+  tenantAllowlist?: string[];
+  tenantDenylist?: string[];
 };
 
 export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -124,6 +128,50 @@ function shouldSkipFallback(
   return suppressed.includes(primaryFailureClass);
 }
 
+function evaluateTenantDispatchPolicy(
+  envelope: UnifiedMessageEnvelope,
+  allowlist: string[] | undefined,
+  denylist: string[] | undefined,
+): { ok: true } | { ok: false; reason: string } {
+  const tenant = envelope.tenantId?.trim() ?? "";
+  const denied = new Set((denylist ?? []).map((item) => item.trim()).filter(Boolean));
+  if (tenant && denied.has(tenant)) {
+    return { ok: false, reason: "tenant_denied_by_dispatch_policy" };
+  }
+  const allowed = (allowlist ?? []).map((item) => item.trim()).filter(Boolean);
+  if (allowed.length > 0 && (!tenant || !allowed.includes(tenant))) {
+    return { ok: false, reason: "tenant_not_allowlisted_for_dispatch" };
+  }
+  return { ok: true };
+}
+
+function tenantPolicyFailureResult(
+  envelope: UnifiedMessageEnvelope,
+  routerConfig: RouterPolicyConfig,
+  reason: string,
+): UnifiedDispatchResult {
+  const routing = validateRoutingDecision({
+    primaryLane: routerConfig.defaultPrimary,
+    fallbackLane: "none",
+    reason,
+    policyVersion: routerConfig.policyVersion,
+    failClosed: true,
+  });
+  const primaryState = validateDispatchState({
+    status: "failed",
+    reason,
+    runtimeUsed: "unified-dispatch",
+    runId: `tenant-policy-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
+    elapsedMs: 0,
+    failureClass: "policy_failure",
+    sourceLane: routerConfig.defaultPrimary,
+    sourceChatId: envelope.chatId,
+    sourceMessageId: envelope.messageId,
+    traceId: envelope.traceId,
+  });
+  return buildResult(envelope, routing, primaryState, primaryState);
+}
+
 export function createUnifiedEnvelopeForDispatch(
   input: Omit<UnifiedMessageEnvelope, "traceId" | "receivedAtIso">,
 ): UnifiedMessageEnvelope {
@@ -139,6 +187,15 @@ export async function dispatchUnifiedEnvelope(
   envelope: UnifiedMessageEnvelope,
 ): Promise<UnifiedDispatchResult> {
   const validated = validateEnvelope(envelope);
+
+  const tenantPolicy = evaluateTenantDispatchPolicy(
+    validated,
+    runtime.tenantAllowlist,
+    runtime.tenantDenylist,
+  );
+  if (!tenantPolicy.ok) {
+    return tenantPolicyFailureResult(validated, runtime.routerConfig, tenantPolicy.reason);
+  }
 
   if (runtime.capabilityEngine) {
     const capabilityDecision = runtime.capabilityEngine.select(validated, runtime.routerConfig);

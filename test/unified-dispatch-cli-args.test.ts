@@ -10,6 +10,21 @@ describe("parseUnifiedDispatchCliArgs", () => {
     expect(parsed.compactJson).toBe(false);
     expect(parsed.enqueueFailedPrimary).toBe(false);
     expect(parsed.replayQueue).toBe(false);
+    expect(parsed.tenantId).toBe("");
+    expect(parsed.regionId).toBe("");
+  });
+
+  it("parses tenant-id and region-id", () => {
+    const parsed = parseUnifiedDispatchCliArgs([
+      "--text",
+      "x",
+      "--tenant-id",
+      "org-a",
+      "--region-id",
+      "eu-west-backup",
+    ]);
+    expect(parsed.tenantId).toBe("org-a");
+    expect(parsed.regionId).toBe("eu-west-backup");
   });
 
   it("parses chat and message ids", () => {

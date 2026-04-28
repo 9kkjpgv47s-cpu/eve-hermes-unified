@@ -24,6 +24,8 @@ export type UnifiedRuntimeEnvConfig = {
     denyCapabilities: string[];
     allowedChatIds: string[];
     deniedChatIds: string[];
+    allowedTenantIds: string[];
+    deniedTenantIds: string[];
     allowCapabilityChats: Record<string, string[]>;
     denyCapabilityChats: Record<string, string[]>;
   };
@@ -32,6 +34,10 @@ export type UnifiedRuntimeEnvConfig = {
     strict: boolean;
   };
   auditLogPath: string;
+  /** When non-empty, dispatch rejects envelopes whose tenantId is missing or not in this list. */
+  tenantAllowlist: string[];
+  /** Dispatch rejects envelopes whose tenantId is in this list. */
+  tenantDenylist: string[];
   routerConfig: RouterPolicyConfig;
 };
 
@@ -231,6 +237,14 @@ export function loadUnifiedRuntimeEnvConfig(
   const capabilityDeniedChatIds = parseCsvList(
     capabilityDeniedChatIdsRaw,
   );
+  const capabilityAllowedTenantIdsRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_ALLOWED_TENANT_IDS",
+    "CAPABILITY_ALLOWED_TENANT_IDS",
+  ]);
+  const capabilityDeniedTenantIdsRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_DENIED_TENANT_IDS",
+    "CAPABILITY_DENIED_TENANT_IDS",
+  ]);
   const capabilityAllowChatMap = parseCapabilityChatMaps(
     firstDefined(reader, [
       "UNIFIED_CAPABILITY_PER_CAPABILITY_CHAT_ALLOWLIST",
@@ -253,9 +267,17 @@ export function loadUnifiedRuntimeEnvConfig(
     denyCapabilitiesRaw: capabilityDenyListRaw,
     allowedChatIdsRaw: capabilityAllowedChatIdsRaw,
     deniedChatIdsRaw: capabilityDeniedChatIdsRaw,
+    allowedTenantIdsRaw: capabilityAllowedTenantIdsRaw,
+    deniedTenantIdsRaw: capabilityDeniedTenantIdsRaw,
     allowCapabilityChatsRaw: undefined,
     denyCapabilityChatsRaw: undefined,
   });
+  const dispatchAllowedTenantIds = parseCsvList(
+    firstDefined(reader, ["UNIFIED_TENANT_ALLOWLIST", "UNIFIED_ALLOWED_TENANT_IDS"]),
+  );
+  const dispatchDeniedTenantIds = parseCsvList(
+    firstDefined(reader, ["UNIFIED_TENANT_DENYLIST", "UNIFIED_DENIED_TENANT_IDS"]),
+  );
   const preflightEnabled = parseBooleanFlag(
     firstDefined(reader, [
       "UNIFIED_PREFLIGHT_ENABLED",
@@ -317,6 +339,8 @@ export function loadUnifiedRuntimeEnvConfig(
     "ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES",
   ]);
   const noFallbackOnFailureClasses = parseNoFallbackFailureClasses(noFallbackFailureClassesRaw);
+  const standbyRegionRaw = firstDefined(reader, ["UNIFIED_ROUTER_STANDBY_REGION", "ROUTER_STANDBY_REGION"]);
+  const standbyRegion = standbyRegionRaw?.trim() ? standbyRegionRaw.trim() : undefined;
 
   return {
     eveDispatchScript,
@@ -335,6 +359,8 @@ export function loadUnifiedRuntimeEnvConfig(
       denyCapabilities: capabilityPolicyBaseline.denyCapabilities,
       allowedChatIds: capabilityPolicyBaseline.allowedChatIds,
       deniedChatIds: capabilityPolicyBaseline.deniedChatIds,
+      allowedTenantIds: capabilityPolicyBaseline.allowedTenantIds,
+      deniedTenantIds: capabilityPolicyBaseline.deniedTenantIds,
       allowCapabilityChats: capabilityAllowChatMap,
       denyCapabilityChats: capabilityDenyChatMap,
     },
@@ -343,6 +369,8 @@ export function loadUnifiedRuntimeEnvConfig(
       strict: preflightStrict,
     },
     auditLogPath,
+    tenantAllowlist: dispatchAllowedTenantIds,
+    tenantDenylist: dispatchDeniedTenantIds,
     routerConfig: {
       defaultPrimary,
       defaultFallback,
@@ -350,6 +378,7 @@ export function loadUnifiedRuntimeEnvConfig(
       policyVersion,
       noFallbackOnFailureClasses,
       hermesPrimaryChatIds,
+      standbyRegion,
       cutoverStage,
       canaryChatIds,
       majorityPercent,

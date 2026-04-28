@@ -40,6 +40,8 @@ function buildLaneDispatcher(deps: CapabilityRegistrationDeps) {
     chatId: string,
     messageId: string,
     traceId: string,
+    tenantId?: string,
+    regionId?: string,
   ): Promise<DispatchState> => {
     return deps.dispatchLane({
       lane,
@@ -48,6 +50,8 @@ function buildLaneDispatcher(deps: CapabilityRegistrationDeps) {
       chatId,
       messageId,
       traceId,
+      tenantId,
+      regionId,
     });
   };
 }
@@ -74,6 +78,8 @@ export function registerDefaultCapabilityExecutors(
         context.chatId,
         context.messageId,
         context.traceId,
+        context.tenantId,
+        context.regionId,
       );
       return {
         consumed: state.status === "pass",
@@ -104,6 +110,8 @@ export function registerDefaultCapabilityExecutors(
         context.chatId,
         context.messageId,
         context.traceId,
+        context.tenantId,
+        context.regionId,
       );
       return {
         consumed: state.status === "pass",
@@ -131,6 +139,8 @@ export function registerDefaultCapabilityExecutors(
         context.chatId,
         context.messageId,
         context.traceId,
+        context.tenantId,
+        context.regionId,
       );
       const recent = await context.memoryStore.list({
         lane: "hermes",
@@ -168,6 +178,8 @@ export function registerDefaultCapabilityExecutors(
         context.chatId,
         context.messageId,
         context.traceId,
+        context.tenantId,
+        context.regionId,
       );
       return {
         consumed: state.status === "pass",

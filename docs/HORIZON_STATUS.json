@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T21:45:00Z",
+  "updatedAtIso": "2026-04-28T22:30:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H4",
+  "activeHorizon": "H5",
   "activeStatus": "in_progress",
-  "summary": "Horizon H4 legacy-path retirement and contract tightening: canonical unified dispatch entrypoint enforcement (validate:unified-entrypoints), LEGACY_ENTRYPOINT_DEPRECATION_MAP, UNIFIED_DISPATCH_CONTRACT_VERSION v1 fixture gate.",
+  "summary": "Horizon H5 scale envelope: tenant-scoped memory + dispatch/capability tenant gates, standby region routing swap, CLI tenant/region, validation scripts and rehearsal manifests.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -215,6 +215,27 @@
       "targetHorizon": "H4",
       "status": "completed",
       "tags": ["contract", "validation"]
+    },
+    {
+      "id": "h5-action-1",
+      "summary": "Tenant isolation for routing ingress, capability policy, and memory namespaces with executable leak checks.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["tenant", "policy", "validation"]
+    },
+    {
+      "id": "h5-action-2",
+      "summary": "Region-aware standby routing swap with replay-safe envelopes and failover rehearsal manifest.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["region", "routing", "rollback"]
+    },
+    {
+      "id": "h5-action-3",
+      "summary": "Bounded agent remediation playbook dry-run chaining tenant validation and region rehearsal artifacts.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["operations", "automation"]
     }
   ],
   "goalPolicies": {
@@ -290,12 +311,12 @@
       "summary": "Durability queue and replay; fallback suppression by failure class; capability execution timeout; SerializedUnifiedMemoryStore; soak drift summarizer; emergency rollback rehearsal manifests."
     },
     "H4": {
-      "status": "in_progress",
+      "status": "completed",
       "summary": "Legacy retirement gates: validate-unified-entrypoints CI script, LEGACY_ENTRYPOINT_DEPRECATION_MAP, contract version constant v1 + fixture validation tests."
     },
     "H5": {
-      "status": "planned",
-      "summary": "Autonomous operations and scale envelope."
+      "status": "in_progress",
+      "summary": "Tenant allowlist/denylist at dispatch; capability tenant scopes; TenantScopedUnifiedMemoryStore; UNIFIED_ROUTER_STANDBY_REGION swap; CLI --tenant-id/--region-id; validate:tenant-isolation + rehearse:region-failover + agent-remediation playbook."
     }
   },
   "history": [
@@ -430,6 +451,12 @@
       "horizon": "H4",
       "status": "in_progress",
       "note": "H4 slice: UNIFIED_DISPATCH_CONTRACT_VERSION v1, LEGACY_ENTRYPOINT_DEPRECATION_MAP, validate-unified-entrypoints.mjs + CI, fixture test unified-dispatch-result-v1-pass.json; activeHorizon advanced to H4; H3 marked completed."
+    },
+    {
+      "timestamp": "2026-04-28T22:30:00Z",
+      "horizon": "H5",
+      "status": "in_progress",
+      "note": "H5 slice: envelope tenantId/regionId; tenant dispatch allowlist/denylist; capability tenant allow/deny; TenantScopedUnifiedMemoryStore for capability execution; standby region lane swap; Eve/Hermes env passthrough; validate:tenant-isolation, rehearse:region-failover, agent-remediation-playbook; H4 marked completed."
     }
   ]
 }

@@ -287,4 +287,105 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.response.laneUsed).toBe("hermes");
     expect(result.response.failureClass).toBe("none");
   });
+
+  it("rejects dispatch when tenantDenylist contains envelope tenantId", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig({ failClosed: true }),
+      tenantDenylist: ["blocked-org"],
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+      tenantId: "blocked-org",
+    });
+
+    expect(result.primaryState.reason).toBe("tenant_denied_by_dispatch_policy");
+    expect(result.routing.reason).toBe("tenant_denied_by_dispatch_policy");
+    expect(result.routing.fallbackLane).toBe("none");
+    expect(result.response.failureClass).toBe("policy_failure");
+  });
+
+  it("rejects dispatch when tenantAllowlist is set and tenantId not listed", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig({ failClosed: true }),
+      tenantAllowlist: ["org-a"],
+    };
+
+    const missing = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+    expect(missing.primaryState.reason).toBe("tenant_not_allowlisted_for_dispatch");
+
+    const wrong = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+      tenantId: "org-b",
+    });
+    expect(wrong.primaryState.reason).toBe("tenant_not_allowlisted_for_dispatch");
+
+    const ok = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+      tenantId: "org-a",
+    });
+    expect(ok.primaryState.status).toBe("pass");
+  });
 });

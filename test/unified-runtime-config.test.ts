@@ -37,6 +37,8 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.defaultFallback).toBe("none");
     expect(config.routerConfig.failClosed).toBe(false);
     expect(config.routerConfig.policyVersion).toBe("v1");
+    expect(config.tenantAllowlist).toEqual([]);
+    expect(config.tenantDenylist).toEqual([]);
   });
 
   it("supports legacy-compatible fallback names for router defaults", () => {
@@ -182,6 +184,25 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
       ),
     );
     expect(config.routerConfig.noFallbackOnFailureClasses).toEqual(["policy_failure", "dispatch_failure"]);
+  });
+
+  it("parses standby region and tenant dispatch lists", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_STANDBY_REGION: "eu-west-backup",
+          UNIFIED_TENANT_ALLOWLIST: "org-a, org-b",
+          UNIFIED_TENANT_DENYLIST: "blocked",
+          UNIFIED_CAPABILITY_ALLOWED_TENANT_IDS: "org-a",
+          UNIFIED_CAPABILITY_DENIED_TENANT_IDS: "blocked",
+        }),
+      ),
+    );
+    expect(config.routerConfig.standbyRegion).toBe("eu-west-backup");
+    expect(config.tenantAllowlist).toEqual(["org-a", "org-b"]);
+    expect(config.tenantDenylist).toEqual(["blocked"]);
+    expect(config.capabilityPolicy.allowedTenantIds).toEqual(["org-a"]);
+    expect(config.capabilityPolicy.deniedTenantIds).toEqual(["blocked"]);
   });
 
   it("parses memory serialize writes and capability execution timeout", () => {

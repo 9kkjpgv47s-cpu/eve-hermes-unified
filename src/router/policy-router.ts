@@ -15,6 +15,8 @@ export type RouterPolicyConfig = {
   noFallbackOnFailureClasses?: FailureClass[];
   /** When set, these chats use Hermes as primary without enabling full cutover staging. */
   hermesPrimaryChatIds?: string[];
+  /** When envelope.regionId matches this label, swap primary/fallback (failover drill). Ignored if fallback is none. */
+  standbyRegion?: string;
   cutoverStage?: RouterCutoverStage;
   canaryChatIds?: string[];
   majorityPercent?: number;
@@ -104,60 +106,87 @@ function defaultRouteForStage(
   };
 }
 
-export function routeMessage(
+function swapLanesForStandby(
+  primary: LaneId,
+  fallback: LaneId | "none",
+): { primaryLane: LaneId; fallbackLane: LaneId | "none" } {
+  if (fallback === "none") {
+    return { primaryLane: primary, fallbackLane: "none" };
+  }
+  return { primaryLane: fallback, fallbackLane: primary };
+}
+
+function applyStandbyRegionSwap(
   envelope: UnifiedMessageEnvelope,
   config: RouterPolicyConfig,
-): RoutingDecision {
+  route: Pick<RoutingDecision, "primaryLane" | "fallbackLane" | "reason">,
+): Pick<RoutingDecision, "primaryLane" | "fallbackLane" | "reason"> {
+  const standby = config.standbyRegion?.trim();
+  const region = envelope.regionId?.trim();
+  if (!standby || !region || standby !== region || route.fallbackLane === "none") {
+    return route;
+  }
+  const swapped = swapLanesForStandby(route.primaryLane, route.fallbackLane);
+  return {
+    ...route,
+    primaryLane: swapped.primaryLane,
+    fallbackLane: swapped.fallbackLane,
+    reason: `${route.reason}:standby_region_swap`,
+  };
+}
+
+function resolveRoutingLanes(
+  envelope: UnifiedMessageEnvelope,
+  config: RouterPolicyConfig,
+): Pick<RoutingDecision, "primaryLane" | "fallbackLane" | "reason"> {
   const text = envelope.text.trim();
   const lower = text.toLowerCase();
 
-  // Explicit lane commands take priority and are message-local.
   if (lower.startsWith("@cursor ")) {
-    return validateRoutingDecision({
+    return applyStandbyRegionSwap(envelope, config, {
       primaryLane: "eve",
       fallbackLane: config.defaultFallback,
       reason: "explicit_cursor_passthrough",
-      policyVersion: config.policyVersion,
-      failClosed: config.failClosed,
     });
   }
   if (lower.startsWith("@hermes ")) {
-    return validateRoutingDecision({
+    return applyStandbyRegionSwap(envelope, config, {
       primaryLane: "hermes",
       fallbackLane: config.defaultFallback,
       reason: "explicit_hermes_passthrough",
-      policyVersion: config.policyVersion,
-      failClosed: config.failClosed,
     });
   }
 
   const hermesPrimaryChats = normalizeChatIds(config.hermesPrimaryChatIds);
   if (hermesPrimaryChats.has(envelope.chatId)) {
-    return validateRoutingDecision({
+    return applyStandbyRegionSwap(envelope, config, {
       primaryLane: "hermes",
       fallbackLane: config.defaultFallback,
       reason: "router_hermes_primary_allowlist",
-      policyVersion: config.policyVersion,
-      failClosed: config.failClosed,
     });
   }
 
-  // Default policy lane ownership can be stage-aware for cutover.
   if (config.cutoverStage) {
     const stagedDefaultRoute = defaultRouteForStage(envelope, config);
-    return validateRoutingDecision({
-      primaryLane: stagedDefaultRoute.primaryLane,
-      fallbackLane: stagedDefaultRoute.fallbackLane,
-      reason: stagedDefaultRoute.reason,
-      policyVersion: config.policyVersion,
-      failClosed: config.failClosed,
-    });
+    return applyStandbyRegionSwap(envelope, config, stagedDefaultRoute);
   }
 
-  return validateRoutingDecision({
+  return applyStandbyRegionSwap(envelope, config, {
     primaryLane: config.defaultPrimary,
     fallbackLane: config.defaultFallback,
     reason: "default_policy_lane",
+  });
+}
+
+export function routeMessage(
+  envelope: UnifiedMessageEnvelope,
+  config: RouterPolicyConfig,
+): RoutingDecision {
+  const lanes = resolveRoutingLanes(envelope, config);
+  return validateRoutingDecision({
+    primaryLane: lanes.primaryLane,
+    fallbackLane: lanes.fallbackLane,
+    reason: lanes.reason,
     policyVersion: config.policyVersion,
     failClosed: config.failClosed,
   });

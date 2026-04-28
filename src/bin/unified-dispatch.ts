@@ -23,6 +23,8 @@ export type UnifiedDispatchCliArgs = {
   text: string;
   chatId: string;
   messageId: string;
+  tenantId: string;
+  regionId: string;
   compactJson: boolean;
   enqueueFailedPrimary: boolean;
   replayQueue: boolean;
@@ -32,6 +34,8 @@ export function parseUnifiedDispatchCliArgs(argv: string[]): UnifiedDispatchCliA
   let text = "";
   let chatId = "0";
   let messageId = "0";
+  let tenantId = "";
+  let regionId = "";
   let compactJson = false;
   let enqueueFailedPrimary = false;
   let replayQueue = false;
@@ -46,6 +50,12 @@ export function parseUnifiedDispatchCliArgs(argv: string[]): UnifiedDispatchCliA
     } else if (arg === "--message-id") {
       messageId = argv[i + 1] ?? "0";
       i += 1;
+    } else if (arg === "--tenant-id") {
+      tenantId = argv[i + 1] ?? "";
+      i += 1;
+    } else if (arg === "--region-id") {
+      regionId = argv[i + 1] ?? "";
+      i += 1;
     } else if (arg === "--compact-json") {
       compactJson = true;
     } else if (arg === "--enqueue-failed-primary") {
@@ -57,7 +67,7 @@ export function parseUnifiedDispatchCliArgs(argv: string[]): UnifiedDispatchCliA
   if (!replayQueue && !text.trim()) {
     throw new Error("Missing required --text argument.");
   }
-  return { text, chatId, messageId, compactJson, enqueueFailedPrimary, replayQueue };
+  return { text, chatId, messageId, tenantId, regionId, compactJson, enqueueFailedPrimary, replayQueue };
 }
 
 function primaryFailedNeedingRecovery(
@@ -78,7 +88,7 @@ async function buildDispatchRuntime(): Promise<{
   config: ReturnType<typeof loadUnifiedRuntimeEnvConfig>;
 }> {
   const config = loadUnifiedRuntimeEnvConfig();
-  const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
+  const baseMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
     { serializeWrites: config.unifiedMemorySerializeWrites },
@@ -93,27 +103,32 @@ async function buildDispatchRuntime(): Promise<{
     chatId: string;
     messageId: string;
     traceId: string;
+    tenantId?: string;
+    regionId?: string;
   }) => {
     const adapter = input.lane === "eve" ? eveAdapter : hermesAdapter;
+    const envelope = {
+      channel: "telegram" as const,
+      chatId: input.chatId,
+      messageId: input.messageId,
+      text: input.text,
+      traceId: input.traceId,
+      receivedAtIso: new Date().toISOString(),
+      ...(input.tenantId?.trim() ? { tenantId: input.tenantId.trim() } : {}),
+      ...(input.regionId?.trim() ? { regionId: input.regionId.trim() } : {}),
+    };
     return adapter.dispatch({
-      envelope: {
-        channel: "telegram",
-        chatId: input.chatId,
-        messageId: input.messageId,
-        text: input.text,
-        traceId: input.traceId,
-        receivedAtIso: new Date().toISOString(),
-      },
+      envelope,
       intentRoute: input.intentRoute,
     });
   };
   registerDefaultCapabilityExecutors(capabilityRegistry, {
     dispatchLane,
-    memoryStore: sharedMemoryStore,
+    memoryStore: baseMemoryStore,
   });
   const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
   const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
-    memoryStore: sharedMemoryStore,
+    memoryStore: baseMemoryStore,
     dispatchLane,
     policy: capabilityPolicy,
     executionTimeoutMs:
@@ -141,6 +156,8 @@ async function buildDispatchRuntime(): Promise<{
     hermesAdapter,
     routerConfig: config.routerConfig,
     capabilityEngine,
+    tenantAllowlist: config.tenantAllowlist,
+    tenantDenylist: config.tenantDenylist,
   };
   return { runtime, config };
 }
@@ -149,7 +166,7 @@ async function main() {
   const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
   await loadDotEnvFile(rootDir);
   const args = parseUnifiedDispatchCliArgs(process.argv.slice(2));
-  const { text, chatId, messageId, compactJson, enqueueFailedPrimary, replayQueue } = args;
+  const { text, chatId, messageId, tenantId, regionId, compactJson, enqueueFailedPrimary, replayQueue } = args;
 
   const { runtime, config } = await buildDispatchRuntime();
   const durabilityQueue = new FileDispatchDurabilityQueue(config.dispatchDurabilityQueuePath);
@@ -166,6 +183,8 @@ async function main() {
     chatId,
     messageId,
     text,
+    ...(tenantId.trim() ? { tenantId: tenantId.trim() } : {}),
+    ...(regionId.trim() ? { regionId: regionId.trim() } : {}),
   });
 
   let durability:

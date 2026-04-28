@@ -17,6 +17,10 @@ export type UnifiedMessageEnvelope = {
   messageId: string;
   receivedAtIso: string;
   text: string;
+  /** Logical tenant for isolation (memory namespace, capability policy). Omit for single-tenant mode. */
+  tenantId?: string;
+  /** Region label for routing hints (e.g. standby failover drills). */
+  regionId?: string;
   metadata?: Record<string, string>;
 };
 

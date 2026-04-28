@@ -55,6 +55,12 @@ export class EveAdapter implements LaneAdapter {
         EVE_TASK_DISPATCH_CHAT_ID: input.envelope.chatId,
         EVE_TASK_DISPATCH_MESSAGE_ID: input.envelope.messageId,
         EVE_TASK_DISPATCH_INTENT_ROUTE: input.intentRoute,
+        ...(input.envelope.tenantId?.trim()
+          ? { EVE_TASK_DISPATCH_TENANT_ID: input.envelope.tenantId.trim() }
+          : {}),
+        ...(input.envelope.regionId?.trim()
+          ? { EVE_TASK_DISPATCH_REGION_ID: input.envelope.regionId.trim() }
+          : {}),
       },
     });
 

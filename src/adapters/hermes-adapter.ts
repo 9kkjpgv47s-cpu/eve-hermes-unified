@@ -55,6 +55,12 @@ export class HermesAdapter implements LaneAdapter {
             HERMES_UNIFIED_CHAT_ID: input.envelope.chatId,
             HERMES_UNIFIED_MESSAGE_ID: input.envelope.messageId,
             HERMES_UNIFIED_INTENT_ROUTE: input.intentRoute,
+            ...(input.envelope.tenantId?.trim()
+              ? { HERMES_UNIFIED_TENANT_ID: input.envelope.tenantId.trim() }
+              : {}),
+            ...(input.envelope.regionId?.trim()
+              ? { HERMES_UNIFIED_REGION_ID: input.envelope.regionId.trim() }
+              : {}),
           },
         },
       );

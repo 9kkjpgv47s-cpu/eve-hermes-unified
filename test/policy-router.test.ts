@@ -9,6 +9,7 @@ const baseConfig = {
   policyVersion: "v1",
   noFallbackOnFailureClasses: [] as FailureClass[],
   hermesPrimaryChatIds: [] as string[],
+  standbyRegion: undefined as string | undefined,
   cutoverStage: "shadow" as const,
   canaryChatIds: [],
   majorityPercent: 50,
@@ -252,5 +253,43 @@ describe("routeMessage", () => {
     );
     expect(decision.primaryLane).toBe("hermes");
     expect(decision.reason).toBe("stage_full_force_hermes");
+  });
+
+  it("swaps primary and fallback when standbyRegion matches envelope.regionId", () => {
+    const env = {
+      traceId: "t11",
+      channel: "telegram" as const,
+      chatId: "1",
+      messageId: "2",
+      receivedAtIso: new Date().toISOString(),
+      text: "hello region",
+      regionId: "eu-west-backup",
+    };
+    const decision = routeMessage(env, {
+      ...baseConfig,
+      standbyRegion: "eu-west-backup",
+    });
+    expect(decision.primaryLane).toBe("hermes");
+    expect(decision.fallbackLane).toBe("eve");
+    expect(decision.reason).toContain("standby_region_swap");
+  });
+
+  it("does not swap lanes when standbyRegion does not match", () => {
+    const env = {
+      traceId: "t12",
+      channel: "telegram" as const,
+      chatId: "1",
+      messageId: "2",
+      receivedAtIso: new Date().toISOString(),
+      text: "hello",
+      regionId: "us-east",
+    };
+    const decision = routeMessage(env, {
+      ...baseConfig,
+      standbyRegion: "eu-west-backup",
+    });
+    expect(decision.primaryLane).toBe("eve");
+    expect(decision.fallbackLane).toBe("hermes");
+    expect(decision.reason).not.toContain("standby_region_swap");
   });
 });

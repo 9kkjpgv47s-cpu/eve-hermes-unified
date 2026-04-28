@@ -18,6 +18,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
   - `gh pr view --json number,title,headRefName,baseRefName,state`
 - **H3 runtime:** memory journal, optional **persist verify** (`UNIFIED_MEMORY_VERIFY_PERSIST`), dispatch audit rotation + `auditSchemaVersion`, capability policy audit (denials + **config snapshots** on fingerprint change), capability execution timeout — see `.env.example` and `docs/CLOUD_AGENT_HANDOFF.md`.
 - **H4:** `docs/LEGACY_PATH_RETIREMENT_MAP.md` + `test/unified-dispatch-entrypoint-guard.test.ts` (lane adapters only in `unified-dispatch.ts`).
+- **H5 (slice):** tenant allowlist/strict gate on dispatch, `TenantScopedMemoryStore` for capability memory when tenant set, `UNIFIED_TENANT_ID` passed to lane subprocesses, CLI `--tenant-id` — see `docs/CLOUD_AGENT_HANDOFF.md` H5 section and `.env.example`.
 - Vitest `globalSetup` creates `./evidence` (gitignored) before tests.
 
 ## Read Order (Do Not Skip)

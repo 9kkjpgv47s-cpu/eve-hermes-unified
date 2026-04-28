@@ -18,7 +18,9 @@ import type {
   CapabilityRegistry,
 } from "../skills/capability-registry.js";
 import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
+import { TenantScopedMemoryStore } from "../memory/tenant-scoped-memory-store.js";
 import type { CapabilityPolicy } from "./capability-policy.js";
+import { resolveEnvelopeTenantId } from "./tenant-scope.js";
 
 export type CapabilityExecutionSelection = UnifiedCapabilityDecision;
 
@@ -181,6 +183,8 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
 
     const parsed = parseExplicitCapabilityText(envelope.text);
     const argsText = parsed?.argsText ?? "";
+    const tenantId = resolveEnvelopeTenantId(envelope);
+    const resolvedTenant = tenantId || undefined;
     const timeoutMs = this.dependencies.executionTimeoutMs ?? 0;
     let execution: CapabilityExecutorPayload;
     if (timeoutMs > 0) {
@@ -195,13 +199,15 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           chatId: envelope.chatId,
           messageId: envelope.messageId,
           traceId: envelope.traceId,
-          memoryStore: this.dependencies.memoryStore,
+          tenantId: resolvedTenant,
+          memoryStore: this.resolveMemoryStore(envelope),
           dispatchLane: async (input) =>
             this.dependencies.dispatchLane({
               ...input,
               chatId: envelope.chatId,
               messageId: envelope.messageId,
               traceId: envelope.traceId,
+              tenantId: input.tenantId ?? resolvedTenant,
             }),
         }),
       );
@@ -240,13 +246,15 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           chatId: envelope.chatId,
           messageId: envelope.messageId,
           traceId: envelope.traceId,
-          memoryStore: this.dependencies.memoryStore,
+          tenantId: resolvedTenant,
+          memoryStore: this.resolveMemoryStore(envelope),
           dispatchLane: async (input) =>
             this.dependencies.dispatchLane({
               ...input,
               chatId: envelope.chatId,
               messageId: envelope.messageId,
               traceId: envelope.traceId,
+              tenantId: input.tenantId ?? resolvedTenant,
             }),
         }),
       );
@@ -270,12 +278,20 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
     return normalized;
   }
 
+  private resolveMemoryStore(envelope: UnifiedMessageEnvelope): UnifiedMemoryStore {
+    const tid = resolveEnvelopeTenantId(envelope);
+    if (!tid) {
+      return this.dependencies.memoryStore;
+    }
+    return new TenantScopedMemoryStore(this.dependencies.memoryStore, tid);
+  }
+
   private async writeExecutionMemory(
     selection: CapabilityExecutionSelection,
     envelope: UnifiedMessageEnvelope,
     result: CapabilityExecutionResult,
   ): Promise<void> {
-    await this.dependencies.memoryStore.set(
+    await this.resolveMemoryStore(envelope).set(
       {
         lane: selection.lane,
         namespace: "capability-execution",

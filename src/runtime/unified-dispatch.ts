@@ -20,12 +20,17 @@ import {
 import type { LaneAdapter } from "../adapters/lane-adapter.js";
 import { routeMessage, type RouterPolicyConfig } from "../router/policy-router.js";
 import type { CapabilityEngine } from "./capability-engine.js";
+import { resolveEnvelopeTenantId } from "./tenant-scope.js";
 
 export type UnifiedRuntime = {
   eveAdapter: LaneAdapter;
   hermesAdapter: LaneAdapter;
   routerConfig: RouterPolicyConfig;
   capabilityEngine?: CapabilityEngine;
+  /** When true, reject requests without a valid tenant when tenant allowlist is configured. */
+  tenantStrict?: boolean;
+  /** Allowed tenant IDs when non-empty (envelope tenantId must match one). */
+  tenantAllowlist?: string[];
 };
 
 export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -108,6 +113,21 @@ function buildResult(
   };
 }
 
+function resolveTenantId(envelope: UnifiedMessageEnvelope): string {
+  return resolveEnvelopeTenantId(envelope);
+}
+
+function tenantAllowed(tenantId: string, allowlist: string[] | undefined): boolean {
+  if (!allowlist || allowlist.length === 0) {
+    return true;
+  }
+  if (!tenantId) {
+    return false;
+  }
+  const set = new Set(allowlist.map((t) => t.trim()).filter(Boolean));
+  return set.has(tenantId);
+}
+
 export async function dispatchUnifiedMessage(
   runtime: UnifiedRuntime,
   input: Omit<UnifiedMessageEnvelope, "traceId" | "receivedAtIso">,
@@ -117,6 +137,55 @@ export async function dispatchUnifiedMessage(
     traceId: `unified-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`,
     receivedAtIso: new Date().toISOString(),
   });
+
+  const tenantId = resolveTenantId(envelope);
+  const allowlist = runtime.tenantAllowlist;
+  if (allowlist && allowlist.length > 0) {
+    if (!tenantAllowed(tenantId, allowlist)) {
+      const reason = tenantId ? "tenant_policy_denied_not_allowlisted" : "tenant_policy_denied_missing_tenant";
+      const failedState = validateDispatchState({
+        status: "failed",
+        reason,
+        runtimeUsed: "unified-dispatch",
+        runId: `tenant-gate-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`,
+        elapsedMs: 0,
+        failureClass: "policy_failure",
+        sourceLane: "eve",
+        sourceChatId: envelope.chatId,
+        sourceMessageId: envelope.messageId,
+        traceId: envelope.traceId,
+      });
+      const routing: RoutingDecision = {
+        primaryLane: "eve",
+        fallbackLane: "none",
+        reason: "tenant_policy_gate",
+        policyVersion: runtime.routerConfig.policyVersion,
+        failClosed: true,
+      };
+      return buildResult(envelope, routing, failedState, failedState);
+    }
+  } else if (runtime.tenantStrict === true && !tenantId) {
+    const failedState = validateDispatchState({
+      status: "failed",
+      reason: "tenant_policy_denied_missing_tenant",
+      runtimeUsed: "unified-dispatch",
+      runId: `tenant-gate-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`,
+      elapsedMs: 0,
+      failureClass: "policy_failure",
+      sourceLane: "eve",
+      sourceChatId: envelope.chatId,
+      sourceMessageId: envelope.messageId,
+      traceId: envelope.traceId,
+    });
+    const routing: RoutingDecision = {
+      primaryLane: "eve",
+      fallbackLane: "none",
+      reason: "tenant_policy_gate",
+      policyVersion: runtime.routerConfig.policyVersion,
+      failClosed: true,
+    };
+    return buildResult(envelope, routing, failedState, failedState);
+  }
 
   if (runtime.capabilityEngine) {
     const capabilityDecision = runtime.capabilityEngine.select(envelope, runtime.routerConfig);

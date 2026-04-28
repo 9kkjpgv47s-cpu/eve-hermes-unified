@@ -58,6 +58,14 @@ Optional production-hardening via environment (see `.env.example`):
 
 - Canonical lane construction for production-style runs is **`src/bin/unified-dispatch.ts`** only; see `docs/LEGACY_PATH_RETIREMENT_MAP.md` and `test/unified-dispatch-entrypoint-guard.test.ts`.
 
+## H5 tenant isolation (optional)
+
+- **`UNIFIED_TENANT_ALLOWLIST`** — comma-separated tenant IDs; when non-empty, only those tenants may dispatch (missing tenant is rejected).
+- **`UNIFIED_TENANT_STRICT=1`** — require a tenant on every request when the allowlist is empty (use with ingress that always sets tenant).
+- **CLI:** `--tenant-id <id>` sets `UnifiedMessageEnvelope.tenantId` for the single-shot dispatch binary.
+- **Lane env:** when an envelope carries a tenant, adapters set **`UNIFIED_TENANT_ID`** for Eve/Hermes subprocesses.
+- **Memory:** capability-engine reads/writes use **`TenantScopedMemoryStore`** (namespace prefix `tenant:<id>:`) when a tenant is present so capability execution records do not collide across tenants on a shared backing file.
+
 ## Cutover and Rollback Commands
 
 Stage:

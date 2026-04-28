@@ -145,6 +145,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.capabilityExecutionTimeoutMs).toBe(30_000);
   });
 
+  it("parses tenant isolation env knobs", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_TENANT_ALLOWLIST: " acme , beta ",
+          UNIFIED_TENANT_STRICT: "1",
+        }),
+      ),
+    );
+    expect(config.tenantAllowlist).toEqual(["acme", "beta"]);
+    expect(config.tenantStrict).toBe(true);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

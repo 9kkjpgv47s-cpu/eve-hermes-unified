@@ -9,7 +9,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3/H4 workstreams advance in code ahead of horizon promotion.
-- Branch: **`cursor/h3-wal-policy-audit-prune-cc15`** — extended with H3 dual-verify + policy snapshot audit + H4 static guard.
+- Branch: **`cursor/h5-tenant-isolation-cc15`** — H5-style optional tenant gate + scoped capability memory + lane `UNIFIED_TENANT_ID` env (on top of H3/H4 durability and legacy-path guard).
 
 ## What Was Just Completed (large chunk)
 
@@ -28,19 +28,25 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 1. **`docs/LEGACY_PATH_RETIREMENT_MAP.md`** — canonical entry vs discouraged paths.
 2. **`test/unified-dispatch-entrypoint-guard.test.ts`** — fails if `new EveAdapter` / `new HermesAdapter` appear outside `src/bin/unified-dispatch.ts`.
 
+### H5 (slice)
+
+1. **Tenant gate** — `UNIFIED_TENANT_ALLOWLIST`, `UNIFIED_TENANT_STRICT`; optional `UnifiedMessageEnvelope.tenantId` / `metadata.tenantId`; CLI `--tenant-id`.
+2. **Memory isolation** — `TenantScopedMemoryStore` for capability-engine reads/writes when tenant present.
+3. **Lane subprocess** — `UNIFIED_TENANT_ID` in Eve/Hermes adapter env when envelope carries tenant.
+
 ## Read Order (Zero-Context Startup)
 
 1. `README.md`
 2. `AGENTS.md`
 3. `AGENT.md`
-4. `docs/CLOUD_AGENT_HANDOFF.md` (H3 + **H4 legacy path** sections)
+4. `docs/CLOUD_AGENT_HANDOFF.md` (H3 + **H4 legacy path** + **H5 tenant** sections)
 5. `docs/LEGACY_PATH_RETIREMENT_MAP.md`
 6. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 7. `docs/HORIZON_STATUS.json`
 
 ## Immediate Next High-Output Targets
 
-1. **Lane subprocess cancellation** or explicit lane-level timeouts aligned with capability budget.
+1. **Lane subprocess cancellation** or explicit lane-level timeouts aligned with capability budget (tenant env is wired; cancellation still open).
 2. **Horizon-neutral** closeout taxonomy cleanup (remaining `h2_*` IDs where safe).
 3. **Schema gate** for new audit line fields in `validate-manifest-schema` if manifests consume dispatch audit JSONL.
 4. Keep `npm run check && npm test && npm run validate:all` green before merge.

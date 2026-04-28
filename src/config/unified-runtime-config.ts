@@ -35,6 +35,10 @@ export type UnifiedRuntimeEnvConfig = {
   capabilityExecutionTimeoutMs: number;
   /** When true with file store, verify on-disk snapshot matches memory after each persist. */
   unifiedMemoryVerifyPersist: boolean;
+  /** When true, reject requests without tenant when allowlist is set, or without tenant when allowlist empty. */
+  tenantStrict: boolean;
+  /** Non-empty list restricts which tenant IDs may run (CSV from env). */
+  tenantAllowlist: string[];
   routerConfig: RouterPolicyConfig;
 };
 
@@ -282,6 +286,13 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     false,
   );
+  const tenantAllowlist = parseCsvList(
+    firstDefined(reader, ["UNIFIED_TENANT_ALLOWLIST", "TENANT_ALLOWLIST"]),
+  );
+  const tenantStrict = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_TENANT_STRICT", "TENANT_STRICT"]),
+    false,
+  );
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -347,6 +358,8 @@ export function loadUnifiedRuntimeEnvConfig(
     capabilityPolicyAuditPath,
     capabilityExecutionTimeoutMs,
     unifiedMemoryVerifyPersist,
+    tenantStrict,
+    tenantAllowlist,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

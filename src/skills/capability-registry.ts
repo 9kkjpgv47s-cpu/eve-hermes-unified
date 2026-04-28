@@ -16,6 +16,8 @@ export type CapabilityExecutionContext = {
   chatId: string;
   messageId: string;
   traceId: string;
+  /** Resolved tenant scope for lane env / isolation (optional). */
+  tenantId?: string;
   dispatchLane: (input: CapabilityLaneDispatchInput) => Promise<DispatchState>;
   memoryStore: UnifiedMemoryStore;
 };
@@ -42,6 +44,8 @@ export type CapabilityLaneDispatchInput = {
   lane: LaneId;
   text: string;
   intentRoute: string;
+  /** Optional tenant scope propagated to lane subprocess env (H5). */
+  tenantId?: string;
 };
 
 export type CapabilityLaneDispatcher = (
@@ -161,6 +165,7 @@ export function registerEveCommandWrappers(
             lane: "eve",
             text: probeText,
             intentRoute: "capability:check_status",
+            tenantId: context.tenantId,
           });
           return {
             consumed: state.status === "pass",
@@ -197,6 +202,7 @@ export function registerEveCommandWrappers(
             lane: "eve",
             text: taskText,
             intentRoute: "capability:eve_dispatch_task",
+            tenantId: context.tenantId,
           });
           return {
             consumed: state.status === "pass",
@@ -236,6 +242,7 @@ export function registerHermesTools(
             lane: "hermes",
             text: summarizeText,
             intentRoute: "capability:summarize_state",
+            tenantId: context.tenantId,
           });
           const recentExecutions = await context.memoryStore.list({
             lane: "hermes",
@@ -278,6 +285,7 @@ export function registerHermesTools(
             lane: "hermes",
             text: taskText,
             intentRoute: "capability:hermes_dispatch_task",
+            tenantId: context.tenantId,
           });
           return {
             consumed: state.status === "pass",

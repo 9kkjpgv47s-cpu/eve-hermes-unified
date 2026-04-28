@@ -25,6 +25,17 @@ export function validateEnvelope(value: UnifiedMessageEnvelope): UnifiedMessageE
   ensure(value.chatId.length > 0, "Envelope chatId is required.");
   ensure(value.messageId.length > 0, "Envelope messageId is required.");
   ensure(value.text.length > 0, "Envelope text is required.");
+  if (value.tenantId !== undefined) {
+    const trimmed = value.tenantId.trim();
+    ensure(trimmed.length > 0, "Envelope tenantId when set must be non-empty.");
+    ensure(trimmed.length <= 128, "Envelope tenantId exceeds maximum length.");
+    ensure(!/[\\/]/.test(trimmed), "Envelope tenantId must not contain path separators.");
+  }
+  const metaTenant = value.metadata?.tenantId?.trim();
+  if (metaTenant && metaTenant.length > 0) {
+    ensure(metaTenant.length <= 128, "metadata.tenantId exceeds maximum length.");
+    ensure(!/[\\/]/.test(metaTenant), "metadata.tenantId must not contain path separators.");
+  }
   return value;
 }
 

@@ -45,9 +45,7 @@ export class EveAdapter implements LaneAdapter {
   async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
     const runId = `unified-eve-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
     const started = Date.now();
-    const commandResult = await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
-      timeoutMs: this.dispatchTimeoutMs,
-      env: {
+    const env: Record<string, string> = {
         EVE_TASK_DISPATCH_RUN_ID: runId,
         EVE_TASK_DISPATCH_RESULT_PATH: this.dispatchStatePath,
         EVE_TASK_DISPATCH_TRACE_ID: input.envelope.traceId,
@@ -55,7 +53,13 @@ export class EveAdapter implements LaneAdapter {
         EVE_TASK_DISPATCH_CHAT_ID: input.envelope.chatId,
         EVE_TASK_DISPATCH_MESSAGE_ID: input.envelope.messageId,
         EVE_TASK_DISPATCH_INTENT_ROUTE: input.intentRoute,
-      },
+      };
+    if (input.envelope.tenantId && input.envelope.tenantId.trim().length > 0) {
+      env.UNIFIED_TENANT_ID = input.envelope.tenantId.trim();
+    }
+    const commandResult = await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
+      timeoutMs: this.dispatchTimeoutMs,
+      env,
     });
 
     let parsed: EveDispatchStateFile | null = null;

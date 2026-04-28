@@ -18,6 +18,8 @@ export type UnifiedMessageEnvelope = {
   receivedAtIso: string;
   text: string;
   metadata?: Record<string, string>;
+  /** Optional tenant scope for memory isolation (see UNIFIED_TENANT_* env). */
+  tenantId?: string;
 };
 
 export type RoutingDecision = {

@@ -46,16 +46,20 @@ export class HermesAdapter implements LaneAdapter {
     const started = Date.now();
     let result;
     try {
-      result = await runCommandWithTimeout(
-        [this.launchCommand, ...this.launchArgs, input.envelope.text],
-        {
-          timeoutMs: this.timeoutMs,
-          env: {
+      const env: Record<string, string> = {
             HERMES_UNIFIED_TRACE_ID: input.envelope.traceId,
             HERMES_UNIFIED_CHAT_ID: input.envelope.chatId,
             HERMES_UNIFIED_MESSAGE_ID: input.envelope.messageId,
             HERMES_UNIFIED_INTENT_ROUTE: input.intentRoute,
-          },
+          };
+      if (input.envelope.tenantId && input.envelope.tenantId.trim().length > 0) {
+        env.UNIFIED_TENANT_ID = input.envelope.tenantId.trim();
+      }
+      result = await runCommandWithTimeout(
+        [this.launchCommand, ...this.launchArgs, input.envelope.text],
+        {
+          timeoutMs: this.timeoutMs,
+          env,
         },
       );
     } catch {

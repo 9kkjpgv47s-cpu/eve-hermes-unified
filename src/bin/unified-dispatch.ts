@@ -3,9 +3,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EveAdapter } from "../adapters/eve-adapter.js";
 import { HermesAdapter } from "../adapters/hermes-adapter.js";
-import { env, loadDotEnvFile } from "../config/env.js";
+import { loadDotEnvFile } from "../config/env.js";
+import { loadUnifiedRuntimeEnvConfig } from "../config/unified-runtime-config.js";
+import { createUnifiedMemoryStoreFromEnv } from "../memory/unified-memory-store.js";
+import { createDefaultUnifiedCapabilityRegistry } from "../skills/capability-registry.js";
+import { UnifiedCapabilityEngine } from "../runtime/capability-engine.js";
+import { registerDefaultCapabilityExecutors } from "../runtime/default-capability-handlers.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
-import type { LaneId } from "../contracts/types.js";
+import { createCapabilityPolicy } from "../runtime/capability-policy.js";
+import { runRuntimePreflight } from "../runtime/preflight.js";
+import { appendDispatchAuditLog } from "../runtime/audit-log.js";
 
 function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
   let text = "";
@@ -30,41 +37,71 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
   return { text, chatId, messageId };
 }
 
-function parseLane(value: string, fallback: LaneId): LaneId {
-  return value === "hermes" ? "hermes" : value === "eve" ? "eve" : fallback;
-}
-
-function parseFallbackLane(value: string): LaneId | "none" {
-  if (value === "none") {
-    return "none";
-  }
-  return parseLane(value, "hermes");
-}
-
 async function main() {
   const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
   await loadDotEnvFile(rootDir);
   const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
+  const config = loadUnifiedRuntimeEnvConfig();
+  const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
+    config.unifiedMemoryStoreKind,
+    config.unifiedMemoryFilePath,
+  );
+  const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
+  const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);
+  const capabilityRegistry = createDefaultUnifiedCapabilityRegistry();
+  const dispatchLane = async (input: {
+    lane: "eve" | "hermes";
+    text: string;
+    intentRoute: string;
+    chatId: string;
+    messageId: string;
+    traceId: string;
+  }) => {
+    const adapter = input.lane === "eve" ? eveAdapter : hermesAdapter;
+    return adapter.dispatch({
+      envelope: {
+        channel: "telegram",
+        chatId: input.chatId,
+        messageId: input.messageId,
+        text: input.text,
+        traceId: input.traceId,
+        receivedAtIso: new Date().toISOString(),
+      },
+      intentRoute: input.intentRoute,
+    });
+  };
+  registerDefaultCapabilityExecutors(capabilityRegistry, {
+    dispatchLane,
+    memoryStore: sharedMemoryStore,
+  });
+  const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
+  const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
+    memoryStore: sharedMemoryStore,
+    dispatchLane,
+    policy: capabilityPolicy,
+  });
 
-  const launchArgs = env("HERMES_LAUNCH_ARGS", "-m hermes gateway")
-    .split(/\s+/)
-    .filter(Boolean);
+  const preflightIssues = await runRuntimePreflight({
+    enabled: config.preflight.enabled,
+    strict: config.preflight.strict,
+    eveDispatchScript: config.eveDispatchScript,
+    eveDispatchResultPath: config.eveDispatchResultPath,
+    hermesLaunchCommand: config.hermesLaunchCommand,
+    unifiedMemoryStoreKind: config.unifiedMemoryStoreKind,
+    unifiedMemoryFilePath: config.unifiedMemoryFilePath,
+    auditEnabled: true,
+    auditLogPath: config.unifiedDispatchAuditLogPath,
+  });
+  if (preflightIssues.length > 0) {
+    const reasons = preflightIssues.join("; ");
+    throw new Error(`Runtime preflight failed: ${reasons}`);
+  }
 
   const runtime = {
-    eveAdapter: new EveAdapter(
-      env("EVE_TASK_DISPATCH_SCRIPT", "/Users/dominiceasterling/openclaw/scripts/eve-task-dispatch.sh"),
-      env("EVE_DISPATCH_RESULT_PATH", "/Users/dominiceasterling/.openclaw/state/eve-task-dispatch-last.json"),
-    ),
-    hermesAdapter: new HermesAdapter(
-      env("HERMES_LAUNCH_COMMAND", "python3"),
-      launchArgs,
-    ),
-    routerConfig: {
-      defaultPrimary: parseLane(env("UNIFIED_ROUTER_DEFAULT_PRIMARY", "eve"), "eve"),
-      defaultFallback: parseFallbackLane(env("UNIFIED_ROUTER_DEFAULT_FALLBACK", "hermes")),
-      failClosed: env("UNIFIED_ROUTER_FAIL_CLOSED", "1") === "1",
-      policyVersion: "v1",
-    },
+    eveAdapter,
+    hermesAdapter,
+    routerConfig: config.routerConfig,
+    capabilityEngine,
   };
 
   const result = await dispatchUnifiedMessage(runtime, {
@@ -73,6 +110,7 @@ async function main() {
     messageId,
     text,
   });
+  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 

@@ -1,0 +1,476 @@
+#!/usr/bin/env node
+import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { spawn } from "node:child_process";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
+
+const REQUIRED_BUNDLE_FILES = [
+  "reports/release-readiness.json",
+  "reports/initial-scope-validation.json",
+  "artifacts/validation-summary.json",
+  "artifacts/regression-eve-primary.json",
+  "artifacts/cutover-readiness.json",
+  "artifacts/failure-injection.txt",
+  "artifacts/soak.jsonl",
+  "artifacts/goal-policy-file-validation.json",
+];
+
+function parseArgs(argv) {
+  const options = {
+    evidenceDir: "",
+    bundleDir: "",
+    bundleManifest: "",
+    validationManifest: "",
+    archive: "",
+    out: "",
+    requireArchive: true,
+    latest: false,
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const value = argv[index + 1];
+    if (arg === "--evidence-dir") {
+      options.evidenceDir = value ?? "";
+      index += 1;
+    } else if (arg === "--bundle-dir") {
+      options.bundleDir = value ?? "";
+      index += 1;
+    } else if (arg === "--bundle-manifest") {
+      options.bundleManifest = value ?? "";
+      index += 1;
+    } else if (arg === "--validation-manifest") {
+      options.validationManifest = value ?? "";
+      index += 1;
+    } else if (arg === "--archive") {
+      options.archive = value ?? "";
+      index += 1;
+    } else if (arg === "--out") {
+      options.out = value ?? "";
+      index += 1;
+    } else if (arg === "--no-require-archive") {
+      options.requireArchive = false;
+    } else if (arg === "--latest") {
+      options.latest = true;
+    }
+  }
+  return options;
+}
+
+function nowStamp() {
+  return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+}
+
+function resolveMaybePath(rawPath) {
+  const normalized = String(rawPath ?? "").trim();
+  if (!normalized) {
+    return "";
+  }
+  return path.resolve(normalized);
+}
+
+async function exists(targetPath) {
+  if (!targetPath) {
+    return false;
+  }
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function isFile(targetPath) {
+  if (!(await exists(targetPath))) {
+    return false;
+  }
+  try {
+    const details = await stat(targetPath);
+    return details.isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function isDirectory(targetPath) {
+  if (!(await exists(targetPath))) {
+    return false;
+  }
+  try {
+    const details = await stat(targetPath);
+    return details.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function newestBundleDirectory(evidenceDir) {
+  const entries = await readdir(evidenceDir, { withFileTypes: true });
+  const directories = entries
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith("merge-readiness-bundle-"))
+    .map((entry) => path.join(evidenceDir, entry.name))
+    .sort();
+  return directories.length > 0 ? directories[directories.length - 1] : "";
+}
+
+async function newestFileInDir(evidenceDir, prefix) {
+  const entries = await readdir(evidenceDir, { withFileTypes: true });
+  const files = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .map((entry) => path.join(evidenceDir, entry.name))
+    .sort();
+  return files.length > 0 ? files[files.length - 1] : "";
+}
+
+async function readJson(targetPath) {
+  const raw = await readFile(targetPath, "utf8");
+  return JSON.parse(raw);
+}
+
+async function listTarEntries(archivePath) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn("tar", ["-tzf", archivePath]);
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", (error) => {
+      reject(error);
+    });
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`tar -tzf failed with code ${String(code)}: ${stderr}`));
+        return;
+      }
+      const entries = stdout
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+      resolve(entries);
+    });
+  });
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  const evidenceDir = resolveMaybePath(options.evidenceDir) || path.resolve(process.cwd(), "evidence");
+  const requestedValidationManifestPath = resolveMaybePath(options.validationManifest);
+  const requestedBundleDir = resolveMaybePath(options.bundleDir);
+  const requestedManifestPath = resolveMaybePath(options.bundleManifest);
+  const requestedLatest = options.latest;
+  const latestBundleAliasDir = path.join(evidenceDir, "merge-readiness-bundle-latest");
+  const latestBundleAliasManifestPath = path.join(
+    latestBundleAliasDir,
+    "merge-readiness-manifest.json",
+  );
+  const latestValidationManifestPath = await newestFileInDir(evidenceDir, "merge-bundle-validation-");
+  const latestBundleDirCandidate = await newestBundleDirectory(evidenceDir);
+  const latestBundleManifestCandidate = latestBundleDirCandidate
+    ? path.join(latestBundleDirCandidate, "merge-readiness-manifest.json")
+    : "";
+  let selectedBundleDir = requestedBundleDir;
+  let selectedManifestPath = requestedManifestPath;
+  let validationManifestResolved = false;
+  let latestAliasResolved = false;
+  let latestAliasFallbackUsed = false;
+  if (!selectedBundleDir && !selectedManifestPath) {
+    if (requestedValidationManifestPath && (await isFile(requestedValidationManifestPath))) {
+      const validationPayload = await readJson(requestedValidationManifestPath);
+      const candidateFromValidation = resolveMaybePath(validationPayload?.files?.bundleManifestPath);
+      if (candidateFromValidation) {
+        selectedManifestPath = candidateFromValidation;
+        selectedBundleDir = path.dirname(candidateFromValidation);
+        validationManifestResolved = true;
+      }
+    } else if (requestedLatest) {
+      const aliasManifestExists = await isFile(latestBundleAliasManifestPath);
+      const aliasDirExists = await isDirectory(latestBundleAliasDir);
+      if (aliasManifestExists || aliasDirExists) {
+        selectedBundleDir = latestBundleAliasDir;
+        selectedManifestPath = latestBundleAliasManifestPath;
+        latestAliasResolved = true;
+      } else if (latestBundleDirCandidate || latestBundleManifestCandidate) {
+        selectedBundleDir = latestBundleDirCandidate;
+        selectedManifestPath = latestBundleManifestCandidate;
+        latestAliasFallbackUsed = true;
+      }
+    }
+  }
+  if (!selectedBundleDir && !selectedManifestPath && latestValidationManifestPath) {
+    const latestValidationPayload = await readJson(latestValidationManifestPath);
+    const candidateFromValidation = resolveMaybePath(latestValidationPayload?.files?.bundleManifestPath);
+    if (candidateFromValidation) {
+      selectedManifestPath = candidateFromValidation;
+      selectedBundleDir = path.dirname(candidateFromValidation);
+      validationManifestResolved = true;
+    }
+  }
+  if (!selectedBundleDir && !selectedManifestPath) {
+    selectedBundleDir = await newestBundleDirectory(evidenceDir);
+  }
+  if (!selectedManifestPath) {
+    selectedManifestPath = selectedBundleDir
+      ? path.join(selectedBundleDir, "merge-readiness-manifest.json")
+      : "";
+  }
+  if (!selectedBundleDir && selectedManifestPath) {
+    selectedBundleDir = path.dirname(selectedManifestPath);
+  }
+  const outPath =
+    resolveMaybePath(options.out) || path.join(evidenceDir, `bundle-verification-${nowStamp()}.json`);
+
+  const failures = [];
+  const checks = {
+    manifestSchemaValid: false,
+    bundleManifestPass: false,
+    latestRequested: requestedLatest,
+    validationManifestResolved,
+    latestAliasResolved,
+    latestAliasFallbackUsed,
+    latestRequestedFallbackToTimestamp: requestedLatest && latestAliasFallbackUsed,
+    releaseReadinessSchemaValid: false,
+    releaseReadinessPass: false,
+    releaseGoalPolicyValidationReported: false,
+    releaseGoalPolicyValidationPassed: false,
+    initialScopePass: false,
+    initialScopeGoalPolicyValidationReported: false,
+    initialScopeGoalPolicyValidationPassed: false,
+    requiredBundleFilesMissing: [],
+    copiedArtifactsMissing: [],
+    archiveChecked: false,
+    archiveMissingEntries: [],
+  };
+
+  if (!(await isDirectory(selectedBundleDir))) {
+    failures.push("missing_bundle_dir");
+  }
+  if (!(await isFile(selectedManifestPath))) {
+    failures.push("missing_bundle_manifest");
+  }
+
+  let bundleManifest = null;
+  if (
+    requestedLatest &&
+    selectedBundleDir === latestBundleAliasDir &&
+    selectedManifestPath === latestBundleAliasManifestPath
+  ) {
+    checks.latestAliasResolved = true;
+    checks.latestAliasFallbackUsed = false;
+  }
+  if (await isFile(selectedManifestPath)) {
+    bundleManifest = await readJson(selectedManifestPath);
+    const schema = validateManifestSchema("merge-bundle", bundleManifest);
+    checks.manifestSchemaValid = schema.valid;
+    if (!schema.valid) {
+      failures.push(...schema.errors.map((error) => `bundle_manifest_schema_invalid:${error}`));
+    }
+    checks.bundleManifestPass = Boolean(bundleManifest?.pass);
+    if (!bundleManifest?.pass) {
+      failures.push("bundle_manifest_not_passed");
+    }
+  }
+
+  if (await isDirectory(selectedBundleDir)) {
+    for (const requiredRelative of REQUIRED_BUNDLE_FILES) {
+      const resolved = path.join(selectedBundleDir, requiredRelative);
+      if (!(await isFile(resolved))) {
+        checks.requiredBundleFilesMissing.push(requiredRelative);
+      }
+    }
+    for (const copiedArtifact of Array.isArray(bundleManifest?.copiedArtifacts)
+      ? bundleManifest.copiedArtifacts
+      : []) {
+      const destinationPath = resolveMaybePath(copiedArtifact?.destination);
+      const manifestBundleDir = resolveMaybePath(bundleManifest?.bundleDir);
+      const relativeDestination =
+        manifestBundleDir && destinationPath
+          ? path.relative(manifestBundleDir, destinationPath)
+          : "";
+      const isRelativeInsideBundle =
+        relativeDestination &&
+        relativeDestination !== "." &&
+        !relativeDestination.startsWith("..") &&
+        !path.isAbsolute(relativeDestination);
+      const projectedDestination = isRelativeInsideBundle
+        ? path.join(selectedBundleDir, relativeDestination)
+        : "";
+      const destinationExists =
+        copiedArtifact?.kind === "directory"
+          ? await isDirectory(projectedDestination)
+          : await isFile(projectedDestination);
+      if (!destinationExists) {
+        checks.copiedArtifactsMissing.push(
+          String(isRelativeInsideBundle ? projectedDestination : copiedArtifact?.destination ?? ""),
+        );
+      }
+    }
+  }
+  if (checks.requiredBundleFilesMissing.length > 0) {
+    failures.push(`required_bundle_files_missing:${checks.requiredBundleFilesMissing.join(",")}`);
+  }
+  if (checks.copiedArtifactsMissing.length > 0) {
+    failures.push(`copied_artifacts_missing:${checks.copiedArtifactsMissing.join(",")}`);
+  }
+
+  const bundledReleaseReadinessPath = selectedBundleDir
+    ? path.join(selectedBundleDir, "reports/release-readiness.json")
+    : "";
+  if (await isFile(bundledReleaseReadinessPath)) {
+    const releasePayload = await readJson(bundledReleaseReadinessPath);
+    const releaseSchema = validateManifestSchema("release-readiness", releasePayload);
+    checks.releaseReadinessSchemaValid = releaseSchema.valid;
+    if (!releaseSchema.valid) {
+      failures.push(...releaseSchema.errors.map((error) => `release_manifest_schema_invalid:${error}`));
+    }
+    checks.releaseReadinessPass = Boolean(releasePayload?.pass);
+    if (!releasePayload?.pass) {
+      failures.push("release_manifest_not_passed");
+    }
+    const releaseGoalPolicyValue = releasePayload?.checks?.goalPolicyFileValidationPassed;
+    checks.releaseGoalPolicyValidationReported = typeof releaseGoalPolicyValue === "boolean";
+    checks.releaseGoalPolicyValidationPassed = releaseGoalPolicyValue === true;
+    if (!checks.releaseGoalPolicyValidationReported) {
+      failures.push("release_manifest_goal_policy_validation_not_reported");
+    } else if (!checks.releaseGoalPolicyValidationPassed) {
+      failures.push("release_manifest_goal_policy_validation_not_passed");
+    }
+    const releaseGoalPolicySourceConsistencyCandidates = [
+      releasePayload?.checks?.goalPolicySourceConsistencyPassed,
+      releasePayload?.checks?.goalPolicySourceConsistencyPass,
+    ];
+    const releaseGoalPolicySourceConsistencyValue = releaseGoalPolicySourceConsistencyCandidates.find(
+      (candidate) => typeof candidate === "boolean",
+    );
+    checks.releaseGoalPolicySourceConsistencyReported =
+      typeof releaseGoalPolicySourceConsistencyValue === "boolean";
+    checks.releaseGoalPolicySourceConsistencyPassed =
+      releaseGoalPolicySourceConsistencyValue === true;
+    if (!checks.releaseGoalPolicySourceConsistencyReported) {
+      failures.push("release_manifest_goal_policy_source_consistency_not_reported");
+    } else if (!checks.releaseGoalPolicySourceConsistencyPassed) {
+      failures.push("release_manifest_goal_policy_source_consistency_not_passed");
+    }
+  } else {
+    failures.push("missing_bundled_release_manifest");
+  }
+
+  const bundledInitialScopePath = selectedBundleDir
+    ? path.join(selectedBundleDir, "reports/initial-scope-validation.json")
+    : "";
+  if (await isFile(bundledInitialScopePath)) {
+    const initialScopePayload = await readJson(bundledInitialScopePath);
+    checks.initialScopePass = Boolean(initialScopePayload?.pass);
+    if (!initialScopePayload?.pass) {
+      failures.push("initial_scope_manifest_not_passed");
+    }
+    const initialScopeGoalPolicyCandidates = [
+      initialScopePayload?.releaseReadinessGoalPolicyValidationPass,
+      initialScopePayload?.checks?.releaseReadinessGoalPolicyValidationPassed,
+      initialScopePayload?.checks?.releaseReadinessGoalPolicyFileValidationPassed,
+    ];
+    const reportedInitialScopeValue = initialScopeGoalPolicyCandidates.find(
+      (candidate) => typeof candidate === "boolean",
+    );
+    checks.initialScopeGoalPolicyValidationReported = typeof reportedInitialScopeValue === "boolean";
+    checks.initialScopeGoalPolicyValidationPassed = reportedInitialScopeValue === true;
+    if (!checks.initialScopeGoalPolicyValidationReported) {
+      failures.push("initial_scope_manifest_goal_policy_validation_not_reported");
+    } else if (!checks.initialScopeGoalPolicyValidationPassed) {
+      failures.push("initial_scope_manifest_goal_policy_validation_not_passed");
+    }
+    const initialScopeGoalPolicySourceConsistencyCandidates = [
+      initialScopePayload?.releaseReadinessGoalPolicySourceConsistencyPass,
+      initialScopePayload?.checks?.releaseReadinessGoalPolicySourceConsistencyPassed,
+      initialScopePayload?.checks?.releaseReadinessGoalPolicySourceConsistencyPass,
+    ];
+    const reportedInitialScopeGoalPolicySourceConsistencyValue =
+      initialScopeGoalPolicySourceConsistencyCandidates.find(
+        (candidate) => typeof candidate === "boolean",
+      );
+    checks.initialScopeGoalPolicySourceConsistencyReported =
+      typeof reportedInitialScopeGoalPolicySourceConsistencyValue === "boolean";
+    checks.initialScopeGoalPolicySourceConsistencyPassed =
+      reportedInitialScopeGoalPolicySourceConsistencyValue === true;
+    if (!checks.initialScopeGoalPolicySourceConsistencyReported) {
+      failures.push("initial_scope_manifest_goal_policy_source_consistency_not_reported");
+    } else if (!checks.initialScopeGoalPolicySourceConsistencyPassed) {
+      failures.push("initial_scope_manifest_goal_policy_source_consistency_not_passed");
+    }
+  } else {
+    failures.push("missing_bundled_initial_scope_manifest");
+  }
+
+  const explicitArchivePath = resolveMaybePath(options.archive);
+  const manifestArchivePath = resolveMaybePath(bundleManifest?.archivePath);
+  const derivedArchivePath = selectedBundleDir ? `${selectedBundleDir}.tar.gz` : "";
+  let selectedArchivePath = explicitArchivePath;
+  if (!selectedArchivePath) {
+    if (requestedLatest && (await isFile(derivedArchivePath))) {
+      selectedArchivePath = derivedArchivePath;
+    } else if (await isFile(manifestArchivePath)) {
+      selectedArchivePath = manifestArchivePath;
+    } else if (await isFile(derivedArchivePath)) {
+      selectedArchivePath = derivedArchivePath;
+    } else {
+      selectedArchivePath = manifestArchivePath || derivedArchivePath;
+    }
+  }
+  if (options.requireArchive) {
+    checks.archiveChecked = true;
+    if (!(await isFile(selectedArchivePath))) {
+      failures.push("missing_bundle_archive");
+    } else {
+      const archiveEntries = await listTarEntries(selectedArchivePath);
+      const archiveRoots = Array.from(
+        new Set([
+          path.basename(selectedBundleDir),
+          path.basename(resolveMaybePath(bundleManifest?.bundleDir)),
+        ].filter((value) => value.length > 0)),
+      );
+      const requiredArchiveEntries = REQUIRED_BUNDLE_FILES.map((relativePath) =>
+        archiveRoots.map((root) => `${root}/${relativePath}`),
+      );
+      for (const requiredEntry of requiredArchiveEntries) {
+        const anyRootMatches = requiredEntry.some((candidate) => archiveEntries.includes(candidate));
+        if (!anyRootMatches) {
+          checks.archiveMissingEntries.push(requiredEntry[0]);
+        }
+      }
+      if (checks.archiveMissingEntries.length > 0) {
+        failures.push(`archive_missing_entries:${checks.archiveMissingEntries.join(",")}`);
+      }
+    }
+  }
+
+  const payload = {
+    generatedAtIso: new Date().toISOString(),
+    pass: failures.length === 0,
+    files: {
+      outPath,
+      evidenceDir,
+      bundleDir: selectedBundleDir || null,
+      bundleManifestPath: selectedManifestPath || null,
+      bundleArchivePath: selectedArchivePath || null,
+      validationManifestPath: requestedValidationManifestPath || latestValidationManifestPath || null,
+    },
+    checks,
+    failures,
+  };
+
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await writeFile(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  if (!payload.pass) {
+    process.stderr.write(`Merge bundle verification failed:\n- ${failures.join("\n- ")}\n`);
+    process.exitCode = 2;
+  }
+}
+
+main().catch((error) => {
+  process.stderr.write(`${String(error)}\n`);
+  process.exitCode = 1;
+});

@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT_DIR="${UNIFIED_EVIDENCE_DIR:-$ROOT_DIR/evidence}"
+mkdir -p "$OUT_DIR"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+
+if [[ "${UNIFIED_MERGE_BUNDLE_RUN_RELEASE_READINESS:-0}" == "1" ]]; then
+  npm --prefix "$ROOT_DIR" run validate:release-readiness
+fi
+
+if [[ "${UNIFIED_MERGE_BUNDLE_RUN_INITIAL_SCOPE:-0}" == "1" ]]; then
+  npm --prefix "$ROOT_DIR" run validate:initial-scope
+fi
+
+newest_matching_file() {
+  local pattern="$1"
+  shopt -s nullglob
+  local matches=($pattern)
+  shopt -u nullglob
+  if [[ ${#matches[@]} -eq 0 ]]; then
+    printf '%s' ""
+    return 0
+  fi
+  printf '%s' "${matches[${#matches[@]}-1]}"
+}
+
+RELEASE_READINESS_PATH="${UNIFIED_RELEASE_READINESS_PATH:-}"
+if [[ -z "$RELEASE_READINESS_PATH" ]]; then
+  RELEASE_READINESS_PATH="$(newest_matching_file "$OUT_DIR/release-readiness-*.json")"
+fi
+
+INITIAL_SCOPE_PATH="${UNIFIED_INITIAL_SCOPE_REPORT_PATH:-}"
+if [[ -z "$INITIAL_SCOPE_PATH" ]]; then
+  INITIAL_SCOPE_PATH="$(newest_matching_file "$OUT_DIR/initial-scope-validation-*.json")"
+fi
+
+BUNDLE_DIR="${UNIFIED_MERGE_BUNDLE_DIR:-$OUT_DIR/merge-readiness-bundle-$STAMP}"
+ARCHIVE_PATH="${UNIFIED_MERGE_BUNDLE_ARCHIVE_PATH:-$OUT_DIR/merge-readiness-bundle-$STAMP.tar.gz}"
+BUNDLE_MANIFEST_PATH="${UNIFIED_MERGE_BUNDLE_MANIFEST_PATH:-$BUNDLE_DIR/merge-readiness-manifest.json}"
+VALIDATION_MANIFEST_PATH="${UNIFIED_MERGE_BUNDLE_VALIDATION_MANIFEST_PATH:-$OUT_DIR/merge-bundle-validation-$STAMP.json}"
+
+build_exit_code=0
+if ! node "$ROOT_DIR/scripts/build-merge-readiness-bundle.mjs" \
+  --evidence-dir "$OUT_DIR" \
+  --release-readiness "$RELEASE_READINESS_PATH" \
+  --initial-scope "$INITIAL_SCOPE_PATH" \
+  --bundle-dir "$BUNDLE_DIR" \
+  --archive-path "$ARCHIVE_PATH" \
+  --manifest-out "$BUNDLE_MANIFEST_PATH"; then
+  build_exit_code=$?
+fi
+
+node - "$VALIDATION_MANIFEST_PATH" "$BUNDLE_MANIFEST_PATH" "$build_exit_code" "$RELEASE_READINESS_PATH" "$INITIAL_SCOPE_PATH" "$ARCHIVE_PATH" <<'NODE'
+const fs = require("node:fs");
+const path = require("node:path");
+
+const validationManifestPath = process.argv[2];
+const bundleManifestPath = process.argv[3];
+const buildExitCode = Number(process.argv[4] || "0");
+const releaseReadinessPath = process.argv[5];
+const initialScopePath = process.argv[6];
+const archivePath = process.argv[7];
+const allowMissingGoalPolicyValidation =
+  String(process.env.UNIFIED_MERGE_BUNDLE_ALLOW_MISSING_GOAL_POLICY_VALIDATION_CHECK || "0") === "1";
+
+let bundleManifest = null;
+if (bundleManifestPath && fs.existsSync(bundleManifestPath)) {
+  bundleManifest = JSON.parse(fs.readFileSync(bundleManifestPath, "utf8"));
+}
+let releaseReadiness = null;
+if (releaseReadinessPath && fs.existsSync(releaseReadinessPath)) {
+  releaseReadiness = JSON.parse(fs.readFileSync(releaseReadinessPath, "utf8"));
+}
+let initialScope = null;
+if (initialScopePath && fs.existsSync(initialScopePath)) {
+  initialScope = JSON.parse(fs.readFileSync(initialScopePath, "utf8"));
+}
+
+function resolveReleaseGoalPolicyValidationPass(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    checks.goalPolicyFileValidationPassed,
+    checks.goalPolicyValidationPassed,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
+function resolveReleaseGoalPolicySourceConsistencyPass(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    checks.goalPolicySourceConsistencyPassed,
+    checks.goalPolicySourceConsistencyPass,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
+function resolveInitialScopeGoalPolicyValidationPass(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    payload.releaseReadinessGoalPolicyValidationPass,
+    checks.releaseReadinessGoalPolicyValidationPassed,
+    checks.releaseReadinessGoalPolicyFileValidationPassed,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
+function resolveInitialScopeGoalPolicySourceConsistencyPass(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    payload.releaseReadinessGoalPolicySourceConsistencyPass,
+    checks.releaseReadinessGoalPolicySourceConsistencyPassed,
+    checks.releaseReadinessGoalPolicySourceConsistencyPass,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
+const releaseGoalPolicyValidation = resolveReleaseGoalPolicyValidationPass(releaseReadiness);
+const releaseGoalPolicySourceConsistency =
+  resolveReleaseGoalPolicySourceConsistencyPass(releaseReadiness);
+const initialScopeGoalPolicyValidation = resolveInitialScopeGoalPolicyValidationPass(initialScope);
+const initialScopeGoalPolicySourceConsistency =
+  resolveInitialScopeGoalPolicySourceConsistencyPass(initialScope);
+
+const failures = [];
+if (buildExitCode !== 0) {
+  failures.push("bundle_build_failed");
+}
+if (!releaseReadinessPath) {
+  failures.push("missing_release_readiness_report");
+}
+if (!initialScopePath) {
+  failures.push("missing_initial_scope_report");
+}
+if (!bundleManifest) {
+  failures.push("missing_bundle_manifest");
+}
+if (bundleManifest && bundleManifest.pass !== true) {
+  failures.push("bundle_manifest_failed");
+}
+if (!allowMissingGoalPolicyValidation && !releaseGoalPolicyValidation.reported) {
+  failures.push("missing_release_goal_policy_validation_check");
+}
+if (releaseGoalPolicyValidation.reported && !releaseGoalPolicyValidation.pass) {
+  failures.push("release_goal_policy_validation_not_passed");
+}
+if (!allowMissingGoalPolicyValidation && !releaseGoalPolicySourceConsistency.reported) {
+  failures.push("missing_release_goal_policy_source_consistency_check");
+}
+if (releaseGoalPolicySourceConsistency.reported && !releaseGoalPolicySourceConsistency.pass) {
+  failures.push("release_goal_policy_source_consistency_not_passed");
+}
+if (!allowMissingGoalPolicyValidation && !initialScopeGoalPolicyValidation.reported) {
+  failures.push("missing_initial_scope_goal_policy_validation_check");
+}
+if (initialScopeGoalPolicyValidation.reported && !initialScopeGoalPolicyValidation.pass) {
+  failures.push("initial_scope_goal_policy_validation_not_passed");
+}
+if (!allowMissingGoalPolicyValidation && !initialScopeGoalPolicySourceConsistency.reported) {
+  failures.push("missing_initial_scope_goal_policy_source_consistency_check");
+}
+if (initialScopeGoalPolicySourceConsistency.reported && !initialScopeGoalPolicySourceConsistency.pass) {
+  failures.push("initial_scope_goal_policy_source_consistency_not_passed");
+}
+
+const payload = {
+  generatedAtIso: new Date().toISOString(),
+  pass: failures.length === 0,
+  files: {
+    validationManifestPath,
+    bundleManifestPath: bundleManifestPath || null,
+    releaseReadinessPath: releaseReadinessPath || null,
+    initialScopePath: initialScopePath || null,
+    bundleArchivePath: archivePath || null,
+  },
+  checks: {
+    buildExitCode,
+    bundleManifestPresent: Boolean(bundleManifest),
+    bundleManifestPass: Boolean(bundleManifest?.pass),
+    bundleFailures: Array.isArray(bundleManifest?.failures) ? bundleManifest.failures : [],
+    allowMissingGoalPolicyValidation,
+    releaseGoalPolicyValidationReported: releaseGoalPolicyValidation.reported,
+    releaseGoalPolicyValidationPassed: releaseGoalPolicyValidation.pass,
+    releaseGoalPolicySourceConsistencyReported: releaseGoalPolicySourceConsistency.reported,
+    releaseGoalPolicySourceConsistencyPassed: releaseGoalPolicySourceConsistency.pass,
+    initialScopeGoalPolicyValidationReported: initialScopeGoalPolicyValidation.reported,
+    initialScopeGoalPolicyValidationPassed: initialScopeGoalPolicyValidation.pass,
+    initialScopeGoalPolicySourceConsistencyReported: initialScopeGoalPolicySourceConsistency.reported,
+    initialScopeGoalPolicySourceConsistencyPassed: initialScopeGoalPolicySourceConsistency.pass,
+  },
+  failures,
+};
+
+fs.mkdirSync(path.dirname(validationManifestPath), { recursive: true });
+fs.writeFileSync(validationManifestPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+NODE
+
+echo "Wrote $VALIDATION_MANIFEST_PATH"
+exit "$build_exit_code"

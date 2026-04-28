@@ -194,6 +194,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.tenantAllowlist).toEqual(["acme", "beta"]);
   });
 
+  it("parses tenant memory isolation flag", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_TENANT_MEMORY_ISOLATION: "1",
+        }),
+      ),
+    );
+    expect(config.tenantMemoryIsolation).toBe(true);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

@@ -182,14 +182,12 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           chatId: envelope.chatId,
           messageId: envelope.messageId,
           traceId: envelope.traceId,
+          envelope,
           signal: abortLaneOnTimeout ? runAbort.signal : undefined,
           memoryStore,
           dispatchLane: async (input) =>
             this.dependencies.dispatchLane({
               ...input,
-              chatId: envelope.chatId,
-              messageId: envelope.messageId,
-              traceId: envelope.traceId,
               signal: abortLaneOnTimeout ? (input.signal ?? runAbort.signal) : input.signal,
             }),
         }),
@@ -236,13 +234,12 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           chatId: envelope.chatId,
           messageId: envelope.messageId,
           traceId: envelope.traceId,
+          envelope,
           memoryStore,
           dispatchLane: async (input) =>
             this.dependencies.dispatchLane({
               ...input,
-              chatId: envelope.chatId,
-              messageId: envelope.messageId,
-              traceId: envelope.traceId,
+              signal: input.signal,
             }),
         }),
       );

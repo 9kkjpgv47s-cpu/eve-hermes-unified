@@ -4,6 +4,7 @@ import { runCommandWithTimeout } from "../process/exec.js";
 import type { DispatchState } from "../contracts/types.js";
 import { validateDispatchState } from "../contracts/validate.js";
 import type { LaneAdapter, LaneDispatchInput } from "./lane-adapter.js";
+import { resolveEnvelopeTenantId } from "../runtime/tenant-scope.js";
 
 type EveDispatchStateFile = {
   status?: string;
@@ -45,6 +46,7 @@ export class EveAdapter implements LaneAdapter {
   async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
     const runId = `unified-eve-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
     const started = Date.now();
+    const tenantId = resolveEnvelopeTenantId(input.envelope);
     const commandResult = await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
       timeoutMs: this.dispatchTimeoutMs,
       env: {
@@ -55,6 +57,7 @@ export class EveAdapter implements LaneAdapter {
         EVE_TASK_DISPATCH_CHAT_ID: input.envelope.chatId,
         EVE_TASK_DISPATCH_MESSAGE_ID: input.envelope.messageId,
         EVE_TASK_DISPATCH_INTENT_ROUTE: input.intentRoute,
+        ...(tenantId ? { EVE_TASK_DISPATCH_TENANT_ID: tenantId } : {}),
       },
       signal: input.signal,
     });

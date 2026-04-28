@@ -3,6 +3,7 @@ import { runCommandWithTimeout } from "../process/exec.js";
 import type { DispatchState } from "../contracts/types.js";
 import { validateDispatchState } from "../contracts/validate.js";
 import type { LaneAdapter, LaneDispatchInput } from "./lane-adapter.js";
+import { resolveEnvelopeTenantId } from "../runtime/tenant-scope.js";
 
 function classifyHermesFailure(reason: string): DispatchState["failureClass"] {
   const lower = reason.toLowerCase();
@@ -47,6 +48,7 @@ export class HermesAdapter implements LaneAdapter {
   async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
     const runId = `unified-hermes-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
     const started = Date.now();
+    const tenantId = resolveEnvelopeTenantId(input.envelope);
     let result;
     try {
       result = await runCommandWithTimeout(
@@ -58,6 +60,7 @@ export class HermesAdapter implements LaneAdapter {
             HERMES_UNIFIED_CHAT_ID: input.envelope.chatId,
             HERMES_UNIFIED_MESSAGE_ID: input.envelope.messageId,
             HERMES_UNIFIED_INTENT_ROUTE: input.intentRoute,
+            ...(tenantId ? { HERMES_UNIFIED_TENANT_ID: tenantId } : {}),
           },
           signal: input.signal,
         },

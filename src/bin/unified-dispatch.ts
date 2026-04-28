@@ -5,6 +5,7 @@ import { EveAdapter } from "../adapters/eve-adapter.js";
 import { HermesAdapter } from "../adapters/hermes-adapter.js";
 import { loadDotEnvFile } from "../config/env.js";
 import { loadUnifiedRuntimeEnvConfig } from "../config/unified-runtime-config.js";
+import type { UnifiedMessageEnvelope } from "../contracts/types.js";
 import { createUnifiedMemoryStoreFromEnv } from "../memory/unified-memory-store.js";
 import { createDefaultUnifiedCapabilityRegistry } from "../skills/capability-registry.js";
 import { UnifiedCapabilityEngine } from "../runtime/capability-engine.js";
@@ -73,20 +74,14 @@ async function main() {
     lane: "eve" | "hermes";
     text: string;
     intentRoute: string;
-    chatId: string;
-    messageId: string;
-    traceId: string;
+    envelope: UnifiedMessageEnvelope;
     signal?: AbortSignal;
   }) => {
     const adapter = input.lane === "eve" ? eveAdapter : hermesAdapter;
     return adapter.dispatch({
       envelope: {
-        channel: "telegram",
-        chatId: input.chatId,
-        messageId: input.messageId,
+        ...input.envelope,
         text: input.text,
-        traceId: input.traceId,
-        receivedAtIso: new Date().toISOString(),
       },
       intentRoute: input.intentRoute,
       signal: input.signal,
@@ -130,6 +125,7 @@ async function main() {
     memoryStore: sharedMemoryStore,
     tenantStrict: config.tenantStrict,
     tenantAllowlist: config.tenantAllowlist,
+    tenantMemoryIsolation: config.tenantMemoryIsolation,
   };
 
   const result = await dispatchUnifiedMessage(runtime, {

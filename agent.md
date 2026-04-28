@@ -9,7 +9,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 durability advances in code ahead of promotion.
-- Branch: **`cursor/h3-wal-journal-closeout-compat-cc15`** (extend with new commit) — file memory **WAL**, optional **persist verify** / **journal replay verify**, dispatch audit **`auditSchemaVersion`**, **`validate-manifest-schema`** gate for **`unified-dispatch-audit-jsonl`**, closeout **h2_* compat aliases**.
+- Branch: **`cursor/h5-tenant-runtime-cc15`** (extend with new commit) — tenant gates, **`UNIFIED_TENANT_MEMORY_ISOLATION`**, capability envelope→lane propagation, adapter tenant env vars.
 
 ## What Was Just Completed (large chunk)
 
@@ -37,7 +37,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Immediate Next High-Output Targets
 
 1. **Horizon-neutral failure taxonomy** — `run-h2-closeout.mjs` appends **`h2_closeout_gate_failed`** for any closeout source horizon **H2+** (aligned with `promote-horizon.mjs` closeout-run gate aliases).
-2. **Tenant isolation** — `UNIFIED_TENANT_STRICT`, **`UNIFIED_TENANT_ALLOWLIST`**, envelope `tenantId` / `metadata.tenantId`, scoped capability memory via `TenantScopedMemoryStore`; extend to full dispatch memory if product requires it.
+2. **Tenant isolation** — `UNIFIED_TENANT_STRICT`, **`UNIFIED_TENANT_ALLOWLIST`**, **`UNIFIED_TENANT_MEMORY_ISOLATION`**, envelope `tenantId` / `metadata.tenantId`, scoped capability memory; lane subprocess env includes **`EVE_TASK_DISPATCH_TENANT_ID`** / **`HERMES_UNIFIED_TENANT_ID`** when tenant is set.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

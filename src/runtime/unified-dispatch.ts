@@ -38,6 +38,11 @@ export type UnifiedRuntime = {
   tenantStrict?: boolean;
   /** When non-empty, reject if resolved tenant is not in this set (normalized). */
   tenantAllowlist?: string[];
+  /**
+   * When true with memoryStore set, require a valid tenant and scope capability memory
+   * (no shared-namespace capability reads/writes without tenant prefix).
+   */
+  tenantMemoryIsolation?: boolean;
 };
 
 export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -190,6 +195,19 @@ export async function dispatchUnifiedMessage(
     return failClosedTenantState(
       envelope,
       "tenant_id_not_allowed",
+      runtime.routerConfig.defaultPrimary,
+      policyVersion,
+    );
+  }
+
+  if (
+    runtime.tenantMemoryIsolation === true &&
+    runtime.memoryStore &&
+    !normalizedTenant
+  ) {
+    return failClosedTenantState(
+      envelope,
+      "tenant_id_required_for_memory_isolation",
       runtime.routerConfig.defaultPrimary,
       policyVersion,
     );

@@ -1,4 +1,5 @@
-import type { DispatchState } from "../contracts/types.js";
+import type { DispatchState, UnifiedMessageEnvelope } from "../contracts/types.js";
+import { validateEnvelope } from "../contracts/validate.js";
 import type {
   CapabilityRegistry,
   CapabilityRegistrationDeps,
@@ -37,18 +38,14 @@ function buildLaneDispatcher(deps: CapabilityRegistrationDeps) {
     lane: "eve" | "hermes",
     text: string,
     intentRoute: string,
-    chatId: string,
-    messageId: string,
-    traceId: string,
+    envelope: UnifiedMessageEnvelope,
     signal?: AbortSignal,
   ): Promise<DispatchState> => {
     return deps.dispatchLane({
       lane,
       text,
       intentRoute,
-      chatId,
-      messageId,
-      traceId,
+      envelope: validateEnvelope({ ...envelope, text }),
       signal,
     });
   };
@@ -73,9 +70,7 @@ export function registerDefaultCapabilityExecutors(
         "eve",
         probe,
         "capability:check_status",
-        context.chatId,
-        context.messageId,
-        context.traceId,
+        context.envelope,
         context.signal,
       );
       return {
@@ -104,9 +99,7 @@ export function registerDefaultCapabilityExecutors(
         "eve",
         task,
         "capability:eve_dispatch_task",
-        context.chatId,
-        context.messageId,
-        context.traceId,
+        context.envelope,
         context.signal,
       );
       return {
@@ -132,9 +125,7 @@ export function registerDefaultCapabilityExecutors(
         "hermes",
         summarizeText,
         "capability:summarize_state",
-        context.chatId,
-        context.messageId,
-        context.traceId,
+        context.envelope,
         context.signal,
       );
       const recent = await context.memoryStore.list({
@@ -170,9 +161,7 @@ export function registerDefaultCapabilityExecutors(
         "hermes",
         task,
         "capability:hermes_dispatch_task",
-        context.chatId,
-        context.messageId,
-        context.traceId,
+        context.envelope,
         context.signal,
       );
       return {

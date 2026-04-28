@@ -6,9 +6,13 @@ import type { CapabilityEngine } from "../src/runtime/capability-engine.js";
 import type { RouterPolicyConfig } from "../src/router/policy-router.js";
 import { InMemoryUnifiedMemoryStore } from "../src/memory/unified-memory-store.js";
 import { TenantScopedMemoryStore } from "../src/memory/tenant-scoped-memory-store.js";
+import { CapabilityRegistry, type CapabilityLaneDispatchInput } from "../src/skills/capability-registry.js";
+import { UnifiedCapabilityEngine } from "../src/runtime/capability-engine.js";
+import { registerDefaultCapabilityExecutors } from "../src/runtime/default-capability-handlers.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   lastSignal: AbortSignal | undefined;
+  lastEnvelope: import("../src/contracts/types.js").UnifiedMessageEnvelope | undefined;
 
   constructor(
     public laneId: "eve" | "hermes",
@@ -17,6 +21,7 @@ class FakeLaneAdapter implements LaneAdapter {
 
   async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
     this.lastSignal = input.signal;
+    this.lastEnvelope = input.envelope;
     return this.response;
   }
 }
@@ -385,6 +390,117 @@ describe("dispatchUnifiedMessage", () => {
       tenantId: "acme",
     });
     expect(allowed.response.failureClass).toBe("none");
+  });
+
+  it("fails closed when tenant memory isolation requires tenant", async () => {
+    const shared = new InMemoryUnifiedMemoryStore();
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig(),
+      memoryStore: shared,
+      tenantMemoryIsolation: true,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+    expect(result.primaryState.reason).toBe("tenant_id_required_for_memory_isolation");
+  });
+
+  it("propagates envelope tenant to lane dispatch inside capabilities", async () => {
+    const shared = new InMemoryUnifiedMemoryStore();
+    const registry = new CapabilityRegistry();
+    let lastLaneEnvelope: import("../src/contracts/types.js").UnifiedMessageEnvelope | undefined;
+    const dispatchLane = async (input: CapabilityLaneDispatchInput) => {
+      lastLaneEnvelope = input.envelope;
+      return {
+        status: "pass" as const,
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "lane-1",
+        elapsedMs: 1,
+        failureClass: "none" as const,
+        sourceLane: "eve" as const,
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: input.envelope.traceId,
+      };
+    };
+    registerDefaultCapabilityExecutors(registry, { dispatchLane, memoryStore: shared });
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore: shared,
+      dispatchLane,
+    });
+
+    const eve = new FakeLaneAdapter("eve", {
+      status: "pass",
+      reason: "ok",
+      runtimeUsed: "eve",
+      runId: "r1",
+      elapsedMs: 1,
+      failureClass: "none",
+      sourceLane: "eve",
+      sourceChatId: "1",
+      sourceMessageId: "2",
+      traceId: "t1",
+    });
+    const hermes = new FakeLaneAdapter("hermes", {
+      status: "pass",
+      reason: "ok",
+      runtimeUsed: "hermes",
+      runId: "r2",
+      elapsedMs: 1,
+      failureClass: "none",
+      sourceLane: "hermes",
+      sourceChatId: "1",
+      sourceMessageId: "2",
+      traceId: "t2",
+    });
+
+    await dispatchUnifiedMessage(
+      {
+        eveAdapter: eve,
+        hermesAdapter: hermes,
+        routerConfig: baseRouterConfig(),
+        capabilityEngine: engine,
+        memoryStore: shared,
+      },
+      {
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "@cap check_status",
+        tenantId: "acme",
+      },
+    );
+
+    expect(lastLaneEnvelope?.tenantId).toBe("acme");
   });
 
   it("passes tenant-scoped memory store to capability execute", async () => {

@@ -142,6 +142,14 @@ describe("CapabilityRegistry", () => {
       traceId: "trace-x",
       chatId: "1",
       messageId: "2",
+      envelope: {
+        traceId: "trace-x",
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        receivedAtIso: new Date().toISOString(),
+        text: "@cap status",
+      },
       memoryStore: new InMemoryUnifiedMemoryStore(),
       dispatchLane: async () => fakeDispatchState,
     };

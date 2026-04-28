@@ -69,8 +69,10 @@ Optional crash recovery for file-backed unified memory:
 - **`tenantId`** on `UnifiedMessageEnvelope` (optional) and **`metadata.tenantId`** (optional); metadata wins when both are set. Values must be non-empty, ≤128 chars, and must not contain `/` or `\`.
 - **`UNIFIED_TENANT_STRICT=1`** — fail closed with reason `tenant_id_required` when no tenant is present after resolution.
 - **`UNIFIED_TENANT_ALLOWLIST`** — comma-separated list; when non-empty, require a tenant id and reject with `tenant_id_not_allowed` if not listed.
+- **`UNIFIED_TENANT_MEMORY_ISOLATION=1`** — when a memory store is configured, require a valid tenant and route **all** capability handler memory through `TenantScopedMemoryStore` (no capability reads/writes on unprefixed namespaces).
 - **`npm run dispatch`** accepts **`--tenant-id <id>`** (sets envelope `tenantId`).
-- When `memoryStore` is wired on the runtime and a valid tenant id is present, **`@cap` handlers** receive a **`TenantScopedMemoryStore`** so capability execution namespaces are prefixed (`tenant:<id>:...`); lane dispatch and non-capability paths use the shared store unless extended later.
+- Capability → lane dispatch passes the **full ingress envelope** (with `text` replaced by the lane payload) so subprocess env includes tenant when set: **`EVE_TASK_DISPATCH_TENANT_ID`**, **`HERMES_UNIFIED_TENANT_ID`**.
+- When `memoryStore` is wired on the runtime and a valid tenant id is present, **`@cap` handlers** receive a **`TenantScopedMemoryStore`** so capability execution namespaces are prefixed (`tenant:<id>:...`); non-capability lane paths do not use unified memory unless extended later.
 
 ## Cutover and Rollback Commands
 

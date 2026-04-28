@@ -40,6 +40,11 @@ export type UnifiedRuntimeEnvConfig = {
   tenantStrict: boolean;
   /** When non-empty, only these tenant ids are accepted (fail-closed for others). */
   tenantAllowlist: string[];
+  /**
+   * When true with a configured memory store, require a valid tenant id and route all capability
+   * memory through a tenant-prefixed view (fail-closed cross-tenant access to shared namespaces).
+   */
+  tenantMemoryIsolation: boolean;
   /** When true with file store + journal, re-read disk after each persist and verify snapshot matches memory. */
   unifiedMemoryVerifyPersist: boolean;
   /** When true with file store + journal, before each persist verify snapshot+WAL replay matches in-memory map. */
@@ -299,6 +304,10 @@ export function loadUnifiedRuntimeEnvConfig(
   )
     .map((entry) => normalizeTenantAllowlistEntry(entry))
     .filter((entry): entry is string => entry !== undefined);
+  const tenantMemoryIsolation = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_TENANT_MEMORY_ISOLATION", "TENANT_MEMORY_ISOLATION"]),
+    false,
+  );
   const unifiedMemoryVerifyPersist = parseBooleanFlag(
     firstDefined(reader, [
       "UNIFIED_MEMORY_VERIFY_PERSIST",
@@ -378,6 +387,7 @@ export function loadUnifiedRuntimeEnvConfig(
     capabilityAbortLaneOnTimeout,
     tenantStrict,
     tenantAllowlist,
+    tenantMemoryIsolation,
     unifiedMemoryVerifyPersist,
     unifiedMemoryVerifyJournalReplay,
     routerConfig: {

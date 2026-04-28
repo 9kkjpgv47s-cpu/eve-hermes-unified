@@ -23,7 +23,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 - **Horizon promotion:** `promote-horizon.mjs` emits **`closeout_run_horizon_closeout_gate_*`** and appends legacy **`closeout_run_h2_closeout_gate_*`** when the promotion source horizon is H2 or later (so H3→H4 promotions keep H2-keyed monitors working).
 - **H2 closeout runner:** `run-h2-closeout.mjs` appends **`h2_closeout_gate_failed`** alongside **`horizon_closeout_gate_failed`** when the closeout `--horizon` is H2 or later.
 - **Capability budget + lane abort:** **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`** and **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT`** — see `docs/CLOUD_AGENT_HANDOFF.md`.
-- **Tenant gate + scoped capability memory:** **`UNIFIED_TENANT_STRICT`**, **`UNIFIED_TENANT_ALLOWLIST`**, envelope **`tenantId`** / **`metadata.tenantId`**, **`npm run dispatch -- --tenant-id`** — see `docs/CLOUD_AGENT_HANDOFF.md`.
+- **Tenant gate + scoped capability memory:** **`UNIFIED_TENANT_STRICT`**, **`UNIFIED_TENANT_ALLOWLIST`**, **`UNIFIED_TENANT_MEMORY_ISOLATION`**, envelope **`tenantId`** / **`metadata.tenantId`**, **`npm run dispatch -- --tenant-id`**; Eve/Hermes adapters pass **`EVE_TASK_DISPATCH_TENANT_ID`** / **`HERMES_UNIFIED_TENANT_ID`** when set — see `docs/CLOUD_AGENT_HANDOFF.md`.
 
 ## Read Order (Do Not Skip)
 

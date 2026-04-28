@@ -150,7 +150,14 @@ async function seedEvidence(evidenceDir: string): Promise<void> {
     JSON.stringify(
       {
         pass: true,
+        files: {
+          validationManifestPath: mergeValidationPath,
+        },
         checks: {
+          latestRequested: false,
+          latestAliasResolved: false,
+          latestAliasFallbackUsed: false,
+          validationManifestResolved: true,
           releaseGoalPolicyValidationReported: true,
           releaseGoalPolicyValidationPassed: true,
           initialScopeGoalPolicyValidationReported: true,

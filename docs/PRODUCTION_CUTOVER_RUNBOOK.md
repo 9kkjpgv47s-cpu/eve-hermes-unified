@@ -191,6 +191,10 @@ npm run promote:stage -- \
 Behavior:
 - Runs `check-stage-promotion-readiness` first and writes `evidence/stage-promotion-readiness-*.json`.
 - Readiness fail-closes unless selected `validate:merge-bundle` and `verify:merge-bundle` artifacts explicitly report/passed release + initial-scope goal-policy propagation checks.
+- Readiness fail-closes unless selected `verify:merge-bundle` evidence also reports deterministic selection provenance and source linkage:
+  - either `checks.latestRequested=true` with alias resolution/fallback proof, or `checks.validationManifestResolved=true`
+  - and `files.validationManifestPath` must be reported
+  - and, when merge-bundle validation evidence is selected in the same run, `files.validationManifestPath` must match that selected `merge-bundle-validation-*` path
 - Applies stage settings with `scripts/prod-cutover-stage.sh` only when readiness passes.
 - Writes execution result to `evidence/stage-promotion-execution-*.json`.
 

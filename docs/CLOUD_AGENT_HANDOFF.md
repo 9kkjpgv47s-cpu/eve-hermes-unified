@@ -231,6 +231,11 @@ Schema validation expectations:
   - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
   - fail-closed enforcement: selected release-readiness evidence must report `checks.goalPolicyFileValidationPassed=true`
   - fail-closed enforcement: selected `validate:merge-bundle` and `verify:merge-bundle` evidence must each report and pass both release + initial-scope goal-policy propagation checks
+  - fail-closed enforcement: selected `verify:merge-bundle` evidence must prove deterministic bundle-selection provenance and reference the selected merge-bundle validation snapshot:
+    - either `checks.latestRequested=true` with `checks.latestAliasResolved=true` or `checks.latestAliasFallbackUsed=true`
+    - or `checks.validationManifestResolved=true`
+    - and `files.validationManifestPath` must be reported
+    - and when merge-bundle-validation artifact selection is known, `files.validationManifestPath` must match the selected `merge-bundle-validation-*.json` path
 - auto-rollback policy decisions can be machine-evaluated with:
   - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
   - fail-closed enforcement: selected release-readiness evidence must report `checks.goalPolicyFileValidationPassed=true`
@@ -243,6 +248,11 @@ Schema validation expectations:
     - `checks.bundleVerificationGoalPolicyValidationPassed=true`
     - `checks.bundleVerificationInitialScopeGoalPolicyValidationReported=true`
     - `checks.bundleVerificationInitialScopeGoalPolicyValidationPassed=true`
+  - fail-closed enforcement: selected stage-promotion-readiness evidence must also report and pass bundle-verification selection provenance checks:
+    - `checks.bundleVerificationSelectionSignalReported=true`
+    - `checks.bundleVerificationSelectionProofPassed=true`
+    - `checks.bundleVerificationValidationManifestPathReported=true`
+    - `checks.bundleVerificationSelectionGateSatisfied=true`
   - optional explicit artifact pinning flags:
     - `--validation-summary-file <path>`
     - `--cutover-readiness-file <path>`

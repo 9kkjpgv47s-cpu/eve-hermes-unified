@@ -127,7 +127,14 @@ async function seedRequiredEvidence(evidenceDir: string): Promise<void> {
       {
         generatedAtIso: new Date().toISOString(),
         pass: true,
+        files: {
+          validationManifestPath: path.join(evidenceDir, `merge-bundle-validation-${stamp}.json`),
+        },
         checks: {
+          latestRequested: false,
+          latestAliasResolved: false,
+          latestAliasFallbackUsed: false,
+          validationManifestResolved: true,
           releaseGoalPolicyValidationReported: true,
           releaseGoalPolicyValidationPassed: true,
           initialScopeGoalPolicyValidationReported: true,

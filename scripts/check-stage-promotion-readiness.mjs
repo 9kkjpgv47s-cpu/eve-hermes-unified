@@ -32,6 +32,7 @@ function parseArgs(argv) {
     evidenceSelection: "",
     allowHorizonMismatch: false,
     requireReleaseReadinessGoalPolicyValidation: true,
+    requireBundleVerificationSelectionProof: true,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -78,6 +79,13 @@ function parseArgs(argv) {
       arg === "--allow-release-readiness-goal-policy-validation-missing"
     ) {
       options.requireReleaseReadinessGoalPolicyValidation = false;
+    } else if (arg === "--require-bundle-verification-selection-proof") {
+      options.requireBundleVerificationSelectionProof = true;
+    } else if (
+      arg === "--allow-missing-bundle-verification-selection-proof" ||
+      arg === "--allow-bundle-verification-selection-proof-missing"
+    ) {
+      options.requireBundleVerificationSelectionProof = false;
     }
   }
   return options;
@@ -271,6 +279,55 @@ function resolveGoalPolicyValidationState(payload, checkKeys) {
   return { reported: false, pass: false };
 }
 
+function resolveBundleVerificationSelectionSignals(payload, selectedMergeBundleValidationPath) {
+  const checks = payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const files = payload?.files && typeof payload.files === "object" ? payload.files : {};
+  const latestRequestedRaw = checks.latestRequested;
+  const latestRequestedReported = typeof latestRequestedRaw === "boolean";
+  const latestRequested = latestRequestedRaw === true;
+  const latestAliasResolved = checks.latestAliasResolved === true;
+  const latestAliasFallbackUsed = checks.latestAliasFallbackUsed === true;
+  const validationManifestResolvedRaw = checks.validationManifestResolved;
+  const validationManifestResolvedReported = typeof validationManifestResolvedRaw === "boolean";
+  const validationManifestResolved = validationManifestResolvedRaw === true;
+  const selectionSignalReported = latestRequestedReported || validationManifestResolvedReported;
+  const selectionProofPassed =
+    (latestRequested && (latestAliasResolved || latestAliasFallbackUsed))
+    || validationManifestResolved;
+  const verificationValidationManifestPath = isNonEmptyString(files.validationManifestPath)
+    ? path.resolve(String(files.validationManifestPath))
+    : "";
+  const verificationValidationManifestPathReported = isNonEmptyString(
+    verificationValidationManifestPath,
+  );
+  const selectedMergeBundleValidationResolved = isNonEmptyString(selectedMergeBundleValidationPath)
+    ? path.resolve(selectedMergeBundleValidationPath)
+    : "";
+  const selectedMergeBundleValidationPathReported = isNonEmptyString(
+    selectedMergeBundleValidationResolved,
+  );
+  const verificationValidationManifestMatchesSelectedMergeBundleValidation =
+    verificationValidationManifestPathReported &&
+    selectedMergeBundleValidationPathReported &&
+    verificationValidationManifestPath === selectedMergeBundleValidationResolved;
+  return {
+    latestRequestedReported,
+    latestRequested,
+    latestAliasResolved,
+    latestAliasFallbackUsed,
+    validationManifestResolvedReported,
+    validationManifestResolved,
+    selectionSignalReported,
+    selectionProofPassed,
+    verificationValidationManifestPath: verificationValidationManifestPath || null,
+    verificationValidationManifestPathReported,
+    selectedMergeBundleValidationPath:
+      selectedMergeBundleValidationResolved || selectedMergeBundleValidationPath || null,
+    selectedMergeBundleValidationPathReported,
+    verificationValidationManifestMatchesSelectedMergeBundleValidation,
+  };
+}
+
 function latestPathMatchesPattern(pattern, targetPath) {
   if (!isNonEmptyString(pattern) || !isNonEmptyString(targetPath)) {
     return false;
@@ -308,6 +365,10 @@ async function main() {
   const requireReleaseReadinessGoalPolicyValidation = parseBooleanOption(
     process.env.UNIFIED_STAGE_PROMOTION_REQUIRE_RELEASE_GOAL_POLICY_VALIDATION,
     options.requireReleaseReadinessGoalPolicyValidation,
+  );
+  const requireBundleVerificationSelectionProof = parseBooleanOption(
+    process.env.UNIFIED_STAGE_PROMOTION_REQUIRE_BUNDLE_VERIFICATION_SELECTION_PROOF,
+    options.requireBundleVerificationSelectionProof,
   );
   const horizonStatusFile = path.resolve(
     options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
@@ -359,6 +420,20 @@ async function main() {
   let bundleVerificationReleaseGoalPolicyValidationPassed = false;
   let bundleVerificationInitialScopeGoalPolicyValidationReported = false;
   let bundleVerificationInitialScopeGoalPolicyValidationPassed = false;
+  let bundleVerificationSelectionSignalReported = false;
+  let bundleVerificationSelectionProofPassed = false;
+  let bundleVerificationLatestRequestedReported = false;
+  let bundleVerificationLatestRequested = false;
+  let bundleVerificationLatestAliasResolved = false;
+  let bundleVerificationLatestAliasFallbackUsed = false;
+  let bundleVerificationValidationManifestResolvedReported = false;
+  let bundleVerificationValidationManifestResolved = false;
+  let bundleVerificationValidationManifestPath = null;
+  let bundleVerificationValidationManifestPathReported = false;
+  let selectedMergeBundleValidationPath = null;
+  let selectedMergeBundleValidationPathReported = false;
+  let bundleVerificationValidationManifestMatchesSelectedMergeBundleValidation = false;
+  let bundleVerificationSelectionGateSatisfied = false;
   let horizonStatus = null;
   let horizonValidation = { valid: false, errors: ["horizon_status_not_loaded"] };
 
@@ -467,6 +542,61 @@ async function main() {
     } else if (!bundleVerificationInitialScopeGoalPolicyValidationPassed) {
       failures.push("bundle_verify_initial_scope_goal_policy_validation_not_passed");
     }
+    const bundleVerificationSelectionSignals = resolveBundleVerificationSelectionSignals(
+      bundleVerification,
+      evidencePaths.mergeBundleValidationPath,
+    );
+    bundleVerificationSelectionSignalReported =
+      bundleVerificationSelectionSignals.selectionSignalReported;
+    bundleVerificationSelectionProofPassed =
+      bundleVerificationSelectionSignals.selectionProofPassed;
+    bundleVerificationLatestRequestedReported =
+      bundleVerificationSelectionSignals.latestRequestedReported;
+    bundleVerificationLatestRequested = bundleVerificationSelectionSignals.latestRequested;
+    bundleVerificationLatestAliasResolved =
+      bundleVerificationSelectionSignals.latestAliasResolved;
+    bundleVerificationLatestAliasFallbackUsed =
+      bundleVerificationSelectionSignals.latestAliasFallbackUsed;
+    bundleVerificationValidationManifestResolvedReported =
+      bundleVerificationSelectionSignals.validationManifestResolvedReported;
+    bundleVerificationValidationManifestResolved =
+      bundleVerificationSelectionSignals.validationManifestResolved;
+    bundleVerificationValidationManifestPath =
+      bundleVerificationSelectionSignals.verificationValidationManifestPath;
+    bundleVerificationValidationManifestPathReported =
+      bundleVerificationSelectionSignals.verificationValidationManifestPathReported;
+    selectedMergeBundleValidationPath =
+      bundleVerificationSelectionSignals.selectedMergeBundleValidationPath;
+    selectedMergeBundleValidationPathReported =
+      bundleVerificationSelectionSignals.selectedMergeBundleValidationPathReported;
+    bundleVerificationValidationManifestMatchesSelectedMergeBundleValidation =
+      bundleVerificationSelectionSignals.verificationValidationManifestMatchesSelectedMergeBundleValidation;
+    if (requireBundleVerificationSelectionProof) {
+      if (!bundleVerificationSelectionSignalReported) {
+        failures.push("bundle_verify_selection_proof_not_reported");
+      } else if (!bundleVerificationSelectionProofPassed) {
+        failures.push("bundle_verify_selection_proof_not_passed");
+      }
+      if (!bundleVerificationValidationManifestPathReported) {
+        failures.push("bundle_verify_validation_manifest_path_not_reported");
+      } else if (
+        selectedMergeBundleValidationPathReported &&
+        !bundleVerificationValidationManifestMatchesSelectedMergeBundleValidation
+      ) {
+        failures.push("bundle_verify_validation_manifest_path_mismatch");
+      }
+    }
+    bundleVerificationSelectionGateSatisfied =
+      !requireBundleVerificationSelectionProof ||
+      (
+        bundleVerificationSelectionSignalReported &&
+        bundleVerificationSelectionProofPassed &&
+        bundleVerificationValidationManifestPathReported &&
+        (
+          !selectedMergeBundleValidationPathReported ||
+          bundleVerificationValidationManifestMatchesSelectedMergeBundleValidation
+        )
+      );
   }
   if (await exists(horizonStatusFile)) {
     horizonStatus = await readJson(horizonStatusFile);
@@ -539,6 +669,7 @@ async function main() {
           bundleVerification?.pass
           && bundleVerificationReleaseGoalPolicyValidationPassed
           && bundleVerificationInitialScopeGoalPolicyValidationPassed
+          && bundleVerificationSelectionGateSatisfied
         )
       ) {
         failures.push("promotion_gate_bundle_verification_not_met");
@@ -592,6 +723,7 @@ async function main() {
       cutoverReadinessPassed: Boolean(cutoverReadiness?.pass),
       releaseReadinessPassed: Boolean(releaseReadiness?.pass),
       requireReleaseReadinessGoalPolicyValidation,
+      requireBundleVerificationSelectionProof,
       releaseGoalPolicyValidationReported,
       releaseGoalPolicyValidationPassed,
       mergeBundleValidationPassed: Boolean(mergeBundleValidation?.pass),
@@ -604,6 +736,20 @@ async function main() {
       bundleVerificationReleaseGoalPolicyValidationPassed,
       bundleVerificationInitialScopeGoalPolicyValidationReported,
       bundleVerificationInitialScopeGoalPolicyValidationPassed,
+      bundleVerificationSelectionSignalReported,
+      bundleVerificationSelectionProofPassed,
+      bundleVerificationLatestRequestedReported,
+      bundleVerificationLatestRequested,
+      bundleVerificationLatestAliasResolved,
+      bundleVerificationLatestAliasFallbackUsed,
+      bundleVerificationValidationManifestResolvedReported,
+      bundleVerificationValidationManifestResolved,
+      bundleVerificationValidationManifestPath,
+      bundleVerificationValidationManifestPathReported,
+      selectedMergeBundleValidationPath,
+      selectedMergeBundleValidationPathReported,
+      bundleVerificationValidationManifestMatchesSelectedMergeBundleValidation,
+      bundleVerificationSelectionGateSatisfied,
       horizonValidationPass: horizonValidation.valid,
       allowHorizonMismatch,
       evidenceSelectionMode,

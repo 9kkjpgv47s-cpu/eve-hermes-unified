@@ -240,6 +240,14 @@ function resolveStagePromotionGoalPolicySignals(stagePromotionPayload) {
       resolveBooleanCandidate(["bundleVerificationInitialScopeGoalPolicyValidationReported"]),
     bundleVerificationInitialScopePassed:
       resolveBooleanCandidate(["bundleVerificationInitialScopeGoalPolicyValidationPassed"]),
+    bundleVerificationSelectionSignalReported:
+      resolveBooleanCandidate(["bundleVerificationSelectionSignalReported"]),
+    bundleVerificationSelectionProofPassed:
+      resolveBooleanCandidate(["bundleVerificationSelectionProofPassed"]),
+    bundleVerificationValidationManifestPathReported:
+      resolveBooleanCandidate(["bundleVerificationValidationManifestPathReported"]),
+    bundleVerificationSelectionGateSatisfied:
+      resolveBooleanCandidate(["bundleVerificationSelectionGateSatisfied"]),
   };
 }
 
@@ -328,6 +336,10 @@ async function main() {
         && stageGoalPolicySignals.bundleVerificationReleasePassed
         && stageGoalPolicySignals.bundleVerificationInitialScopeReported
         && stageGoalPolicySignals.bundleVerificationInitialScopePassed
+        && stageGoalPolicySignals.bundleVerificationSelectionSignalReported
+        && stageGoalPolicySignals.bundleVerificationSelectionProofPassed
+        && stageGoalPolicySignals.bundleVerificationValidationManifestPathReported
+        && stageGoalPolicySignals.bundleVerificationSelectionGateSatisfied
       );
     },
   });
@@ -423,6 +435,17 @@ async function main() {
       failures.push(
         "stage_promotion_bundle_verification_initial_scope_goal_policy_validation_not_passed",
       );
+    }
+    if (!stagePromotionGoalPolicySignals.bundleVerificationSelectionSignalReported) {
+      failures.push("stage_promotion_bundle_verification_selection_proof_not_reported");
+    } else if (!stagePromotionGoalPolicySignals.bundleVerificationSelectionProofPassed) {
+      failures.push("stage_promotion_bundle_verification_selection_proof_not_passed");
+    }
+    if (!stagePromotionGoalPolicySignals.bundleVerificationValidationManifestPathReported) {
+      failures.push("stage_promotion_bundle_verification_validation_manifest_path_not_reported");
+    }
+    if (!stagePromotionGoalPolicySignals.bundleVerificationSelectionGateSatisfied) {
+      failures.push("stage_promotion_bundle_verification_selection_gate_not_passed");
     }
   }
 
@@ -523,6 +546,14 @@ async function main() {
         stagePromotionGoalPolicySignals.bundleVerificationInitialScopeReported,
       stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed:
         stagePromotionGoalPolicySignals.bundleVerificationInitialScopePassed,
+      stagePromotionBundleVerificationSelectionSignalReported:
+        stagePromotionGoalPolicySignals.bundleVerificationSelectionSignalReported,
+      stagePromotionBundleVerificationSelectionProofPassed:
+        stagePromotionGoalPolicySignals.bundleVerificationSelectionProofPassed,
+      stagePromotionBundleVerificationValidationManifestPathReported:
+        stagePromotionGoalPolicySignals.bundleVerificationValidationManifestPathReported,
+      stagePromotionBundleVerificationSelectionGateSatisfied:
+        stagePromotionGoalPolicySignals.bundleVerificationSelectionGateSatisfied,
     },
     rollbackExecution,
   };

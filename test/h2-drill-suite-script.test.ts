@@ -149,7 +149,14 @@ async function seedEvidence(
     JSON.stringify(
       {
         pass: true,
+        files: {
+          validationManifestPath: mergeValidationPath,
+        },
         checks: {
+          latestRequested: false,
+          latestAliasResolved: false,
+          latestAliasFallbackUsed: false,
+          validationManifestResolved: true,
           releaseGoalPolicyValidationReported: true,
           releaseGoalPolicyValidationPassed: true,
           initialScopeGoalPolicyValidationReported: true,

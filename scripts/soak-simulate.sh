@@ -46,7 +46,7 @@ for i in $(seq 1 "$iterations"); do
     HERMES_LAUNCH_COMMAND="$hermes_launch_command" \
     UNIFIED_HERMES_LAUNCH_ARGS= \
     HERMES_LAUNCH_ARGS= \
-    "${dispatch_cmd[@]}" --text "$text" --chat-id "$chat_id" --message-id "$i" >>"$report" 2>&1 || true
+    "${dispatch_cmd[@]}" --compact-json --text "$text" --chat-id "$chat_id" --message-id "$i" >>"$report" 2>&1 || true
 done
 
 echo "Wrote $report"

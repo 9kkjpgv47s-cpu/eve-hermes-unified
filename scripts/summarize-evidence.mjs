@@ -137,10 +137,15 @@ function isFailureClassKnown(value) {
   );
 }
 
-async function newestFileInDir(dir, prefix) {
+async function newestFileInDir(dir, prefix, suffix = "") {
   const entries = await readdir(dir, { withFileTypes: true });
   const matches = entries
-    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.startsWith(prefix) &&
+        (suffix ? entry.name.endsWith(suffix) : true),
+    )
     .map((entry) => path.join(dir, entry.name));
   if (matches.length === 0) {
     return null;
@@ -151,7 +156,7 @@ async function newestFileInDir(dir, prefix) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const soakFile = await newestFileInDir(options.evidenceDir, "soak-");
+  const soakFile = await newestFileInDir(options.evidenceDir, "soak-", ".jsonl");
   const failureFile = await newestFileInDir(options.evidenceDir, "failure-injection-");
   if (!soakFile) {
     throw new Error("No soak report found.");

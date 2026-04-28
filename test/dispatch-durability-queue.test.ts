@@ -7,6 +7,7 @@ import {
   replayPendingDispatches,
 } from "../src/runtime/dispatch-durability-queue.js";
 import type { DispatchState, UnifiedMessageEnvelope } from "../src/contracts/types.js";
+import { UNIFIED_DISPATCH_CONTRACT_VERSION } from "../src/contracts/schema-version.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
 import type { RouterPolicyConfig } from "../src/router/policy-router.js";
 
@@ -86,6 +87,7 @@ describe("FileDispatchDurabilityQueue", () => {
     );
 
     expect(replayed).toHaveLength(1);
+    expect(replayed[0].result.contractVersion).toBe(UNIFIED_DISPATCH_CONTRACT_VERSION);
     expect(replayed[0].result.envelope.traceId).toBe(traceId);
     expect(replayed[0].result.primaryState.traceId).toBe(traceId);
     expect(eve.dispatches).toHaveLength(1);

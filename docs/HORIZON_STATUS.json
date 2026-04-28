@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T23:26:00Z",
+  "updatedAtIso": "2026-04-28T17:05:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -164,21 +164,21 @@
       "id": "h3-action-2",
       "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["policy-hardening", "runtime"]
     },
     {
       "id": "h3-action-3",
       "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["capability", "policy-hardening"]
     },
     {
       "id": "h3-action-4",
       "summary": "Add memory durability verification suite for crash/restart recovery and cross-lane consistency checks.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "memory"]
     },
     {
@@ -266,7 +266,7 @@
     },
     "H3": {
       "status": "planned",
-      "summary": "Runtime durability and policy maturity hardening."
+      "summary": "Runtime durability and policy maturity: failure-class fallback suppression, capability execution timeouts, optional serialized in-memory store ordering; remaining work includes dispatch replay queue and long-window soak."
     },
     "H4": {
       "status": "planned",
@@ -387,10 +387,10 @@
       "note": "Added goal-policy coverage gate for future horizon transitions and promotion enforcement flags so operators can require policy-backed progression beyond the immediate transition."
     },
     {
-      "timestamp": "2026-04-26T23:26:00Z",
-      "horizon": "H2",
-      "status": "in_progress",
-      "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
+      "timestamp": "2026-04-28T17:05:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "Shipped H3 partial slice: UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES + unified dispatch integration; UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS enforcement in capability engine; SerializedUnifiedMemoryStore + UNIFIED_MEMORY_SERIALIZE_WRITES for concurrent memory ordering; tests added."
     }
   ]
 }

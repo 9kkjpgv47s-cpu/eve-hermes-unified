@@ -83,6 +83,23 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     );
     expect(config.unifiedMemoryStoreKind).toBe("memory");
     expect(config.unifiedMemoryFilePath).toBe("/tmp/custom-memory.json");
+    expect(config.unifiedMemorySerializeWrites).toBe(false);
+    expect(config.capabilityExecutionTimeoutMs).toBe(180_000);
+  });
+
+  it("parses optional memory serialization and capability timeout env", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_SERIALIZE_WRITES: "1",
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "5000",
+          UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES: "policy_failure,dispatch_failure",
+        }),
+      ),
+    );
+    expect(config.unifiedMemorySerializeWrites).toBe(true);
+    expect(config.capabilityExecutionTimeoutMs).toBe(5000);
+    expect(config.routerConfig.noFallbackOnFailureClasses).toEqual(["policy_failure", "dispatch_failure"]);
   });
 
   it("parses capability policy controls", () => {

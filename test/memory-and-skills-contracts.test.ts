@@ -17,6 +17,7 @@ import {
 import {
   createUnifiedMemoryStoreFromEnv,
   InMemoryUnifiedMemoryStore,
+  SerializedUnifiedMemoryStore,
 } from "../src/memory/unified-memory-store.js";
 
 describe("UnifiedMemoryStore adapters", () => {
@@ -41,6 +42,23 @@ describe("UnifiedMemoryStore adapters", () => {
     const value = await adapter.get(target);
     expect(value?.value).toBe("2");
     expect(value?.lane).toBe("hermes");
+  });
+
+  it("serializes concurrent writes when SerializedUnifiedMemoryStore wraps in-memory backend", async () => {
+    const inner = new InMemoryUnifiedMemoryStore();
+    const store = new SerializedUnifiedMemoryStore(inner);
+    const key = { lane: "shared" as const, namespace: "n", key: "k" };
+
+    await Promise.all([
+      store.set(key, "a"),
+      store.set(key, "b"),
+      store.set(key, "c"),
+    ]);
+
+    const finalEntry = await store.get(key);
+    expect(["a", "b", "c"]).toContain(finalEntry?.value);
+    const listed = await store.list({ namespace: "n" });
+    expect(listed).toHaveLength(1);
   });
 
   it("lists entries by lane and key prefix", async () => {

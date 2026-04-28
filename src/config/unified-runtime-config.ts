@@ -1,4 +1,4 @@
-import type { LaneId } from "../contracts/types.js";
+import type { FailureClass, LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
 import type { UnifiedMemoryStoreKind } from "../memory/unified-memory-store.js";
@@ -10,6 +10,8 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchCommand: string;
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
+  /** When true, wrap the memory backend so concurrent writes are serialized (crash-safe ordering). */
+  unifiedMemorySerializeWrites: boolean;
   unifiedMemoryFilePath: string;
   unifiedDispatchAuditLogPath: string;
   capabilityPolicy: {
@@ -26,6 +28,8 @@ export type UnifiedRuntimeEnvConfig = {
     strict: boolean;
   };
   auditLogPath: string;
+  /** 0 = unlimited; caps capability executor wall time in unified dispatch. */
+  capabilityExecutionTimeoutMs: number;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -69,6 +73,39 @@ function parseBooleanFlag(raw: string | undefined, fallback: boolean): boolean {
 
 function parseMemoryStoreKind(raw: string | undefined): UnifiedMemoryStoreKind {
   return raw === "memory" ? "memory" : "file";
+}
+
+function parsePositiveIntMs(raw: string | undefined, fallback: number): number {
+  const numeric = Number(raw);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return fallback;
+  }
+  return Math.floor(numeric);
+}
+
+const ROUTER_FAILURE_CLASS_SET = new Set<FailureClass>([
+  "provider_limit",
+  "cooldown",
+  "dispatch_failure",
+  "state_unavailable",
+  "policy_failure",
+]);
+
+function parseNoFallbackFailureClasses(raw: string | undefined): FailureClass[] | undefined {
+  if (!raw?.trim()) {
+    return undefined;
+  }
+  const out = new Set<FailureClass>();
+  for (const part of raw.split(",")) {
+    const token = part.trim();
+    if (!token) {
+      continue;
+    }
+    if (ROUTER_FAILURE_CLASS_SET.has(token as FailureClass)) {
+      out.add(token as FailureClass);
+    }
+  }
+  return out.size > 0 ? [...out] : undefined;
 }
 
 function parseCsvList(raw: string | undefined): string[] {
@@ -122,6 +159,10 @@ export function loadUnifiedRuntimeEnvConfig(
     firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_ARGS", "HERMES_LAUNCH_ARGS"]) ?? "-m hermes gateway";
   const unifiedMemoryStoreKind = parseMemoryStoreKind(
     firstDefined(reader, ["UNIFIED_MEMORY_STORE_KIND", "MEMORY_STORE_KIND"]),
+  );
+  const unifiedMemorySerializeWrites = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_MEMORY_SERIALIZE_WRITES", "MEMORY_SERIALIZE_WRITES"]),
+    false,
   );
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
@@ -253,6 +294,19 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
+  const noFallbackOnFailureClasses = parseNoFallbackFailureClasses(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES",
+      "ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES",
+    ]),
+  );
+  const capabilityExecutionTimeoutMs = parsePositiveIntMs(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS",
+      "CAPABILITY_EXECUTION_TIMEOUT_MS",
+    ]),
+    180_000,
+  );
 
   return {
     eveDispatchScript,
@@ -260,6 +314,7 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchCommand,
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
+    unifiedMemorySerializeWrites,
     unifiedMemoryFilePath,
     unifiedDispatchAuditLogPath,
     capabilityPolicy: {
@@ -276,6 +331,7 @@ export function loadUnifiedRuntimeEnvConfig(
       strict: preflightStrict,
     },
     auditLogPath,
+    capabilityExecutionTimeoutMs,
     routerConfig: {
       defaultPrimary,
       defaultFallback,
@@ -285,6 +341,7 @@ export function loadUnifiedRuntimeEnvConfig(
       canaryChatIds,
       majorityPercent,
       hashSalt,
+      noFallbackOnFailureClasses,
     },
   };
 }

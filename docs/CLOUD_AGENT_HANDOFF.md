@@ -44,6 +44,12 @@ Every PR should include:
 - Preserve canonical `traceId` continuity from envelope to response.
 - Keep explicit lane directives (`@cursor`, `@hermes`) deterministic.
 
+## H3 partial implementation (in-repo)
+
+- **`UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES`**: comma-separated `FailureClass` values; when the primary lane fails with one of these classes, dispatch does not run the fallback lane (unless `failClosed` or `fallbackLane=none` already stop fallback).
+- **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`**: wall-clock cap for capability executor body in `UnifiedCapabilityEngine` (0 = unlimited; default 180000).
+- **`UNIFIED_MEMORY_SERIALIZE_WRITES=1`**: wrap the in-memory `UnifiedMemoryStore` with a serialized front so concurrent `get`/`set`/`list` operations are totally ordered (file backend is unchanged).
+
 ## Cutover and Rollback Commands
 
 Stage:

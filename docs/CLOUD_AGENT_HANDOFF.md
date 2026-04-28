@@ -58,6 +58,12 @@ Rollback:
 npm run cutover:rollback
 ```
 
+## Dispatch audit log rotation (H3)
+
+- **`UNIFIED_DISPATCH_AUDIT_LOG_MAX_BYTES`** (alias `DISPATCH_AUDIT_LOG_MAX_BYTES`): when the active file at `UNIFIED_DISPATCH_AUDIT_LOG_PATH` reaches this size in bytes, it is rotated to `*.1`, previous `*.1` → `*.2`, etc., then a new empty active file is created before the next append.
+- **`UNIFIED_DISPATCH_AUDIT_LOG_MAX_ROTATED_FILES`** (alias `DISPATCH_AUDIT_LOG_MAX_ROTATED_FILES`, default **8**, max **256**): how many numbered backups to retain (`path.1` … `path.N`); oldest is deleted on each rotation.
+- Omit `MAX_BYTES` or set to **0** to disable rotation (append-only growth, previous behavior).
+
 ## Evidence Expectations
 
 Before marking a phase complete, include artifacts from:

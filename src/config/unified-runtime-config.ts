@@ -12,6 +12,8 @@ export type UnifiedRuntimeEnvConfig = {
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
   unifiedDispatchAuditLogPath: string;
+  dispatchAuditLogMaxBytesBeforeRotate: number;
+  dispatchAuditLogMaxRotatedFiles: number;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -129,6 +131,28 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const dispatchAuditMaxBytesRaw = firstDefined(reader, [
+    "UNIFIED_DISPATCH_AUDIT_LOG_MAX_BYTES",
+    "DISPATCH_AUDIT_LOG_MAX_BYTES",
+  ]);
+  const dispatchAuditLogMaxBytesBeforeRotate = (() => {
+    if (!dispatchAuditMaxBytesRaw) {
+      return 0;
+    }
+    const n = Number.parseInt(dispatchAuditMaxBytesRaw, 10);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  })();
+  const dispatchAuditMaxRotatedFilesRaw = firstDefined(reader, [
+    "UNIFIED_DISPATCH_AUDIT_LOG_MAX_ROTATED_FILES",
+    "DISPATCH_AUDIT_LOG_MAX_ROTATED_FILES",
+  ]);
+  const dispatchAuditLogMaxRotatedFiles = (() => {
+    if (!dispatchAuditMaxRotatedFilesRaw) {
+      return 8;
+    }
+    const n = Number.parseInt(dispatchAuditMaxRotatedFilesRaw, 10);
+    return Number.isFinite(n) && n >= 1 ? Math.min(256, n) : 8;
+  })();
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -262,6 +286,8 @@ export function loadUnifiedRuntimeEnvConfig(
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
     unifiedDispatchAuditLogPath,
+    dispatchAuditLogMaxBytesBeforeRotate,
+    dispatchAuditLogMaxRotatedFiles,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

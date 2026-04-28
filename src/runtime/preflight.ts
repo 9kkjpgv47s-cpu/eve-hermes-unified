@@ -13,6 +13,8 @@ export type RuntimePreflightConfig = {
   unifiedMemoryFilePath: string;
   auditEnabled?: boolean;
   auditLogPath: string;
+  /** Optional JSONL path for capability policy authorization audit; directory must be writable when set. */
+  capabilityPolicyAuditLogPath?: string;
 };
 
 function shellEscape(value: string): string {
@@ -82,6 +84,14 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     const auditWritable = await checkWritableParent(config.auditLogPath);
     if (!auditWritable) {
       issues.push(`Unified audit log path is not writable: ${config.auditLogPath}`);
+    }
+  }
+
+  const capAudit = config.capabilityPolicyAuditLogPath?.trim();
+  if (capAudit) {
+    const capWritable = await checkWritableParent(capAudit);
+    if (!capWritable) {
+      issues.push(`Capability policy audit log path is not writable: ${capAudit}`);
     }
   }
 

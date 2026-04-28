@@ -14,6 +14,7 @@ const HORIZON_STAGE_MAP = {
   H5: "full",
   H6: "full",
   H7: "full",
+  H8: "full",
 };
 const STAGE_ORDER = new Map(
   VALID_STAGES.map((stage, index) => [stage, index]),

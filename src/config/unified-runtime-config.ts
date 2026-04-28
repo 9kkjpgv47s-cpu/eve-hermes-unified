@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { FailureClass, LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
@@ -38,6 +40,8 @@ export type UnifiedRuntimeEnvConfig = {
   auditRotationMaxBytes: number;
   /** Keep at most this many generations (active log + timestamped rotated siblings). */
   auditRotationRetainCount: number;
+  /** Append-only JSONL log for capability policy authorization decisions (@cap). */
+  capabilityPolicyAuditLogPath: string;
   /** When non-empty, dispatch rejects envelopes whose tenantId is missing or not in this list. */
   tenantAllowlist: string[];
   /** Dispatch rejects envelopes whose tenantId is in this list. */
@@ -315,6 +319,9 @@ export function loadUnifiedRuntimeEnvConfig(
     8,
   );
   const auditRotationRetainCount = auditRotationRetainCountRaw <= 0 ? 1 : auditRotationRetainCountRaw;
+  const capabilityPolicyAuditLogPath =
+    firstDefined(reader, ["UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH", "CAPABILITY_POLICY_AUDIT_LOG_PATH"]) ??
+    path.join(path.dirname(auditLogPath), "unified-capability-policy-audit.jsonl");
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -393,6 +400,7 @@ export function loadUnifiedRuntimeEnvConfig(
     auditLogPath,
     auditRotationMaxBytes,
     auditRotationRetainCount,
+    capabilityPolicyAuditLogPath,
     tenantAllowlist: dispatchAllowedTenantIds,
     tenantDenylist: dispatchDeniedTenantIds,
     routerConfig: {

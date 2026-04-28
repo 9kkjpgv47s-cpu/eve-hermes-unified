@@ -62,18 +62,23 @@ Every PR should include:
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
 - **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H6**.
 
-## Sustainment assurance (H6 → H7 terminal)
+## Sustainment assurance (terminal H8)
 
-- **H6 bundle** (historical): `npm run run:h6-assurance-bundle` writes `evidence/h6-assurance-bundle-*.json`.
-- **H7 bundle** (current): `npm run run:h7-assurance-bundle` adds audit-log rotation proof (`test/audit-log-rotation.test.ts`) to the H6 gate set.
-- **Closeout gate**: `npm run validate:h7-closeout` (terminal horizon skips downstream stage-promotion artifact in `validate-horizon-closeout`; `validate:h6-closeout` remains for replay against older evidence).
-- **Horizon index**: orchestration scripts include **H7** as the terminal horizon sequence entry.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H7** assurance bundle + `validate:h7-closeout` and writes `evidence/post-h7-sustainment-loop-*.json`. See `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8. **`npm run validate:post-h7-sustainment-manifest`** optionally checks the latest loop manifest without re-running steps. Legacy: **`npm run verify:sustainment-loop:h6-legacy`** / **`validate:post-h6-sustainment-manifest`** for the prior H6-only chain.
+- **H6–H7 bundles** (historical): `run:h6-assurance-bundle`, `run:h7-assurance-bundle`.
+- **H8 bundle** (current): `npm run run:h8-assurance-bundle` adds capability policy authorization audit proof (`test/capability-policy-audit.test.ts`) on top of H7 gates.
+- **Closeout gate**: `npm run validate:h8-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older `--horizon H7` etc. remain for replay).
+- **Horizon index**: orchestration scripts include **H8** as the terminal horizon sequence entry.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H8** assurance bundle + `validate:h8-closeout` → `evidence/post-h8-sustainment-loop-*.json`. **`npm run validate:post-h8-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h7-legacy`** / **`validate:post-h7-sustainment-manifest`**; **`verify:sustainment-loop:h6-legacy`** / **`validate:post-h6-sustainment-manifest`**.
 
 ## Dispatch audit rotation (H7)
 
 - **Env**: `UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES` (0 = off), `UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT` (default 8; minimum enforced as 1 generation).
 - **Behavior**: before each append in `src/bin/unified-dispatch.ts`, when max-bytes is set, the active JSONL may rotate to `${path}.${timestamp}.jsonl`; oldest archives are pruned to satisfy retention.
+
+## Capability policy authorization audit (H8)
+
+- **Env**: `UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH` — append-only JSONL for each `@cap` policy evaluation (allowed/denied + `policyReason`). Defaults to `dirname(UNIFIED_AUDIT_LOG_PATH)/unified-capability-policy-audit.jsonl` when unset.
+- **Runtime**: `UnifiedCapabilityEngine` logs after `authorize()` when the path is configured; preflight checks parent directory writable.
 
 ## Cutover and Rollback Commands
 

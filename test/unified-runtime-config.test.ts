@@ -151,6 +151,28 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.auditRotationRetainCount).toBe(1);
   });
 
+  it("defaults capability policy audit log beside unified audit path", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_AUDIT_LOG_PATH: "/var/log/unified/dispatch-audit.jsonl",
+        }),
+      ),
+    );
+    expect(config.capabilityPolicyAuditLogPath).toBe("/var/log/unified/unified-capability-policy-audit.jsonl");
+  });
+
+  it("parses explicit capability policy audit log path", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH: "/tmp/explicit-cap-policy.jsonl",
+        }),
+      ),
+    );
+    expect(config.capabilityPolicyAuditLogPath).toBe("/tmp/explicit-cap-policy.jsonl");
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

@@ -19,6 +19,7 @@ import type {
 import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
 import { TenantScopedUnifiedMemoryStore } from "../memory/tenant-scoped-memory-store.js";
 import type { CapabilityPolicy } from "./capability-policy.js";
+import { appendCapabilityPolicyAuditLog } from "./capability-policy-audit-log.js";
 
 export type CapabilityExecutionSelection = UnifiedCapabilityDecision;
 
@@ -41,6 +42,8 @@ export type CapabilityExecutionDependencies = {
   policy?: CapabilityPolicy;
   /** Wall-clock budget for executor body; omit or 0 for no limit. */
   executionTimeoutMs?: number;
+  /** When set, append JSONL capability policy authorization records (@cap) after each policy evaluation. */
+  capabilityPolicyAuditLogPath?: string;
 };
 
 async function withCapabilityExecutorTimeout<T>(
@@ -163,6 +166,21 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
         chatId: envelope.chatId,
         tenantId: envelope.tenantId,
       });
+      const auditPath = this.dependencies.capabilityPolicyAuditLogPath?.trim();
+      if (auditPath) {
+        await appendCapabilityPolicyAuditLog(auditPath, {
+          recordedAtIso: new Date().toISOString(),
+          traceId: envelope.traceId,
+          capabilityId: selection.id,
+          lane: selection.lane,
+          chatId: envelope.chatId,
+          messageId: envelope.messageId,
+          ...(envelope.tenantId?.trim() ? { tenantId: envelope.tenantId.trim() } : {}),
+          ...(envelope.regionId?.trim() ? { regionId: envelope.regionId.trim() } : {}),
+          allowed: authorization.allowed,
+          policyReason: authorization.reason,
+        });
+      }
       if (!authorization.allowed) {
         const denied = denialExecutionResult(
           selection,

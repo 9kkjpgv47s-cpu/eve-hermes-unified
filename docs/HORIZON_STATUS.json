@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T12:00:00Z",
+  "updatedAtIso": "2026-04-29T18:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H7",
+  "activeHorizon": "H8",
   "activeStatus": "completed",
-  "summary": "Horizon H7 (audit lifecycle): configurable dispatch audit rotation + retention before append; run-h7-assurance-bundle includes audit-log rotation vitest; terminal sustainment via verify:sustainment-loop (post-H7 manifest + validate:h7-closeout). Historical H1–H6 outcomes retained.",
+  "summary": "Horizon H8 (capability policy audit trail): append-only JSONL for each @cap authorization (allowed/denied + policyReason); UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH; run-h8-assurance-bundle adds capability-policy-audit vitest to H7 gates; terminal sustainment via verify:sustainment-loop (post-H8 + validate:h8-closeout).",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -83,6 +83,13 @@
       "artifactPattern": "evidence/h7-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H7"]
+    },
+    {
+      "id": "h8-assurance-bundle",
+      "command": "node ./scripts/run-h8-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h8-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H8"]
     }
   ],
   "nextActions": [
@@ -307,6 +314,27 @@
       "targetHorizon": "H7",
       "status": "completed",
       "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h8-action-1",
+      "summary": "Append-only capability policy authorization audit JSONL (traceId, capabilityId, allowed, policyReason) wired through UnifiedCapabilityEngine and unified-dispatch preflight.",
+      "targetHorizon": "H8",
+      "status": "completed",
+      "tags": ["policy", "audit", "runtime"]
+    },
+    {
+      "id": "h8-action-2",
+      "summary": "H8 assurance bundle extends H7 with capability-policy-audit vitest; validate:h8-closeout and post-H8 sustainment loop manifest.",
+      "targetHorizon": "H8",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h8-action-3",
+      "summary": "Goal policy H7→H8 transition and documentation for capability policy audit path and legacy sustainment npm aliases.",
+      "targetHorizon": "H8",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -385,6 +413,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H7->H8": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "policy": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "audit": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -426,6 +469,10 @@
     "H7": {
       "status": "completed",
       "summary": "Audit lifecycle: dispatch audit JSONL rotation/retention in unified-dispatch; H7 assurance bundle adds audit-log rotation tests; terminal sustainment loop chains validate:h7-closeout; horizon tooling VALID_HORIZONS includes H7."
+    },
+    "H8": {
+      "status": "completed",
+      "summary": "Capability policy authorization audit: append-only JSONL per @cap decision (default path beside dispatch audit); H8 assurance adds capability-policy-audit tests; VALID_HORIZONS H8; verify:sustainment-loop post-H8."
     }
   },
   "history": [
@@ -584,6 +631,12 @@
       "horizon": "H7",
       "status": "completed",
       "note": "H7 audit lifecycle: audit-log rotation module + env-driven policy before append; run-h7-assurance-bundle and verify:sustainment-loop post-H7; tooling sequences extended through H7; terminal closeout skips stage-promotion at H7."
+    },
+    {
+      "timestamp": "2026-04-29T18:00:00Z",
+      "horizon": "H8",
+      "status": "completed",
+      "note": "H8 capability policy audit trail: appendCapabilityPolicyAuditLog + UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH; run-h8-assurance-bundle; promote:sustainment-loop to post-H8; terminal closeout at H8."
     }
   ]
 }

@@ -180,11 +180,11 @@ Primary risks:
 - Drift between documented horizons and `VALID_HORIZONS` in tooling.
 
 Mitigations:
-- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H7**).
+- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H8**).
 
-### Post-H7 operations
+### Post-H8 operations
 
-After **H7** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for a single chained verification that refreshes assurance evidence and runs **`validate:h7-closeout`**. Optionally **`npm run validate:post-h7-sustainment-manifest`** checks the latest **`evidence/post-h7-sustainment-loop-*.json`** without re-running the loop. To replay the legacy H6-only sustainment chain (older evidence pins), use **`npm run verify:sustainment-loop:h6-legacy`** and **`npm run validate:post-h6-sustainment-manifest`**.
+After **H8** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h8-closeout`**. Optionally **`npm run validate:post-h8-sustainment-manifest`** checks the latest **`evidence/post-h8-sustainment-loop-*.json`**. Legacy chains: **`npm run verify:sustainment-loop:h7-legacy`** / **`validate:post-h7-sustainment-manifest`**, **`verify:sustainment-loop:h6-legacy`** / **`validate:post-h6-sustainment-manifest`**.
 
 ### Horizon H7 - Dispatch audit lifecycle (rotation and retention)
 
@@ -208,6 +208,29 @@ Primary risks:
 Mitigations:
 
 - Document defaults (rotation off until **`UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES`** is set); tune retention with **`UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT`**.
+
+### Horizon H8 - Capability policy authorization audit trail
+
+Goal: deliver immutable **authorization evidence** for `@cap` commands by appending one JSON record per policy evaluation (allow/deny + stable reason code), addressing the H3 roadmap theme of policy-change accountability at the enforcement boundary.
+
+Workstreams:
+
+- Append-only JSONL sink configurable via **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** (default: sibling of dispatch audit directory).
+- Integration in **`UnifiedCapabilityEngine`** immediately after **`authorize()`**; optional **`tenantId`** / **`regionId`** when present on the envelope.
+- Preflight writable-parent check for the audit path (aligned with dispatch audit checks).
+
+Exit evidence:
+
+- **`npm run run:h8-assurance-bundle`** passes and artifact matches **`evidence/h8-assurance-bundle-*.json`** (includes **`capabilityPolicyAuditPass`**).
+- **`npm run validate:h8-closeout`** passes when evidence is present (H8 is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- Log volume growth on chatty `@cap` workloads.
+
+Mitigations:
+
+- Operators pin **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** to rotated filesystems or ship logs to centralized retention; dispatch audit rotation remains separate on **`UNIFIED_AUDIT_LOG_PATH`**.
 
 ## Cross-Horizon Execution Rules
 

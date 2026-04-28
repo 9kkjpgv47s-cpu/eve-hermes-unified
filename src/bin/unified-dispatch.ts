@@ -132,6 +132,7 @@ async function buildDispatchRuntime(): Promise<{
     memoryStore: baseMemoryStore,
     dispatchLane,
     policy: capabilityPolicy,
+    capabilityPolicyAuditLogPath: config.capabilityPolicyAuditLogPath,
     executionTimeoutMs:
       config.capabilityExecutionTimeoutMs > 0 ? config.capabilityExecutionTimeoutMs : undefined,
   });
@@ -146,6 +147,7 @@ async function buildDispatchRuntime(): Promise<{
     unifiedMemoryFilePath: config.unifiedMemoryFilePath,
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
+    capabilityPolicyAuditLogPath: config.capabilityPolicyAuditLogPath,
   });
   if (preflightIssues.length > 0) {
     const reasons = preflightIssues.join("; ");

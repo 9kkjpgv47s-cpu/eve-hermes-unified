@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T12:30:00.000Z",
+  "updatedAtIso": "2026-04-29T18:30:00.000Z",
   "owner": "cloud-agent",
   "summary": "Centralized goal policy definitions for horizon promotion gates.",
   "transitions": {
@@ -74,6 +74,21 @@
           "minPendingCount": 1
         },
         "observability": {
+          "minCount": 1,
+          "minPendingCount": 0
+        }
+      }
+    },
+    "H7->H8": {
+      "minimumGoalIncrease": 1,
+      "minActionGrowthFactor": 1.01,
+      "minPendingNextActions": 1,
+      "requiredTaggedActionCounts": {
+        "policy": {
+          "minCount": 1,
+          "minPendingCount": 1
+        },
+        "audit": {
           "minCount": 1,
           "minPendingCount": 0
         }

@@ -32,6 +32,7 @@ function parseArgs(argv) {
     evidenceSelection: "",
     allowHorizonMismatch: false,
     requireReleaseReadinessGoalPolicyValidation: true,
+    requireReleaseReadinessGoalPolicySourceConsistency: true,
     requireBundleVerificationSelectionProof: true,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -79,6 +80,17 @@ function parseArgs(argv) {
       arg === "--allow-release-readiness-goal-policy-validation-missing"
     ) {
       options.requireReleaseReadinessGoalPolicyValidation = false;
+    } else if (
+      arg === "--require-release-readiness-goal-policy-source-consistency" ||
+      arg === "--require-release-readiness-goal-policy-source-integrity"
+    ) {
+      options.requireReleaseReadinessGoalPolicySourceConsistency = true;
+    } else if (
+      arg === "--allow-missing-release-readiness-goal-policy-source-consistency" ||
+      arg === "--allow-release-readiness-goal-policy-source-consistency-missing" ||
+      arg === "--allow-release-readiness-goal-policy-source-integrity-missing"
+    ) {
+      options.requireReleaseReadinessGoalPolicySourceConsistency = false;
     } else if (arg === "--require-bundle-verification-selection-proof") {
       options.requireBundleVerificationSelectionProof = true;
     } else if (
@@ -279,6 +291,57 @@ function resolveGoalPolicyValidationState(payload, checkKeys) {
   return { reported: false, pass: false };
 }
 
+function resolveGoalPolicySourceConsistencyState(payload, checkKeys) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  for (const key of checkKeys) {
+    const candidate = checks[key];
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
+function resolveStagePolicySourceConsistencySignals(stagePromotionPayload) {
+  const checks =
+    stagePromotionPayload?.checks && typeof stagePromotionPayload.checks === "object"
+      ? stagePromotionPayload.checks
+      : {};
+  const resolveBooleanCandidate = (keys) => {
+    for (const key of keys) {
+      if (checks[key] === true) {
+        return true;
+      }
+    }
+    return false;
+  };
+  return {
+    mergeBundleReleaseSourceConsistencyReported:
+      resolveBooleanCandidate([
+        "mergeBundleReleaseGoalPolicySourceConsistencyReported",
+        "mergeBundleGoalPolicySourceConsistencyReported",
+      ]),
+    mergeBundleReleaseSourceConsistencyPassed:
+      resolveBooleanCandidate([
+        "mergeBundleReleaseGoalPolicySourceConsistencyPassed",
+        "mergeBundleGoalPolicySourceConsistencyPassed",
+      ]),
+    bundleVerificationReleaseSourceConsistencyReported:
+      resolveBooleanCandidate([
+        "bundleVerificationReleaseGoalPolicySourceConsistencyReported",
+        "bundleVerificationGoalPolicySourceConsistencyReported",
+      ]),
+    bundleVerificationReleaseSourceConsistencyPassed:
+      resolveBooleanCandidate([
+        "bundleVerificationReleaseGoalPolicySourceConsistencyPassed",
+        "bundleVerificationGoalPolicySourceConsistencyPassed",
+      ]),
+  };
+}
+
 function resolveBundleVerificationSelectionSignals(payload, selectedMergeBundleValidationPath) {
   const checks = payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
   const files = payload?.files && typeof payload.files === "object" ? payload.files : {};
@@ -366,6 +429,10 @@ async function main() {
     process.env.UNIFIED_STAGE_PROMOTION_REQUIRE_RELEASE_GOAL_POLICY_VALIDATION,
     options.requireReleaseReadinessGoalPolicyValidation,
   );
+  const requireReleaseReadinessGoalPolicySourceConsistency = parseBooleanOption(
+    process.env.UNIFIED_STAGE_PROMOTION_REQUIRE_RELEASE_GOAL_POLICY_SOURCE_CONSISTENCY,
+    options.requireReleaseReadinessGoalPolicySourceConsistency,
+  );
   const requireBundleVerificationSelectionProof = parseBooleanOption(
     process.env.UNIFIED_STAGE_PROMOTION_REQUIRE_BUNDLE_VERIFICATION_SELECTION_PROOF,
     options.requireBundleVerificationSelectionProof,
@@ -412,12 +479,18 @@ async function main() {
   let bundleVerification = null;
   let releaseGoalPolicyValidationReported = false;
   let releaseGoalPolicyValidationPassed = false;
+  let releaseGoalPolicySourceConsistencyReported = false;
+  let releaseGoalPolicySourceConsistencyPassed = false;
   let mergeBundleReleaseGoalPolicyValidationReported = false;
   let mergeBundleReleaseGoalPolicyValidationPassed = false;
+  let mergeBundleReleaseGoalPolicySourceConsistencyReported = false;
+  let mergeBundleReleaseGoalPolicySourceConsistencyPassed = false;
   let mergeBundleInitialScopeGoalPolicyValidationReported = false;
   let mergeBundleInitialScopeGoalPolicyValidationPassed = false;
   let bundleVerificationReleaseGoalPolicyValidationReported = false;
   let bundleVerificationReleaseGoalPolicyValidationPassed = false;
+  let bundleVerificationReleaseGoalPolicySourceConsistencyReported = false;
+  let bundleVerificationReleaseGoalPolicySourceConsistencyPassed = false;
   let bundleVerificationInitialScopeGoalPolicyValidationReported = false;
   let bundleVerificationInitialScopeGoalPolicyValidationPassed = false;
   let bundleVerificationSelectionSignalReported = false;
@@ -464,11 +537,27 @@ async function main() {
       typeof releaseReadiness?.checks?.goalPolicyFileValidationPassed === "boolean";
     releaseGoalPolicyValidationPassed =
       releaseReadiness?.checks?.goalPolicyFileValidationPassed === true;
+    const releaseGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(
+      releaseReadiness,
+      [
+        "goalPolicySourceConsistencyPassed",
+        "goalPolicySourceConsistencyPass",
+      ],
+    );
+    releaseGoalPolicySourceConsistencyReported = releaseGoalPolicySourceConsistency.reported;
+    releaseGoalPolicySourceConsistencyPassed = releaseGoalPolicySourceConsistency.pass;
     if (requireReleaseReadinessGoalPolicyValidation) {
       if (!releaseGoalPolicyValidationReported) {
         failures.push("release_goal_policy_validation_not_reported");
       } else if (!releaseGoalPolicyValidationPassed) {
         failures.push("release_goal_policy_validation_not_passed");
+      }
+    }
+    if (requireReleaseReadinessGoalPolicySourceConsistency) {
+      if (!releaseGoalPolicySourceConsistencyReported) {
+        failures.push("release_goal_policy_source_consistency_not_reported");
+      } else if (!releaseGoalPolicySourceConsistencyPassed) {
+        failures.push("release_goal_policy_source_consistency_not_passed");
       }
     }
   }
@@ -496,6 +585,22 @@ async function main() {
       failures.push("merge_bundle_release_goal_policy_validation_not_reported");
     } else if (!mergeBundleReleaseGoalPolicyValidationPassed) {
       failures.push("merge_bundle_release_goal_policy_validation_not_passed");
+    }
+    const mergeBundleReleaseGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(
+      mergeBundleValidation,
+      [
+        "releaseGoalPolicySourceConsistencyPassed",
+        "releaseGoalPolicySourceConsistencyPass",
+      ],
+    );
+    mergeBundleReleaseGoalPolicySourceConsistencyReported =
+      mergeBundleReleaseGoalPolicySourceConsistency.reported;
+    mergeBundleReleaseGoalPolicySourceConsistencyPassed =
+      mergeBundleReleaseGoalPolicySourceConsistency.pass;
+    if (!mergeBundleReleaseGoalPolicySourceConsistencyReported) {
+      failures.push("merge_bundle_release_goal_policy_source_consistency_not_reported");
+    } else if (!mergeBundleReleaseGoalPolicySourceConsistencyPassed) {
+      failures.push("merge_bundle_release_goal_policy_source_consistency_not_passed");
     }
     const mergeBundleInitialScopeGoalPolicyValidation = resolveGoalPolicyValidationState(
       mergeBundleValidation,
@@ -528,6 +633,22 @@ async function main() {
       failures.push("bundle_verify_release_goal_policy_validation_not_reported");
     } else if (!bundleVerificationReleaseGoalPolicyValidationPassed) {
       failures.push("bundle_verify_release_goal_policy_validation_not_passed");
+    }
+    const bundleVerificationReleaseGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(
+      bundleVerification,
+      [
+        "releaseGoalPolicySourceConsistencyPassed",
+        "releaseGoalPolicySourceConsistencyPass",
+      ],
+    );
+    bundleVerificationReleaseGoalPolicySourceConsistencyReported =
+      bundleVerificationReleaseGoalPolicySourceConsistency.reported;
+    bundleVerificationReleaseGoalPolicySourceConsistencyPassed =
+      bundleVerificationReleaseGoalPolicySourceConsistency.pass;
+    if (!bundleVerificationReleaseGoalPolicySourceConsistencyReported) {
+      failures.push("bundle_verify_release_goal_policy_source_consistency_not_reported");
+    } else if (!bundleVerificationReleaseGoalPolicySourceConsistencyPassed) {
+      failures.push("bundle_verify_release_goal_policy_source_consistency_not_passed");
     }
     const bundleVerificationInitialScopeGoalPolicyValidation = resolveGoalPolicyValidationState(
       bundleVerification,
@@ -658,6 +779,7 @@ async function main() {
         !(
           mergeBundleValidation?.pass
           && mergeBundleReleaseGoalPolicyValidationPassed
+          && mergeBundleReleaseGoalPolicySourceConsistencyPassed
           && mergeBundleInitialScopeGoalPolicyValidationPassed
         )
       ) {
@@ -668,6 +790,7 @@ async function main() {
         !(
           bundleVerification?.pass
           && bundleVerificationReleaseGoalPolicyValidationPassed
+          && bundleVerificationReleaseGoalPolicySourceConsistencyPassed
           && bundleVerificationInitialScopeGoalPolicyValidationPassed
           && bundleVerificationSelectionGateSatisfied
         )
@@ -723,17 +846,24 @@ async function main() {
       cutoverReadinessPassed: Boolean(cutoverReadiness?.pass),
       releaseReadinessPassed: Boolean(releaseReadiness?.pass),
       requireReleaseReadinessGoalPolicyValidation,
+      requireReleaseReadinessGoalPolicySourceConsistency,
       requireBundleVerificationSelectionProof,
       releaseGoalPolicyValidationReported,
       releaseGoalPolicyValidationPassed,
+      releaseGoalPolicySourceConsistencyReported,
+      releaseGoalPolicySourceConsistencyPassed,
       mergeBundleValidationPassed: Boolean(mergeBundleValidation?.pass),
       mergeBundleReleaseGoalPolicyValidationReported,
       mergeBundleReleaseGoalPolicyValidationPassed,
+      mergeBundleReleaseGoalPolicySourceConsistencyReported,
+      mergeBundleReleaseGoalPolicySourceConsistencyPassed,
       mergeBundleInitialScopeGoalPolicyValidationReported,
       mergeBundleInitialScopeGoalPolicyValidationPassed,
       bundleVerificationPassed: Boolean(bundleVerification?.pass),
       bundleVerificationReleaseGoalPolicyValidationReported,
       bundleVerificationReleaseGoalPolicyValidationPassed,
+      bundleVerificationReleaseGoalPolicySourceConsistencyReported,
+      bundleVerificationReleaseGoalPolicySourceConsistencyPassed,
       bundleVerificationInitialScopeGoalPolicyValidationReported,
       bundleVerificationInitialScopeGoalPolicyValidationPassed,
       bundleVerificationSelectionSignalReported,

@@ -9,6 +9,10 @@ SUMMARY_PATH="${UNIFIED_RELEASE_READINESS_SUMMARY_PATH:-${UNIFIED_RELEASE_READIN
 COMMAND_LOG_DIR="${UNIFIED_RELEASE_READINESS_COMMAND_LOG_DIR:-$OUT_DIR/release-readiness-command-logs-$(date +%Y%m%d-%H%M%S)}"
 COMMANDS_FILE="${UNIFIED_RELEASE_READINESS_COMMANDS_FILE:-$COMMAND_LOG_DIR/commands.json}"
 GOAL_POLICY_VALIDATION_REPORT_PATH="${UNIFIED_RELEASE_READINESS_GOAL_POLICY_VALIDATION_REPORT_PATH:-$OUT_DIR/goal-policy-file-validation-$(date +%Y%m%d-%H%M%S).json}"
+REQUIRE_GOAL_POLICY_SOURCE_CONSISTENCY_FLAG=""
+if [[ "${UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_SOURCE_CONSISTENCY:-1}" == "1" ]]; then
+  REQUIRE_GOAL_POLICY_SOURCE_CONSISTENCY_FLAG="--require-goal-policy-source-consistency"
+fi
 mkdir -p "$COMMAND_LOG_DIR"
 printf '[]\n' >"$COMMANDS_FILE"
 
@@ -119,6 +123,7 @@ if [[ "${UNIFIED_RELEASE_READINESS_RUN_GOAL_POLICY_FILE_VALIDATION:-1}" == "1" ]
     --until-horizon H5 \
     --require-tagged-requirements \
     --require-positive-pending-min \
+    $REQUIRE_GOAL_POLICY_SOURCE_CONSISTENCY_FLAG \
     --out "$GOAL_POLICY_VALIDATION_REPORT_PATH"
 fi
 
@@ -128,13 +133,23 @@ if [[ "${#required_command_names[@]}" -gt 0 ]]; then
   required_joined="${required_joined%,}"
 fi
 
-node "$ROOT_DIR/scripts/release-readiness.mjs" \
-  --evidence-dir "$OUT_DIR" \
-  --out "$SUMMARY_PATH" \
-  --command-log-dir "$COMMAND_LOG_DIR" \
-  --commands-file "$COMMANDS_FILE" \
-  --goal-policy-file-validation-report "$GOAL_POLICY_VALIDATION_REPORT_PATH" \
-  $(if [[ "${UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_FILE_VALIDATION_REPORT:-1}" != "1" ]]; then printf '%s' "--allow-missing-goal-policy-file-validation-report"; fi) \
-  $(if [[ -n "$required_joined" ]]; then printf '%s %s' "--required-command-names" "$required_joined"; fi)
+release_readiness_cmd=(
+  node "$ROOT_DIR/scripts/release-readiness.mjs"
+  --evidence-dir "$OUT_DIR"
+  --out "$SUMMARY_PATH"
+  --command-log-dir "$COMMAND_LOG_DIR"
+  --commands-file "$COMMANDS_FILE"
+  --goal-policy-file-validation-report "$GOAL_POLICY_VALIDATION_REPORT_PATH"
+)
+if [[ "${UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_FILE_VALIDATION_REPORT:-1}" != "1" ]]; then
+  release_readiness_cmd+=("--allow-missing-goal-policy-file-validation-report")
+fi
+if [[ "${UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_SOURCE_CONSISTENCY:-1}" != "1" ]]; then
+  release_readiness_cmd+=("--allow-missing-goal-policy-source-consistency-report")
+fi
+if [[ -n "$required_joined" ]]; then
+  release_readiness_cmd+=("--required-command-names" "$required_joined")
+fi
+"${release_readiness_cmd[@]}"
 
 echo "Wrote $SUMMARY_PATH"

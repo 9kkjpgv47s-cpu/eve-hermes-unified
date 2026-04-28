@@ -139,6 +139,38 @@ export function validateReleaseReadinessManifest(payload) {
     );
     pushError(
       errors,
+      checks.goalPolicySourceConsistencyReported === undefined
+        || typeof checks.goalPolicySourceConsistencyReported === "boolean",
+      "checks.goalPolicySourceConsistencyReported must be boolean or undefined",
+    );
+    pushError(
+      errors,
+      checks.goalPolicySourceConsistencyPassed === undefined
+        || typeof checks.goalPolicySourceConsistencyPassed === "boolean",
+      "checks.goalPolicySourceConsistencyPassed must be boolean or undefined",
+    );
+    pushError(
+      errors,
+      checks.goalPolicySourceConsistencyPass === undefined
+        || typeof checks.goalPolicySourceConsistencyPass === "boolean",
+      "checks.goalPolicySourceConsistencyPass must be boolean or undefined",
+    );
+    pushError(
+      errors,
+      checks.goalPolicySourceConsistencyConflictTransitions === undefined
+        || checks.goalPolicySourceConsistencyConflictTransitions === null
+        || Array.isArray(checks.goalPolicySourceConsistencyConflictTransitions),
+      "checks.goalPolicySourceConsistencyConflictTransitions must be array, null, or undefined",
+    );
+    pushError(
+      errors,
+      checks.goalPolicySourceConsistencyOverlapTransitions === undefined
+        || checks.goalPolicySourceConsistencyOverlapTransitions === null
+        || Array.isArray(checks.goalPolicySourceConsistencyOverlapTransitions),
+      "checks.goalPolicySourceConsistencyOverlapTransitions must be array, null, or undefined",
+    );
+    pushError(
+      errors,
       Array.isArray(checks.requiredReleaseCommands),
       "checks.requiredReleaseCommands must be an array",
     );

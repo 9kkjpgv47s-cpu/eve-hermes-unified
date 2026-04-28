@@ -69,6 +69,7 @@ describe("build-merge-readiness-bundle.mjs", () => {
             },
             checks: {
               goalPolicyFileValidationPassed: true,
+              goalPolicySourceConsistencyPassed: true,
               validationCommandsPassed: true,
             },
           },
@@ -85,6 +86,7 @@ describe("build-merge-readiness-bundle.mjs", () => {
             checklistPath,
             checks: {
               releaseReadinessGoalPolicyValidationPassed: true,
+              releaseReadinessGoalPolicySourceConsistencyPassed: true,
             },
             failures: [],
           },

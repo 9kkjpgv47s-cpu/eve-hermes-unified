@@ -222,6 +222,14 @@ function resolveStagePromotionGoalPolicySignals(stagePromotionPayload) {
       "mergeBundleReleaseGoalPolicyValidationPassed",
       "mergeBundleGoalPolicyValidationPassed",
     ]),
+    mergeBundleReleaseSourceConsistencyReported: resolveBooleanCandidate([
+      "mergeBundleReleaseGoalPolicySourceConsistencyReported",
+      "mergeBundleGoalPolicySourceConsistencyReported",
+    ]),
+    mergeBundleReleaseSourceConsistencyPassed: resolveBooleanCandidate([
+      "mergeBundleReleaseGoalPolicySourceConsistencyPassed",
+      "mergeBundleGoalPolicySourceConsistencyPassed",
+    ]),
     mergeBundleInitialScopeReported:
       resolveBooleanCandidate(["mergeBundleInitialScopeGoalPolicyValidationReported"]),
     mergeBundleInitialScopePassed:
@@ -235,6 +243,16 @@ function resolveStagePromotionGoalPolicySignals(stagePromotionPayload) {
       resolveBooleanCandidate([
         "bundleVerificationReleaseGoalPolicyValidationPassed",
         "bundleVerificationGoalPolicyValidationPassed",
+      ]),
+    bundleVerificationReleaseSourceConsistencyReported:
+      resolveBooleanCandidate([
+        "bundleVerificationReleaseGoalPolicySourceConsistencyReported",
+        "bundleVerificationGoalPolicySourceConsistencyReported",
+      ]),
+    bundleVerificationReleaseSourceConsistencyPassed:
+      resolveBooleanCandidate([
+        "bundleVerificationReleaseGoalPolicySourceConsistencyPassed",
+        "bundleVerificationGoalPolicySourceConsistencyPassed",
       ]),
     bundleVerificationInitialScopeReported:
       resolveBooleanCandidate(["bundleVerificationInitialScopeGoalPolicyValidationReported"]),
@@ -409,6 +427,9 @@ async function main() {
   if (releaseReadiness?.checks?.goalPolicyFileValidationPassed !== true) {
     failures.push("release_goal_policy_file_validation_not_passed");
   }
+  if (releaseReadiness?.checks?.goalPolicySourceConsistencyPassed !== true) {
+    failures.push("release_goal_policy_source_consistency_not_passed");
+  }
   if (stagePromotion?.pass !== true) {
     failures.push("stage_promotion_readiness_failed");
   } else {
@@ -416,6 +437,15 @@ async function main() {
       failures.push("stage_promotion_merge_bundle_release_goal_policy_validation_not_reported");
     } else if (!stagePromotionGoalPolicySignals.mergeBundleReleasePassed) {
       failures.push("stage_promotion_merge_bundle_release_goal_policy_validation_not_passed");
+    }
+    if (!stagePromotionGoalPolicySignals.mergeBundleReleaseSourceConsistencyReported) {
+      failures.push(
+        "stage_promotion_merge_bundle_release_goal_policy_source_consistency_not_reported",
+      );
+    } else if (!stagePromotionGoalPolicySignals.mergeBundleReleaseSourceConsistencyPassed) {
+      failures.push(
+        "stage_promotion_merge_bundle_release_goal_policy_source_consistency_not_passed",
+      );
     }
     if (!stagePromotionGoalPolicySignals.mergeBundleInitialScopeReported) {
       failures.push("stage_promotion_merge_bundle_initial_scope_goal_policy_validation_not_reported");
@@ -426,6 +456,15 @@ async function main() {
       failures.push("stage_promotion_bundle_verification_release_goal_policy_validation_not_reported");
     } else if (!stagePromotionGoalPolicySignals.bundleVerificationReleasePassed) {
       failures.push("stage_promotion_bundle_verification_release_goal_policy_validation_not_passed");
+    }
+    if (!stagePromotionGoalPolicySignals.bundleVerificationReleaseSourceConsistencyReported) {
+      failures.push(
+        "stage_promotion_bundle_verification_release_goal_policy_source_consistency_not_reported",
+      );
+    } else if (!stagePromotionGoalPolicySignals.bundleVerificationReleaseSourceConsistencyPassed) {
+      failures.push(
+        "stage_promotion_bundle_verification_release_goal_policy_source_consistency_not_passed",
+      );
     }
     if (!stagePromotionGoalPolicySignals.bundleVerificationInitialScopeReported) {
       failures.push(
@@ -529,11 +568,17 @@ async function main() {
       releaseReadinessPassed: releaseReadiness?.pass === true,
       releaseGoalPolicyFileValidationPassed:
         releaseReadiness?.checks?.goalPolicyFileValidationPassed === true,
+      releaseGoalPolicySourceConsistencyPassed:
+        releaseReadiness?.checks?.goalPolicySourceConsistencyPassed === true,
       stagePromotionReadinessPassed: stagePromotion?.pass === true,
       stagePromotionMergeBundleGoalPolicyValidationReported:
         stagePromotionGoalPolicySignals.mergeBundleReleaseReported,
       stagePromotionMergeBundleGoalPolicyValidationPassed:
         stagePromotionGoalPolicySignals.mergeBundleReleasePassed,
+      stagePromotionMergeBundleGoalPolicySourceConsistencyReported:
+        stagePromotionGoalPolicySignals.mergeBundleReleaseSourceConsistencyReported,
+      stagePromotionMergeBundleGoalPolicySourceConsistencyPassed:
+        stagePromotionGoalPolicySignals.mergeBundleReleaseSourceConsistencyPassed,
       stagePromotionMergeBundleInitialScopeGoalPolicyValidationReported:
         stagePromotionGoalPolicySignals.mergeBundleInitialScopeReported,
       stagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed:
@@ -542,6 +587,10 @@ async function main() {
         stagePromotionGoalPolicySignals.bundleVerificationReleaseReported,
       stagePromotionBundleVerificationGoalPolicyValidationPassed:
         stagePromotionGoalPolicySignals.bundleVerificationReleasePassed,
+      stagePromotionBundleVerificationGoalPolicySourceConsistencyReported:
+        stagePromotionGoalPolicySignals.bundleVerificationReleaseSourceConsistencyReported,
+      stagePromotionBundleVerificationGoalPolicySourceConsistencyPassed:
+        stagePromotionGoalPolicySignals.bundleVerificationReleaseSourceConsistencyPassed,
       stagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported:
         stagePromotionGoalPolicySignals.bundleVerificationInitialScopeReported,
       stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed:

@@ -338,6 +338,22 @@ async function main() {
     } else if (!checks.releaseGoalPolicyValidationPassed) {
       failures.push("release_manifest_goal_policy_validation_not_passed");
     }
+    const releaseGoalPolicySourceConsistencyCandidates = [
+      releasePayload?.checks?.goalPolicySourceConsistencyPassed,
+      releasePayload?.checks?.goalPolicySourceConsistencyPass,
+    ];
+    const releaseGoalPolicySourceConsistencyValue = releaseGoalPolicySourceConsistencyCandidates.find(
+      (candidate) => typeof candidate === "boolean",
+    );
+    checks.releaseGoalPolicySourceConsistencyReported =
+      typeof releaseGoalPolicySourceConsistencyValue === "boolean";
+    checks.releaseGoalPolicySourceConsistencyPassed =
+      releaseGoalPolicySourceConsistencyValue === true;
+    if (!checks.releaseGoalPolicySourceConsistencyReported) {
+      failures.push("release_manifest_goal_policy_source_consistency_not_reported");
+    } else if (!checks.releaseGoalPolicySourceConsistencyPassed) {
+      failures.push("release_manifest_goal_policy_source_consistency_not_passed");
+    }
   } else {
     failures.push("missing_bundled_release_manifest");
   }
@@ -365,6 +381,24 @@ async function main() {
       failures.push("initial_scope_manifest_goal_policy_validation_not_reported");
     } else if (!checks.initialScopeGoalPolicyValidationPassed) {
       failures.push("initial_scope_manifest_goal_policy_validation_not_passed");
+    }
+    const initialScopeGoalPolicySourceConsistencyCandidates = [
+      initialScopePayload?.releaseReadinessGoalPolicySourceConsistencyPass,
+      initialScopePayload?.checks?.releaseReadinessGoalPolicySourceConsistencyPassed,
+      initialScopePayload?.checks?.releaseReadinessGoalPolicySourceConsistencyPass,
+    ];
+    const reportedInitialScopeGoalPolicySourceConsistencyValue =
+      initialScopeGoalPolicySourceConsistencyCandidates.find(
+        (candidate) => typeof candidate === "boolean",
+      );
+    checks.initialScopeGoalPolicySourceConsistencyReported =
+      typeof reportedInitialScopeGoalPolicySourceConsistencyValue === "boolean";
+    checks.initialScopeGoalPolicySourceConsistencyPassed =
+      reportedInitialScopeGoalPolicySourceConsistencyValue === true;
+    if (!checks.initialScopeGoalPolicySourceConsistencyReported) {
+      failures.push("initial_scope_manifest_goal_policy_source_consistency_not_reported");
+    } else if (!checks.initialScopeGoalPolicySourceConsistencyPassed) {
+      failures.push("initial_scope_manifest_goal_policy_source_consistency_not_passed");
     }
   } else {
     failures.push("missing_bundled_initial_scope_manifest");

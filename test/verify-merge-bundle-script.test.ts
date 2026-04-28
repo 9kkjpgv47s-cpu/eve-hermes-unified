@@ -95,6 +95,9 @@ async function seedBundleFixture(rootDir: string): Promise<{
           regressionPassed: true,
           cutoverReadinessPassed: true,
           goalPolicyFileValidationPassed: true,
+          goalPolicySourceConsistencyReported: true,
+          goalPolicySourceConsistencyPass: true,
+          goalPolicySourceConsistencyPassed: true,
           commandLogsMissing: [],
           discoveredCommandLogs: ["check.log"],
           requiredReleaseCommands: ["check"],
@@ -119,6 +122,8 @@ async function seedBundleFixture(rootDir: string): Promise<{
         checklistPath,
             checks: {
               releaseReadinessGoalPolicyValidationPassed: true,
+              releaseReadinessGoalPolicySourceConsistencyReported: true,
+              releaseReadinessGoalPolicySourceConsistencyPass: true,
             },
         failures: [],
       },

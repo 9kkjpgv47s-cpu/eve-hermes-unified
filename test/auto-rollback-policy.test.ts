@@ -128,6 +128,7 @@ async function seedEvidence(
           regressionPassed: true,
           cutoverReadinessPassed: options?.cutoverPass !== false,
           goalPolicyFileValidationPassed: options?.goalPolicyValidationPass !== false,
+          goalPolicySourceConsistencyPassed: options?.goalPolicyValidationPass !== false,
           commandLogsMissing: [],
           discoveredCommandLogs: [],
           requiredReleaseCommands: [],
@@ -174,17 +175,43 @@ async function seedEvidence(
           cutoverReadinessPassed: options?.cutoverPass !== false,
           releaseReadinessPassed: options?.releasePass !== false,
           releaseReadinessGoalPolicyValidationPassed: options?.goalPolicyValidationPass !== false,
+          releaseGoalPolicySourceConsistencyReported: options?.goalPolicyValidationPass !== null,
+          releaseGoalPolicySourceConsistencyPassed: options?.goalPolicyValidationPass !== false,
+          mergeBundleReleaseGoalPolicyValidationReported:
+            options?.stagePromotionMergeBundleGoalPolicyValidationPass !== null,
           mergeBundleGoalPolicyValidationReported:
             options?.stagePromotionMergeBundleGoalPolicyValidationPass !== null,
+          mergeBundleReleaseGoalPolicyValidationPassed:
+            options?.stagePromotionMergeBundleGoalPolicyValidationPass !== false,
           mergeBundleGoalPolicyValidationPassed:
+            options?.stagePromotionMergeBundleGoalPolicyValidationPass !== false,
+          mergeBundleReleaseGoalPolicySourceConsistencyReported:
+            options?.stagePromotionMergeBundleGoalPolicyValidationPass !== null,
+          mergeBundleReleaseGoalPolicySourceConsistencyPassed:
+            options?.stagePromotionMergeBundleGoalPolicyValidationPass !== false,
+          mergeBundleGoalPolicySourceConsistencyReported:
+            options?.stagePromotionMergeBundleGoalPolicyValidationPass !== null,
+          mergeBundleGoalPolicySourceConsistencyPassed:
             options?.stagePromotionMergeBundleGoalPolicyValidationPass !== false,
           mergeBundleInitialScopeGoalPolicyValidationReported:
             options?.stagePromotionMergeBundleInitialScopeGoalPolicyValidationPass !== null,
           mergeBundleInitialScopeGoalPolicyValidationPassed:
             options?.stagePromotionMergeBundleInitialScopeGoalPolicyValidationPass !== false,
+          bundleVerificationReleaseGoalPolicyValidationReported:
+            options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== null,
           bundleVerificationGoalPolicyValidationReported:
             options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== null,
+          bundleVerificationReleaseGoalPolicyValidationPassed:
+            options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== false,
           bundleVerificationGoalPolicyValidationPassed:
+            options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== false,
+          bundleVerificationReleaseGoalPolicySourceConsistencyReported:
+            options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== null,
+          bundleVerificationReleaseGoalPolicySourceConsistencyPassed:
+            options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== false,
+          bundleVerificationGoalPolicySourceConsistencyReported:
+            options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== null,
+          bundleVerificationGoalPolicySourceConsistencyPassed:
             options?.stagePromotionBundleVerificationGoalPolicyValidationPass !== false,
           bundleVerificationInitialScopeGoalPolicyValidationReported:
             options?.stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPass !== null,

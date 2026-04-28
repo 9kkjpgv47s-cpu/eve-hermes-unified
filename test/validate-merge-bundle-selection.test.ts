@@ -66,6 +66,8 @@ describe("validate-merge-bundle.sh report selection", () => {
           regressionPassed: true,
           cutoverReadinessPassed: true,
           goalPolicyFileValidationPassed: true,
+          goalPolicySourceConsistencyReported: true,
+          goalPolicySourceConsistencyPassed: true,
           commandLogsMissing: [],
           discoveredCommandLogs: [],
           requiredReleaseCommands: [],
@@ -104,6 +106,7 @@ describe("validate-merge-bundle.sh report selection", () => {
             checklistPath,
             checks: {
               releaseReadinessGoalPolicyValidationPassed: true,
+              releaseReadinessGoalPolicySourceConsistencyPass: true,
             },
             failures: [],
           },

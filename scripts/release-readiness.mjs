@@ -12,6 +12,7 @@ function parseArgs(argv) {
     requiredCommandNames: "",
     goalPolicyFileValidationReport: "",
     requireGoalPolicyFileValidationReport: true,
+    requireGoalPolicySourceConsistencyReport: true,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -47,6 +48,16 @@ function parseArgs(argv) {
       arg === "--allow-missing-goal-policy-validation-report"
     ) {
       options.requireGoalPolicyFileValidationReport = false;
+    } else if (
+      arg === "--require-goal-policy-source-consistency-report" ||
+      arg === "--require-goal-policy-source-consistency"
+    ) {
+      options.requireGoalPolicySourceConsistencyReport = true;
+    } else if (
+      arg === "--allow-missing-goal-policy-source-consistency-report" ||
+      arg === "--allow-missing-goal-policy-source-consistency"
+    ) {
+      options.requireGoalPolicySourceConsistencyReport = false;
     }
   }
   if (!options.evidenceDir) {
@@ -160,6 +171,15 @@ async function main() {
     options.requireGoalPolicyFileValidationReport =
       requireGoalPolicyFileValidationReportFromEnv.trim() !== "0";
   }
+  const requireGoalPolicySourceConsistencyReportFromEnv =
+    process.env.UNIFIED_RELEASE_READINESS_REQUIRE_GOAL_POLICY_SOURCE_CONSISTENCY_REPORT;
+  if (
+    typeof requireGoalPolicySourceConsistencyReportFromEnv === "string" &&
+    requireGoalPolicySourceConsistencyReportFromEnv.trim().length > 0
+  ) {
+    options.requireGoalPolicySourceConsistencyReport =
+      requireGoalPolicySourceConsistencyReportFromEnv.trim() !== "0";
+  }
   const evidenceDir = path.resolve(options.evidenceDir);
   const validationSummaryPath = await newestFileInDir(evidenceDir, "validation-summary-");
   const regressionPath = await newestFileInDir(evidenceDir, "regression-eve-primary-");
@@ -215,6 +235,10 @@ async function main() {
   let regressionSummary = null;
   let cutoverSummary = null;
   let goalPolicyValidationSummary = null;
+  let goalPolicySourceConsistencyReported = false;
+  let goalPolicySourceConsistencyPassed = false;
+  let goalPolicySourceConsistencyOverlapTransitions = [];
+  let goalPolicySourceConsistencyConflictTransitions = [];
   if (validationSummaryPath) {
     validationSummary = await readJson(validationSummaryPath);
     if (!validationSummary?.gates?.passed) {
@@ -241,6 +265,37 @@ async function main() {
     if (goalPolicyValidationSummary?.pass !== true) {
       failures.push("goal_policy_file_validation_failed");
     }
+    const crossSourceConsistencyChecked =
+      goalPolicyValidationSummary?.checks?.crossSourceConsistencyChecked;
+    const crossSourceConsistencyPass =
+      goalPolicyValidationSummary?.checks?.crossSourceConsistencyPass;
+    goalPolicySourceConsistencyReported =
+      typeof crossSourceConsistencyChecked === "boolean" &&
+      typeof crossSourceConsistencyPass === "boolean";
+    goalPolicySourceConsistencyPassed =
+      crossSourceConsistencyChecked === true && crossSourceConsistencyPass === true;
+    goalPolicySourceConsistencyOverlapTransitions = Array.isArray(
+      goalPolicyValidationSummary?.checks?.crossSourceOverlapTransitionKeys,
+    )
+      ? goalPolicyValidationSummary.checks.crossSourceOverlapTransitionKeys
+      : [];
+    goalPolicySourceConsistencyConflictTransitions = Array.isArray(
+      goalPolicyValidationSummary?.checks?.crossSourceConflictTransitionKeys,
+    )
+      ? goalPolicyValidationSummary.checks.crossSourceConflictTransitionKeys
+      : [];
+    if (options.requireGoalPolicySourceConsistencyReport) {
+      if (!goalPolicySourceConsistencyReported) {
+        failures.push("goal_policy_source_consistency_not_reported");
+      } else if (!goalPolicySourceConsistencyPassed) {
+        failures.push("goal_policy_source_consistency_not_passed");
+      }
+    }
+  } else if (
+    options.requireGoalPolicySourceConsistencyReport &&
+    options.requireGoalPolicyFileValidationReport
+  ) {
+    failures.push("missing_goal_policy_source_consistency_report");
   }
 
   const commandLogs = await evaluateCommandLogs(options.commandLogDir);
@@ -321,6 +376,19 @@ async function main() {
       cutoverReadinessPassed: Boolean(cutoverSummary?.pass),
       requireGoalPolicyFileValidationReport: options.requireGoalPolicyFileValidationReport,
       goalPolicyFileValidationPassed: goalPolicyValidationSummary?.pass === true,
+      requireGoalPolicySourceConsistencyReport:
+        options.requireGoalPolicySourceConsistencyReport,
+      goalPolicySourceConsistencyReported,
+      goalPolicySourceConsistencyPass: goalPolicySourceConsistencyPassed,
+      goalPolicySourceConsistencyPassed,
+      goalPolicySourceConsistencyOverlapTransitions:
+        goalPolicySourceConsistencyOverlapTransitions.length > 0
+          ? goalPolicySourceConsistencyOverlapTransitions
+          : null,
+      goalPolicySourceConsistencyConflictTransitions:
+        goalPolicySourceConsistencyConflictTransitions.length > 0
+          ? goalPolicySourceConsistencyConflictTransitions
+          : null,
       commandLogsMissing: commandLogs.missing,
       discoveredCommandLogs: commandLogs.discovered,
       requiredReleaseCommands,

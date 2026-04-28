@@ -95,6 +95,23 @@ function resolveReleaseGoalPolicyValidationPass(payload) {
   return { reported: false, pass: false };
 }
 
+function resolveReleaseGoalPolicySourceConsistencyPass(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    checks.goalPolicySourceConsistencyPassed,
+    checks.goalPolicySourceConsistencyPass,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
 function resolveInitialScopeGoalPolicyValidationPass(payload) {
   if (!payload || typeof payload !== "object") {
     return { reported: false, pass: false };
@@ -113,8 +130,30 @@ function resolveInitialScopeGoalPolicyValidationPass(payload) {
   return { reported: false, pass: false };
 }
 
+function resolveInitialScopeGoalPolicySourceConsistencyPass(payload) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const candidates = [
+    payload.releaseReadinessGoalPolicySourceConsistencyPass,
+    checks.releaseReadinessGoalPolicySourceConsistencyPassed,
+    checks.releaseReadinessGoalPolicySourceConsistencyPass,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
 const releaseGoalPolicyValidation = resolveReleaseGoalPolicyValidationPass(releaseReadiness);
+const releaseGoalPolicySourceConsistency =
+  resolveReleaseGoalPolicySourceConsistencyPass(releaseReadiness);
 const initialScopeGoalPolicyValidation = resolveInitialScopeGoalPolicyValidationPass(initialScope);
+const initialScopeGoalPolicySourceConsistency =
+  resolveInitialScopeGoalPolicySourceConsistencyPass(initialScope);
 
 const failures = [];
 if (buildExitCode !== 0) {
@@ -138,11 +177,23 @@ if (!allowMissingGoalPolicyValidation && !releaseGoalPolicyValidation.reported) 
 if (releaseGoalPolicyValidation.reported && !releaseGoalPolicyValidation.pass) {
   failures.push("release_goal_policy_validation_not_passed");
 }
+if (!allowMissingGoalPolicyValidation && !releaseGoalPolicySourceConsistency.reported) {
+  failures.push("missing_release_goal_policy_source_consistency_check");
+}
+if (releaseGoalPolicySourceConsistency.reported && !releaseGoalPolicySourceConsistency.pass) {
+  failures.push("release_goal_policy_source_consistency_not_passed");
+}
 if (!allowMissingGoalPolicyValidation && !initialScopeGoalPolicyValidation.reported) {
   failures.push("missing_initial_scope_goal_policy_validation_check");
 }
 if (initialScopeGoalPolicyValidation.reported && !initialScopeGoalPolicyValidation.pass) {
   failures.push("initial_scope_goal_policy_validation_not_passed");
+}
+if (!allowMissingGoalPolicyValidation && !initialScopeGoalPolicySourceConsistency.reported) {
+  failures.push("missing_initial_scope_goal_policy_source_consistency_check");
+}
+if (initialScopeGoalPolicySourceConsistency.reported && !initialScopeGoalPolicySourceConsistency.pass) {
+  failures.push("initial_scope_goal_policy_source_consistency_not_passed");
 }
 
 const payload = {
@@ -163,8 +214,12 @@ const payload = {
     allowMissingGoalPolicyValidation,
     releaseGoalPolicyValidationReported: releaseGoalPolicyValidation.reported,
     releaseGoalPolicyValidationPassed: releaseGoalPolicyValidation.pass,
+    releaseGoalPolicySourceConsistencyReported: releaseGoalPolicySourceConsistency.reported,
+    releaseGoalPolicySourceConsistencyPassed: releaseGoalPolicySourceConsistency.pass,
     initialScopeGoalPolicyValidationReported: initialScopeGoalPolicyValidation.reported,
     initialScopeGoalPolicyValidationPassed: initialScopeGoalPolicyValidation.pass,
+    initialScopeGoalPolicySourceConsistencyReported: initialScopeGoalPolicySourceConsistency.reported,
+    initialScopeGoalPolicySourceConsistencyPassed: initialScopeGoalPolicySourceConsistency.pass,
   },
   failures,
 };

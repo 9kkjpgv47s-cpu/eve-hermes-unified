@@ -9,6 +9,7 @@ function parseArgs(argv) {
     evidenceDir: "",
     out: "",
     requireReleaseReadinessGoalPolicyValidation: true,
+    requireReleaseReadinessGoalPolicySourceConsistency: true,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -35,6 +36,16 @@ function parseArgs(argv) {
       arg === "--require-release-readiness-goal-policy-file-validation"
     ) {
       options.requireReleaseReadinessGoalPolicyValidation = true;
+    } else if (
+      arg === "--allow-release-readiness-without-goal-policy-source-consistency" ||
+      arg === "--allow-release-readiness-without-goal-policy-source-integrity"
+    ) {
+      options.requireReleaseReadinessGoalPolicySourceConsistency = false;
+    } else if (
+      arg === "--require-release-readiness-goal-policy-source-consistency" ||
+      arg === "--require-release-readiness-goal-policy-source-integrity"
+    ) {
+      options.requireReleaseReadinessGoalPolicySourceConsistency = true;
     }
   }
   return options;
@@ -55,6 +66,27 @@ function applyBooleanEnvOverride(options) {
     rawValue === "off"
   ) {
     options.requireReleaseReadinessGoalPolicyValidation = false;
+  }
+
+  const rawSourceConsistencyValue = String(
+    process.env.UNIFIED_INITIAL_SCOPE_REQUIRE_GOAL_POLICY_SOURCE_CONSISTENCY ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  if (
+    rawSourceConsistencyValue === "1"
+    || rawSourceConsistencyValue === "true"
+    || rawSourceConsistencyValue === "yes"
+    || rawSourceConsistencyValue === "on"
+  ) {
+    options.requireReleaseReadinessGoalPolicySourceConsistency = true;
+  } else if (
+    rawSourceConsistencyValue === "0"
+    || rawSourceConsistencyValue === "false"
+    || rawSourceConsistencyValue === "no"
+    || rawSourceConsistencyValue === "off"
+  ) {
+    options.requireReleaseReadinessGoalPolicySourceConsistency = false;
   }
 }
 
@@ -113,6 +145,8 @@ async function main() {
   let releaseReadiness = null;
   let releaseReadinessGoalPolicyValidationPassed = false;
   let releaseReadinessGoalPolicyValidationReported = false;
+  let releaseReadinessGoalPolicySourceConsistencyPassed = false;
+  let releaseReadinessGoalPolicySourceConsistencyReported = false;
   if (!releaseReadinessPath) {
     failures.push("missing_release_readiness_report");
   } else {
@@ -125,6 +159,15 @@ async function main() {
       typeof legacyGoalPolicyValidationResult === "boolean";
     releaseReadinessGoalPolicyValidationPassed =
       goalPolicyFileValidationResult === true || legacyGoalPolicyValidationResult === true;
+    const goalPolicySourceConsistencyResult =
+      releaseReadiness?.checks?.goalPolicySourceConsistencyPassed;
+    const legacyGoalPolicySourceConsistencyResult =
+      releaseReadiness?.checks?.goalPolicySourceConsistencyPass;
+    releaseReadinessGoalPolicySourceConsistencyReported =
+      typeof goalPolicySourceConsistencyResult === "boolean"
+      || typeof legacyGoalPolicySourceConsistencyResult === "boolean";
+    releaseReadinessGoalPolicySourceConsistencyPassed =
+      goalPolicySourceConsistencyResult === true || legacyGoalPolicySourceConsistencyResult === true;
     if (!releaseReadiness?.pass) {
       failures.push("release_readiness_not_passed");
     }
@@ -138,6 +181,16 @@ async function main() {
           : "release_readiness_goal_policy_validation_missing",
       );
     }
+    if (
+      options.requireReleaseReadinessGoalPolicySourceConsistency &&
+      !releaseReadinessGoalPolicySourceConsistencyPassed
+    ) {
+      failures.push(
+        releaseReadinessGoalPolicySourceConsistencyReported
+          ? "release_readiness_goal_policy_source_consistency_not_passed"
+          : "release_readiness_goal_policy_source_consistency_missing",
+      );
+    }
   }
 
   const payload = {
@@ -148,15 +201,23 @@ async function main() {
     missingChecklistItems: uncheckedItems,
     releaseReadinessPass: Boolean(releaseReadiness?.pass),
     releaseReadinessGoalPolicyValidationPass: releaseReadinessGoalPolicyValidationPassed,
+    releaseReadinessGoalPolicySourceConsistencyPass:
+      releaseReadinessGoalPolicySourceConsistencyPassed,
     checks: {
       uncheckedChecklistItems: uncheckedItems,
       releaseReadinessPassed: Boolean(releaseReadiness?.pass),
       requireReleaseReadinessGoalPolicyValidation:
         options.requireReleaseReadinessGoalPolicyValidation,
+      requireReleaseReadinessGoalPolicySourceConsistency:
+        options.requireReleaseReadinessGoalPolicySourceConsistency,
       releaseReadinessGoalPolicyValidationReported:
         releaseReadinessGoalPolicyValidationReported,
       releaseReadinessGoalPolicyValidationPassed:
         releaseReadinessGoalPolicyValidationPassed,
+      releaseReadinessGoalPolicySourceConsistencyReported:
+        releaseReadinessGoalPolicySourceConsistencyReported,
+      releaseReadinessGoalPolicySourceConsistencyPassed:
+        releaseReadinessGoalPolicySourceConsistencyPassed,
       releaseReadinessFailures: Array.isArray(releaseReadiness?.failures)
         ? releaseReadiness.failures
         : [],

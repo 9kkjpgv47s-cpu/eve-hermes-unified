@@ -109,6 +109,7 @@ async function seedEvidence(
           regressionPassed: true,
           cutoverReadinessPassed: true,
           goalPolicyFileValidationPassed: true,
+          goalPolicySourceConsistencyPassed: true,
           commandLogsMissing: [],
           discoveredCommandLogs: [],
           requiredReleaseCommands: [],
@@ -144,8 +145,12 @@ async function seedEvidence(
           bundleManifestPass: true,
           releaseGoalPolicyValidationReported: true,
           releaseGoalPolicyValidationPassed: true,
+          releaseGoalPolicySourceConsistencyReported: true,
+          releaseGoalPolicySourceConsistencyPassed: true,
           initialScopeGoalPolicyValidationReported: true,
           initialScopeGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicySourceConsistencyReported: true,
+          initialScopeGoalPolicySourceConsistencyPassed: true,
           bundleFailures: [],
         },
         failures: [],
@@ -170,8 +175,12 @@ async function seedEvidence(
           validationManifestResolved: true,
           releaseGoalPolicyValidationReported: true,
           releaseGoalPolicyValidationPassed: true,
+          releaseGoalPolicySourceConsistencyReported: true,
+          releaseGoalPolicySourceConsistencyPassed: true,
           initialScopeGoalPolicyValidationReported: true,
           initialScopeGoalPolicyValidationPassed: true,
+          initialScopeGoalPolicySourceConsistencyReported: true,
+          initialScopeGoalPolicySourceConsistencyPassed: true,
         },
       },
       null,
@@ -348,6 +357,9 @@ describe("check-stage-promotion-readiness.mjs", () => {
           activeHorizon: string;
           stage: string;
           evidenceSelectionMode: string;
+          releaseGoalPolicySourceConsistencyPassed: boolean;
+          mergeBundleReleaseGoalPolicySourceConsistencyPassed: boolean;
+          bundleVerificationReleaseGoalPolicySourceConsistencyPassed: boolean;
         };
       };
       expect(payload.pass).toBe(true);
@@ -356,6 +368,9 @@ describe("check-stage-promotion-readiness.mjs", () => {
       expect(payload.checks.activeHorizon).toBe("H2");
       expect(payload.checks.stage).toBe("canary");
       expect(payload.checks.evidenceSelectionMode).toBe("latest");
+      expect(payload.checks.releaseGoalPolicySourceConsistencyPassed).toBe(true);
+      expect(payload.checks.mergeBundleReleaseGoalPolicySourceConsistencyPassed).toBe(true);
+      expect(payload.checks.bundleVerificationReleaseGoalPolicySourceConsistencyPassed).toBe(true);
     });
   });
 
@@ -371,6 +386,7 @@ describe("check-stage-promotion-readiness.mjs", () => {
       releasePayload.checks = {
         ...(releasePayload.checks ?? {}),
         goalPolicyFileValidationPassed: false,
+        goalPolicySourceConsistencyPassed: true,
       };
       await writeFile(seeded.releasePath, JSON.stringify(releasePayload, null, 2), "utf8");
       await seedHorizonStatus(horizonPath, "canary", "H2");
@@ -464,6 +480,8 @@ describe("check-stage-promotion-readiness.mjs", () => {
       };
       delete verifyPayload.checks.releaseGoalPolicyValidationReported;
       delete verifyPayload.checks.releaseGoalPolicyValidationPassed;
+      delete verifyPayload.checks.releaseGoalPolicySourceConsistencyReported;
+      delete verifyPayload.checks.releaseGoalPolicySourceConsistencyPassed;
       delete verifyPayload.checks.initialScopeGoalPolicyValidationReported;
       delete verifyPayload.checks.initialScopeGoalPolicyValidationPassed;
       await writeFile(seeded.verifyPath, JSON.stringify(verifyPayload, null, 2), "utf8");
@@ -492,6 +510,7 @@ describe("check-stage-promotion-readiness.mjs", () => {
       };
       expect(payload.pass).toBe(false);
       expect(payload.failures).toContain("bundle_verify_release_goal_policy_validation_not_reported");
+      expect(payload.failures).toContain("bundle_verify_release_goal_policy_source_consistency_not_reported");
       expect(payload.failures).toContain(
         "bundle_verify_initial_scope_goal_policy_validation_not_reported",
       );

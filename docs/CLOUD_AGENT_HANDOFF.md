@@ -53,6 +53,12 @@ Every PR should include:
 - **Soak drift summary**: `npm run summarize:soak-report -- --input evidence/soak-*.jsonl` produces metrics + optional drift alarms (`UNIFIED_SOAK_FAIL_ON_DRIFT=1`).
 - **Emergency rollback rehearsal**: `npm run rehearse:emergency-rollback` writes `evidence/emergency-rollback-rehearsal-*.json`; `--execute` applies Eve-safe policy via `scripts/prod-rollback-eve-safe-lane.sh`.
 
+## H4 legacy path retirement (in-repo)
+
+- Deprecation table: `docs/LEGACY_ENTRYPOINT_DEPRECATION_MAP.md`
+- Static gate: `npm run validate:unified-entrypoints` (only `src/bin/unified-dispatch.ts` may construct `EveAdapter` / `HermesAdapter`)
+- Contract version: `UNIFIED_DISPATCH_CONTRACT_VERSION` in `src/contracts/schema-version.ts`; fixtures under `test/fixtures/contracts/`
+
 ## Cutover and Rollback Commands
 
 Stage:

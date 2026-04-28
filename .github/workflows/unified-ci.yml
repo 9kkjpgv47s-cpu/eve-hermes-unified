@@ -30,6 +30,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Unified dispatch entrypoint gate
+        run: npm run validate:unified-entrypoints
+
       - name: Build
         run: npm run build
 

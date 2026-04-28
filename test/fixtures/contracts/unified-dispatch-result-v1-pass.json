@@ -1,0 +1,36 @@
+{
+  "envelope": {
+    "traceId": "fixture-trace-v1",
+    "channel": "telegram",
+    "chatId": "100",
+    "messageId": "200",
+    "receivedAtIso": "2026-04-28T12:00:00.000Z",
+    "text": "fixture message"
+  },
+  "routing": {
+    "primaryLane": "eve",
+    "fallbackLane": "none",
+    "reason": "explicit_cursor_passthrough",
+    "policyVersion": "v1",
+    "failClosed": true
+  },
+  "primaryState": {
+    "status": "pass",
+    "reason": "ok",
+    "runtimeUsed": "eve",
+    "runId": "fixture-run",
+    "elapsedMs": 10,
+    "failureClass": "none",
+    "sourceLane": "eve",
+    "sourceChatId": "100",
+    "sourceMessageId": "200",
+    "traceId": "fixture-trace-v1"
+  },
+  "response": {
+    "consumed": true,
+    "responseText": "Unified dispatch succeeded via eve.\nrun_id: fixture-run\nreason: ok",
+    "failureClass": "none",
+    "laneUsed": "eve",
+    "traceId": "fixture-trace-v1"
+  }
+}

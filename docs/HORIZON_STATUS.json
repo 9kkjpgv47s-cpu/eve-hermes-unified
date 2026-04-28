@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T17:15:00Z",
+  "updatedAtIso": "2026-04-28T17:30:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -189,11 +189,25 @@
       "tags": ["validation", "durability"]
     },
     {
-      "id": "h3-action-6",
-      "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
-      "targetHorizon": "H3",
+      "id": "h4-action-1",
+      "summary": "Publish legacy entrypoint deprecation map with canonical unified dispatch ingress.",
+      "targetHorizon": "H4",
       "status": "completed",
-      "tags": ["rollback", "operations"]
+      "tags": ["legacy", "documentation"]
+    },
+    {
+      "id": "h4-action-2",
+      "summary": "Add executable gate preventing direct EveAdapter/HermesAdapter construction outside unified dispatch binary.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "validation"]
+    },
+    {
+      "id": "h4-action-3",
+      "summary": "Pin unified dispatch contract version constant and JSON fixture validated by schema validators.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["contracts", "testing"]
     }
   ],
   "goalPolicies": {
@@ -265,12 +279,12 @@
       "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, H2-specific closeout evidence is machine-validated, one-command closeout and promotion runners are available, horizon advancement can consume pinned closeout-run evidence, and progressive goal-runway gates can require larger next-horizon scope before promotion."
     },
     "H3": {
-      "status": "planned",
-      "summary": "Runtime durability and policy maturity: durable dispatch queue + replay, soak drift summarizer, emergency rollback rehearsal manifests; remaining work includes deeper ingress-side queue integration."
+      "status": "completed",
+      "summary": "Runtime durability and policy maturity delivered: durable dispatch queue + replay, soak drift summarizer, emergency rollback rehearsal manifests, failure-class fallback suppression, capability timeouts, serialized in-memory option."
     },
     "H4": {
-      "status": "planned",
-      "summary": "Legacy path retirement and contract tightening."
+      "status": "in_progress",
+      "summary": "Legacy path retirement: deprecation map, validate:unified-entrypoints gate, contract v1 fixtures."
     },
     "H5": {
       "status": "planned",
@@ -397,6 +411,12 @@
       "horizon": "H3",
       "status": "planned",
       "note": "Completed H3 action items 1,5,6: FileDispatchDurabilityQueue + dispatchUnifiedEnvelope replay, summarize-soak-report.mjs SLO drift metrics, emergency-rollback-rehearsal.sh evidence manifest; dispatch CLI --enqueue-only and --replay-queue."
+    },
+    {
+      "timestamp": "2026-04-28T17:30:00Z",
+      "horizon": "H4",
+      "status": "in_progress",
+      "note": "H4 slice: LEGACY_ENTRYPOINT_DEPRECATION_MAP.md, validate-unified-entrypoints.mjs, UNIFIED_DISPATCH_CONTRACT_VERSION + JSON fixture test."
     }
   ]
 }

@@ -8,26 +8,22 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Branch (at handoff time): `cursor/h3-dispatch-fallback-capability-timeout-7d5a`
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); **all listed H3 `nextActions` are completed in-repo** (see `docs/HORIZON_STATUS.json`); next program slice is **H4** (legacy path retirement / contract tightening).
+- Branch (at handoff time): `cursor/h3-dispatch-wal-soak-rehearsal-7d5a`
 - Latest slice (this session):
-  - **H3 `h3-action-2`:** Optional `UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES` — lane fallback only when primary `failureClass` is in the allowlist; otherwise `primaryFallbackLimited` on dispatch result
-  - **H3 `h3-action-3`:** Optional `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` — `@cap` executor wall-clock bound with `capability_execution_timeout` + metadata
-  - **H3 `h3-action-4` (prior on parent branch):** atomic unified memory file writes + optional dual-write shadow
+  - **H3 `h3-action-1`:** Durable dispatch WAL (`UNIFIED_DISPATCH_DURABLE_WAL_PATH`) with `dispatch_attempt` / `dispatch_complete` lines; **`npm run replay:dispatch-wal`** replays orphans and writes `dispatch_replay_complete`; shared **`buildUnifiedDispatchRuntime`**
+  - **H3 `h3-action-5`:** **`npm run summarize:soak`** → `scripts/summarize-soak-jsonl.mjs` (failure-class + trace drift alarms on soak JSONL)
+  - **H3 `h3-action-6`:** **`npm run run:emergency-rollback-rehearsal`** → `scripts/emergency-rollback-rehearsal.sh` (operator manifest; does not run prod rollback)
 
 ## What Was Just Completed
 
-1. **Dispatch fallback policy gate** and **`UnifiedDispatchResult.primaryFallbackLimited`** signal.
-2. **Capability execution timeout** envelope in `UnifiedCapabilityEngine` + `unified-dispatch` wiring.
-3. **Horizon tracking:** `h3-action-2`, `h3-action-3` completed in `docs/HORIZON_STATUS.json`; history + `.env.example` updated.
+1. Dispatch durable WAL + replay tooling and tests (`dispatch-durable-wal`, preflight WAL path).
+2. Soak summarizer + emergency rollback rehearsal script + `package.json` scripts.
+3. Horizon tracking: `h3-action-1`, `h3-action-5`, `h3-action-6` → completed; `horizonStates.H3` summary updated; history entries preserved/extended.
 
-## Earlier session (memory durability branch `cursor/h3-unified-memory-durability-7d5a`)
+## Earlier H3 increments (same convergence line)
 
-- Atomic `FileUnifiedMemoryStore` persistence; dual-write shadow; `test/unified-memory-durability.test.ts`.
-
-## Earlier session (closeout / promotion taxonomy, parent branch)
-
-- Horizon-neutral drill closeout checks, `promote-horizon` / `run-h2-promotion` gate signal alignment, scoped non-H2 closeout gate failure codes, `missing_evidence_dir` fix when `--closeout-run-file` is used.
+- Memory atomic/dual-write; failure-class fallback gate; capability timeout; closeout/promotion taxonomy fixes (see git history / `docs/HORIZON_STATUS.json`).
 
 ## Read Order (Zero-Context Startup)
 
@@ -40,10 +36,9 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **H3 `h3-action-1`:** persistent queue / replay semantics for cross-lane dispatch recovery (design + incremental implementation + tests).
-2. **H3 `h3-action-5`+:** soak validation, emergency rollback rehearsal bundles.
-3. Complete horizon-neutral taxonomy for remaining H2-only orchestrator strings (keep compatibility aliases).
-4. Keep manifest schema gates aligned when adding new evidence types.
+1. **H4:** legacy path retirement scan + deprecation map (`docs/NEXT_LONG_HORIZON_ACTION_PLAN.md` H4 section).
+2. **H2 closeout (when ready):** operator evidence under `evidence/` + `validate:h2-closeout` / promotion flows.
+3. Optional: wire `summarize:soak` into CI after long soak runs; tune drift thresholds via env if needed.
 
 ## Validation Pack
 
@@ -53,16 +48,12 @@ npm test
 npm run validate:all
 ```
 
-Targeted suites when touching promotion/closeout paths:
+H3 tooling smoke:
 
 ```bash
-npm test -- test/h2-closeout-runner-script.test.ts test/promote-horizon-script.test.ts test/h2-promotion-runner-script.test.ts test/horizon-closeout-validation.test.ts
-```
-
-Targeted suite for unified memory / durability:
-
-```bash
-npm test -- test/unified-memory-durability.test.ts test/memory-and-skills-contracts.test.ts
+npm run summarize:soak -- --input path/to/soak.jsonl
+npm run replay:dispatch-wal -- --dry-run
+npm run run:emergency-rollback-rehearsal
 ```
 
 ## Execution Guardrails

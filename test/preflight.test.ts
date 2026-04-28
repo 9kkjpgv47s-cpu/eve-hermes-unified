@@ -71,4 +71,18 @@ describe("runRuntimePreflight", () => {
       );
     });
   });
+
+  it("fails when dispatch durable WAL parent is not writable", async () => {
+    await withTempDir(async (dir) => {
+      const blockedFile = path.join(dir, "blocked-wal");
+      await writeFile(blockedFile, "x", "utf8");
+      const config = {
+        ...baseConfig(dir),
+        dispatchDurableWalPath: path.join(blockedFile, "wal.jsonl"),
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "Dispatch durable WAL path is not writable",
+      );
+    });
+  });
 });

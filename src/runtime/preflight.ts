@@ -12,6 +12,8 @@ export type RuntimePreflightConfig = {
   unifiedMemoryStoreKind: "file" | "memory";
   unifiedMemoryFilePath: string;
   unifiedMemoryDualWriteFilePath?: string;
+  /** When set, preflight verifies parent directory is writable for durable dispatch WAL. */
+  dispatchDurableWalPath?: string;
   auditEnabled?: boolean;
   auditLogPath: string;
 };
@@ -90,6 +92,14 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
           "Unified memory dual-write path must differ from the primary unified memory file path.",
         );
       }
+    }
+  }
+
+  const walPath = String(config.dispatchDurableWalPath ?? "").trim();
+  if (walPath.length > 0) {
+    const walWritable = await checkWritableParent(walPath);
+    if (!walWritable) {
+      issues.push(`Dispatch durable WAL path is not writable: ${walPath}`);
     }
   }
 

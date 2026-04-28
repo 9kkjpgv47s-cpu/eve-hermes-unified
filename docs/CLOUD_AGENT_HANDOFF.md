@@ -25,7 +25,7 @@ Use this backlog when continuing H2 convergence without chat context. Order is a
 2. **Command coverage** — Treat `npm run run:h[1-5]-drill-suite` uniformly in closeout evidence evaluation (same schema and gate semantics as today’s H2 drill suite).
 3. **Tests** — Extend assertions to expect canonical codes first while still accepting legacy aliases where compatibility is required.
 4. **Schema and manifests** — Keep `scripts/validate-manifest-schema.mjs` and emitted JSON aligned with any renamed check keys; update fixtures when adding new horizons.
-5. **H3+ runway** — After H2 closeout is stable, execute planned H3 actions in `docs/HORIZON_STATUS.json` (durability, policy hardening, capability envelopes) with evidence under `evidence/`. **Progress:** `h3-action-2` through `h3-action-4` are completed in-repo; **`h3-action-1` and `h3-action-5`+** remain planned.
+5. **H3+ runway** — After H2 closeout is stable, execute planned H3 actions in `docs/HORIZON_STATUS.json` (durability, policy hardening, capability envelopes) with evidence under `evidence/`. **Progress:** all listed **`h3-action-*` items are completed in-repo** (WAL/replay, policy fallback gate, capability timeout, memory durability, soak summarizer, emergency rollback rehearsal manifest); advance to **H4** workstreams next.
 
 ## Baseline Status Fields to Record
 

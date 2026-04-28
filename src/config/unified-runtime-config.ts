@@ -14,6 +14,8 @@ export type UnifiedRuntimeEnvConfig = {
   /** Optional second file path for dual-write durability (H3); must differ from primary when set. */
   unifiedMemoryDualWriteFilePath: string;
   unifiedDispatchAuditLogPath: string;
+  /** Optional append-only durable WAL for dispatch attempts (H3 replay). Empty disables. */
+  dispatchDurableWalPath: string;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -182,6 +184,12 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const dispatchDurableWalPath =
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_DURABLE_WAL_PATH",
+      "DISPATCH_DURABLE_WAL_PATH",
+      "UNIFIED_DISPATCH_WAL_PATH",
+    ]) ?? "";
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -329,6 +337,7 @@ export function loadUnifiedRuntimeEnvConfig(
     unifiedMemoryFilePath,
     unifiedMemoryDualWriteFilePath,
     unifiedDispatchAuditLogPath,
+    dispatchDurableWalPath,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

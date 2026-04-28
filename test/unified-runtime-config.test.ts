@@ -117,6 +117,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.unifiedCapabilityExecutionTimeoutMs).toBe(15_000);
   });
 
+  it("parses optional dispatch durable WAL path", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABLE_WAL_PATH: "/tmp/dispatch-wal.jsonl",
+        }),
+      ),
+    );
+    expect(config.dispatchDurableWalPath).toBe("/tmp/dispatch-wal.jsonl");
+  });
+
   it("parses capability policy controls", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

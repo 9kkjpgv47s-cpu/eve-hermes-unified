@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T18:00:00Z",
+  "updatedAtIso": "2026-04-28T19:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -157,7 +157,7 @@
       "id": "h3-action-1",
       "summary": "Harden runtime durability boundaries with persistent queue/replay semantics for cross-lane dispatch recovery.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "runtime"]
     },
     {
@@ -185,14 +185,14 @@
       "id": "h3-action-5",
       "summary": "Create long-window soak validation for H3 policy and durability changes with explicit SLO drift alarms.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
     },
     {
       "id": "h3-action-6",
       "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["rollback", "operations"]
     }
   ],
@@ -266,7 +266,7 @@
     },
     "H3": {
       "status": "planned",
-      "summary": "Runtime durability and policy maturity hardening."
+      "summary": "In-repo H3 slice closed: durable dispatch WAL + replay, soak JSONL summarizer with drift alarms, emergency rollback rehearsal manifest, memory atomic/dual-write, failure-class fallback gate, capability execution timeout; H4+ remains future work."
     },
     "H4": {
       "status": "planned",
@@ -403,6 +403,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "H3 policy slice: optional UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES gates lane fallback by primary failure class; optional UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS bounds @cap executor wall time with auditable timeout result; UnifiedDispatchResult.primaryFallbackLimited when fallback skipped by policy."
+    },
+    {
+      "timestamp": "2026-04-28T19:00:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "H3 dispatch durable WAL (attempt/complete JSONL), replay tool `npm run replay:dispatch-wal`, soak aggregation `npm run summarize:soak`, emergency rollback rehearsal `npm run run:emergency-rollback-rehearsal`; shared runtime builder for dispatch/replay."
     }
   ]
 }

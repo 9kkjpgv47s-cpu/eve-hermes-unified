@@ -8,8 +8,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: `H2` (`docs/HORIZON_STATUS.json`); **H3 in-repo progress:** `h3-action-2`–`h3-action-4` completed (dispatch fallback failure-class gate, capability execution timeout, unified memory atomic/dual-write). **`h3-action-1` and `h3-action-5`+ remain planned.**
-- Primary focus: staged promotion drills + rollback-policy enforcement with auditable artifacts; next H3 chunk is **queue/replay (`h3-action-1`)** and **soak / rollback rehearsal evidence (`h3-action-5`+)**.
+- Horizon: `H2` (`docs/HORIZON_STATUS.json`); **listed H3 `nextActions` are all completed in-repo**; next long-horizon slice is **H4** (legacy path retirement / contract tightening per `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`).
+- Primary focus: H2 operationalization + H4 prep; H3 tooling (WAL replay, soak summarize, rollback rehearsal) is available for regression and evidence.
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -42,6 +42,15 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 ```bash
 npm run check
 npm test
+```
+
+### H3 dispatch WAL / soak / rehearsal
+
+```bash
+npm test -- test/dispatch-durable-wal.test.ts
+npm run summarize:soak -- --input path/to/soak.jsonl
+npm run replay:dispatch-wal -- --dry-run
+npm run run:emergency-rollback-rehearsal
 ```
 
 ### H3 dispatch / capability policy
@@ -89,7 +98,7 @@ npm run verify:merge-bundle -- --evidence-dir evidence --latest
 3. Evidence freshness rules so stage drill reliably selects latest passing artifacts for all dependent gates.
 4. Runbook tightening for operator replay of canary/majority incidents.
 5. Extend closeout/promotion orchestration to horizon-generic operation (H3/H4) while preserving H2 command compatibility.
-6. **H3 next:** `h3-action-1` queue/replay for dispatch recovery; long-window soak and rollback rehearsal bundles (`h3-action-5`+).
+6. **H4 next:** legacy ingress scan, deprecation map, versioned dispatch contract fixtures per long-horizon plan.
 
 ## Done Signal for Each Iteration
 

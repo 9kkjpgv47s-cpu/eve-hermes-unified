@@ -1,18 +1,16 @@
 #!/usr/bin/env node
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { EveAdapter } from "../adapters/eve-adapter.js";
-import { HermesAdapter } from "../adapters/hermes-adapter.js";
+import { randomUUID } from "node:crypto";
 import { loadDotEnvFile } from "../config/env.js";
 import { loadUnifiedRuntimeEnvConfig } from "../config/unified-runtime-config.js";
-import { createUnifiedMemoryStoreFromEnv } from "../memory/unified-memory-store.js";
-import { createDefaultUnifiedCapabilityRegistry } from "../skills/capability-registry.js";
-import { UnifiedCapabilityEngine } from "../runtime/capability-engine.js";
-import { registerDefaultCapabilityExecutors } from "../runtime/default-capability-handlers.js";
+import { buildUnifiedDispatchRuntime, resolveRepoRootFromImportMeta } from "../runtime/build-unified-dispatch-runtime.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
-import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
+import {
+  appendDispatchWalLine,
+  type DispatchWalAttemptRecord,
+  type DispatchWalCompleteRecord,
+} from "../runtime/dispatch-durable-wal.js";
 
 function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
   let text = "";
@@ -38,50 +36,11 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
 }
 
 async function main() {
-  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const rootDir = resolveRepoRootFromImportMeta(import.meta.url);
   await loadDotEnvFile(rootDir);
   const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
   const config = loadUnifiedRuntimeEnvConfig();
-  const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
-    config.unifiedMemoryStoreKind,
-    config.unifiedMemoryFilePath,
-    { dualWriteShadowFilePath: config.unifiedMemoryDualWriteFilePath },
-  );
-  const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
-  const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);
-  const capabilityRegistry = createDefaultUnifiedCapabilityRegistry();
-  const dispatchLane = async (input: {
-    lane: "eve" | "hermes";
-    text: string;
-    intentRoute: string;
-    chatId: string;
-    messageId: string;
-    traceId: string;
-  }) => {
-    const adapter = input.lane === "eve" ? eveAdapter : hermesAdapter;
-    return adapter.dispatch({
-      envelope: {
-        channel: "telegram",
-        chatId: input.chatId,
-        messageId: input.messageId,
-        text: input.text,
-        traceId: input.traceId,
-        receivedAtIso: new Date().toISOString(),
-      },
-      intentRoute: input.intentRoute,
-    });
-  };
-  registerDefaultCapabilityExecutors(capabilityRegistry, {
-    dispatchLane,
-    memoryStore: sharedMemoryStore,
-  });
-  const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
-  const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
-    memoryStore: sharedMemoryStore,
-    dispatchLane,
-    policy: capabilityPolicy,
-    capabilityExecutionTimeoutMs: config.unifiedCapabilityExecutionTimeoutMs,
-  });
+  const { runtime } = buildUnifiedDispatchRuntime(config);
 
   const preflightIssues = await runRuntimePreflight({
     enabled: config.preflight.enabled,
@@ -92,6 +51,7 @@ async function main() {
     unifiedMemoryStoreKind: config.unifiedMemoryStoreKind,
     unifiedMemoryFilePath: config.unifiedMemoryFilePath,
     unifiedMemoryDualWriteFilePath: config.unifiedMemoryDualWriteFilePath,
+    dispatchDurableWalPath: config.dispatchDurableWalPath,
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
   });
@@ -100,12 +60,22 @@ async function main() {
     throw new Error(`Runtime preflight failed: ${reasons}`);
   }
 
-  const runtime = {
-    eveAdapter,
-    hermesAdapter,
-    routerConfig: config.routerConfig,
-    capabilityEngine,
-  };
+  const walPath = String(config.dispatchDurableWalPath ?? "").trim();
+  const attemptId = randomUUID();
+  const attemptIso = new Date().toISOString();
+  if (walPath.length > 0) {
+    const attemptRecord: DispatchWalAttemptRecord = {
+      walVersion: "v1",
+      event: "dispatch_attempt",
+      attemptId,
+      recordedAtIso: attemptIso,
+      channel: "telegram",
+      chatId,
+      messageId,
+      text,
+    };
+    await appendDispatchWalLine(walPath, attemptRecord);
+  }
 
   const result = await dispatchUnifiedMessage(runtime, {
     channel: "telegram",
@@ -113,6 +83,21 @@ async function main() {
     messageId,
     text,
   });
+
+  if (walPath.length > 0) {
+    const completeRecord: DispatchWalCompleteRecord = {
+      walVersion: "v1",
+      event: "dispatch_complete",
+      attemptId,
+      recordedAtIso: new Date().toISOString(),
+      traceId: result.envelope.traceId,
+      primaryStatus: result.primaryState.status,
+      responseFailureClass: result.response.failureClass,
+      laneUsed: result.response.laneUsed,
+    };
+    await appendDispatchWalLine(walPath, completeRecord);
+  }
+
   await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }

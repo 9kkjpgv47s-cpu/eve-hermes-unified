@@ -247,6 +247,41 @@ function resolveGoalPolicyValidationState(payload, checkKeys) {
   return { reported: false, pass: false };
 }
 
+function resolveBundleVerificationSelectionSignals(payload) {
+  const checks = payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const files = payload?.files && typeof payload.files === "object" ? payload.files : {};
+  const latestRequestedRaw = checks.latestRequested;
+  const latestRequestedReported = typeof latestRequestedRaw === "boolean";
+  const latestRequested = latestRequestedRaw === true;
+  const latestAliasResolved = checks.latestAliasResolved === true;
+  const latestAliasFallbackUsed = checks.latestAliasFallbackUsed === true;
+  const validationManifestResolvedRaw = checks.validationManifestResolved;
+  const validationManifestResolvedReported = typeof validationManifestResolvedRaw === "boolean";
+  const validationManifestResolved = validationManifestResolvedRaw === true;
+  const selectionSignalReported = latestRequestedReported || validationManifestResolvedReported;
+  const selectionProofPassed =
+    (latestRequested && (latestAliasResolved || latestAliasFallbackUsed))
+    || validationManifestResolved;
+  const validationManifestPath = isNonEmptyString(files.validationManifestPath)
+    ? String(files.validationManifestPath).trim()
+    : "";
+  const validationManifestPathReported = validationManifestPath.length > 0;
+  const selectionGateSatisfied =
+    selectionSignalReported && selectionProofPassed && validationManifestPathReported;
+  return {
+    latestRequestedReported,
+    latestRequested,
+    latestAliasResolved,
+    latestAliasFallbackUsed,
+    validationManifestResolvedReported,
+    validationManifestResolved,
+    selectionSignalReported,
+    selectionProofPassed,
+    validationManifestPathReported,
+    selectionGateSatisfied,
+  };
+}
+
 function evaluateCommandPayload(command, payload) {
   const verificationType = commandVerificationType(command);
   if (verificationType === "existence-only") {
@@ -325,6 +360,18 @@ function evaluateCommandPayload(command, payload) {
       checks.push("bundle_verify_initial_scope_goal_policy_validation_not_reported");
     } else if (!initialScopeGoalPolicyValidation.pass) {
       checks.push("bundle_verify_initial_scope_goal_policy_validation_not_passed");
+    }
+    const selectionSignals = resolveBundleVerificationSelectionSignals(payload);
+    if (!selectionSignals.selectionSignalReported) {
+      checks.push("bundle_verify_selection_proof_not_reported");
+    } else if (!selectionSignals.selectionProofPassed) {
+      checks.push("bundle_verify_selection_proof_not_passed");
+    }
+    if (!selectionSignals.validationManifestPathReported) {
+      checks.push("bundle_verify_validation_manifest_path_not_reported");
+    }
+    if (!selectionSignals.selectionGateSatisfied) {
+      checks.push("bundle_verify_selection_gate_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -629,6 +676,20 @@ async function main() {
           item.command === "npm run validate:release-readiness"
           && item.pass === true
           && !item.checks.includes("release_goal_policy_validation_not_passed"),
+      ),
+      bundleVerificationSelectionProvenanceReported: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run verify:merge-bundle"
+          && item.pass === true
+          && !item.checks.includes("bundle_verify_selection_proof_not_reported")
+          && !item.checks.includes("bundle_verify_validation_manifest_path_not_reported"),
+      ),
+      bundleVerificationSelectionProvenancePassed: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run verify:merge-bundle"
+          && item.pass === true
+          && !item.checks.includes("bundle_verify_selection_proof_not_passed")
+          && !item.checks.includes("bundle_verify_selection_gate_not_passed"),
       ),
       stagePromotionPassed: stagePromotionEvidence.pass,
       stagePromotionEvidence,

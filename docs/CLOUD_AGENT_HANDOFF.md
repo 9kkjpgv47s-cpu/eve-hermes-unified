@@ -120,6 +120,10 @@ Schema validation expectations:
     - `validate:initial-scope` evidence must report and pass propagated release goal-policy status
     - `validate:merge-bundle` evidence must report and pass both release + initial-scope goal-policy propagation checks
     - `verify:merge-bundle` evidence must report and pass both release + initial-scope goal-policy propagation checks
+    - `verify:merge-bundle` evidence must also report deterministic bundle-selection provenance:
+      - either `checks.latestRequested=true` with alias resolution/fallback proof, or `checks.validationManifestResolved=true`
+      - and must report `files.validationManifestPath`
+      - and must satisfy `bundle_verify_selection_gate_not_passed` fail-closed gate when these signals are missing/invalid
 - dedicated H2 closeout gate:
   - `npm run validate:h2-closeout`
   - enforces H2-scoped required evidence (`h2-drill-suite`, rollback threshold calibration, supervised rollback simulation) when listed in `requiredEvidence`

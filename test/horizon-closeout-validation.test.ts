@@ -168,6 +168,7 @@ async function seedEvidence(evidenceDir: string): Promise<{
           bundleDir: "/tmp/merge-readiness-bundle",
           bundleManifestPath: "/tmp/merge-readiness-manifest.json",
           bundleArchivePath: "/tmp/merge-readiness-bundle.tar.gz",
+          validationManifestPath: mergeValidationPath,
           outPath: verifyPath,
         },
         checks: {
@@ -177,6 +178,7 @@ async function seedEvidence(evidenceDir: string): Promise<{
           latestAliasResolved: false,
           latestAliasFallbackUsed: false,
           validationManifestResolved: true,
+          validationManifestResolvedReported: true,
           releaseReadinessSchemaValid: true,
           releaseReadinessPass: true,
           releaseGoalPolicyValidationReported: true,

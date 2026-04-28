@@ -239,6 +239,11 @@ Policy expectations:
 - fail-closed stage-promotion propagation checks:
   - selected `stage-promotion-readiness` evidence must report/pass merge-bundle release + initial-scope goal-policy propagation checks
   - selected `stage-promotion-readiness` evidence must report/pass bundle-verification release + initial-scope goal-policy propagation checks
+- fail-closed stage-promotion bundle-verification selection provenance checks:
+  - selected `stage-promotion-readiness` evidence must report/pass `checks.bundleVerificationSelectionSignalReported`
+  - selected `stage-promotion-readiness` evidence must report/pass `checks.bundleVerificationSelectionProofPassed`
+  - selected `stage-promotion-readiness` evidence must report/pass `checks.bundleVerificationValidationManifestPathReported`
+  - selected `stage-promotion-readiness` evidence must report/pass `checks.bundleVerificationSelectionGateSatisfied`
 - Majority/full add:
   - failure scenario pass-count threshold
 

@@ -45,5 +45,17 @@ mkdir -p "$EVIDENCE"
 stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 out="$EVIDENCE/unified-dispatch-transcript-${stamp}.json"
 
-npm run dispatch -- --text "ci dispatch transcript" --chat-id "ci" --message-id "1" >"$out"
+dispatch_bin="${UNIFIED_DISPATCH_BIN:-$ROOT_DIR/dist/src/bin/unified-dispatch.js}"
+dispatch_cmd=()
+if [[ -f "$dispatch_bin" ]]; then
+  dispatch_cmd=(node "$dispatch_bin")
+elif [[ -x "$ROOT_DIR/node_modules/.bin/tsx" && -f "$ROOT_DIR/src/bin/unified-dispatch.ts" ]]; then
+  dispatch_cmd=("$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/src/bin/unified-dispatch.ts")
+else
+  echo "Missing dispatch runner. Run npm run build or ensure tsx + src/bin/unified-dispatch.ts exist." >&2
+  exit 70
+fi
+
+"${dispatch_cmd[@]}" --text "ci dispatch transcript" --chat-id "ci" --message-id "1" >"$out"
+npx --no-install tsx "$ROOT_DIR/src/bin/validate-dispatch-contracts.ts" --file "$out"
 echo "Wrote $out"

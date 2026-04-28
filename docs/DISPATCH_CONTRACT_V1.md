@@ -27,7 +27,7 @@ Runtime code validates every outbound result via **`validateUnifiedDispatchResul
 
 ## Fixtures
 
-Canonical examples live under **`test/fixtures/`** (e.g. `unified-dispatch-result-v1-primary-pass.json`). CI runs **`npm run validate:dispatch-contract`**, which executes `src/bin/validate-dispatch-contracts.ts` against every matching fixture.
+Canonical examples live under **`test/fixtures/`** (e.g. `unified-dispatch-result-v1-primary-pass.json`). CI runs **`npm run validate:dispatch-contract`**, which executes `src/bin/validate-dispatch-contracts.ts` against every matching fixture. The same CLI accepts **`--file <path>`** (repeatable); `scripts/ci-dispatch-transcript.sh` validates the freshly written transcript with `--file` so CI artifacts stay contract-conformant.
 
 ## Upgrade path
 

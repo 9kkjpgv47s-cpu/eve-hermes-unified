@@ -33,14 +33,14 @@ for i in $(seq 1 "$iterations"); do
     text="normal message $i"
   fi
 
-  # H5: spread soak across tenants/regions so summarize:soak and evidence-summary can aggregate drill dimensions.
+  # H5/H6: spread soak across tenants/regions/partitions so summarize:soak and evidence-summary aggregate drill dimensions.
   soak_extra_args=()
   case $((i % 3)) in
     0)
-      soak_extra_args+=(--tenant-id alpha --region-id us-west)
+      soak_extra_args+=(--tenant-id alpha --region-id us-west --partition-id soak-part-a)
       ;;
     1)
-      soak_extra_args+=(--tenant-id beta --region-id eu-central)
+      soak_extra_args+=(--tenant-id beta --region-id eu-central --partition-id soak-part-b)
       ;;
     *) ;;
   esac

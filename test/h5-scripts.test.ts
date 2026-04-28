@@ -75,6 +75,7 @@ describe("H5 operator scripts", () => {
           soakDrillDimensions: {
             tenants: { alpha: 5, beta: 5, _none: 2 },
             regions: { "us-west": 5, "eu-central": 5, _none: 2 },
+            partitions: { "soak-part-a": 5, "soak-part-b": 5, _none: 2 },
             regionAligned: { true: 10, false: 0, unknown: 0 },
           },
         }),
@@ -122,6 +123,64 @@ describe("H5 operator scripts", () => {
       const parsed = JSON.parse(raw) as { pass?: boolean; checks?: { horizonCloseoutGatePass?: boolean } };
       expect(parsed.pass).toBe(true);
       expect(parsed.checks?.horizonCloseoutGatePass).toBe(true);
+    });
+  });
+
+  it("validate-h5-evidence-bundle fails when partition drill diversity is insufficient", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990102-000000";
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          soakDrillDimensions: {
+            tenants: { alpha: 5, beta: 5, _none: 2 },
+            regions: { "us-west": 5, "eu-central": 5, _none: 2 },
+            partitions: { "only-one": 10, _none: 2 },
+            regionAligned: { true: 10, false: 0, unknown: 0 },
+          },
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h5-region-misalignment-drill-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h5-region-misalignment-drill-v2",
+          pass: true,
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `emergency-rollback-rehearsal-${stamp}.json`),
+        JSON.stringify({ manifestVersion: "h3-emergency-rollback-rehearsal-v1", dryRun: true }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `remediation-playbook-dry-run-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h5-remediation-dry-run-v1",
+          policyBounds: { dryRunOnly: true },
+        }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h5-closeout-partition-fail.json");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-h5-evidence-bundle.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as { pass?: boolean; failures?: string[] };
+      expect(parsed.pass).toBe(false);
+      expect(parsed.failures?.some((f) => f.includes("soak_partition_drill_diversity_insufficient"))).toBe(true);
     });
   });
 

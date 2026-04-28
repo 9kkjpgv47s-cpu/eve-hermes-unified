@@ -86,6 +86,7 @@ async function main() {
   }
   const tenants = {};
   const regions = {};
+  const partitions = {};
   const regionAligned = { true: 0, false: 0, unknown: 0 };
   for (const r of records) {
     const fc = r.response?.failureClass ?? "unknown";
@@ -102,6 +103,8 @@ async function main() {
     tenants[tenantKey] = (tenants[tenantKey] ?? 0) + 1;
     const regionKey = r.envelope?.regionId?.trim() || "_none";
     regions[regionKey] = (regions[regionKey] ?? 0) + 1;
+    const partitionKey = r.envelope?.partitionId?.trim() || "_none";
+    partitions[partitionKey] = (partitions[partitionKey] ?? 0) + 1;
     const ra = r.routing?.regionAligned;
     if (ra === true) {
       regionAligned.true += 1;
@@ -131,6 +134,10 @@ async function main() {
   if (total >= 6 && regionKeys.length < 2) {
     driftAlarms.push("soak_low_region_drill_diversity");
   }
+  const partitionKeys = Object.keys(partitions).filter((k) => k !== "_none");
+  if (total >= 6 && partitionKeys.length < 2) {
+    driftAlarms.push("soak_low_partition_drill_diversity");
+  }
   const summary = {
     generatedAtIso: new Date().toISOString(),
     soakFile,
@@ -141,6 +148,7 @@ async function main() {
     drillDimensions: {
       tenants,
       regions,
+      partitions,
       regionAligned,
     },
     driftAlarms,

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T12:00:00Z",
+  "updatedAtIso": "2026-04-29T18:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H5",
   "activeStatus": "in_progress",
-  "summary": "H5 autonomous operations slice is active: tenant-scoped memory and capability policy, region-aware deterministic routing, WAL replay parity for tenant/region, remediation dry-run manifests, and strict tenant preflight. H6: h6-action-1 landed (optional envelope partitionId through dispatch, WAL attempt/complete, replay, audit; UNIFIED_DISPATCH_DEFAULT_PARTITION_ID). Next: h6-action-2 soak/evidence partition dimensions. Prior horizons H1–H4 remain closed in-repo with machine-verified validate:all evidence.",
+  "summary": "H5 autonomous operations slice is active: tenant-scoped memory and capability policy, region-aware deterministic routing, WAL replay parity for tenant/region, remediation dry-run manifests, and strict tenant preflight. H6: h6-action-1 (partitionId propagation) and h6-action-2 (soak/evidence partition drill dimensions + H5 evidence gate) landed. Next: h6-action-3 partition operator drill. Prior horizons H1–H4 remain closed in-repo with machine-verified validate:all evidence.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -304,7 +304,7 @@
       "id": "h6-action-2",
       "summary": "Extend soak and evidence summaries with partition drill dimensions and diversity drift alarms consistent with H5 tenant/region patterns.",
       "targetHorizon": "H6",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "automation"]
     },
     {
@@ -415,11 +415,11 @@
     },
     "H5": {
       "status": "in_progress",
-      "summary": "H5 slice is machine-closeout-gated via validate:h5-evidence-bundle (bundled into validate:h5-closeout) for soak drill dimensions, region drill v2, rollback rehearsal, and remediation dry-run. h6-action-1 (partitionId) implemented in runtime; h6-action-2..4 remain."
+      "summary": "H5 slice is machine-closeout-gated via validate:h5-evidence-bundle (bundled into validate:h5-closeout) for soak tenant/region/partition drill dimensions, region drill v2, rollback rehearsal, and remediation dry-run. h6-action-1..2 on partition evidence landed; h6-action-3..4 remain."
     },
     "H6": {
       "status": "planned",
-      "summary": "Federation/partition correlation: partitionId on envelope, WAL, replay, audit, and dispatch defaults (h6-action-1). Soak/evidence dimensions, partition drill, and H6 closeout bundle remain (h6-action-2..4). See docs/H6_PROGRAM.md."
+      "summary": "Federation/partition correlation: partitionId on envelope, WAL, replay, audit, and dispatch defaults (h6-action-1). Soak and validation-summary partition drill dimensions + diversity gate in validate:h5-evidence-bundle (h6-action-2). Partition drill manifest and H6 closeout bundle remain (h6-action-3..4). See docs/H6_PROGRAM.md."
     }
   },
   "history": [
@@ -590,6 +590,12 @@
       "horizon": "H6",
       "status": "planned",
       "note": "Completed h6-action-1: optional partitionId on UnifiedMessageEnvelope; dispatchUnifiedMessage applies dispatchDefaults.defaultPartitionId; WAL attempt/complete and orphan replay carry partitionId; unified-dispatch CLI --partition-id and env UNIFIED_DISPATCH_DEFAULT_PARTITION_ID; audit log top-level partitionId; tests extended."
+    },
+    {
+      "timestamp": "2026-04-29T18:00:00Z",
+      "horizon": "H6",
+      "status": "planned",
+      "note": "Completed h6-action-2: soak-simulate passes --partition-id per tenant/region cycle; summarize-soak-jsonl and summarize-evidence emit partitions in drillDimensions/soakDrillDimensions; drift alarm soak_low_partition_drill_diversity; validate-h5-evidence-bundle requires ≥2 non-_none partition keys in validation-summary soakDrillDimensions."
     }
   ]
 }

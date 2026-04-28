@@ -188,6 +188,7 @@ async function main() {
   const elapsedValues = [];
   const tenants = {};
   const regions = {};
+  const partitions = {};
   const regionAligned = { true: 0, false: 0, unknown: 0 };
   for (const record of records) {
     if (record?.response?.failureClass === "none") {
@@ -213,6 +214,8 @@ async function main() {
     tenants[tenantKey] = (tenants[tenantKey] ?? 0) + 1;
     const regionKey = record?.envelope?.regionId?.trim() || "_none";
     regions[regionKey] = (regions[regionKey] ?? 0) + 1;
+    const partitionKey = record?.envelope?.partitionId?.trim() || "_none";
+    partitions[partitionKey] = (partitions[partitionKey] ?? 0) + 1;
     const ra = record?.routing?.regionAligned;
     if (ra === true) {
       regionAligned.true += 1;
@@ -272,6 +275,7 @@ async function main() {
     soakDrillDimensions: {
       tenants,
       regions,
+      partitions,
       regionAligned,
     },
     failureScenarios: {

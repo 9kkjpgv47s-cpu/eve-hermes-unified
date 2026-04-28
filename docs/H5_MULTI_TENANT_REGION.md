@@ -64,9 +64,9 @@ The third scenario (`@hermes`) temporarily sets **`UNIFIED_ROUTER_DEFAULT_FALLBA
 
 ## Soak drill dimensions
 
-`scripts/soak-simulate.sh` cycles `--tenant-id` / `--region-id` across iterations so `npm run summarize:soak` can emit `drillDimensions` (tenant counts, region counts, `routing.regionAligned` histogram) and optional drift alarms for low tenant/region diversity.
+`scripts/soak-simulate.sh` cycles `--tenant-id` / `--region-id` / `--partition-id` across iterations so `npm run summarize:soak` can emit `drillDimensions` (tenant counts, region counts, partition counts, `routing.regionAligned` histogram) and optional drift alarms for low tenant/region/partition diversity.
 
-`scripts/summarize-evidence.mjs` includes the same aggregates under `soakDrillDimensions` in the validation summary output.
+`scripts/summarize-evidence.mjs` includes the same aggregates under `soakDrillDimensions` in the validation summary output (including **`partitions`**).
 
 ## Dispatch audit retention hooks
 

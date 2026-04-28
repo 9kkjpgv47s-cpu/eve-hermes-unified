@@ -87,13 +87,18 @@ async function main() {
       checks.soakDrillDimensionsPresent = true;
       const tenantKeys = countNonNoneKeys(dd.tenants);
       const regionKeys = countNonNoneKeys(dd.regions);
+      const partitionKeys = countNonNoneKeys(dd.partitions);
       checks.tenantDrillKeyCount = tenantKeys;
       checks.regionDrillKeyCount = regionKeys;
+      checks.partitionDrillKeyCount = partitionKeys;
       if (tenantKeys < 2) {
         failures.push(`soak_tenant_drill_diversity_insufficient:${tenantKeys}`);
       }
       if (regionKeys < 2) {
         failures.push(`soak_region_drill_diversity_insufficient:${regionKeys}`);
+      }
+      if (partitionKeys < 2) {
+        failures.push(`soak_partition_drill_diversity_insufficient:${partitionKeys}`);
       }
     }
     checks.validationSummaryPath = validationPath;

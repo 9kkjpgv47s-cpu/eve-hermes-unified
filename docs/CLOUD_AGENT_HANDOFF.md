@@ -336,6 +336,14 @@ The merge-bundle validation wrapper also enforces initial-scope goal-policy prop
 
 After `npm run build`, CI runs `npm run validate:ci-dispatch-transcript`, which executes `scripts/ci-dispatch-transcript.sh`: one `npm run dispatch` with stub Eve/Hermes (inline fake Eve script, Hermes `/bin/true`) and writes `evidence/unified-dispatch-transcript-*.json`. That file is included in the `unified-evidence` artifact with the rest of the validation outputs.
 
+## Soak metrics, SLO gate, and multi-stage matrix (H2)
+
+- `scripts/soak-simulate.sh` runs dispatch in a loop, then writes `evidence/soak-latest-metrics.json` (override `UNIFIED_SOAK_METRICS_OUT`) via `ci-soak-metrics-from-jsonl.mjs`, and runs `ci-soak-slo-gate.mjs` unless `UNIFIED_SOAK_RUN_SLO_GATE=0`. Cutover stage defaults to `shadow`; set `UNIFIED_SOAK_CUTOVER_STAGE` for staged traffic simulation.
+- `npm run validate:soak-matrix` runs `scripts/soak-matrix.sh` (default stages `shadow,canary,majority`; override `UNIFIED_SOAK_MATRIX_STAGES`). Each stage writes `evidence/soak-latest-metrics-<stage>.json`.
+- Soak metrics include `failureClassCounts` / `failureClassRates` plus `dispatchFailureRate` and `policyFailureRate` for optional SLO gates: `UNIFIED_SOAK_MAX_DISPATCH_FAILURE_RATE`, `UNIFIED_SOAK_MAX_POLICY_FAILURE_RATE`.
+- `summarize-evidence.mjs` and `release-readiness.mjs` select the newest **`soak-*.jsonl`** file so `soak-latest-metrics.json` does not replace the dispatch transcript when sorting by name.
+- CI runs a **Soak matrix + SLO gate** step after build (stub lanes) with relaxed thresholds suitable for GitHub-hosted runners.
+
 ## Legacy long-horizon branch (pre-capability-engine)
 
 Remote branch `cursor/long-horizon-convergence-5a8b` carried an alternate stack (separate `build-unified-runtime`, Telegram webhook CLIs, Zod control plane, soak matrix). It does not merge cleanly onto current `main` because `main` added `UnifiedCapabilityEngine`, the new `UnifiedMemoryStore` API (`get`/`set`/`list`), and `unified-runtime-config`. Porting those features needs a deliberate redesign on top of the current runtime wiring — avoid blind merges.

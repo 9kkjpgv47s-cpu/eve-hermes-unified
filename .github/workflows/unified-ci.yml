@@ -30,10 +30,27 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Dispatch JSON transcript (CI stub)
-        run: npm run validate:ci-dispatch-transcript
+      - name: Soak matrix + SLO gate (stub lanes)
+        env:
+          UNIFIED_ROUTER_DEFAULT_PRIMARY: hermes
+          UNIFIED_ROUTER_DEFAULT_FALLBACK: none
+          UNIFIED_ROUTER_FAIL_CLOSED: "1"
+          UNIFIED_ROUTER_CUTOVER_STAGE: full
+          UNIFIED_MEMORY_STORE_KIND: file
+          UNIFIED_MEMORY_FILE_PATH: /tmp/eve-hermes-unified-memory-soak.json
+          EVE_TASK_DISPATCH_SCRIPT: /bin/true
+          EVE_DISPATCH_RESULT_PATH: /tmp/eve-dispatch-soak.json
+          HERMES_LAUNCH_COMMAND: /bin/true
+          HERMES_LAUNCH_ARGS: ""
+          UNIFIED_SOAK_MATRIX_STAGES: shadow,canary
+          UNIFIED_SOAK_MIN_SUCCESS_RATE: "0.95"
+          UNIFIED_SOAK_MAX_MISSING_TRACE_RATE: "0.05"
+          UNIFIED_SOAK_MAX_UNCLASSIFIED: "2"
+          UNIFIED_SOAK_MAX_P95_PRIMARY_MS: "8000"
+          UNIFIED_SOAK_MAX_DISPATCH_FAILURE_RATE: "0.15"
+          UNIFIED_SOAK_MAX_POLICY_FAILURE_RATE: "0.15"
+        run: npm run build && npm run validate:soak-matrix
 
-      - name: Full validation chain
         env:
           UNIFIED_ROUTER_DEFAULT_PRIMARY: hermes
           UNIFIED_ROUTER_DEFAULT_FALLBACK: none

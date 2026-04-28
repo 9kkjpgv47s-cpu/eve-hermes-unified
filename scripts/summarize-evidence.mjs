@@ -2,6 +2,7 @@
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { evaluateEvidenceGates, evaluateFailureScenarioCoverage } from "./evidence-gates.mjs";
+import { extractDispatchJsonRecords } from "./dispatch-json-extract.mjs";
 
 function parseArgs(argv) {
   const options = {
@@ -47,85 +48,6 @@ function parseArgs(argv) {
   return options;
 }
 
-function parseDispatchJsonFromLine(line) {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("{")) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (parsed && typeof parsed === "object" && parsed.response && parsed.envelope) {
-      return parsed;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-function isDispatchRecord(value) {
-  return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    value.response &&
-    value.envelope
-  );
-}
-
-function extractDispatchJsonRecords(raw) {
-  const records = [];
-  let depth = 0;
-  let inString = false;
-  let escape = false;
-  let startIndex = -1;
-
-  for (let i = 0; i < raw.length; i += 1) {
-    const ch = raw[i];
-
-    if (inString) {
-      if (escape) {
-        escape = false;
-      } else if (ch === "\\") {
-        escape = true;
-      } else if (ch === "\"") {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (ch === "\"") {
-      inString = true;
-      continue;
-    }
-
-    if (ch === "{") {
-      if (depth === 0) {
-        startIndex = i;
-      }
-      depth += 1;
-      continue;
-    }
-
-    if (ch === "}" && depth > 0) {
-      depth -= 1;
-      if (depth === 0 && startIndex >= 0) {
-        const candidate = raw.slice(startIndex, i + 1);
-        try {
-          const parsed = JSON.parse(candidate);
-          if (parsed && typeof parsed === "object" && parsed.response && parsed.envelope) {
-            records.push(parsed);
-          }
-        } catch {
-          // Ignore non-dispatch JSON snippets.
-        }
-        startIndex = -1;
-      }
-    }
-  }
-
-  return records;
-}
-
 function isFailureClassKnown(value) {
   return (
     value === "none" ||
@@ -137,10 +59,18 @@ function isFailureClassKnown(value) {
   );
 }
 
-async function newestFileInDir(dir, prefix) {
+async function newestFileInDir(dir, prefix, { suffix } = {}) {
   const entries = await readdir(dir, { withFileTypes: true });
   const matches = entries
-    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .filter((entry) => {
+      if (!entry.isFile() || !entry.name.startsWith(prefix)) {
+        return false;
+      }
+      if (suffix && !entry.name.endsWith(suffix)) {
+        return false;
+      }
+      return true;
+    })
     .map((entry) => path.join(dir, entry.name));
   if (matches.length === 0) {
     return null;
@@ -151,7 +81,7 @@ async function newestFileInDir(dir, prefix) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const soakFile = await newestFileInDir(options.evidenceDir, "soak-");
+  const soakFile = await newestFileInDir(options.evidenceDir, "soak-", { suffix: ".jsonl" });
   const failureFile = await newestFileInDir(options.evidenceDir, "failure-injection-");
   if (!soakFile) {
     throw new Error("No soak report found.");
@@ -161,7 +91,7 @@ async function main() {
   }
 
   const soakRaw = await readFile(soakFile, "utf8");
-  const records = extractDispatchJsonRecords(soakRaw).filter(isDispatchRecord);
+  const records = extractDispatchJsonRecords(soakRaw);
 
   const total = records.length;
   let success = 0;
@@ -180,7 +110,7 @@ async function main() {
     if (!isFailureClassKnown(failureClass)) {
       unclassifiedFailures += 1;
     }
-    const elapsedCandidates = [record?.primaryState?.elapsedMs, record?.capabilityExecution?.elapsedMs, 0];
+    const elapsedCandidates = [record?.primaryState?.elapsedMs, record?.capabilityExecution?.elapsedMs];
     for (const candidate of elapsedCandidates) {
       const elapsedMs = Number(candidate);
       if (Number.isFinite(elapsedMs) && elapsedMs >= 0) {
@@ -193,9 +123,10 @@ async function main() {
   const successRate = total > 0 ? success / total : 0;
   const missingTraceRate = total > 0 ? missingTrace / total : 1;
   const sortedElapsed = [...elapsedValues].sort((a, b) => a - b);
-  const p95Index = sortedElapsed.length === 0
-    ? -1
-    : Math.min(sortedElapsed.length - 1, Math.ceil(sortedElapsed.length * 0.95) - 1);
+  const p95Index =
+    sortedElapsed.length === 0
+      ? -1
+      : Math.min(sortedElapsed.length - 1, Math.ceil(sortedElapsed.length * 0.95) - 1);
   const p95LatencyMs = p95Index >= 0 ? sortedElapsed[p95Index] : null;
 
   const failureRaw = await readFile(failureFile, "utf8");

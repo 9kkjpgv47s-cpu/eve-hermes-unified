@@ -85,6 +85,22 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
+## Phase 8 - Post-H6 sustainment (continuous)
+
+After horizon **H6** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+
+- [ ] `npm run validate:horizon-status` exits `0`.
+- [ ] `npm run run:h6-assurance-bundle` exits `0` and emits `evidence/h6-assurance-bundle-*.json`.
+- [ ] `npm run validate:h6-closeout` exits `0` (uses evidence under `evidence/`).
+
+Single command (chains the three above and writes `evidence/post-h6-sustainment-loop-*.json`):
+
+- [ ] `npm run verify:sustainment-loop` exits `0`.
+
+Exit criteria:
+
+- Sustainment verification is reproducible from a clean checkout after `npm install` and `mkdir -p evidence`.
+
 ## PR Delivery Requirements (every implementation cycle)
 
 - [x] Include scope summary and constraints.

@@ -67,6 +67,7 @@ Every PR should include:
 - **Bundle**: `npm run run:h6-assurance-bundle` writes `evidence/h6-assurance-bundle-*.json` (horizon status validation + tenant isolation + region failover rehearsal + unified entrypoints).
 - **Closeout gate**: `npm run validate:h6-closeout` (terminal horizon skips downstream stage-promotion artifact in `validate-horizon-closeout`).
 - **Horizon index**: orchestration scripts include **H6** as the terminal sustainment horizon.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + assurance bundle + `validate:h6-closeout` and writes `evidence/post-h6-sustainment-loop-*.json`. See `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8.
 
 ## Cutover and Rollback Commands
 

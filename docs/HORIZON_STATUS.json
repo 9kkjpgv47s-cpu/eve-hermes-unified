@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T00:00:00Z",
+  "updatedAtIso": "2026-04-29T01:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H6",
   "activeStatus": "completed",
-  "summary": "Horizon H6 sustainment complete: assurance bundle script, H6 in orchestration and goal policies, CI evidence; terminal horizon closeout gate.",
+  "summary": "Horizons H1–H6 complete; post-H6 sustainment: verify:sustainment-loop + MASTER_EXECUTION_CHECKLIST Phase 8.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -527,10 +527,10 @@
       "note": "H5 closeout: requiredEvidence scoped legacy gates to H1–H4; added h5-closeout-evidence; validate-horizon-closeout skips stage-promotion for terminal H5; promotionReadiness.targetStage full; run-h5-closeout-evidence.mjs aggregates bounded playbook manifest."
     },
     {
-      "timestamp": "2026-04-29T00:30:00Z",
+      "timestamp": "2026-04-29T01:00:00Z",
       "horizon": "H6",
       "status": "completed",
-      "note": "H6 sustainment: run-h6-assurance-bundle.mjs; VALID_HORIZONS + sequences through H6; validate:h6-closeout; GOAL_POLICIES H5->H6; CI runs assurance bundle; documentation updated."
+      "note": "Post-H6 operator loop: run-post-h6-sustainment-loop.mjs and npm run verify:sustainment-loop; MASTER_EXECUTION_CHECKLIST Phase 8; CLOUD_AGENT_HANDOFF sustainment verification pointer."
     }
   ]
 }

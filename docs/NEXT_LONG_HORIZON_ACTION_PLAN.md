@@ -182,6 +182,10 @@ Primary risks:
 Mitigations:
 - Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status`.
 
+### Post-H6 operations
+
+After **H6** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for a single chained verification that refreshes assurance evidence and runs **`validate:h6-closeout`**.
+
 ## Cross-Horizon Execution Rules
 
 1. Do not promote any horizon gate without a passing merge bundle and release readiness manifest.

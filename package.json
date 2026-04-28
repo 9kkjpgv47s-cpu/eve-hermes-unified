@@ -30,6 +30,7 @@
     "validate:h6-closeout": "node ./scripts/validate-horizon-closeout.mjs --horizon H6 --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --require-completed-actions",
     "run:h5-closeout-evidence": "node ./scripts/run-h5-closeout-evidence.mjs",
     "run:h6-assurance-bundle": "node ./scripts/run-h6-assurance-bundle.mjs",
+    "verify:sustainment-loop": "node ./scripts/run-post-h6-sustainment-loop.mjs",
     "check:progressive-horizon-goals": "node ./scripts/check-progressive-horizon-goals.mjs",
     "check:goal-policy-coverage": "node ./scripts/check-goal-policy-coverage.mjs",
     "audit:goal-policy-readiness": "node ./scripts/audit-goal-policy-readiness.mjs",

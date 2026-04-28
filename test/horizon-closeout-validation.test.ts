@@ -365,6 +365,7 @@ async function seedHorizonStatus(statusPath: string, mode: "h1-in-progress" | "h
           H4: { status: "planned", summary: "H4" },
           H5: { status: "planned", summary: "H5" },
           H6: { status: "planned", summary: "H6 planned" },
+          H7: { status: "planned", summary: "H7 planned" },
         },
         history: [
           {
@@ -839,6 +840,7 @@ describe("validate-horizon-closeout.mjs", () => {
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
               H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -980,6 +982,7 @@ describe("validate-horizon-closeout.mjs", () => {
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
               H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -1132,6 +1135,7 @@ describe("validate-horizon-closeout.mjs", () => {
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
               H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -1288,6 +1292,7 @@ describe("validate-horizon-closeout.mjs", () => {
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
               H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -1424,6 +1429,7 @@ describe("validate-horizon-closeout.mjs", () => {
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
               H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {

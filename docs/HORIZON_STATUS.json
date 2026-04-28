@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T22:00:00Z",
+  "updatedAtIso": "2026-04-30T00:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H5",
+  "activeHorizon": "H6",
   "activeStatus": "in_progress",
-  "summary": "H5 autonomous operations slice is active: tenant-scoped memory and capability policy, region-aware deterministic routing, WAL replay parity for tenant/region, remediation dry-run manifests, and strict tenant preflight. H6 slice h6-action-1..4 completed in-repo (partitionId, soak partition dimensions, partition drill, H6 closeout manifest validate:h6-closeout + H5→H6 promotion notes). Prior horizons H1–H4 remain closed in-repo with machine-verified validate:all evidence.",
+  "summary": "H6 federation/partition slice is active in-repo: partitionId propagation, soak partition drill dimensions, partition operator drill, H5/H6 evidence closeout manifests in validate:all. H5 scale slice is closed in status; H7 runway seeded (h7-action-1..2). Prior horizons H1–H4 remain closed with machine-verified validate:all evidence.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -325,8 +325,22 @@
       "id": "h6-action-5",
       "summary": "Optional: after promote:horizon marks H5 completed, set activeHorizon to H6 and seed H7 or product-specific nextActions when scope is ready.",
       "targetHorizon": "H6",
-      "status": "planned",
+      "status": "completed",
       "tags": ["operations", "validation"]
+    },
+    {
+      "id": "h7-action-1",
+      "summary": "Define H7 program goals (observability, SLO contracts, or product-specific) and align goalPolicies H6->H7 with evidence gates.",
+      "targetHorizon": "H7",
+      "status": "planned",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h7-action-2",
+      "summary": "Optional: extend horizon-closeout / evidence-summary for H6→H7 promotion path when H7 scope is locked.",
+      "targetHorizon": "H7",
+      "status": "planned",
+      "tags": ["validation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -390,6 +404,21 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H6->H7": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.05,
+        "minPendingNextActions": 2,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -421,12 +450,16 @@
       "summary": "Versioned dispatch contract stamping, legacy ingress static scan in validate:all, contract documentation, and JSONL-friendly CLI output are in place."
     },
     "H5": {
-      "status": "in_progress",
-      "summary": "H5 slice is machine-closeout-gated via validate:h5-evidence-bundle (bundled into validate:h5-closeout) for soak tenant/region/partition drill dimensions, region drill v2, H6 partition drill v1, rollback rehearsal, and remediation dry-run. validate:h6-closeout wraps the latest h5-closeout manifest for H5→H6 promotion pinning. h6-action-1..4 completed."
+      "status": "completed",
+      "summary": "Multi-tenant and multi-region scale slice closed: tenant-scoped memory and capability policy, region-aware routing, WAL replay parity, remediation dry-run, region drill v2, partition drill, validate:h5-evidence-bundle and validate:h6-closeout in validate:all."
     },
     "H6": {
+      "status": "in_progress",
+      "summary": "Federation/partition evidence program active: partitionId, soak partition dimensions, h6-partition-drill, h6-closeout wrapper; h6-action-1..5 completed in-repo. Run promote:horizon H5→H6 with pinned closeout when advancing production status."
+    },
+    "H7": {
       "status": "planned",
-      "summary": "Federation/partition slice: h6-action-1..4 completed (partitionId propagation; soak partition dimensions; partition drill; H6 closeout manifest validate:h6-closeout + promote:horizon H5→H6 notes). See docs/H6_PROGRAM.md."
+      "summary": "Next program horizon placeholder: observability/SLO hardening or product-specific goals; see docs/H7_PROGRAM.md and h7-action-* nextActions."
     }
   },
   "history": [
@@ -615,6 +648,12 @@
       "horizon": "H6",
       "status": "planned",
       "note": "Completed h6-action-4: scripts/validate-h6-closeout.mjs emits h6-closeout-*.json (schemaVersion h6-closeout-v1, closeout H5→H6, wraps latest passing h5-closeout-*.json); npm run validate:h6-closeout in validate:all; notes for promote:horizon --goal-policy-key H5->H6 and GOAL_POLICIES.json."
+    },
+    {
+      "timestamp": "2026-04-30T00:00:00Z",
+      "horizon": "H6",
+      "status": "in_progress",
+      "note": "Completed h6-action-5: activeHorizon set to H6; H5 marked completed in horizonStates; H7 planned with h7-action-1..2; H6->H7 in docs/GOAL_POLICIES.json and goalPolicies; horizon tooling extended to H7 (scripts/horizon-constants.mjs, validate-horizon-status regex, validate-horizon-closeout npm run matcher)."
     }
   ]
 }

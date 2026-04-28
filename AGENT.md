@@ -8,9 +8,9 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: `H5` (`docs/HORIZON_STATUS.json`, in progress)
-- Completed in-repo slices: H3–H5 through **h5-action-10**; H6 **h6-action-1..4** (partition evidence + **`validate:h6-closeout`** in **`validate:all`**). Optional **h6-action-5** when advancing status after promotion.
-- Primary focus: optional **h6-action-5** (post-promotion status / next horizon seeding) when operators run **`promote:horizon`**
+- Horizon: **`H6`** active (`docs/HORIZON_STATUS.json`); **H7** planned with **`h7-action-*`** and **`docs/H7_PROGRAM.md`**
+- Completed in-repo through **h6-action-5** (status bump + H7 scaffold + **`H6->H7`** goal policy)
+- Primary focus: **h7-action-1** (lock H7 goals and evidence gates) per `docs/H7_PROGRAM.md`
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -26,6 +26,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 4. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 5. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
 6. `docs/HORIZON_STATUS.json`
+7. `docs/H7_PROGRAM.md` (when working H7 runway)
 
 ## High-Output Execution Loop
 

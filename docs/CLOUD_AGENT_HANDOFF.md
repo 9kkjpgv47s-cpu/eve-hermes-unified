@@ -96,7 +96,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
 - `npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence --allow-horizon-mismatch`
 - `npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`
-- `npm run audit:goal-policy-readiness -- --source-horizon H2 --until-horizon H6 --horizon-status-file docs/HORIZON_STATUS.json`
+- `npm run audit:goal-policy-readiness -- --source-horizon H2 --until-horizon H7 --horizon-status-file docs/HORIZON_STATUS.json`
 
 Keep evidence under `evidence/` when possible so subsequent agents can inspect prior runs.
 

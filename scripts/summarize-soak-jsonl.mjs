@@ -84,6 +84,9 @@ async function main() {
       parseErrors += 1;
     }
   }
+  const tenants = {};
+  const regions = {};
+  const regionAligned = { true: 0, false: 0, unknown: 0 };
   for (const r of records) {
     const fc = r.response?.failureClass ?? "unknown";
     failureClasses[fc] = (failureClasses[fc] ?? 0) + 1;
@@ -94,6 +97,18 @@ async function main() {
     const tid = r.response?.traceId ?? r.envelope?.traceId;
     if (!tid || String(tid).trim() === "") {
       missingTrace += 1;
+    }
+    const tenantKey = r.envelope?.tenantId?.trim() || "_none";
+    tenants[tenantKey] = (tenants[tenantKey] ?? 0) + 1;
+    const regionKey = r.envelope?.regionId?.trim() || "_none";
+    regions[regionKey] = (regions[regionKey] ?? 0) + 1;
+    const ra = r.routing?.regionAligned;
+    if (ra === true) {
+      regionAligned.true += 1;
+    } else if (ra === false) {
+      regionAligned.false += 1;
+    } else {
+      regionAligned.unknown += 1;
     }
   }
   const total = records.length;
@@ -108,6 +123,14 @@ async function main() {
   if (total > 10 && noneRate < 0.5) {
     driftAlarms.push("soak_low_none_failure_class_rate");
   }
+  const tenantKeys = Object.keys(tenants).filter((k) => k !== "_none");
+  if (total >= 6 && tenantKeys.length < 2) {
+    driftAlarms.push("soak_low_tenant_drill_diversity");
+  }
+  const regionKeys = Object.keys(regions).filter((k) => k !== "_none");
+  if (total >= 6 && regionKeys.length < 2) {
+    driftAlarms.push("soak_low_region_drill_diversity");
+  }
   const summary = {
     generatedAtIso: new Date().toISOString(),
     soakFile,
@@ -115,6 +138,11 @@ async function main() {
     failureClasses,
     lanes,
     routingReasons,
+    drillDimensions: {
+      tenants,
+      regions,
+      regionAligned,
+    },
     driftAlarms,
   };
   const out =

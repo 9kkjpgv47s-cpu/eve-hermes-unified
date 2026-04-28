@@ -33,6 +33,18 @@ for i in $(seq 1 "$iterations"); do
     text="normal message $i"
   fi
 
+  # H5: spread soak across tenants/regions so summarize:soak and evidence-summary can aggregate drill dimensions.
+  soak_extra_args=()
+  case $((i % 3)) in
+    0)
+      soak_extra_args+=(--tenant-id alpha --region-id us-west)
+      ;;
+    1)
+      soak_extra_args+=(--tenant-id beta --region-id eu-central)
+      ;;
+    *) ;;
+  esac
+
   env \
     UNIFIED_ROUTER_DEFAULT_PRIMARY=hermes \
     UNIFIED_ROUTER_DEFAULT_FALLBACK=none \
@@ -46,7 +58,7 @@ for i in $(seq 1 "$iterations"); do
     HERMES_LAUNCH_COMMAND="$hermes_launch_command" \
     UNIFIED_HERMES_LAUNCH_ARGS= \
     HERMES_LAUNCH_ARGS= \
-    "${dispatch_cmd[@]}" --text "$text" --chat-id "$chat_id" --message-id "$i" >>"$report" 2>&1 || true
+    "${dispatch_cmd[@]}" "${soak_extra_args[@]}" --text "$text" --chat-id "$chat_id" --message-id "$i" >>"$report" 2>&1 || true
 done
 
 echo "Wrote $report"

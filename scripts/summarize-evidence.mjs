@@ -186,6 +186,9 @@ async function main() {
   let missingTrace = 0;
   let unclassifiedFailures = 0;
   const elapsedValues = [];
+  const tenants = {};
+  const regions = {};
+  const regionAligned = { true: 0, false: 0, unknown: 0 };
   for (const record of records) {
     if (record?.response?.failureClass === "none") {
       success += 1;
@@ -205,6 +208,18 @@ async function main() {
         elapsedValues.push(elapsedMs);
         break;
       }
+    }
+    const tenantKey = record?.envelope?.tenantId?.trim() || "_none";
+    tenants[tenantKey] = (tenants[tenantKey] ?? 0) + 1;
+    const regionKey = record?.envelope?.regionId?.trim() || "_none";
+    regions[regionKey] = (regions[regionKey] ?? 0) + 1;
+    const ra = record?.routing?.regionAligned;
+    if (ra === true) {
+      regionAligned.true += 1;
+    } else if (ra === false) {
+      regionAligned.false += 1;
+    } else {
+      regionAligned.unknown += 1;
     }
   }
 
@@ -253,6 +268,11 @@ async function main() {
       p95LatencyMs,
       latencySampleCount: elapsedValues.length,
       failureScenarioPassCount: scenarioCoverage.covered,
+    },
+    soakDrillDimensions: {
+      tenants,
+      regions,
+      regionAligned,
     },
     failureScenarios: {
       coveredScenarios: scenarioCoverage.coveredScenarios,

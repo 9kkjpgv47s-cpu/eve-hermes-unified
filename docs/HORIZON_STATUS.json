@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T22:05:00Z",
+  "updatedAtIso": "2026-04-28T22:15:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H5",
   "activeStatus": "in_progress",
@@ -248,15 +248,29 @@
       "id": "h5-action-4",
       "summary": "Extend soak and evidence summaries with explicit multi-tenant and multi-region drill dimensions.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "automation"]
     },
     {
       "id": "h5-action-5",
       "summary": "Optional tenant-scoped audit log partitioning and retention policy hooks.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "operations"]
+    },
+    {
+      "id": "h5-action-6",
+      "summary": "Add operator drill for region-misaligned routing with explicit evidence artifact and gate in validate:all or evidence-summary.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "runtime"]
+    },
+    {
+      "id": "h5-action-7",
+      "summary": "Cross-tenant leak regression harness for memory list and capability summarize_state under concurrent tenants.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["automation", "memory"]
     }
   ],
   "goalPolicies": {
@@ -337,7 +351,7 @@
     },
     "H5": {
       "status": "in_progress",
-      "summary": "Tenant-scoped memory and capability policy, region-aware routing swap, WAL/audit tenant and region fields, remediation dry-run manifests, and follow-on validation runway actions are tracked here."
+      "summary": "Tenant-scoped memory and capability policy, region-aware routing swap, WAL/audit tenant and region fields, soak and evidence-summary drill dimensions, optional tenant-partitioned audit with byte-threshold rotation, remediation dry-run manifests, and further H5 runway actions are tracked here."
     }
   },
   "history": [
@@ -472,6 +486,12 @@
       "horizon": "H5",
       "status": "in_progress",
       "note": "H5 core slice landed: tenantId/regionId on envelopes and WAL, tenant-scoped memory keys and capability execution records, routerRegionId region failover swap, per-tenant capability chat env maps, strict tenant preflight, remediation-playbook-dry-run and validate:h5-tenant-isolation in validate:all; seeded h5-action-4 and h5-action-5 for follow-on work."
+    },
+    {
+      "timestamp": "2026-04-28T22:15:00Z",
+      "horizon": "H5",
+      "status": "in_progress",
+      "note": "Completed h5-action-4 and h5-action-5: soak-simulate cycles tenant/region CLI args; summarize-soak-jsonl emits drillDimensions and diversity drift alarms; summarize-evidence includes soakDrillDimensions; appendDispatchAuditLog supports tenant-partitioned paths and max-bytes rotation with env UNIFIED_DISPATCH_AUDIT_TENANT_PARTITION and UNIFIED_DISPATCH_AUDIT_MAX_BYTES_BEFORE_ROTATE; seeded h5-action-6 and h5-action-7 for region drill evidence and cross-tenant memory harness."
     }
   ]
 }

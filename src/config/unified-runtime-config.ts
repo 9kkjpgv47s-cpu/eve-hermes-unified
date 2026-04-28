@@ -15,6 +15,10 @@ export type UnifiedRuntimeEnvConfig = {
   dispatchDurableWalPath?: string;
   unifiedCapabilityExecutionTimeoutMs?: number;
   unifiedDispatchAuditLogPath: string;
+  /** H5: when true, audit lines for tenant-bearing dispatches go to per-tenant files alongside the base path. */
+  dispatchAuditTenantPartition?: boolean;
+  /** H5: when set, rotate the active audit file before append if size exceeds this byte count. */
+  dispatchAuditMaxBytesBeforeRotate?: number;
   /** H5: default tenant when CLI/envelope omits tenantId (optional). */
   dispatchDefaultTenantId?: string;
   /** H5: default region when CLI/envelope omits regionId (optional). */
@@ -128,6 +132,10 @@ function parsePositiveIntMs(raw: string | undefined): number | undefined {
   return n;
 }
 
+function parsePositiveInt(raw: string | undefined): number | undefined {
+  return parsePositiveIntMs(raw);
+}
+
 function parseDispatchFallbackFailureClasses(raw: string | undefined): FailureClass[] {
   if (!raw?.trim()) {
     return [];
@@ -184,6 +192,19 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const dispatchAuditTenantPartition = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_AUDIT_TENANT_PARTITION",
+      "DISPATCH_AUDIT_TENANT_PARTITION",
+    ]),
+    false,
+  );
+  const dispatchAuditMaxBytesBeforeRotate = parsePositiveInt(
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_AUDIT_MAX_BYTES_BEFORE_ROTATE",
+      "DISPATCH_AUDIT_MAX_BYTES_BEFORE_ROTATE",
+    ]),
+  );
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -351,6 +372,8 @@ export function loadUnifiedRuntimeEnvConfig(
     dispatchDurableWalPath,
     unifiedCapabilityExecutionTimeoutMs,
     unifiedDispatchAuditLogPath,
+    dispatchAuditTenantPartition,
+    dispatchAuditMaxBytesBeforeRotate,
     dispatchDefaultTenantId,
     dispatchDefaultRegionId,
     tenantIsolationStrict,

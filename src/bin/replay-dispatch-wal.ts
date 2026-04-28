@@ -100,7 +100,10 @@ async function main() {
       ...(o.tenantId ? { tenantId: o.tenantId } : {}),
       ...(o.regionId ? { regionId: o.regionId } : {}),
     });
-    await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
+    await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result, {
+      tenantPartition: config.dispatchAuditTenantPartition,
+      maxBytesBeforeRotate: config.dispatchAuditMaxBytesBeforeRotate,
+    });
     const replayId = randomUUID();
     const replay: DispatchWalReplayCompleteRecord = {
       walVersion: "v1",

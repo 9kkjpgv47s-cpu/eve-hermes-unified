@@ -43,7 +43,18 @@ When `UNIFIED_TENANT_ISOLATION_STRICT=1`, runtime preflight requires a non-empty
 
 Both run as part of `npm run validate:all`.
 
-## Follow-on (planned in `docs/HORIZON_STATUS.json`)
+## Soak drill dimensions
 
-- Richer soak/evidence dimensions for tenant and region (`h5-action-4`).
-- Optional tenant-scoped audit partitioning (`h5-action-5`).
+`scripts/soak-simulate.sh` cycles `--tenant-id` / `--region-id` across iterations so `npm run summarize:soak` can emit `drillDimensions` (tenant counts, region counts, `routing.regionAligned` histogram) and optional drift alarms for low tenant/region diversity.
+
+`scripts/summarize-evidence.mjs` includes the same aggregates under `soakDrillDimensions` in the validation summary output.
+
+## Dispatch audit retention hooks
+
+When `UNIFIED_DISPATCH_AUDIT_TENANT_PARTITION=1`, each dispatch with a non-empty `envelope.tenantId` appends to a sibling file `basename.tenant-<sanitized>.jsonl` next to `UNIFIED_DISPATCH_AUDIT_LOG_PATH` (legacy path still receives dispatches without `tenantId`).
+
+When `UNIFIED_DISPATCH_AUDIT_MAX_BYTES_BEFORE_ROTATE` is set to a positive byte threshold, the active audit file is renamed to `*.rotated-<iso-stamp>` before the next append if it would exceed the limit.
+
+## Prior follow-on items
+
+These are now implemented in-repo; see `docs/HORIZON_STATUS.json` for any newer runway actions.

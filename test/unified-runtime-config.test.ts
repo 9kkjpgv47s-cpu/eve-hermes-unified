@@ -179,4 +179,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.routerRegionId).toBe("eu-central");
     expect(config.capabilityPolicy.denyCapabilityChatsByTenant?.acme?.summarize_state).toEqual(["1", "2"]);
   });
+
+  it("parses dispatch audit partition and rotation env knobs", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_AUDIT_TENANT_PARTITION: "1",
+          UNIFIED_DISPATCH_AUDIT_MAX_BYTES_BEFORE_ROTATE: "10485760",
+        }),
+      ),
+    );
+    expect(config.dispatchAuditTenantPartition).toBe(true);
+    expect(config.dispatchAuditMaxBytesBeforeRotate).toBe(10485760);
+  });
 });

@@ -122,7 +122,10 @@ async function main() {
     }
   }
 
-  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result!);
+  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result!, {
+    tenantPartition: config.dispatchAuditTenantPartition,
+    maxBytesBeforeRotate: config.dispatchAuditMaxBytesBeforeRotate,
+  });
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

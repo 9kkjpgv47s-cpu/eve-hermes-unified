@@ -21,6 +21,14 @@ export type UnifiedControlPlaneEnv = {
   telegramWebhookPath: string;
   telegramWebhookHost: string;
   telegramWebhookPort: number;
+  /** When true, POST sendMessage with dispatch summary after each handled message. */
+  telegramWebhookSendReply: boolean;
+  /** Base URL for set-webhook CLI (e.g. https://example.com). Path is appended from telegramWebhookPath. */
+  telegramWebhookPublicUrl: string;
+  /** When true, redact lane stdout/stderr before attaching to DispatchState. */
+  unifiedLaneIoRedact: boolean;
+  /** Extra | or , separated regex sources for redaction. */
+  unifiedLaneIoRedactCustom: string;
 };
 
 function parseIntBounded(raw: string, fallback: number, min: number, max: number): number {
@@ -101,6 +109,10 @@ export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
   const strictConfig = env("UNIFIED_STRICT_CONFIG", "0") === "1";
 
   const telegramWebhookPort = parseIntBounded(env("TELEGRAM_WEBHOOK_PORT", "8787"), 8787, 1, 65_535);
+  const telegramWebhookSendReply = env("TELEGRAM_WEBHOOK_SEND_REPLY", "0") === "1";
+  const telegramWebhookPublicUrl = env("TELEGRAM_WEBHOOK_PUBLIC_URL", "").replace(/\/+$/, "");
+  const unifiedLaneIoRedact = env("UNIFIED_LANE_IO_REDACT", "1") === "1";
+  const unifiedLaneIoRedactCustom = env("UNIFIED_LANE_IO_REDACT_CUSTOM", "");
 
   return {
     eveTaskDispatchScript: env(
@@ -128,6 +140,10 @@ export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
     telegramWebhookPath: env("TELEGRAM_WEBHOOK_PATH", "/telegram/webhook"),
     telegramWebhookHost: env("TELEGRAM_WEBHOOK_HOST", "127.0.0.1"),
     telegramWebhookPort,
+    telegramWebhookSendReply,
+    telegramWebhookPublicUrl,
+    unifiedLaneIoRedact,
+    unifiedLaneIoRedactCustom,
   };
 }
 

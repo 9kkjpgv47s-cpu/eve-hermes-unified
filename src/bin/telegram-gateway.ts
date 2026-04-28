@@ -5,7 +5,7 @@
  */
 import path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { resolvePackageRoot } from "../config/package-root.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { buildUnifiedRuntimeFromEnv, defaultEvidenceDir } from "../runtime/build-unified-runtime.js";
 import { env } from "../config/env.js";
@@ -34,7 +34,7 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
 }
 
 async function main() {
-  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const rootDir = resolvePackageRoot(import.meta.url);
   const { runtime, gatewayMode } = await buildUnifiedRuntimeFromEnv(rootDir);
 
   if (gatewayMode === "legacy") {

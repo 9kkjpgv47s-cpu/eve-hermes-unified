@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 /**
- * Minimal Telegram Bot API webhook server: verifies secret path, maps `message` to unified dispatch,
- * returns JSON (production would call `answer*` APIs separately).
+ * Telegram Bot API webhook server: verifies secret path, maps `message` to unified dispatch,
+ * optionally replies via sendMessage (TELEGRAM_WEBHOOK_SEND_REPLY=1).
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolvePackageRoot } from "../config/package-root.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { buildUnifiedRuntimeFromEnv } from "../runtime/build-unified-runtime.js";
 import { loadDotEnvFile } from "../config/env.js";
+import { loadUnifiedConfigFile } from "../config/load-unified-config-file.js";
 import { loadUnifiedControlPlaneEnv } from "../config/unified-control-plane-env.js";
+import { telegramSendMessage } from "../telegram/bot-api.js";
+import { summarizeDispatch } from "../telegram/dispatch-reply-summary.js";
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -27,8 +30,9 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 }
 
 async function main() {
-  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const rootDir = resolvePackageRoot(import.meta.url);
   await loadDotEnvFile(rootDir);
+  await loadUnifiedConfigFile(rootDir);
   const c = loadUnifiedControlPlaneEnv();
   if (!c.telegramBotToken.trim()) {
     throw new Error("TELEGRAM_BOT_TOKEN is required for telegram-webhook server.");
@@ -86,7 +90,14 @@ async function main() {
         text: msg.text,
       });
 
-      sendJson(res, 200, { ok: true, dispatch: result });
+      let telegramReply: unknown;
+      if (c.telegramWebhookSendReply) {
+        telegramReply = await telegramSendMessage(c.telegramBotToken, msg.chat.id, summarizeDispatch(result), {
+          replyToMessageId: msg.message_id,
+        });
+      }
+
+      sendJson(res, 200, { ok: true, dispatch: result, telegramReply });
     } catch (error) {
       sendJson(res, 500, { ok: false, error: String(error) });
     }

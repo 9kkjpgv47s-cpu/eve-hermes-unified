@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolvePackageRoot } from "../config/package-root.js";
 import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { buildUnifiedRuntimeFromEnv } from "../runtime/build-unified-runtime.js";
 
@@ -28,7 +28,7 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
 }
 
 async function main() {
-  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const rootDir = resolvePackageRoot(import.meta.url);
   const { runtime } = await buildUnifiedRuntimeFromEnv(rootDir);
   const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
 

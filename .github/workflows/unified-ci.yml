@@ -33,6 +33,9 @@ jobs:
       - name: Failure-injection matrix (post-build)
         run: npm run validate:failure-injection
 
+      - name: Soak simulation and metrics bundle
+        run: npm run validate:soak -- 12
+
       - name: Gateway smoke and evidence transcript
         run: bash ./scripts/ci-record-dispatch-evidence.sh
 

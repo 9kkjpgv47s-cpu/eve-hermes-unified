@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { runCommandWithTimeout } from "../process/exec.js";
 import type { DispatchState } from "../contracts/types.js";
 import { truncateLaneIo, validateDispatchState } from "../contracts/validate.js";
+import { redactLaneIo } from "../config/lane-io-redact.js";
 import type { LaneAdapter, LaneDispatchInput } from "./lane-adapter.js";
 
 type EveDispatchStateFile = {
@@ -59,7 +60,16 @@ export class EveAdapter implements LaneAdapter {
     private readonly dispatchScriptPath: string,
     private readonly dispatchStatePath: string,
     private readonly dispatchTimeoutMs = 180_000,
+    private readonly laneIoRedact = false,
+    private readonly laneIoRedactCustom = "",
   ) {}
+
+  private capIo(out: string, err: string): { laneStdout: string; laneStderr: string } {
+    return {
+      laneStdout: truncateLaneIo(redactLaneIo(out, this.laneIoRedact, this.laneIoRedactCustom)),
+      laneStderr: truncateLaneIo(redactLaneIo(err, this.laneIoRedact, this.laneIoRedactCustom)),
+    };
+  }
 
   async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
     const runId = `unified-eve-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
@@ -83,8 +93,7 @@ export class EveAdapter implements LaneAdapter {
         sourceChatId: input.envelope.chatId,
         sourceMessageId: input.envelope.messageId,
         traceId: input.envelope.traceId,
-        laneStdout: truncateLaneIo(result.stdout),
-        laneStderr: truncateLaneIo(result.stderr),
+        ...this.capIo(result.stdout, result.stderr),
       };
       return validateDispatchState(state);
     }
@@ -101,8 +110,7 @@ export class EveAdapter implements LaneAdapter {
         sourceChatId: input.envelope.chatId,
         sourceMessageId: input.envelope.messageId,
         traceId: input.envelope.traceId,
-        laneStdout: truncateLaneIo(result.stdout),
-        laneStderr: truncateLaneIo(result.stderr),
+        ...this.capIo(result.stdout, result.stderr),
       };
       return validateDispatchState(state);
     }

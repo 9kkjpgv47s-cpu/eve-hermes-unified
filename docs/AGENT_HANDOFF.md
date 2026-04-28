@@ -6,17 +6,19 @@ This file is the canonical handoff for cloud agents and humans picking up work i
 
 - **Unified dispatch**: `dispatchUnifiedMessage` in `src/runtime/unified-dispatch.ts` validates the envelope, calls `routeMessage`, runs the primary lane adapter, optionally runs fallback when primary fails and `failClosed` is false. When `memoryStore` / `capabilityRegistry` are set on `UnifiedRuntime`, dispatch passes `memorySnapshot` and per-lane `capabilityIds` into `LaneDispatchInput`, appends dispatch events, and on **pass** merges `last_lane`, `last_run_id`, `last_reason` into the store via optional `mergeWorkingSet`.
 - **Policy router**: `src/router/policy-router.ts` — `@cursor` → Eve, `@hermes` → Hermes, else `defaultPrimary` / `defaultFallback` from config.
-- **Control plane env**: `src/config/unified-control-plane-env.ts` — `loadUnifiedControlPlaneEnv()`, `applyLegacyUnifiedEnvShims()`, `LEGACY_ENV_ALIASES`, `emitLegacyEnvWarnings()` (stderr unless `VITEST=true` or `UNIFIED_SUPPRESS_LEGACY_WARNINGS=1`), `assertUnifiedControlPlaneEnv()` (includes `UNIFIED_STRICT_CONFIG` router validation). Fields: `memoryBackend` (`memory`|`file`), `memoryFilePath`, Telegram webhook settings.
-- **Runtime factory**: `src/runtime/build-unified-runtime.ts` — picks `InMemoryUnifiedMemoryStore` vs `FileBackedUnifiedMemoryStore` from env.
-- **Telegram gateway (Phase 1)**: `src/bin/telegram-gateway.ts` — envelope + `dispatchUnifiedMessage`; transcript under `UNIFIED_EVIDENCE_DIR`. `UNIFIED_TELEGRAM_GATEWAY_MODE=legacy` skips dispatch.
-- **Telegram webhook server**: `src/bin/telegram-webhook.ts` — HTTP POST webhook (`npm run webhook:telegram`); requires `TELEGRAM_BOT_TOKEN`, optional `TELEGRAM_WEBHOOK_SECRET` header `X-Telegram-Bot-Api-Secret-Token`, maps `message` to dispatch, returns JSON.
-- **Unified dispatch CLI**: `src/bin/unified-dispatch.ts` — stdout JSON only.
-- **Adapters**: `EveAdapter` / `HermesAdapter` — pass `EVE_UNIFIED_MEMORY_JSON` / `HERMES_UNIFIED_MEMORY_JSON` and `*_UNIFIED_CAPABILITY_IDS` when present; Hermes and Eve non-timeout failures attach **`laneStdout` / `laneStderr`** (truncated via `truncateLaneIo` in `src/contracts/validate.ts`). `src/process/exec.ts` kills process group on timeout.
-- **Memory**: `src/memory/unified-memory-store.ts` (`InMemoryUnifiedMemoryStore`), `src/memory/file-backed-unified-memory-store.ts` (JSON file, atomic rename).
-- **Capabilities**: `src/capabilities/capability-registry.ts`.
-- **CI stubs**: `scripts/ci-eve-dispatch-stub.sh`, `ci-hermes-dispatch-stub.sh`, `ci-sleep-hermes-stub.sh`, `ci-eve-exit7-stub.sh`, `ci-eve-invalid-json-stub.sh`; `scripts/ci-record-dispatch-evidence.sh`; `scripts/failure-injection-smoke.sh` matrix.
-- **Contracts**: `src/contracts/types.ts` (`DispatchState` optional `laneStdout` / `laneStderr`) and `validate.ts`.
-- **Tests**: `test/**/*.test.ts`; Vitest sets `VITEST=true` via `vitest.config.ts`.
+- **Control plane env**: `src/config/unified-control-plane-env.ts` — `loadUnifiedControlPlaneEnv()`, `applyLegacyUnifiedEnvShims()`, `LEGACY_ENV_ALIASES`, `emitLegacyEnvWarnings()` (stderr unless `VITEST=true` or `UNIFIED_SUPPRESS_LEGACY_WARNINGS=1`), `assertUnifiedControlPlaneEnv()`. Includes `UNIFIED_LANE_IO_REDACT` (default **on**), `UNIFIED_LANE_IO_REDACT_CUSTOM`, `TELEGRAM_WEBHOOK_SEND_REPLY`, `TELEGRAM_WEBHOOK_PUBLIC_URL`.
+- **Config file overlay**: `src/config/load-unified-config-file.ts` reads **`unified.config.json`** at repo root (gitignored); keys merge into `process.env` only when unset. Example: **`unified.config.example.json`** (safe to commit). `buildUnifiedRuntimeFromEnv` loads `.env` then JSON then env loader.
+- **Package root**: `src/config/package-root.ts` — `resolvePackageRoot(import.meta.url)` so CLIs work from **`dist/`** without writing evidence under `dist/`.
+- **Lane I/O redaction**: `src/config/lane-io-redact.ts` — `redactLaneIo` applied in Eve/Hermes adapters before `truncateLaneIo`.
+- **Runtime factory**: `src/runtime/build-unified-runtime.ts` — memory backend + adapters with redact flags.
+- **Telegram gateway**: `src/bin/telegram-gateway.ts` — transcript under `UNIFIED_EVIDENCE_DIR`. Legacy mode unchanged.
+- **Telegram webhook**: `src/bin/telegram-webhook.ts` — optional **`TELEGRAM_WEBHOOK_SEND_REPLY=1`** → `sendMessage` with summary from `src/telegram/dispatch-reply-summary.ts`; response JSON includes `telegramReply` when enabled.
+- **Telegram setWebhook CLI**: `src/bin/telegram-webhook-set.ts` — `npm run telegram:set-webhook -- --url https://host` (or `TELEGRAM_WEBHOOK_PUBLIC_URL`); uses `telegramSetWebhook` in `src/telegram/bot-api.ts`.
+- **Soak / metrics**: `src/bin/soak-simulate.ts` — `npm run validate:soak` / `bash scripts/soak-simulate.sh [iterations]` writes **`evidence/soak-*.jsonl`** + **`evidence/soak-metrics-*.json`** (aggregates).
+- **Unified dispatch CLI**: `src/bin/unified-dispatch.ts`.
+- **Adapters**: Memory/cap env vars; lane stdout/stderr with redaction + truncation.
+- **Memory / capabilities**: As before (`src/memory/*`, `src/capabilities/*`).
+- **CI stubs / scripts**: `scripts/failure-injection-smoke.sh`, `ci-record-dispatch-evidence.sh`, `soak-simulate.sh` (delegates to compiled `soak-simulate.js` with stub env defaults).
 
 ## Design references (do not duplicate; link here)
 
@@ -29,15 +31,15 @@ This file is the canonical handoff for cloud agents and humans picking up work i
 
 1. **Policy and dispatch** — Done for current repo scope.
 
-2. **Trace and failure** — Lane I/O on `DispatchState`; failure-injection matrix in CI. Remaining: optional redaction of secrets in `laneStderr`, Hermes structured stderr protocol.
+2. **Trace and failure** — Redaction + lane I/O done. Remaining: structured Hermes stderr protocol, richer redaction rules / allowlist.
 
-3. **Gateway / Telegram** — CLI gateway + webhook server done. Remaining: TLS termination, `setWebhook` automation, production secret management, answer/sendMessage flow.
+3. **Gateway / Telegram** — Webhook + optional reply + setWebhook CLI done. Remaining: TLS termination in front of webhook, production secret vault, native `answer*` / inline keyboards if product needs.
 
-4. **Memory** — File-backed + merge on pass done. Remaining: multi-writer / HA store, Eve/Hermes native memory protocol (replace JSON env blobs).
+4. **Memory** — File-backed + merge on pass done. Remaining: HA / multi-writer, replace JSON env blobs with native Eve/Hermes contracts.
 
-5. **Control plane** — Strict router validation + deprecation warnings done. Remaining: optional JSON-schema or zod for full env, config file alongside env.
+5. **Control plane** — JSON overlay + strict router mode done. Remaining: full schema validation (zod) for all keys, hot reload.
 
-6. **Evidence and CI** — Failure-injection + gateway + artifact upload done. Remaining: soak/regression jobs publishing metrics bundles.
+6. **Evidence and CI** — Failure-injection + soak metrics + gateway + artifact upload done. Remaining: SLO gate thresholds in CI (fail job if success rate below N), soak duration matrix.
 
 ## Session log (append only)
 
@@ -47,3 +49,4 @@ This file is the canonical handoff for cloud agents and humans picking up work i
 | 2026-04-28 | `cursor/agent-handoff-scope-5a8b` | Policy version env; explicit lane dispatch tests; envelope trace fallback on unified response. |
 | 2026-04-28 | `cursor/long-horizon-convergence-5a8b` | Memory store + capability registry + gateway CLI + control-plane env + exec timeout process-group kill + CI evidence + adapter/state failure paths. |
 | 2026-04-28 | `cursor/long-horizon-convergence-5a8b` | File-backed memory, mergeWorkingSet on pass, adapter memory/cap env + lane I/O, Telegram webhook server, strict config + legacy warnings, expanded failure-injection + CI, Vitest VITEST env. |
+| 2026-04-28 | `cursor/long-horizon-convergence-5a8b` | Lane I/O redaction, unified.config.json overlay, resolvePackageRoot for dist CLIs, soak-simulate Node + CI metrics, Telegram sendMessage reply + setWebhook CLI, webhook-set + bot-api helpers. |

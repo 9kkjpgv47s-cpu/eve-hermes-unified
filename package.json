@@ -14,7 +14,8 @@
     "sync:sources": "bash ./scripts/sync-sources.sh",
     "bootstrap:sources": "bash ./scripts/bootstrap-sources.sh",
     "validate:failure-injection": "bash ./scripts/failure-injection-smoke.sh",
-    "validate:soak": "bash ./scripts/soak-simulate.sh 20",
+    "validate:soak": "bash ./scripts/soak-simulate.sh",
+    "telegram:set-webhook": "tsx src/bin/telegram-webhook-set.ts",
     "cutover:stage": "bash ./scripts/prod-cutover-stage.sh",
     "cutover:rollback": "bash ./scripts/prod-rollback-eve-safe-lane.sh"
   },

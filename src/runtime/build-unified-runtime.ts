@@ -7,6 +7,7 @@ import {
   assertUnifiedControlPlaneEnv,
   loadUnifiedControlPlaneEnv,
 } from "../config/unified-control-plane-env.js";
+import { loadUnifiedConfigFile } from "../config/load-unified-config-file.js";
 import { FileBackedUnifiedMemoryStore } from "../memory/file-backed-unified-memory-store.js";
 import { InMemoryUnifiedMemoryStore } from "../memory/unified-memory-store.js";
 import type { UnifiedRuntime } from "./unified-dispatch.js";
@@ -16,6 +17,7 @@ export async function buildUnifiedRuntimeFromEnv(rootDir: string): Promise<{
   gatewayMode: "unified" | "legacy";
 }> {
   await loadDotEnvFile(rootDir);
+  await loadUnifiedConfigFile(rootDir);
   const c = loadUnifiedControlPlaneEnv();
   assertUnifiedControlPlaneEnv(c);
 
@@ -27,8 +29,20 @@ export async function buildUnifiedRuntimeFromEnv(rootDir: string): Promise<{
     c.memoryBackend === "file" ? new FileBackedUnifiedMemoryStore(memoryPath) : new InMemoryUnifiedMemoryStore();
 
   const runtime: UnifiedRuntime = {
-    eveAdapter: new EveAdapter(c.eveTaskDispatchScript, c.eveDispatchResultPath, c.eveLaneTimeoutMs),
-    hermesAdapter: new HermesAdapter(c.hermesLaunchCommand, c.hermesLaunchArgs, c.hermesLaneTimeoutMs),
+    eveAdapter: new EveAdapter(
+      c.eveTaskDispatchScript,
+      c.eveDispatchResultPath,
+      c.eveLaneTimeoutMs,
+      c.unifiedLaneIoRedact,
+      c.unifiedLaneIoRedactCustom,
+    ),
+    hermesAdapter: new HermesAdapter(
+      c.hermesLaunchCommand,
+      c.hermesLaunchArgs,
+      c.hermesLaneTimeoutMs,
+      c.unifiedLaneIoRedact,
+      c.unifiedLaneIoRedactCustom,
+    ),
     routerConfig: {
       defaultPrimary: c.routerDefaultPrimary,
       defaultFallback: c.routerDefaultFallback,

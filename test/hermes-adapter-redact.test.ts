@@ -4,18 +4,22 @@ import { writeFile, mkdir, chmod } from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 
-describe("HermesAdapter lane I/O", () => {
-  it("captures stderr on non-zero exit", async () => {
-    const dir = path.join(tmpdir(), `hermes-io-${Date.now()}`);
+describe("HermesAdapter redaction", () => {
+  it("redacts bearer tokens in stderr when enabled", async () => {
+    const dir = path.join(tmpdir(), `hermes-redact-${Date.now()}`);
     await mkdir(dir, { recursive: true });
-    const script = path.join(dir, "err.sh");
-    await writeFile(script, "#!/usr/bin/env bash\necho err1 >&2\nexit 3\n", "utf8");
+    const script = path.join(dir, "leak.sh");
+    await writeFile(
+      script,
+      "#!/usr/bin/env bash\necho 'Authorization: Bearer supersecret123' >&2\nexit 1\n",
+      "utf8",
+    );
     await chmod(script, 0o755);
 
     const adapter = new HermesAdapter("bash", [script], 5000, true, "");
     const state = await adapter.dispatch({
       envelope: {
-        traceId: "t-io",
+        traceId: "t-red",
         channel: "telegram",
         chatId: "1",
         messageId: "2",
@@ -23,11 +27,8 @@ describe("HermesAdapter lane I/O", () => {
         text: "x",
       },
       intentRoute: "unified:test",
-      memorySnapshot: { k: "v" },
-      capabilityIds: ["hermes.gateway"],
     });
-
-    expect(state.status).toBe("failed");
-    expect(state.laneStderr).toContain("err1");
+    expect(state.laneStderr).toContain("[REDACTED]");
+    expect(state.laneStderr).not.toContain("supersecret");
   });
 });

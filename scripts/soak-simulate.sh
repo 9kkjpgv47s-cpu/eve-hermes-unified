@@ -2,22 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT_DIR="${UNIFIED_EVIDENCE_DIR:-$ROOT_DIR/evidence}"
-mkdir -p "$OUT_DIR"
+export EVE_TASK_DISPATCH_SCRIPT="${EVE_TASK_DISPATCH_SCRIPT:-$ROOT_DIR/scripts/ci-eve-dispatch-stub.sh}"
+export EVE_DISPATCH_RESULT_PATH="${EVE_DISPATCH_RESULT_PATH:-/tmp/eve-hermes-unified-soak.json}"
+export HERMES_LAUNCH_COMMAND="${HERMES_LAUNCH_COMMAND:-bash}"
+export HERMES_LAUNCH_ARGS="${HERMES_LAUNCH_ARGS:-$ROOT_DIR/scripts/ci-hermes-dispatch-stub.sh}"
 
 iterations="${1:-20}"
-report="$OUT_DIR/soak-$(date +%Y%m%d-%H%M%S).jsonl"
-
-for i in $(seq 1 "$iterations"); do
-  if (( i % 3 == 0 )); then
-    text="@hermes summarize state $i"
-  elif (( i % 2 == 0 )); then
-    text="@cursor check status $i"
-  else
-    text="normal message $i"
-  fi
-
-  node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "$text" --chat-id "777" --message-id "$i" >>"$report" 2>&1 || true
-done
-
-echo "Wrote $report"
+node "$ROOT_DIR/dist/src/bin/soak-simulate.js" --iterations "$iterations"

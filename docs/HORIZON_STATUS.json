@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T20:00:00Z",
+  "updatedAtIso": "2026-04-28T21:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -164,14 +164,14 @@
       "id": "h3-action-2",
       "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["policy-hardening", "runtime"]
     },
     {
       "id": "h3-action-3",
       "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["capability", "policy-hardening"]
     },
     {
@@ -185,14 +185,14 @@
       "id": "h3-action-5",
       "summary": "Create long-window soak validation for H3 policy and durability changes with explicit SLO drift alarms.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
     },
     {
       "id": "h3-action-6",
       "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["rollback", "operations"]
     }
   ],
@@ -266,7 +266,7 @@
     },
     "H3": {
       "status": "planned",
-      "summary": "H3-action-1 and H3-action-4 landed: optional dispatch durable WAL + replay CLI, atomic file-backed memory writes, optional dual-write shadow file, shared buildUnifiedDispatchRuntime, preflight for WAL/shadow paths, and Vitest for WAL + memory durability."
+      "summary": "All H3 next-actions completed: WAL/memory durability, policy-gated dispatch fallback (UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES + primaryFallbackLimited), capability execution timeout (UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS), summarize:soak + validate:all integration, emergency rollback rehearsal manifest, compact dispatch JSONL for evidence gates, and summarize-evidence soak file selection fix."
     },
     "H4": {
       "status": "planned",
@@ -397,6 +397,12 @@
       "horizon": "H3",
       "status": "planned",
       "note": "H3 durability slice: append-only dispatch WAL (attempt/complete), replay-dispatch-wal CLI, atomic JSON memory persistence, optional UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH dual-write store, buildUnifiedDispatchRuntime shared wiring, env UNIFIED_DISPATCH_DURABLE_WAL_PATH, preflight checks, and tests for WAL orphans + dual-write parity."
+    },
+    {
+      "timestamp": "2026-04-28T21:00:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "H3 policy/soak/rollback slice: dispatchFailureClassesAllowingFallback + primaryFallbackLimited on UnifiedDispatchResult; UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS in capability engine; npm run summarize:soak + scripts/summarize-soak-jsonl.mjs; npm run run:emergency-rollback-rehearsal; validate:all chains soak summary + rehearsal; unified-dispatch emits single-line JSON for JSONL evidence; summarize-evidence selects newest soak-*.jsonl only (ignores soak-summary artifacts) and merges line+scanner record extraction."
     }
   ]
 }

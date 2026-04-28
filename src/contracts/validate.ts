@@ -113,6 +113,12 @@ export function validateUnifiedDispatchResult(value: UnifiedDispatchResult): Uni
   if (value.capabilityExecution) {
     validateCapabilityExecutionResult(value.capabilityExecution);
   }
+  if (value.primaryFallbackLimited === true) {
+    ensure(
+      !value.fallbackState && !value.fallbackInfo,
+      "primaryFallbackLimited requires no fallbackState or fallbackInfo.",
+    );
+  }
   return value;
 }
 

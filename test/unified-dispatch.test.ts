@@ -179,6 +179,51 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.fallbackInfo).toBeUndefined();
   });
 
+  it("skips fallback when failure class is not in allowlist", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "failed",
+        reason: "policy_blocked",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 5,
+        failureClass: "policy_failure",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "should_not_run",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig({
+        failClosed: false,
+        dispatchFailureClassesAllowingFallback: ["dispatch_failure"],
+      }),
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+
+    expect(result.response.laneUsed).toBe("eve");
+    expect(result.primaryFallbackLimited).toBe(true);
+    expect(result.fallbackState).toBeUndefined();
+    expect(result.fallbackInfo).toBeUndefined();
+  });
+
   it("uses capability engine path when explicit capability command resolves", async () => {
     const runtime = {
       eveAdapter: new FakeLaneAdapter("eve", {

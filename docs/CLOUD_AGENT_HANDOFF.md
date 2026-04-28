@@ -16,9 +16,13 @@ Use this document when one cloud agent hands execution to another. The objective
    - `npm test`
 3. Confirm runtime command compiles and runs:
    - `npm run dispatch -- --text "startup verification" --chat-id 1 --message-id 1`
-4. Optional H3 durability hooks (when enabled in `.env`):
-   - `UNIFIED_DISPATCH_DURABLE_WAL_PATH`: append-only JSONL for dispatch attempt/complete; `npm run replay:dispatch-wal -- --dry-run` lists orphans without re-dispatching
-   - `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH`: secondary file mirroring the primary file-backed memory store (path must differ from `UNIFIED_MEMORY_FILE_PATH`)
+4. **H3 optional controls** (see `.env.example`):
+   - `UNIFIED_DISPATCH_DURABLE_WAL_PATH` + `npm run replay:dispatch-wal` (append-only JSONL, orphan replay)
+   - `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH` (secondary memory JSON; must differ from primary path)
+   - `UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES` gates when automatic Hermes fallback runs after a primary failure; results may include `primaryFallbackLimited`
+   - `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` bounds `@cap` executor wall-clock time (timeout → `capability_execution_timeout`)
+5. **Soak drift:** after each soak, `npm run summarize:soak` writes `evidence/soak-summary-*.json` with drift alarms; chained in `npm run validate:all`.
+6. **Rollback rehearsal:** `npm run run:emergency-rollback-rehearsal` writes `evidence/emergency-rollback-rehearsal-*.json` (manifest only, no env mutation).
 
 ## Baseline Status Fields to Record
 

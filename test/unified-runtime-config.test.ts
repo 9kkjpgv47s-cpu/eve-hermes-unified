@@ -153,4 +153,20 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.hashSalt).toBe("salt-1");
     expect(config.preflight.enabled).toBe(false);
   });
+
+  it("parses dispatch fallback failure class allowlist and capability execution timeout", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES: "dispatch_failure, provider_limit",
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "1500",
+        }),
+      ),
+    );
+    expect(config.routerConfig.dispatchFailureClassesAllowingFallback).toEqual([
+      "dispatch_failure",
+      "provider_limit",
+    ]);
+    expect(config.unifiedCapabilityExecutionTimeoutMs).toBe(1500);
+  });
 });

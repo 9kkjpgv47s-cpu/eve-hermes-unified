@@ -10,9 +10,11 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 - Horizon: `H2` (`docs/HORIZON_STATUS.json`)
 - Primary focus: staged promotion drills + rollback-policy enforcement with auditable artifacts
-- H3 durability hooks (optional, see `.env.example`):
+- H3 hooks (optional, see `.env.example`):
   - `UNIFIED_DISPATCH_DURABLE_WAL_PATH` + `npm run replay:dispatch-wal`
   - `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH` for mirrored file-backed memory
+  - `UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES` + `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`
+  - `npm run summarize:soak` and `npm run run:emergency-rollback-rehearsal` (part of `validate:all`)
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -47,6 +49,8 @@ npm run check
 npm test
 # optional: pass --wal or set UNIFIED_DISPATCH_DURABLE_WAL_PATH
 npm run replay:dispatch-wal -- --wal /tmp/dispatch.wal.jsonl --dry-run --limit 5
+npm run summarize:soak
+npm run run:emergency-rollback-rehearsal
 ```
 
 ### H2 Promotion/Policy Flow
@@ -77,7 +81,7 @@ npm run verify:merge-bundle -- --evidence-dir evidence --latest
 
 ## Immediate Next Technical Targets (H2+)
 
-1. **H3:** policy-router fallback contracts (`h3-action-2`), capability execution budgets (`h3-action-3`), soak drift tooling (`h3-action-5`), rollback rehearsal bundles (`h3-action-6`).
+1. **H4:** legacy ingress retirement / contract tightening per `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`.
 2. Majority-stage drill hardening (pass + fail scenarios, stable thresholds).
 3. Auto-rollback simulation with optional `--auto-apply-rollback` under controlled test conditions.
 4. Evidence freshness rules so stage drill reliably selects latest passing artifacts for all dependent gates.

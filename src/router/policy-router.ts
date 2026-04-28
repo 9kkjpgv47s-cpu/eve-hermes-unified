@@ -1,4 +1,4 @@
-import type { LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
+import type { FailureClass, LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
 import { validateRoutingDecision } from "../contracts/validate.js";
 
 export type RouterCutoverStage = "shadow" | "canary" | "majority" | "full";
@@ -12,6 +12,11 @@ export type RouterPolicyConfig = {
   canaryChatIds?: string[];
   majorityPercent?: number;
   hashSalt?: string;
+  /**
+   * When non-empty, only primary failures whose `failureClass` is listed here may trigger
+   * automatic fallback. Other failures keep the primary response and set `primaryFallbackLimited`.
+   */
+  dispatchFailureClassesAllowingFallback?: FailureClass[];
 };
 
 function normalizeCutoverStage(value: RouterCutoverStage | undefined): RouterCutoverStage {

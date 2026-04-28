@@ -57,6 +57,7 @@ export function buildUnifiedDispatchRuntime(config: UnifiedRuntimeEnvConfig): Bu
     memoryStore: sharedMemoryStore,
     dispatchLane,
     policy: capabilityPolicy,
+    capabilityExecutionTimeoutMs: config.unifiedCapabilityExecutionTimeoutMs,
   });
   const runtime: UnifiedRuntime = {
     eveAdapter,

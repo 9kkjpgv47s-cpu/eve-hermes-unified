@@ -80,6 +80,8 @@ export type UnifiedDispatchResult = {
   primaryState: DispatchState;
   fallbackState?: DispatchState;
   fallbackInfo?: DispatchFallbackInfo;
+  /** When set, primary failed but automatic fallback was skipped by router policy (failure-class gate). */
+  primaryFallbackLimited?: boolean;
   capabilityDecision?: UnifiedCapabilityDecision;
   capabilityExecution?: CapabilityExecutionResult;
   response: UnifiedResponse;

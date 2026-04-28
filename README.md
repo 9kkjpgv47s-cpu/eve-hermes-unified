@@ -94,10 +94,18 @@ Run one unified-dispatch request with explicit message envelope:
 npm run dispatch -- --text "check project status" --chat-id 123 --message-id 456
 ```
 
-Optional **durable dispatch WAL** (JSONL): set `UNIFIED_DISPATCH_DURABLE_WAL_PATH` in `.env`. Each run appends `dispatch_attempt` then `dispatch_complete`. Replay orphaned attempts:
+Dispatch stdout is **single-line JSON** so soak logs remain valid JSONL.
+
+Optional **durable dispatch WAL** (JSONL): set `UNIFIED_DISPATCH_DURABLE_WAL_PATH`. Replay orphans:
 
 ```bash
 npm run replay:dispatch-wal -- --dry-run --limit 10
 ```
+
+Optional **failure-class gated fallback**: set `UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES` (comma-separated) so only listed primary `failureClass` values trigger Hermes fallback; other primaries return `primaryFallbackLimited: true` on the dispatch result.
+
+Optional **`@cap` execution timeout**: `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` (milliseconds, `0` = unlimited).
+
+After soak, **`npm run summarize:soak`** reads the latest `evidence/soak-*.jsonl` and writes a drift summary JSON. **`npm run run:emergency-rollback-rehearsal`** emits an operator rollback rehearsal manifest under `evidence/` (no production changes).
 
 Key environment controls are in `.env.example`.

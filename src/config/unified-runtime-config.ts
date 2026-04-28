@@ -1,4 +1,4 @@
-import type { LaneId } from "../contracts/types.js";
+import type { FailureClass, LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
 import type { UnifiedMemoryStoreKind } from "../memory/unified-memory-store.js";
@@ -31,6 +31,8 @@ export type UnifiedRuntimeEnvConfig = {
   };
   auditLogPath: string;
   routerConfig: RouterPolicyConfig;
+  /** Wall-clock limit for capability executor body (0 = unlimited). */
+  unifiedCapabilityExecutionTimeoutMs: number;
 };
 
 export type RuntimeEnvSnapshot = Partial<Record<string, string>>;
@@ -108,6 +110,37 @@ function parsePercent(raw: string | undefined, fallback: number): number {
     return Math.floor(numeric);
   }
   return fallback;
+}
+
+const FAILURE_CLASS_VALUES: FailureClass[] = [
+  "none",
+  "provider_limit",
+  "cooldown",
+  "dispatch_failure",
+  "state_unavailable",
+  "policy_failure",
+];
+
+function parseDispatchFallbackFailureClasses(raw: string | undefined): FailureClass[] | undefined {
+  if (!raw?.trim()) {
+    return undefined;
+  }
+  const out = new Set<FailureClass>();
+  for (const part of raw.split(",")) {
+    const token = part.trim().toLowerCase() as FailureClass;
+    if (FAILURE_CLASS_VALUES.includes(token)) {
+      out.add(token);
+    }
+  }
+  return out.size > 0 ? [...out] : undefined;
+}
+
+function parsePositiveIntMs(raw: string | undefined, fallback: number): number {
+  const n = Number.parseInt(String(raw ?? "").trim(), 10);
+  if (!Number.isFinite(n) || n < 0) {
+    return fallback;
+  }
+  return n;
 }
 
 export function loadUnifiedRuntimeEnvConfig(
@@ -265,6 +298,16 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
+  const dispatchFailureClassesAllowingFallback = parseDispatchFallbackFailureClasses(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES",
+      "ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES",
+    ]),
+  );
+  const unifiedCapabilityExecutionTimeoutMs = parsePositiveIntMs(
+    firstDefined(reader, ["UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS", "CAPABILITY_EXECUTION_TIMEOUT_MS"]),
+    0,
+  );
 
   return {
     eveDispatchScript,
@@ -290,6 +333,7 @@ export function loadUnifiedRuntimeEnvConfig(
       strict: preflightStrict,
     },
     auditLogPath,
+    unifiedCapabilityExecutionTimeoutMs,
     routerConfig: {
       defaultPrimary,
       defaultFallback,
@@ -299,6 +343,7 @@ export function loadUnifiedRuntimeEnvConfig(
       canaryChatIds,
       majorityPercent,
       hashSalt,
+      dispatchFailureClassesAllowingFallback,
     },
   };
 }

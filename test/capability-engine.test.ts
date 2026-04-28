@@ -278,6 +278,54 @@ describe("UnifiedCapabilityEngine", () => {
     expect(result.response.failureClass).toBe("policy_failure");
   });
 
+  it("fails capability execution when executor exceeds timeout budget", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "cap-timeout-"));
+    try {
+      const registry = new CapabilityRegistry();
+      registry.register(
+        {
+          id: "slow_cap",
+          description: "slow",
+          owner: "eve",
+        },
+        async () => {
+          await new Promise((r) => setTimeout(r, 500));
+          return { consumed: true, responseText: "should not reach" };
+        },
+      );
+      const memoryStore = new FileUnifiedMemoryStore(path.join(tmp, "mem.json"));
+      const engine = new UnifiedCapabilityEngine(registry, {
+        memoryStore,
+        dispatchLane: async () => fakeLaneState("eve"),
+        capabilityExecutionTimeoutMs: 30,
+      });
+      const runtime = {
+        eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+        hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+        routerConfig: {
+          defaultPrimary: "eve" as const,
+          defaultFallback: "none" as const,
+          failClosed: true,
+          policyVersion: "v1",
+        },
+        capabilityEngine: engine,
+      };
+
+      const result = await dispatchUnifiedMessage(runtime, {
+        channel: "telegram",
+        chatId: "1",
+        messageId: "1",
+        text: "@cap slow_cap",
+      });
+
+      expect(result.capabilityExecution?.status).toBe("failed");
+      expect(result.capabilityExecution?.reason).toBe("capability_execution_timeout");
+      expect(result.capabilityExecution?.failureClass).toBe("dispatch_failure");
+    } finally {
+      await rm(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("allows capability execution when capability and chat are explicitly allowlisted", async () => {
     const registry = new CapabilityRegistry();
     const memoryStore = new FileUnifiedMemoryStore(

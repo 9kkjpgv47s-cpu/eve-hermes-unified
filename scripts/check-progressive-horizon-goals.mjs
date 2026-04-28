@@ -3,8 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
-
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+import { HORIZON_SEQUENCE } from "./horizon-constants.mjs";
 
 function parseArgs(argv) {
   const options = {

@@ -32,7 +32,7 @@ describe("H5 operator scripts", () => {
     });
   });
 
-  it("validate-h5-closeout fails when soak drill dimensions are missing", async () => {
+  it("validate-h5-evidence-bundle fails when soak drill dimensions are missing", async () => {
     await withTempEvidenceDir(async (evidenceDir) => {
       const summaryPath = path.join(evidenceDir, "validation-summary-test.json");
       await writeFile(
@@ -47,7 +47,7 @@ describe("H5 operator scripts", () => {
       const result = await runCommandWithTimeout(
         [
           "node",
-          "scripts/validate-h5-closeout.mjs",
+          "scripts/validate-h5-evidence-bundle.mjs",
           "--evidence-dir",
           evidenceDir,
           "--out",
@@ -65,7 +65,7 @@ describe("H5 operator scripts", () => {
     });
   });
 
-  it("validate-h5-closeout passes with synthetic H5 evidence bundle", async () => {
+  it("validate-h5-evidence-bundle passes with synthetic H5 evidence bundle", async () => {
     await withTempEvidenceDir(async (evidenceDir) => {
       const stamp = "20990101-000000";
       await writeFile(
@@ -109,7 +109,7 @@ describe("H5 operator scripts", () => {
       const result = await runCommandWithTimeout(
         [
           "node",
-          "scripts/validate-h5-closeout.mjs",
+          "scripts/validate-h5-evidence-bundle.mjs",
           "--evidence-dir",
           evidenceDir,
           "--out",

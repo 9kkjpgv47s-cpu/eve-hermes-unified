@@ -1,17 +1,16 @@
 #!/usr/bin/env node
+import { execFile as execFileCallback } from "node:child_process";
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
+import { HORIZON_SEQUENCE, HORIZON_STAGE_MAP } from "./horizon-constants.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
-const HORIZON_STAGE_MAP = {
-  H1: "shadow",
-  H2: "canary",
-  H3: "majority",
-  H4: "full",
-  H5: "full",
-};
+const execFile = promisify(execFileCallback);
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -58,7 +57,7 @@ function readCommandOptionValue(tokens, optionNames) {
 
 function parseHorizonRunnerCommand(command) {
   const normalized = normalizeCommand(command);
-  const match = normalized.match(/^npm run run:h([1-5])-(closeout|promotion)(?:\s+.*)?$/);
+  const match = normalized.match(/^npm run run:h([1-6])-(closeout|promotion)(?:\s+.*)?$/);
   if (match) {
     const source = normalizeHorizon(`H${String(match[1])}`);
     const kind = String(match[2]);
@@ -127,6 +126,20 @@ function evidenceEntryAppliesToHorizon(entry, targetHorizon) {
   return singleScope === target;
 }
 
+async function runH5EvidenceBundleGate(horizonStatusFile, evidenceDir) {
+  const scriptPath = path.join(REPO_ROOT, "scripts", "validate-h5-evidence-bundle.mjs");
+  try {
+    await execFile(process.execPath, [scriptPath, "--horizon-status-file", horizonStatusFile, "--evidence-dir", evidenceDir], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    });
+    return { pass: true };
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : null;
+    return { pass: false, code };
+  }
+}
+
 function parseArgs(argv) {
   const options = {
     horizon: "",
@@ -137,6 +150,7 @@ function parseArgs(argv) {
     requireActiveNextHorizon: false,
     requireCompletedActions: false,
     allowHorizonMismatch: false,
+    requireH5EvidenceBundle: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -162,6 +176,8 @@ function parseArgs(argv) {
       options.requireCompletedActions = true;
     } else if (arg === "--allow-horizon-mismatch") {
       options.allowHorizonMismatch = true;
+    } else if (arg === "--require-h5-evidence-bundle") {
+      options.requireH5EvidenceBundle = true;
     }
   }
   return options;
@@ -1097,6 +1113,18 @@ async function main() {
     };
   }
 
+  let h5EvidenceBundleGate = null;
+  if (
+    targetHorizon === "H5"
+    && options.requireH5EvidenceBundle
+    && (await exists(evidenceDir))
+  ) {
+    h5EvidenceBundleGate = await runH5EvidenceBundleGate(horizonStatusFile, evidenceDir);
+    if (!h5EvidenceBundleGate.pass) {
+      failures.push("h5_evidence_bundle_gate_failed");
+    }
+  }
+
   const payload = {
     generatedAtIso: new Date().toISOString(),
     pass: failures.length === 0,
@@ -1202,6 +1230,7 @@ async function main() {
       nextActions: horizonActionResults,
       requiredEvidence: requiredEvidenceResults,
       nextHorizon: nextHorizonChecks,
+      h5EvidenceBundleGate,
     },
     failures,
   };

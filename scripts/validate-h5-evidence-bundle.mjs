@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * H5 closeout gate (h5-action-9): validates latest evidence bundle from validate:all
+ * H5 evidence bundle gate (h5-action-9): validates latest evidence from validate:all
  * (validation summary soak dimensions, region drill v2, rollback rehearsal, remediation dry-run).
  * Emits a horizon-closeout schema manifest for optional promote:horizon --closeout-file.
+ * Full H5 horizon closeout (required evidence + this bundle) is `npm run validate:h5-closeout`.
  */
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -194,7 +195,7 @@ async function main() {
     `${JSON.stringify({ pass: manifest.pass, outPath, failureCount: manifest.failures.length })}\n`,
   );
   if (!manifest.pass) {
-    process.stderr.write(`H5 closeout validation failed:\n- ${manifest.failures.join("\n- ")}\n`);
+    process.stderr.write(`H5 evidence bundle validation failed:\n- ${manifest.failures.join("\n- ")}\n`);
     process.exitCode = 2;
   }
 }

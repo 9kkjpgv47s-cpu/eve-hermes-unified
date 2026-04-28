@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T23:00:00Z",
+  "updatedAtIso": "2026-04-29T00:30:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H5",
   "activeStatus": "in_progress",
-  "summary": "H5 autonomous operations slice is active: tenant-scoped memory and capability policy, region-aware deterministic routing, WAL replay parity for tenant/region, remediation dry-run manifests, and strict tenant preflight. Prior horizons H1–H4 remain closed in-repo with machine-verified validate:all evidence.",
+  "summary": "H5 autonomous operations slice is active: tenant-scoped memory and capability policy, region-aware deterministic routing, WAL replay parity for tenant/region, remediation dry-run manifests, and strict tenant preflight. H6 program goals are defined (partition/federation correlation, evidence dimensions, promotion gates); implementation is tracked under h6-action-* nextActions. Prior horizons H1–H4 remain closed in-repo with machine-verified validate:all evidence.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -290,6 +290,34 @@
       "id": "h5-action-10",
       "summary": "Post-H5: define next program horizon (H6) goals in HORIZON_STATUS and goalPolicies when product scope is ready.",
       "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h6-action-1",
+      "summary": "Optional partitionId (or equivalent) on UnifiedMessageEnvelope with propagation through dispatch result, durable WAL, replay CLI, and audit logs; backward compatible when unset.",
+      "targetHorizon": "H6",
+      "status": "planned",
+      "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h6-action-2",
+      "summary": "Extend soak and evidence summaries with partition drill dimensions and diversity drift alarms consistent with H5 tenant/region patterns.",
+      "targetHorizon": "H6",
+      "status": "planned",
+      "tags": ["validation", "automation"]
+    },
+    {
+      "id": "h6-action-3",
+      "summary": "Operator drill and machine gate for partition-scoped dispatch evidence (manifest + validate:all hook) mirroring H5 region drill rigor.",
+      "targetHorizon": "H6",
+      "status": "planned",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h6-action-4",
+      "summary": "H6 closeout: consolidate partition evidence bundle validation and document promote:horizon H5→H6 path with H5->H6 goal policy checks.",
+      "targetHorizon": "H6",
       "status": "planned",
       "tags": ["validation", "operations"]
     }
@@ -340,6 +368,21 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H5->H6": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.05,
+        "minPendingNextActions": 2,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 2,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -372,7 +415,11 @@
     },
     "H5": {
       "status": "in_progress",
-      "summary": "H5 slice is machine-closeout-gated via validate:h5-closeout (evidence bundle: soak drill dimensions, region drill v2, rollback rehearsal, remediation dry-run). Optional promote:horizon H5 with --closeout-file. Post-H5 runway tracked as h5-action-10."
+      "summary": "H5 slice is machine-closeout-gated via validate:h5-evidence-bundle (bundled into validate:h5-closeout) for soak drill dimensions, region drill v2, rollback rehearsal, and remediation dry-run. h5-action-10 completed: H6 goals and H5->H6 goal policy added; H6 state is planned."
+    },
+    "H6": {
+      "status": "planned",
+      "summary": "Federation/partition correlation across dispatch, WAL, replay, audit, and soak evidence. See docs/H6_PROGRAM.md; work tracked as h6-action-1..4."
     }
   },
   "history": [
@@ -530,7 +577,13 @@
       "timestamp": "2026-04-28T23:00:00Z",
       "horizon": "H5",
       "status": "in_progress",
-      "note": "Completed h5-action-9: added scripts/validate-h5-closeout.mjs (horizon-closeout manifest, soak tenant/region diversity checks, region drill v2 + rollback + remediation artifacts) and npm run validate:h5-closeout in validate:all; seeded h5-action-10 for post-H5 program definition."
+      "note": "Completed h5-action-9: added scripts/validate-h5-evidence-bundle.mjs (horizon-closeout manifest, soak tenant/region diversity checks, region drill v2 + rollback + remediation artifacts) and npm run validate:h5-evidence-bundle in validate:all; seeded h5-action-10 for post-H5 program definition."
+    },
+    {
+      "timestamp": "2026-04-29T00:30:00Z",
+      "horizon": "H5",
+      "status": "in_progress",
+      "note": "Completed h5-action-10: introduced H6 in horizon tooling (scripts/horizon-constants.mjs), docs/H6_PROGRAM.md, H5->H6 in docs/GOAL_POLICIES.json and goalPolicies here, horizonStates.H6 planned, h6-action-1..4 planned. Renamed evidence bundle script to validate-h5-evidence-bundle.mjs; validate:h5-closeout now runs validate-horizon-closeout for H5→H6; validate:all uses validate:h5-evidence-bundle."
     }
   ]
 }

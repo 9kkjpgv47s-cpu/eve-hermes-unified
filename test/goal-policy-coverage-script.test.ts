@@ -18,11 +18,13 @@ async function seedHorizonStatus(
   options?: {
     withH3H4?: boolean;
     withH4H5?: boolean;
+    withH5H6?: boolean;
     includeTaggedCounts?: boolean;
   },
 ): Promise<void> {
   const withH3H4 = options?.withH3H4 ?? true;
   const withH4H5 = options?.withH4H5 ?? true;
+  const withH5H6 = options?.withH5H6 ?? false;
   const includeTaggedCounts = options?.includeTaggedCounts ?? true;
 
   const transitions: Record<string, unknown> = {
@@ -60,6 +62,32 @@ async function seedHorizonStatus(
           }
         : undefined,
     };
+  }
+  if (withH5H6) {
+    transitions["H5->H6"] = {
+      minimumGoalIncrease: 1,
+      minActionGrowthFactor: 1.05,
+      minPendingNextActions: 2,
+      requiredTaggedActionCounts: includeTaggedCounts
+        ? {
+            validation: { minCount: 1, minPendingCount: 1 },
+            operations: { minCount: 1, minPendingCount: 1 },
+          }
+        : undefined,
+    };
+  }
+
+  const nextActions: Array<Record<string, unknown>> = [
+    { id: "h2-action-1", summary: "seed", targetHorizon: "H2", status: "completed", tags: ["durability"] },
+    { id: "h3-action-1", summary: "seed", targetHorizon: "H3", status: "planned", tags: ["durability"] },
+    { id: "h4-action-1", summary: "seed", targetHorizon: "H4", status: "planned", tags: ["policy"] },
+    { id: "h5-action-1", summary: "seed", targetHorizon: "H5", status: "planned", tags: ["automation"] },
+  ];
+  if (withH5H6) {
+    nextActions.push(
+      { id: "h6-action-1", summary: "seed", targetHorizon: "H6", status: "planned", tags: ["validation"] },
+      { id: "h6-action-2", summary: "seed", targetHorizon: "H6", status: "planned", tags: ["operations"] },
+    );
   }
 
   await writeFile(
@@ -105,12 +133,7 @@ async function seedHorizonStatus(
             required: true,
           },
         ],
-        nextActions: [
-          { id: "h2-action-1", summary: "seed", targetHorizon: "H2", status: "completed", tags: ["durability"] },
-          { id: "h3-action-1", summary: "seed", targetHorizon: "H3", status: "planned", tags: ["durability"] },
-          { id: "h4-action-1", summary: "seed", targetHorizon: "H4", status: "planned", tags: ["policy"] },
-          { id: "h5-action-1", summary: "seed", targetHorizon: "H5", status: "planned", tags: ["automation"] },
-        ],
+        nextActions,
         goalPolicies: { transitions },
         promotionReadiness: {
           targetStage: "majority",
@@ -128,6 +151,7 @@ async function seedHorizonStatus(
           H3: { status: "planned", summary: "H3 planned" },
           H4: { status: "planned", summary: "H4 planned" },
           H5: { status: "planned", summary: "H5 planned" },
+          H6: { status: "planned", summary: "H6 planned" },
         },
         history: [
           {
@@ -147,10 +171,11 @@ async function seedHorizonStatus(
 
 async function seedGoalPolicyFile(
   policyPath: string,
-  options?: { includeH3H4?: boolean; includeH4H5?: boolean; includeTaggedCounts?: boolean },
+  options?: { includeH3H4?: boolean; includeH4H5?: boolean; includeH5H6?: boolean; includeTaggedCounts?: boolean },
 ): Promise<void> {
   const includeH3H4 = options?.includeH3H4 ?? true;
   const includeH4H5 = options?.includeH4H5 ?? true;
+  const includeH5H6 = options?.includeH5H6 ?? false;
   const includeTaggedCounts = options?.includeTaggedCounts ?? true;
   const transitions: Record<string, unknown> = {
     "H2->H3": {
@@ -174,6 +199,16 @@ async function seedGoalPolicyFile(
       minActionGrowthFactor: 1.05,
       minPendingNextActions: 2,
       requiredTaggedActionCounts: includeTaggedCounts ? { automation: 1 } : {},
+    };
+  }
+  if (includeH5H6) {
+    transitions["H5->H6"] = {
+      minimumGoalIncrease: 1,
+      minActionGrowthFactor: 1.05,
+      minPendingNextActions: 2,
+      requiredTaggedActionCounts: includeTaggedCounts
+        ? { validation: 1, operations: 1 }
+        : {},
     };
   }
   await writeFile(policyPath, JSON.stringify({ transitions }, null, 2), "utf8");
@@ -259,7 +294,7 @@ async function seedGoalPolicyFileWithDuplicateTransition(policyPath: string): Pr
 
 async function seedAutoGoalPolicyFile(
   statusPath: string,
-  options?: { includeH3H4?: boolean; includeH4H5?: boolean; includeTaggedCounts?: boolean },
+  options?: { includeH3H4?: boolean; includeH4H5?: boolean; includeH5H6?: boolean; includeTaggedCounts?: boolean },
 ): Promise<string> {
   const autoPath = path.join(path.dirname(statusPath), "GOAL_POLICIES.json");
   await seedGoalPolicyFile(autoPath, options);
@@ -302,6 +337,47 @@ describe("check-goal-policy-coverage.mjs", () => {
       expect(payload.checks.transitionCount).toBe(3);
       expect(payload.checks.transitionKeys).toEqual(["H2->H3", "H3->H4", "H4->H5"]);
       expect(payload.checks.transitions["H2->H3"].hasTaggedRequirements).toBe(true);
+    });
+  });
+
+  it("passes when H5->H6 transition is included in coverage window", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(dir, "goal-policy-coverage-h6.json");
+      await seedHorizonStatus(statusPath, {
+        withH3H4: true,
+        withH4H5: true,
+        withH5H6: true,
+        includeTaggedCounts: true,
+      });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-goal-policy-coverage.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--source-horizon",
+          "H2",
+          "--max-target-horizon",
+          "H6",
+          "--require-tagged-requirements",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          transitionCount: number;
+          transitionKeys: string[];
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.transitionCount).toBe(4);
+      expect(payload.checks.transitionKeys).toEqual(["H2->H3", "H3->H4", "H4->H5", "H5->H6"]);
     });
   });
 

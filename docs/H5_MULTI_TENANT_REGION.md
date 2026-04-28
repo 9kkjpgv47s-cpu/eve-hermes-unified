@@ -43,15 +43,17 @@ When `UNIFIED_TENANT_ISOLATION_STRICT=1`, runtime preflight requires a non-empty
 
 Both run as part of `npm run validate:all`.
 
-## H5 closeout gate (h5-action-9)
+## H5 evidence bundle gate (h5-action-9)
 
-After a full `validate:all` (or equivalent evidence generation), run:
+After a full `validate:all` (or equivalent evidence generation), the bundle check runs as:
 
 ```bash
-npm run validate:h5-closeout
+npm run validate:h5-evidence-bundle
 ```
 
-This selects the newest `validation-summary-*.json`, `h5-region-misalignment-drill-*.json`, `emergency-rollback-rehearsal-*.json`, and `remediation-playbook-dry-run-*.json` under `evidence/`, checks soak tenant/region drill diversity (≥2 non-`_none` keys each), and writes `evidence/h5-closeout-*.json` as a **`horizon-closeout`** manifest (`checks.horizonCloseoutGatePass`). Operators may pin this file for **`npm run promote:horizon`** when the program is ready to mark H5 completed per `docs/CLOUD_AGENT_HANDOFF.md` and local promotion policy.
+This selects the newest `validation-summary-*.json`, `h5-region-misalignment-drill-*.json`, `emergency-rollback-rehearsal-*.json`, and `remediation-playbook-dry-run-*.json` under `evidence/`, checks soak tenant/region drill diversity (≥2 non-`_none` keys each), and writes `evidence/h5-closeout-*.json` as a **`horizon-closeout`** manifest (`checks.horizonCloseoutGatePass`).
+
+Full **H5 horizon closeout** (required global evidence plus the bundle above) uses `npm run validate:h5-closeout`, which runs `validate-horizon-closeout.mjs` for `--horizon H5 --next-horizon H6` with `--require-h5-evidence-bundle` so the evidence bundle gate runs in the same process as standard closeout checks. Operators may pin the emitted manifest for **`npm run promote:horizon`** when marking H5 completed per `docs/CLOUD_AGENT_HANDOFF.md` and local promotion policy.
 
 ## Region misalignment operator drill (h5-action-6)
 

@@ -3,8 +3,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
-
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+import { HORIZON_SEQUENCE } from "./horizon-constants.mjs";
 
 function parseArgs(argv) {
   const options = {

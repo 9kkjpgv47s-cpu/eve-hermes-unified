@@ -3,15 +3,14 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 import { loadGoalPolicyTransitions, validateGoalPolicySourceOption } from "./goal-policy-source.mjs";
-
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+import { HORIZON_SEQUENCE, MAX_HORIZON_ID } from "./horizon-constants.mjs";
 
 function parseArgs(argv) {
   const options = {
     horizonStatusFile: "",
     goalPolicyFile: "",
     sourceHorizon: "",
-    maxTargetHorizon: "H5",
+    maxTargetHorizon: MAX_HORIZON_ID,
     requiredPolicyTransitions: "",
     out: "",
     requireTaggedRequirements: true,
@@ -126,7 +125,7 @@ async function main() {
   const statusValidation = validateHorizonStatus(horizonStatus);
 
   const sourceHorizon = normalizeHorizon(options.sourceHorizon, horizonStatus?.activeHorizon ?? "");
-  const maxTargetHorizon = normalizeHorizon(options.maxTargetHorizon, "H5");
+  const maxTargetHorizon = normalizeHorizon(options.maxTargetHorizon, MAX_HORIZON_ID);
   const windowTransitions = buildTransitions(sourceHorizon, maxTargetHorizon);
   const requiredPolicyTransitions = parseRequiredTransitions(options.requiredPolicyTransitions);
   const transitions = requiredPolicyTransitions.length > 0 ? requiredPolicyTransitions : windowTransitions;

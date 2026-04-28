@@ -120,7 +120,7 @@ if [[ "${UNIFIED_RELEASE_READINESS_RUN_GOAL_POLICY_FILE_VALIDATION:-1}" == "1" ]
     --horizon-status-file "$ROOT_DIR/docs/HORIZON_STATUS.json" \
     --goal-policy-file "$ROOT_DIR/docs/GOAL_POLICIES.json" \
     --source-horizon H2 \
-    --until-horizon H5 \
+    --until-horizon H6 \
     --require-tagged-requirements \
     --require-positive-pending-min \
     $REQUIRE_GOAL_POLICY_SOURCE_CONSISTENCY_FLAG \

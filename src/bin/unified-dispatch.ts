@@ -182,6 +182,7 @@ async function main() {
   const durabilityQueue = new FileDispatchDurabilityQueue(
     config.dispatchDurabilityQueuePath,
     config.durabilityQueueRetentionNonTerminalMax,
+    config.durabilityQueueReplayMaxAttemptsPerEntry,
   );
 
   if (replayQueue) {

@@ -62,13 +62,13 @@ Every PR should include:
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
 - **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H6**.
 
-## Sustainment assurance (terminal H11)
+## Sustainment assurance (terminal H12)
 
-- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h10-assurance-bundle`**.
-- **H11 bundle** (current): `npm run run:h11-assurance-bundle` adds capability policy audit JSONL rotation proof (`test/capability-policy-audit-rotation.test.ts`) on top of H10 gates.
-- **Closeout gate**: `npm run validate:h11-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
-- **Horizon index**: orchestration scripts include **H11** as the terminal horizon sequence entry.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H11** assurance bundle + `validate:h11-closeout` → `evidence/post-h11-sustainment-loop-*.json`. **`npm run validate:post-h11-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h10-legacy`** / **`validate:post-h10-sustainment-manifest`**; **`verify:sustainment-loop:h9-legacy`** … **`h6-legacy`**.
+- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h11-assurance-bundle`**.
+- **H12 bundle** (current): `npm run run:h12-assurance-bundle` adds dispatch durability queue replay attempt bound proof (`test/dispatch-durability-queue-replay-limit.test.ts`) on top of H11 gates.
+- **Closeout gate**: `npm run validate:h12-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
+- **Horizon index**: orchestration scripts include **H12** as the terminal horizon sequence entry.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H12** assurance bundle + `validate:h12-closeout` → `evidence/post-h12-sustainment-loop-*.json`. **`npm run validate:post-h12-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h11-legacy`** / **`validate:post-h11-sustainment-manifest`**; **`verify:sustainment-loop:h10-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 
@@ -93,6 +93,11 @@ Every PR should include:
 
 - **Env**: **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`** (alias **`CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`**, 0 = off), **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT`** (alias **`CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT`**, default 8).
 - **Behavior**: before each capability policy audit append in **`appendCapabilityPolicyAuditLog`**, when max-bytes is set, rotate active JSONL to **`${path}.${timestamp}.jsonl`** (same naming pattern as dispatch audit); **`UnifiedCapabilityEngine`** passes rotation when configured via **`unified-dispatch`** runtime config.
+
+## Dispatch durability queue replay attempt bound (H12)
+
+- **Env**: **`UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY`** (alias **`DISPATCH_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY`**) — max replay attempts per **`pending`** entry before marking **`failed`** with reason **`replay_max_attempts_exceeded`**. **`0`** = unlimited (legacy behavior).
+- **Runtime**: **`replayPendingDispatches`** compares **`entry.attempts`** to the configured cap before **`incrementAttempt`**; **`FileDispatchDurabilityQueue`** receives the cap from **`unified-dispatch`** runtime config.
 
 ## Cutover and Rollback Commands
 

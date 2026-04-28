@@ -21,6 +21,10 @@ export type UnifiedRuntimeEnvConfig = {
    * Pending entries are never pruned.
    */
   durabilityQueueRetentionNonTerminalMax: number;
+  /**
+   * Max replay attempts per pending queue entry (checked before each replay increment); 0 = unlimited.
+   */
+  durabilityQueueReplayMaxAttemptsPerEntry: number;
   /** When true, wrap in-memory (or any) store with serialized writes for ordered mutation under concurrency. */
   unifiedMemorySerializeWrites: boolean;
   /** Wall-clock budget (ms) for capability executor body; 0 = unlimited. */
@@ -221,6 +225,13 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     5000,
   );
+  const durabilityQueueReplayMaxAttemptsPerEntry = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY",
+      "DISPATCH_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY",
+    ]),
+    0,
+  );
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -415,6 +426,7 @@ export function loadUnifiedRuntimeEnvConfig(
     unifiedDispatchAuditLogPath,
     dispatchDurabilityQueuePath,
     durabilityQueueRetentionNonTerminalMax,
+    durabilityQueueReplayMaxAttemptsPerEntry,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T23:55:00Z",
+  "updatedAtIso": "2026-04-30T00:05:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H11",
+  "activeHorizon": "H12",
   "activeStatus": "completed",
-  "summary": "Horizon H11 (capability policy audit JSONL lifecycle): optional size-based rotation via UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES / RETAIN_COUNT before each @cap policy append; run-h11-assurance-bundle adds capability-policy-audit-rotation tests on top of H10 gates; terminal sustainment via verify:sustainment-loop (post-H11 + validate:h11-closeout).",
+  "summary": "Horizon H12 (dispatch durability queue replay attempt bound): optional UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY marks pending entries failed with replay_max_attempts_exceeded before replay dispatch when attempts reach cap; 0 = unlimited (default); run-h12-assurance-bundle adds replay-limit vitest on top of H11 gates; terminal sustainment via verify:sustainment-loop (post-H12 + validate:h12-closeout).",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -111,6 +111,13 @@
       "artifactPattern": "evidence/h11-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H11"]
+    },
+    {
+      "id": "h12-assurance-bundle",
+      "command": "node ./scripts/run-h12-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h12-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H12"]
     }
   ],
   "nextActions": [
@@ -419,6 +426,27 @@
       "targetHorizon": "H11",
       "status": "completed",
       "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h12-action-1",
+      "summary": "Configurable max replay attempts per pending durability queue entry (default 0 unlimited); replayPendingDispatches fails stuck rows with replay_max_attempts_exceeded when attempts >= cap.",
+      "targetHorizon": "H12",
+      "status": "completed",
+      "tags": ["durability", "operations", "runtime"]
+    },
+    {
+      "id": "h12-action-2",
+      "summary": "H12 assurance bundle extends H11 with dispatch-durability-queue-replay-limit vitest; validate:h12-closeout and post-H12 sustainment loop manifest.",
+      "targetHorizon": "H12",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h12-action-3",
+      "summary": "Goal policy H11→H12 transition and documentation; verify:sustainment-loop post-H12; verify:sustainment-loop:h11-legacy for prior chain.",
+      "targetHorizon": "H12",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -557,6 +585,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H11->H12": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -613,7 +656,11 @@
     },
     "H11": {
       "status": "completed",
-      "summary": "Capability policy audit lifecycle: optional JSONL rotation aligned with dispatch audit naming; H11 assurance adds capability-policy-audit-rotation tests; terminal sustainment post-H11 via verify:sustainment-loop."
+      "summary": "Capability policy audit lifecycle: optional JSONL rotation aligned with dispatch audit naming; H11 assurance adds capability-policy-audit-rotation tests."
+    },
+    "H12": {
+      "status": "completed",
+      "summary": "Durability queue replay guardrail: optional max replay attempts per pending entry; H12 assurance adds replay-limit tests; terminal sustainment post-H12 via verify:sustainment-loop."
     }
   },
   "history": [
@@ -796,6 +843,12 @@
       "horizon": "H11",
       "status": "completed",
       "note": "H11 capability policy audit rotation: optional UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES before each @cap policy append; run-h11-assurance-bundle + post-H11 sustainment; terminal closeout at H11."
+    },
+    {
+      "timestamp": "2026-04-30T00:05:00Z",
+      "horizon": "H12",
+      "status": "completed",
+      "note": "H12 durability queue replay limit: optional UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY caps replay attempts per pending row; run-h12-assurance-bundle + post-H12 sustainment; terminal closeout at H12."
     }
   ]
 }

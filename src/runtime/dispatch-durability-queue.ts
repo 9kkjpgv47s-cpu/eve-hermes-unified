@@ -104,7 +104,13 @@ export class FileDispatchDurabilityQueue {
   constructor(
     private readonly filePath: string,
     private readonly retentionNonTerminalMax = 0,
+    private readonly replayMaxAttemptsPerEntry = 0,
   ) {}
+
+  /** 0 = unlimited replay attempts per pending entry. */
+  getReplayMaxAttemptsPerEntry(): number {
+    return this.replayMaxAttemptsPerEntry;
+  }
 
   async appendEnvelope(envelope: UnifiedMessageEnvelope): Promise<string> {
     const validated = validateEnvelope(envelope);
@@ -199,6 +205,11 @@ export async function replayPendingDispatches(
   const results: ReplayPendingResult[] = [];
 
   for (const entry of slice) {
+    const maxReplay = queue.getReplayMaxAttemptsPerEntry();
+    if (maxReplay > 0 && entry.attempts >= maxReplay) {
+      await queue.markFailed(entry.id, "replay_max_attempts_exceeded");
+      continue;
+    }
     await queue.incrementAttempt(entry.id);
     try {
       const result = await dispatchUnifiedEnvelope(runtime, entry.envelope);

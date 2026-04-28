@@ -251,6 +251,30 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(capped.durabilityQueueRetentionNonTerminalMax).toBe(100);
   });
 
+  it("parses durability queue replay max attempts per entry", () => {
+    const defaults = loadUnifiedRuntimeEnvConfig(readFrom(baseEnv({})));
+    expect(defaults.durabilityQueueReplayMaxAttemptsPerEntry).toBe(0);
+
+    const capped = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY: "5",
+        }),
+      ),
+    );
+    expect(capped.durabilityQueueReplayMaxAttemptsPerEntry).toBe(5);
+
+    const fromAlias = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY: "",
+          DISPATCH_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY: "12",
+        }),
+      ),
+    );
+    expect(fromAlias.durabilityQueueReplayMaxAttemptsPerEntry).toBe(12);
+  });
+
   it("parses Hermes-primary chat allowlist", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

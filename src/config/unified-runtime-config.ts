@@ -34,6 +34,10 @@ export type UnifiedRuntimeEnvConfig = {
   auditLogRotationRetainBytes: number;
   /** When > 0, fail capability execution if the handler does not settle within this many ms. */
   capabilityExecutionTimeoutMs: number;
+  /** When true with file store + journal, re-read disk after each persist and verify snapshot matches memory. */
+  unifiedMemoryVerifyPersist: boolean;
+  /** When true with file store + journal, before each persist verify snapshot+WAL replay matches in-memory map. */
+  unifiedMemoryVerifyJournalReplay: boolean;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -262,6 +266,20 @@ export function loadUnifiedRuntimeEnvConfig(
       0,
     ),
   );
+  const unifiedMemoryVerifyPersist = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_MEMORY_VERIFY_PERSIST",
+      "MEMORY_VERIFY_PERSIST",
+    ]),
+    false,
+  );
+  const unifiedMemoryVerifyJournalReplay = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY",
+      "MEMORY_VERIFY_JOURNAL_REPLAY",
+    ]),
+    false,
+  );
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -324,6 +342,8 @@ export function loadUnifiedRuntimeEnvConfig(
     auditLogRotationMaxBytes,
     auditLogRotationRetainBytes,
     capabilityExecutionTimeoutMs,
+    unifiedMemoryVerifyPersist,
+    unifiedMemoryVerifyJournalReplay,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

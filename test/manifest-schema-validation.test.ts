@@ -372,6 +372,59 @@ describe("validate-manifest-schema.mjs", () => {
     });
   });
 
+  it("passes for valid unified-dispatch-audit jsonl", async () => {
+    await withTempDir(async (dir) => {
+      const auditPath = path.join(dir, "unified-dispatch-audit-20260428-000000.jsonl");
+      const line = {
+        auditSchemaVersion: 1,
+        recordedAtIso: new Date().toISOString(),
+        traceId: "t-audit",
+        chatId: "1",
+        messageId: "2",
+        routing: {
+          primaryLane: "eve",
+          fallbackLane: "none",
+          reason: "default_policy_lane",
+          policyVersion: "v1",
+          failClosed: true,
+        },
+        primaryState: {
+          status: "pass",
+          reason: "ok",
+          runtimeUsed: "eve",
+          runId: "r1",
+          elapsedMs: 1,
+          failureClass: "none",
+          sourceLane: "eve",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t-audit",
+        },
+        response: {
+          consumed: true,
+          responseText: "ok",
+          failureClass: "none",
+          laneUsed: "eve",
+          traceId: "t-audit",
+        },
+      };
+      await writeFile(auditPath, `${JSON.stringify(line)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "unified-dispatch-audit-jsonl",
+          "--file",
+          auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
   it("passes for valid stage-drill and auto-rollback-policy manifests", async () => {
     await withTempDir(async (dir) => {
       const stageDrillPath = path.join(dir, "stage-drill-canary-20260426-000000.json");

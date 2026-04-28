@@ -45,6 +45,8 @@ describe("appendDispatchAuditLog rotation", () => {
     await appendDispatchAuditLog(logPath, minimalResult("t1"), { maxBytesBeforeRotate: 0, retainBytesAfterRotate: 0 });
     const text = await readFile(logPath, "utf8");
     expect(text.split("\n").filter(Boolean)).toHaveLength(1);
+    const parsed = JSON.parse(text.trim().split("\n")[0]!) as { auditSchemaVersion?: number };
+    expect(parsed.auditSchemaVersion).toBe(1);
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -69,8 +71,9 @@ describe("appendDispatchAuditLog rotation", () => {
     const primary = await readFile(logPath, "utf8");
     const lines = primary.split("\n").filter(Boolean);
     expect(lines.length).toBeGreaterThanOrEqual(1);
-    const last = JSON.parse(lines[lines.length - 1]!) as { traceId: string };
+    const last = JSON.parse(lines[lines.length - 1]!) as { traceId: string; auditSchemaVersion?: number };
     expect(last.traceId).toBe("after-rotate");
+    expect(last.auditSchemaVersion).toBe(1);
 
     await rm(dir, { recursive: true, force: true });
   });

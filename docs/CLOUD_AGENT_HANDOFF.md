@@ -49,7 +49,15 @@ Every PR should include:
 Optional crash recovery for file-backed unified memory:
 
 - **`UNIFIED_MEMORY_JOURNAL_PATH`** — append-only JSONL WAL (`v:1`, `op: set|delete`). Each `set`/`delete` appends before the in-memory map is updated; on startup the store loads the JSON snapshot then **replays** the journal. After each successful atomic snapshot persist, the journal is **truncated** (operations are durable in the snapshot file).
+- **`UNIFIED_MEMORY_VERIFY_PERSIST=1`** — after each successful persist, re-read the snapshot and verify it matches the in-memory map (and SHA-256 of canonical JSON).
+- **`UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY=1`** — before each persist, verify **(on-disk snapshot + WAL replay)** matches the in-memory map (detects journal tampering or drift).
 - Preflight checks the journal path parent is writable when set and `UNIFIED_MEMORY_STORE_KIND=file`.
+
+## Dispatch audit JSONL (schema)
+
+- Each append includes **`auditSchemaVersion`** (see `src/contracts/dispatch-audit-version.ts`). Bump the constant when changing the record shape.
+- Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>`.
+- `npm run validate:manifest-schemas` includes `evidence/unified-dispatch-audit-*.jsonl` when present.
 
 ## Cutover and Rollback Commands
 

@@ -96,6 +96,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.unifiedMemoryJournalPath).toBe("/tmp/mem.journal");
   });
 
+  it("parses memory verify persist and journal replay flags", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_VERIFY_PERSIST: "1",
+          UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY: "1",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryVerifyPersist).toBe(true);
+    expect(config.unifiedMemoryVerifyJournalReplay).toBe(true);
+  });
+
   it("parses capability policy controls", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

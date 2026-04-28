@@ -9,34 +9,35 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 durability advances in code ahead of promotion.
-- Branch: **`cursor/h3-memory-atomic-closeout-taxonomy-cc15`** — atomic file memory + optional **WAL journal** + closeout validator **h2_* compat aliases** for horizon closeout/promotion run checks.
+- Branch: **`cursor/h3-wal-journal-closeout-compat-cc15`** (extend with new commit) — file memory **WAL**, optional **persist verify** / **journal replay verify**, dispatch audit **`auditSchemaVersion`**, **`validate-manifest-schema`** gate for **`unified-dispatch-audit-jsonl`**, closeout **h2_* compat aliases**.
 
 ## What Was Just Completed (large chunk)
 
 ### H3
 
-1. **File memory WAL** — `UNIFIED_MEMORY_JOURNAL_PATH`: append-only journal, replay after snapshot load, truncate after successful persist (`src/memory/unified-memory-store.ts`).
-2. **Atomic snapshot persist** — write temp + `rename` (existing).
-3. **Preflight** — journal path writable when file store + journal set (`src/runtime/preflight.ts`).
-4. **Capability execution timeout** — `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` (existing on branch).
+1. **File memory WAL** — `UNIFIED_MEMORY_JOURNAL_PATH` (append/replay/truncate on persist).
+2. **Persist verify** — `UNIFIED_MEMORY_VERIFY_PERSIST=1` re-reads snapshot + hash/map compare after each persist.
+3. **Journal replay verify** — `UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY=1` verifies snapshot+WAL vs memory before each persist.
+4. **Dispatch audit schema** — `auditSchemaVersion` on each JSONL line (`src/contracts/dispatch-audit-version.ts`).
 
 ### Tooling
 
-1. **`validate-horizon-closeout.mjs`** — drill suite already dual-reports `horizon_drill_*` / `h2_drill_*`; **horizon-closeout-run** and **horizon-promotion-run** now append **`h2_closeout_run_*`** / **`h2_promotion_run_*`** aliases for each `horizon_*` failure id (pass logic unchanged).
+1. **`validate-horizon-closeout.mjs`** — drill `horizon_drill_*` / `h2_drill_*`; **h2_closeout_run_*** / **h2_promotion_run_*** aliases for horizon closeout/promotion run checks.
+2. **`validate-manifest-schema.mjs`** — `--type unified-dispatch-audit-jsonl`; `evidence/unified-dispatch-audit-*.jsonl` in `--type all` sweep.
 
 ## Read Order (Zero-Context Startup)
 
 1. `README.md`
 2. `AGENTS.md`
 3. `AGENT.md`
-4. `docs/CLOUD_AGENT_HANDOFF.md` (H3 memory journal section)
+4. `docs/CLOUD_AGENT_HANDOFF.md` (H3 memory + dispatch audit sections)
 5. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 6. `docs/HORIZON_STATUS.json`
 
 ## Immediate Next High-Output Targets
 
-1. **Persist verify** / **journal replay verify** (post-snapshot hash or snapshot+WAL equivalence) if operators need stronger fail-fast gates.
-2. **Dispatch audit** schema versioning + manifest validation if consumers need strict JSONL contracts.
+1. **Lane subprocess cancellation** aligned with capability execution budget (if not merged elsewhere).
+2. **Tenant isolation** / policy maturity per H4–H5 plan when ready.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack
@@ -49,7 +50,8 @@ npm run validate:all
 
 ## Guardrails
 
-- WAL is truncated only after a successful snapshot persist; crash between append and persist can leave redundant journal lines — replay is idempotent for `set`/`delete`.
+- Persist verify and journal replay verify are **fail-fast** when enabled.
+- Bump `UNIFIED_DISPATCH_AUDIT_SCHEMA_VERSION` when changing dispatch audit record shape.
 
 ## Delivery Checklist Per Iteration
 

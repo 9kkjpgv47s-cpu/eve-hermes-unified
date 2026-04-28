@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { appendFile, mkdir, readFile, rename, truncate, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { LaneId } from "../contracts/types.js";
@@ -35,6 +36,16 @@ export interface UnifiedMemoryStore {
 
 export type UnifiedMemoryStoreKind = "memory" | "file";
 
+export type FileMemoryStoreOptions = {
+  /** When true with a journal path, re-read disk after persist and verify snapshot matches in-memory map (and hash). */
+  verifyPersist?: boolean;
+  /**
+   * When true with a journal path, before each persist verify that (on-disk snapshot + WAL replay)
+   * matches the in-memory map.
+   */
+  verifyJournalReplay?: boolean;
+};
+
 export function validateUnifiedMemoryKey(target: UnifiedMemoryKey): void {
   if (target.lane !== "eve" && target.lane !== "hermes" && target.lane !== "shared") {
     throw new Error("UnifiedMemoryKey.lane must be eve|hermes|shared.");
@@ -69,6 +80,86 @@ function cloneEntry(entry: UnifiedMemoryEntry): UnifiedMemoryEntry {
 
 function serializeRecordMap(records: Map<string, UnifiedMemoryEntry>): string {
   return JSON.stringify([...records.values()], null, 2);
+}
+
+function hashSnapshotJson(data: string): string {
+  return createHash("sha256").update(data, "utf8").digest("hex");
+}
+
+function mapsEqual(a: Map<string, UnifiedMemoryEntry>, b: Map<string, UnifiedMemoryEntry>): boolean {
+  if (a.size !== b.size) {
+    return false;
+  }
+  for (const [key, entry] of a) {
+    const other = b.get(key);
+    if (!other) {
+      return false;
+    }
+    if (
+      other.lane !== entry.lane ||
+      other.namespace !== entry.namespace ||
+      other.key !== entry.key ||
+      other.value !== entry.value ||
+      other.updatedAtIso !== entry.updatedAtIso
+    ) {
+      return false;
+    }
+    const ma = entry.metadata ? JSON.stringify(entry.metadata) : "";
+    const mb = other.metadata ? JSON.stringify(other.metadata) : "";
+    if (ma !== mb) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function verifyPersistAgainstDisk(
+  filePath: string,
+  expected: Map<string, UnifiedMemoryEntry>,
+): Promise<void> {
+  const raw = await readFile(filePath, "utf8");
+  const reloaded = new Map<string, UnifiedMemoryEntry>();
+  for (const entry of parseRecordList(raw)) {
+    reloaded.set(storageKey(entry), cloneEntry(entry));
+  }
+  if (!mapsEqual(expected, reloaded)) {
+    throw new Error("unified_memory_persist_verify_failed: snapshot mismatch after persist");
+  }
+  const expectedHash = hashSnapshotJson(serializeRecordMap(expected));
+  const diskHash = hashSnapshotJson(raw);
+  if (expectedHash !== diskHash) {
+    throw new Error("unified_memory_persist_verify_failed: snapshot hash mismatch");
+  }
+}
+
+export async function buildMemoryMapFromSnapshotAndJournal(
+  filePath: string,
+  journalPath: string,
+): Promise<Map<string, UnifiedMemoryEntry>> {
+  const records = new Map<string, UnifiedMemoryEntry>();
+  try {
+    const raw = await readFile(filePath, "utf8");
+    for (const entry of parseRecordList(raw)) {
+      records.set(storageKey(entry), cloneEntry(entry));
+    }
+  } catch {
+    // missing / invalid snapshot
+  }
+  await replayMemoryWal(journalPath, records);
+  return records;
+}
+
+export async function verifyMemorySnapshotPlusJournalMatchesState(
+  filePath: string,
+  journalPath: string,
+  expected: Map<string, UnifiedMemoryEntry>,
+): Promise<void> {
+  const rebuilt = await buildMemoryMapFromSnapshotAndJournal(filePath, journalPath);
+  if (!mapsEqual(expected, rebuilt)) {
+    throw new Error(
+      "unified_memory_journal_replay_verify_failed: on-disk snapshot + WAL replay does not match in-memory state",
+    );
+  }
 }
 
 function parseRecordList(raw: string): UnifiedMemoryEntry[] {
@@ -235,6 +326,7 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   constructor(
     private readonly filePath: string,
     private readonly journalPath?: string,
+    private readonly options?: FileMemoryStoreOptions,
   ) {}
 
   private journalFile(): string | undefined {
@@ -261,14 +353,20 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 
   private async persist(): Promise<void> {
+    const j = this.journalFile();
+    if (j && this.options?.verifyJournalReplay) {
+      await verifyMemorySnapshotPlusJournalMatchesState(this.filePath, j, this.records);
+    }
     await mkdir(path.dirname(this.filePath), { recursive: true });
     const data = serializeRecordMap(this.records);
     const tmpPath = `${this.filePath}.${process.pid}.${Date.now()}.tmp`;
     await writeFile(tmpPath, data, "utf8");
     await rename(tmpPath, this.filePath);
-    const j = this.journalFile();
     if (j) {
       await clearMemoryWal(j);
+    }
+    if (this.options?.verifyPersist) {
+      await verifyPersistAgainstDisk(this.filePath, this.records);
     }
   }
 
@@ -368,9 +466,10 @@ export function createUnifiedMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
   journalPath?: string,
+  options?: FileMemoryStoreOptions,
 ): UnifiedMemoryStore {
   if (kind === "file") {
-    return new FileUnifiedMemoryStore(filePath, journalPath);
+    return new FileUnifiedMemoryStore(filePath, journalPath, options);
   }
   return new InMemoryUnifiedMemoryStore();
 }

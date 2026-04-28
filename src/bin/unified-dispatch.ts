@@ -50,6 +50,12 @@ async function main() {
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
     journalPath,
+    config.unifiedMemoryStoreKind === "file"
+      ? {
+          verifyPersist: config.unifiedMemoryVerifyPersist,
+          verifyJournalReplay: config.unifiedMemoryVerifyJournalReplay,
+        }
+      : undefined,
   );
   const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
   const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);

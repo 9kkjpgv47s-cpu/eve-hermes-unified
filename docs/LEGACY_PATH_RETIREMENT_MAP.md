@@ -18,3 +18,11 @@ Canonical production ingress for unified routing and lane execution is:
 ## Contract versioning
 
 Dispatch JSONL audit lines include `auditSchemaVersion` (see `src/contracts/dispatch-audit-version.ts`). Bump when changing the audit record shape.
+
+Validate captured audit artifacts (optional CI / evidence gate):
+
+```bash
+node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file path/to/unified-dispatch-audit-*.jsonl
+```
+
+Files under `evidence/` named `unified-dispatch-audit-*.jsonl` are also checked when running `npm run validate:manifest-schemas` (`--type all`).

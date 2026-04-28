@@ -38,6 +38,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ### Tooling
 
 1. **`validate-horizon-closeout.mjs`** — for `h2-drill-suite` verification failures, appends **`horizon_drill_*`** aliases alongside legacy **`h2_drill_*`** ids.
+2. **`validate-manifest-schema.mjs`** — **`unified-dispatch-audit-jsonl`** type + `evidence/unified-dispatch-audit-*.jsonl` inclusion in **`--type all`** sweep (shape gate for `auditSchemaVersion` and nested routing/state/response).
 
 ## Read Order (Zero-Context Startup)
 
@@ -51,8 +52,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Schema gate** for new audit line fields in `validate-manifest-schema` if manifests consume dispatch audit JSONL.
-2. **Horizon-neutral** taxonomy: consume `horizon_drill_*` aliases where scripts filter failure ids; extend aliases to other gates as needed.
+1. **Horizon-neutral** taxonomy: extend `horizon_*` aliases beyond h2-drill-suite where scripts filter failure ids.
+2. **Dual-write verify** mode for file memory (WAL vs snapshot dedicated check) if operators need migration confidence.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

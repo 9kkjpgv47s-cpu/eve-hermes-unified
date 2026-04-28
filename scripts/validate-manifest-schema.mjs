@@ -784,7 +784,170 @@ export function validateAutoRollbackPolicyManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
-export function validateStageDrillManifest(payload) {
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isLaneId(value) {
+  return value === "eve" || value === "hermes";
+}
+
+function isFailureClass(value) {
+  return (
+    value === "none" ||
+    value === "provider_limit" ||
+    value === "cooldown" ||
+    value === "dispatch_failure" ||
+    value === "state_unavailable" ||
+    value === "policy_failure"
+  );
+}
+
+/** Expected audit line schema (must match appendDispatchAuditLog / UNIFIED_DISPATCH_AUDIT_SCHEMA_VERSION). */
+const UNIFIED_DISPATCH_AUDIT_LINE_SCHEMA_VERSION = 1;
+
+export function validateUnifiedDispatchAuditJsonlLine(record, lineIndex) {
+  const prefix = `line ${String(lineIndex + 1)}`;
+  const errors = [];
+  pushError(errors, record && typeof record === "object", `${prefix}: must be a JSON object`);
+  if (!record || typeof record !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    record.auditSchemaVersion === UNIFIED_DISPATCH_AUDIT_LINE_SCHEMA_VERSION,
+    `${prefix}: auditSchemaVersion must be exactly ${String(UNIFIED_DISPATCH_AUDIT_LINE_SCHEMA_VERSION)}`,
+  );
+  pushError(errors, isNonEmptyString(record.recordedAtIso), `${prefix}: recordedAtIso must be non-empty string`);
+  pushError(errors, isNonEmptyString(record.traceId), `${prefix}: traceId must be non-empty string`);
+  pushError(errors, isNonEmptyString(record.chatId), `${prefix}: chatId must be non-empty string`);
+  pushError(errors, isNonEmptyString(record.messageId), `${prefix}: messageId must be non-empty string`);
+
+  const routing = record.routing;
+  pushError(errors, routing && typeof routing === "object", `${prefix}: routing must be an object`);
+  if (routing && typeof routing === "object") {
+    pushError(errors, isLaneId(routing.primaryLane), `${prefix}: routing.primaryLane must be eve or hermes`);
+    pushError(
+      errors,
+      isLaneId(routing.fallbackLane) || routing.fallbackLane === "none",
+      `${prefix}: routing.fallbackLane must be eve, hermes, or none`,
+    );
+    pushError(errors, isNonEmptyString(routing.reason), `${prefix}: routing.reason must be non-empty string`);
+    pushError(
+      errors,
+      isNonEmptyString(routing.policyVersion),
+      `${prefix}: routing.policyVersion must be non-empty string`,
+    );
+    pushError(errors, typeof routing.failClosed === "boolean", `${prefix}: routing.failClosed must be boolean`);
+  }
+
+  const primary = record.primaryState;
+  pushError(errors, primary && typeof primary === "object", `${prefix}: primaryState must be an object`);
+  if (primary && typeof primary === "object") {
+    pushError(errors, primary.status === "pass" || primary.status === "failed", `${prefix}: primaryState.status invalid`);
+    pushError(errors, isNonEmptyString(primary.reason), `${prefix}: primaryState.reason must be non-empty string`);
+    pushError(errors, isNonEmptyString(primary.runtimeUsed), `${prefix}: primaryState.runtimeUsed must be string`);
+    pushError(errors, isNonEmptyString(primary.runId), `${prefix}: primaryState.runId must be non-empty string`);
+    pushError(errors, isFiniteNumber(primary.elapsedMs), `${prefix}: primaryState.elapsedMs must be finite number`);
+    pushError(errors, isFailureClass(primary.failureClass), `${prefix}: primaryState.failureClass invalid`);
+    pushError(errors, isLaneId(primary.sourceLane), `${prefix}: primaryState.sourceLane must be eve or hermes`);
+    pushError(errors, isNonEmptyString(primary.sourceChatId), `${prefix}: primaryState.sourceChatId required`);
+    pushError(errors, isNonEmptyString(primary.sourceMessageId), `${prefix}: primaryState.sourceMessageId required`);
+    pushError(errors, isNonEmptyString(primary.traceId), `${prefix}: primaryState.traceId required`);
+  }
+
+  if (record.fallbackState !== undefined && record.fallbackState !== null) {
+    const fb = record.fallbackState;
+    pushError(errors, fb && typeof fb === "object", `${prefix}: fallbackState must be object or null`);
+    if (fb && typeof fb === "object") {
+      pushError(errors, fb.status === "pass" || fb.status === "failed", `${prefix}: fallbackState.status invalid`);
+      pushError(errors, isNonEmptyString(fb.reason), `${prefix}: fallbackState.reason must be non-empty string`);
+      pushError(errors, isNonEmptyString(fb.runtimeUsed), `${prefix}: fallbackState.runtimeUsed must be string`);
+      pushError(errors, isNonEmptyString(fb.runId), `${prefix}: fallbackState.runId must be non-empty string`);
+      pushError(errors, isFiniteNumber(fb.elapsedMs), `${prefix}: fallbackState.elapsedMs must be finite number`);
+      pushError(errors, isFailureClass(fb.failureClass), `${prefix}: fallbackState.failureClass invalid`);
+      pushError(errors, isLaneId(fb.sourceLane), `${prefix}: fallbackState.sourceLane invalid`);
+      pushError(errors, isNonEmptyString(fb.sourceChatId), `${prefix}: fallbackState.sourceChatId required`);
+      pushError(errors, isNonEmptyString(fb.sourceMessageId), `${prefix}: fallbackState.sourceMessageId required`);
+      pushError(errors, isNonEmptyString(fb.traceId), `${prefix}: fallbackState.traceId required`);
+    }
+  }
+  if (record.fallbackInfo !== undefined && record.fallbackInfo !== null) {
+    const fi = record.fallbackInfo;
+    pushError(errors, fi && typeof fi === "object", `${prefix}: fallbackInfo must be object`);
+    if (fi && typeof fi === "object") {
+      pushError(errors, typeof fi.attempted === "boolean", `${prefix}: fallbackInfo.attempted must be boolean`);
+      pushError(errors, isNonEmptyString(fi.reason), `${prefix}: fallbackInfo.reason required`);
+      pushError(errors, isLaneId(fi.fromLane), `${prefix}: fallbackInfo.fromLane invalid`);
+      pushError(errors, isLaneId(fi.toLane), `${prefix}: fallbackInfo.toLane invalid`);
+    }
+  }
+  if (record.capabilityDecision !== undefined && record.capabilityDecision !== null) {
+    const cd = record.capabilityDecision;
+    pushError(errors, cd && typeof cd === "object", `${prefix}: capabilityDecision must be object`);
+    if (cd && typeof cd === "object") {
+      pushError(errors, isNonEmptyString(cd.id), `${prefix}: capabilityDecision.id required`);
+      pushError(errors, isLaneId(cd.lane), `${prefix}: capabilityDecision.lane invalid`);
+      pushError(errors, isNonEmptyString(cd.routeReason), `${prefix}: capabilityDecision.routeReason required`);
+    }
+  }
+  if (record.capabilityExecution !== undefined && record.capabilityExecution !== null) {
+    const ce = record.capabilityExecution;
+    pushError(errors, ce && typeof ce === "object", `${prefix}: capabilityExecution must be object`);
+    if (ce && typeof ce === "object") {
+      pushError(errors, ce.status === "pass" || ce.status === "failed", `${prefix}: capabilityExecution.status invalid`);
+      pushError(errors, typeof ce.consumed === "boolean", `${prefix}: capabilityExecution.consumed must be boolean`);
+      pushError(errors, isNonEmptyString(ce.reason), `${prefix}: capabilityExecution.reason required`);
+      pushError(errors, isNonEmptyString(ce.outputText), `${prefix}: capabilityExecution.outputText required`);
+      pushError(errors, isFailureClass(ce.failureClass), `${prefix}: capabilityExecution.failureClass invalid`);
+      pushError(errors, isNonEmptyString(ce.runId), `${prefix}: capabilityExecution.runId required`);
+      pushError(errors, isFiniteNumber(ce.elapsedMs), `${prefix}: capabilityExecution.elapsedMs must be finite`);
+      const cap = ce.capability;
+      pushError(errors, cap && typeof cap === "object", `${prefix}: capabilityExecution.capability must be object`);
+      if (cap && typeof cap === "object") {
+        pushError(errors, isNonEmptyString(cap.id), `${prefix}: capabilityExecution.capability.id required`);
+        pushError(errors, isLaneId(cap.lane), `${prefix}: capabilityExecution.capability.lane invalid`);
+        pushError(errors, isNonEmptyString(cap.routeReason), `${prefix}: capabilityExecution.capability.routeReason required`);
+      }
+    }
+  }
+
+  const response = record.response;
+  pushError(errors, response && typeof response === "object", `${prefix}: response must be an object`);
+  if (response && typeof response === "object") {
+    pushError(errors, typeof response.consumed === "boolean", `${prefix}: response.consumed must be boolean`);
+    pushError(errors, typeof response.responseText === "string", `${prefix}: response.responseText must be string`);
+    pushError(errors, isFailureClass(response.failureClass), `${prefix}: response.failureClass invalid`);
+    pushError(errors, isLaneId(response.laneUsed), `${prefix}: response.laneUsed invalid`);
+    pushError(errors, isNonEmptyString(response.traceId), `${prefix}: response.traceId required`);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateUnifiedDispatchAuditJsonlText(raw) {
+  const errors = [];
+  const lines = String(raw ?? "").split(/\r?\n/);
+  const nonEmpty = lines.map((l) => l.trim()).filter((l) => l.length > 0);
+  pushError(errors, nonEmpty.length > 0, "file must contain at least one non-empty JSON line");
+  if (nonEmpty.length === 0) {
+    return { valid: false, errors };
+  }
+  for (let i = 0; i < nonEmpty.length; i += 1) {
+    let parsed;
+    try {
+      parsed = JSON.parse(nonEmpty[i]);
+    } catch {
+      errors.push(`line ${String(i + 1)}: invalid JSON`);
+      continue;
+    }
+    const lineResult = validateUnifiedDispatchAuditJsonlLine(parsed, i);
+    errors.push(...lineResult.errors);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+function validateStageDrillManifest(payload) {
   const errors = [];
   pushError(errors, payload && typeof payload === "object", "payload must be an object");
   if (!payload || typeof payload !== "object") {
@@ -893,8 +1056,18 @@ function parseArgs(argv) {
   return options;
 }
 
-async function validateSingleFile(type, filePath) {
+async function validateTypedArtifact(type, filePath) {
   const resolved = path.resolve(filePath);
+  if (type === "unified-dispatch-audit-jsonl") {
+    const raw = await readFile(resolved, "utf8");
+    const validation = validateUnifiedDispatchAuditJsonlText(raw);
+    return {
+      type,
+      file: resolved,
+      valid: validation.valid,
+      errors: validation.errors,
+    };
+  }
   const payload = JSON.parse(await readFile(resolved, "utf8"));
   const validation = validateManifestSchema(type, payload);
   return {
@@ -903,6 +1076,10 @@ async function validateSingleFile(type, filePath) {
     valid: validation.valid,
     errors: validation.errors,
   };
+}
+
+async function validateSingleFile(type, filePath) {
+  return validateTypedArtifact(type, filePath);
 }
 
 async function listAllManifestTargets(evidenceDir) {
@@ -922,6 +1099,7 @@ async function listAllManifestTargets(evidenceDir) {
   const stagePromotionExecutionTargets = [];
   const autoRollbackPolicyTargets = [];
   const stageDrillTargets = [];
+  const dispatchAuditJsonlTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1007,6 +1185,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "stage-drill",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("unified-dispatch-audit-") && entry.name.endsWith(".jsonl")) {
+      dispatchAuditJsonlTargets.push({
+        type: "unified-dispatch-audit-jsonl",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -1024,6 +1207,7 @@ async function listAllManifestTargets(evidenceDir) {
   stagePromotionExecutionTargets.sort((a, b) => a.file.localeCompare(b.file));
   autoRollbackPolicyTargets.sort((a, b) => a.file.localeCompare(b.file));
   stageDrillTargets.sort((a, b) => a.file.localeCompare(b.file));
+  dispatchAuditJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1040,6 +1224,7 @@ async function listAllManifestTargets(evidenceDir) {
     stagePromotionExecutionTargets,
     autoRollbackPolicyTargets,
     stageDrillTargets,
+    dispatchAuditJsonlTargets,
   };
 }
 
@@ -1057,7 +1242,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|all)",
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|all)",
     );
   }
 
@@ -1142,6 +1327,13 @@ async function main() {
           ...(targetGroups.stageDrillTargets.length > 0
             ? [targetGroups.stageDrillTargets[targetGroups.stageDrillTargets.length - 1]]
             : []),
+          ...(targetGroups.dispatchAuditJsonlTargets.length > 0
+            ? [
+                targetGroups.dispatchAuditJsonlTargets[
+                  targetGroups.dispatchAuditJsonlTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1159,6 +1351,7 @@ async function main() {
           ...targetGroups.stagePromotionExecutionTargets,
           ...targetGroups.autoRollbackPolicyTargets,
           ...targetGroups.stageDrillTargets,
+          ...targetGroups.dispatchAuditJsonlTargets,
         ];
     const results = [];
     for (const target of targets) {

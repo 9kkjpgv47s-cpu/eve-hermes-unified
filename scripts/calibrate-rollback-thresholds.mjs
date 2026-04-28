@@ -103,6 +103,8 @@ function stageDefaults(stage) {
     maxUnclassifiedFailures: 0,
     minFailureScenarioPassCount: 5,
     maxP95LatencyMs: normalized === "canary" ? 2500 : 2000,
+    maxDispatchFailureRate: normalized === "canary" ? 0.2 : 0.12,
+    maxPolicyFailureRate: normalized === "canary" ? 0.2 : 0.12,
   };
 }
 
@@ -112,12 +114,16 @@ function summarizeSamples(samples) {
   const unclassifiedFailures = [];
   const p95LatencyMsValues = [];
   const failureScenarioPassCounts = [];
+  const dispatchFailureRates = [];
+  const policyFailureRates = [];
   for (const sample of samples) {
     successRates.push(sample.metrics.successRate);
     missingTraceRates.push(sample.metrics.missingTraceRate);
     unclassifiedFailures.push(sample.metrics.unclassifiedFailures);
     p95LatencyMsValues.push(sample.metrics.p95LatencyMs);
     failureScenarioPassCounts.push(sample.metrics.failureScenarioPassCount);
+    dispatchFailureRates.push(sample.metrics.dispatchFailureRate);
+    policyFailureRates.push(sample.metrics.policyFailureRate);
   }
   return {
     sampleCount: samples.length,
@@ -126,6 +132,8 @@ function summarizeSamples(samples) {
     maxUnclassifiedFailures: Math.max(...unclassifiedFailures),
     maxP95LatencyMs: Math.max(...p95LatencyMsValues),
     minFailureScenarioPassCount: Math.min(...failureScenarioPassCounts),
+    maxDispatchFailureRate: Math.max(...dispatchFailureRates),
+    maxPolicyFailureRate: Math.max(...policyFailureRates),
   };
 }
 
@@ -151,10 +159,29 @@ function calibrateThresholds(stage, observed, options) {
     ),
   );
 
+  const dispatchHeadroom = 0.02;
+  const policyHeadroom = 0.02;
+  const maxDispatchFailureRate = round4(
+    clamp(
+      Math.max(defaults.maxDispatchFailureRate, observed.maxDispatchFailureRate + dispatchHeadroom),
+      0.01,
+      0.99,
+    ),
+  );
+  const maxPolicyFailureRate = round4(
+    clamp(
+      Math.max(defaults.maxPolicyFailureRate, observed.maxPolicyFailureRate + policyHeadroom),
+      0.01,
+      0.99,
+    ),
+  );
+
   return {
     ...defaults,
     minSuccessRate,
     maxP95LatencyMs,
+    maxDispatchFailureRate,
+    maxPolicyFailureRate,
   };
 }
 
@@ -170,6 +197,10 @@ function calibrationArgs(thresholds) {
     String(thresholds.minFailureScenarioPassCount),
     "--max-p95-latency-ms",
     String(thresholds.maxP95LatencyMs),
+    "--max-dispatch-failure-rate",
+    String(thresholds.maxDispatchFailureRate),
+    "--max-policy-failure-rate",
+    String(thresholds.maxPolicyFailureRate),
   ];
 }
 
@@ -188,6 +219,8 @@ async function loadSample(filePath) {
   const unclassifiedFailures = Number(payload?.metrics?.unclassifiedFailures);
   const p95LatencyMs = Number(payload?.metrics?.p95LatencyMs);
   const failureScenarioPassCount = Number(payload?.metrics?.failureScenarioPassCount);
+  const dispatchFailureRate = Number(payload?.metrics?.dispatchFailureRate);
+  const policyFailureRate = Number(payload?.metrics?.policyFailureRate);
   if (
     !payload ||
     !Number.isFinite(successRate) ||
@@ -208,6 +241,8 @@ async function loadSample(filePath) {
       unclassifiedFailures,
       p95LatencyMs,
       failureScenarioPassCount,
+      dispatchFailureRate: Number.isFinite(dispatchFailureRate) ? dispatchFailureRate : 0,
+      policyFailureRate: Number.isFinite(policyFailureRate) ? policyFailureRate : 0,
     },
   };
 }
@@ -285,6 +320,8 @@ async function main() {
           maxUnclassifiedFailures: Number.POSITIVE_INFINITY,
           maxP95LatencyMs: Number.POSITIVE_INFINITY,
           minFailureScenarioPassCount: 0,
+          maxDispatchFailureRate: 0,
+          maxPolicyFailureRate: 0,
         };
   const recommendedThresholds = calibrateThresholds(stage || "majority", observed, options);
   const payload = {

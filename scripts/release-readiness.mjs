@@ -66,10 +66,15 @@ function parseArgs(argv) {
   return options;
 }
 
-async function newestFileInDir(dir, prefix) {
+async function newestFileInDir(dir, prefix, suffix = "") {
   const entries = await readdir(dir, { withFileTypes: true });
   const matches = entries
-    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.startsWith(prefix) &&
+        (suffix ? entry.name.endsWith(suffix) : true),
+    )
     .map((entry) => path.join(dir, entry.name));
   if (matches.length === 0) {
     return null;
@@ -185,7 +190,7 @@ async function main() {
   const regressionPath = await newestFileInDir(evidenceDir, "regression-eve-primary-");
   const cutoverPath = await newestFileInDir(evidenceDir, "cutover-readiness-");
   const failureInjectionPath = await newestFileInDir(evidenceDir, "failure-injection-");
-  const soakPath = await newestFileInDir(evidenceDir, "soak-");
+  const soakPath = await newestFileInDir(evidenceDir, "soak-", ".jsonl");
   const explicitGoalPolicyValidationPath = options.goalPolicyFileValidationReport
     ? path.resolve(options.goalPolicyFileValidationReport)
     : "";

@@ -80,6 +80,8 @@ export function evaluateEvidenceGates(metrics, options) {
   const maxMissingTraceRate = Number(options?.maxMissingTraceRate);
   const maxUnclassifiedFailures = Number(options?.maxUnclassifiedFailures);
   const maxP95LatencyMs = Number(options?.maxP95LatencyMs);
+  const maxDispatchFailureRate = Number(options?.maxDispatchFailureRate);
+  const maxPolicyFailureRate = Number(options?.maxPolicyFailureRate);
 
   if (Number.isFinite(minSuccessRate) && metrics.successRate < minSuccessRate) {
     failures.push(`successRate ${metrics.successRate.toFixed(4)} < ${minSuccessRate.toFixed(4)}`);
@@ -97,6 +99,24 @@ export function evaluateEvidenceGates(metrics, options) {
   }
   if (Number.isFinite(maxP95LatencyMs) && Number(metrics.p95LatencyMs) > maxP95LatencyMs) {
     failures.push(`p95LatencyMs ${metrics.p95LatencyMs} > ${maxP95LatencyMs}`);
+  }
+  if (
+    Number.isFinite(maxDispatchFailureRate) &&
+    Number.isFinite(metrics.dispatchFailureRate) &&
+    metrics.dispatchFailureRate > maxDispatchFailureRate
+  ) {
+    failures.push(
+      `dispatchFailureRate ${metrics.dispatchFailureRate.toFixed(4)} > ${maxDispatchFailureRate.toFixed(4)}`,
+    );
+  }
+  if (
+    Number.isFinite(maxPolicyFailureRate) &&
+    Number.isFinite(metrics.policyFailureRate) &&
+    metrics.policyFailureRate > maxPolicyFailureRate
+  ) {
+    failures.push(
+      `policyFailureRate ${metrics.policyFailureRate.toFixed(4)} > ${maxPolicyFailureRate.toFixed(4)}`,
+    );
   }
   if (options?.requireFailureScenarios && metrics.failureScenarioPassCount < REQUIRED_SCENARIOS.length) {
     failures.push(

@@ -78,7 +78,11 @@ export type DispatchFallbackInfo = {
   toLane: LaneId;
 };
 
+export type UnifiedDispatchContractVersion = "v1";
+
 export type UnifiedDispatchResult = {
+  /** JSON contract revision for downstream validators and fixtures. */
+  contractVersion: UnifiedDispatchContractVersion;
   envelope: UnifiedMessageEnvelope;
   routing: RoutingDecision;
   primaryState: DispatchState;

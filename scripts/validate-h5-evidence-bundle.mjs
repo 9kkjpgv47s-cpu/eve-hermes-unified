@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * H5 evidence bundle gate (h5-action-9): validates latest evidence from validate:all
- * (validation summary soak dimensions, region drill v2, rollback rehearsal, remediation dry-run).
+ * H5 evidence bundle gate (h5-action-9 + H6 partition drill): validates latest evidence from validate:all
+ * (validation summary soak dimensions, region drill v2, H6 partition drill, rollback rehearsal, remediation dry-run).
  * Emits a horizon-closeout schema manifest for optional promote:horizon --closeout-file.
  * Full H5 horizon closeout (required evidence + this bundle) is `npm run validate:h5-closeout`.
  */
@@ -120,6 +120,25 @@ async function main() {
     }
     if (rd.pass !== true) {
       failures.push("region_drill_pass_false");
+    }
+  }
+
+  const partitionDrillPath = await newestMatchingFile(
+    evidenceDir,
+    (n) => n.startsWith("h6-partition-drill-") && n.endsWith(".json"),
+  );
+  if (!partitionDrillPath) {
+    failures.push("missing_h6_partition_drill_manifest");
+    checks.partitionDrillPresent = false;
+  } else {
+    const pd = JSON.parse(await readFile(partitionDrillPath, "utf8"));
+    checks.partitionDrillPresent = true;
+    checks.partitionDrillPath = partitionDrillPath;
+    if (pd.schemaVersion !== "h6-partition-drill-v1") {
+      failures.push(`partition_drill_schema_version:${String(pd.schemaVersion)}`);
+    }
+    if (pd.pass !== true) {
+      failures.push("partition_drill_pass_false");
     }
   }
 

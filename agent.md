@@ -9,7 +9,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H5` (`docs/HORIZON_STATUS.json`, in progress)
-- Latest in-repo slice: tenant/region on envelopes and WAL, tenant-scoped memory keys, `UNIFIED_ROUTER_REGION_ID` failover swap, per-tenant capability chat env maps, `validate:h5-tenant-isolation` + `run:remediation-playbook-dry-run` in `validate:all`
+- Latest in-repo slice: tenant/region/partition on envelopes and WAL, tenant-scoped memory keys, `UNIFIED_ROUTER_REGION_ID` failover swap, per-tenant capability chat env maps, `validate:h5-tenant-isolation`, `run:remediation-playbook-dry-run`, `run:h5-region-misalignment-drill`, and `run:h6-partition-drill` in `validate:all`
 - See `docs/H5_MULTI_TENANT_REGION.md` for env and CLI details
 
 ## What Was Just Completed

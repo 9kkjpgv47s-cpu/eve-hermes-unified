@@ -54,9 +54,17 @@ After a full `validate:all` (or equivalent evidence generation), the bundle chec
 npm run validate:h5-evidence-bundle
 ```
 
-This selects the newest `validation-summary-*.json`, `h5-region-misalignment-drill-*.json`, `emergency-rollback-rehearsal-*.json`, and `remediation-playbook-dry-run-*.json` under `evidence/`, checks soak tenant/region drill diversity (≥2 non-`_none` keys each), and writes `evidence/h5-closeout-*.json` as a **`horizon-closeout`** manifest (`checks.horizonCloseoutGatePass`).
+This selects the newest `validation-summary-*.json`, `h5-region-misalignment-drill-*.json`, `h6-partition-drill-*.json`, `emergency-rollback-rehearsal-*.json`, and `remediation-playbook-dry-run-*.json` under `evidence/`, checks soak tenant/region/partition drill diversity (≥2 non-`_none` keys each for tenants, regions, and partitions), and writes `evidence/h5-closeout-*.json` as a **`horizon-closeout`** manifest (`checks.horizonCloseoutGatePass`).
 
 Full **H5 horizon closeout** (required global evidence plus the bundle above) uses `npm run validate:h5-closeout`, which runs `validate-horizon-closeout.mjs` for `--horizon H5 --next-horizon H6` with `--require-h5-evidence-bundle` so the evidence bundle gate runs in the same process as standard closeout checks. Operators may pin the emitted manifest for **`npm run promote:horizon`** when marking H5 completed per `docs/CLOUD_AGENT_HANDOFF.md` and local promotion policy.
+
+## H6 partition operator drill (h6-action-3)
+
+```bash
+npm run run:h6-partition-drill
+```
+
+Runs two dispatches with distinct `--partition-id` values against a temporary WAL, asserts `envelope.partitionId` and WAL attempt/complete `partitionId` correlation, and writes `evidence/h6-partition-drill-*.json` with **`schemaVersion: h6-partition-drill-v1`**. This manifest is required by **`npm run validate:h5-evidence-bundle`** (same gate as the H5 region drill).
 
 ## Region misalignment operator drill (h5-action-6)
 

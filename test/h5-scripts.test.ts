@@ -14,6 +14,24 @@ async function withTempEvidenceDir(run: (dir: string) => Promise<void>): Promise
 }
 
 describe("H5 operator scripts", () => {
+  it("h6-partition-drill passes and writes manifest", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/h6-partition-drill.mjs", "--evidence-dir", evidenceDir],
+        { timeoutMs: 60_000, env: { ...process.env } as Record<string, string> },
+      );
+      expect(result.code).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim()) as {
+        pass?: boolean;
+        manifestPath?: string;
+        schemaVersion?: string;
+      };
+      expect(parsed.pass).toBe(true);
+      expect(parsed.manifestPath).toContain("h6-partition-drill-");
+      expect(parsed.schemaVersion).toBe("h6-partition-drill-v1");
+    });
+  });
+
   it("h5-region-misalignment-drill passes and writes manifest", async () => {
     await withTempEvidenceDir(async (evidenceDir) => {
       const result = await runCommandWithTimeout(
@@ -91,6 +109,15 @@ describe("H5 operator scripts", () => {
         "utf8",
       );
       await writeFile(
+        path.join(evidenceDir, `h6-partition-drill-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h6-partition-drill-v1",
+          pass: true,
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
         path.join(evidenceDir, `emergency-rollback-rehearsal-${stamp}.json`),
         JSON.stringify({
           manifestVersion: "h3-emergency-rollback-rehearsal-v1",
@@ -152,6 +179,15 @@ describe("H5 operator scripts", () => {
         "utf8",
       );
       await writeFile(
+        path.join(evidenceDir, `h6-partition-drill-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h6-partition-drill-v1",
+          pass: true,
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
         path.join(evidenceDir, `emergency-rollback-rehearsal-${stamp}.json`),
         JSON.stringify({ manifestVersion: "h3-emergency-rollback-rehearsal-v1", dryRun: true }),
         "utf8",
@@ -181,6 +217,64 @@ describe("H5 operator scripts", () => {
       const parsed = JSON.parse(raw) as { pass?: boolean; failures?: string[] };
       expect(parsed.pass).toBe(false);
       expect(parsed.failures?.some((f) => f.includes("soak_partition_drill_diversity_insufficient"))).toBe(true);
+    });
+  });
+
+  it("validate-h5-evidence-bundle fails when h6 partition drill manifest is missing", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990103-000000";
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          soakDrillDimensions: {
+            tenants: { alpha: 5, beta: 5, _none: 2 },
+            regions: { "us-west": 5, "eu-central": 5, _none: 2 },
+            partitions: { "soak-part-a": 5, "soak-part-b": 5, _none: 2 },
+            regionAligned: { true: 10, false: 0, unknown: 0 },
+          },
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h5-region-misalignment-drill-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h5-region-misalignment-drill-v2",
+          pass: true,
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `emergency-rollback-rehearsal-${stamp}.json`),
+        JSON.stringify({ manifestVersion: "h3-emergency-rollback-rehearsal-v1", dryRun: true }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `remediation-playbook-dry-run-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h5-remediation-dry-run-v1",
+          policyBounds: { dryRunOnly: true },
+        }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h5-closeout-missing-h6.json");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-h5-evidence-bundle.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as { pass?: boolean; failures?: string[] };
+      expect(parsed.pass).toBe(false);
+      expect(parsed.failures?.some((f) => f.includes("missing_h6_partition_drill_manifest"))).toBe(true);
     });
   });
 

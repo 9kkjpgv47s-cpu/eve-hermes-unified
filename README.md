@@ -32,6 +32,7 @@ npm run replay:dispatch-wal -- --dry-run
 npm run validate:h5-tenant-isolation
 npm run run:remediation-playbook-dry-run
 npm run run:h5-region-misalignment-drill
+npm run run:h6-partition-drill
 npm run validate:h5-evidence-bundle
 npm run validate:h5-closeout
 npm run validate:regression-eve-primary

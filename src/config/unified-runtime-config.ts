@@ -16,6 +16,11 @@ export type UnifiedRuntimeEnvConfig = {
   unifiedDispatchAuditLogPath: string;
   /** File path for durable dispatch replay queue (JSON). */
   dispatchDurabilityQueuePath: string;
+  /**
+   * Max dispatched/failed queue entries to retain (oldest pruned first); 0 = unlimited.
+   * Pending entries are never pruned.
+   */
+  durabilityQueueRetentionNonTerminalMax: number;
   /** When true, wrap in-memory (or any) store with serialized writes for ordered mutation under concurrency. */
   unifiedMemorySerializeWrites: boolean;
   /** Wall-clock budget (ms) for capability executor body; 0 = unlimited. */
@@ -205,6 +210,13 @@ export function loadUnifiedRuntimeEnvConfig(
   const dispatchDurabilityQueuePath =
     firstDefined(reader, ["UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH", "DISPATCH_QUEUE_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-queue.json";
+  const durabilityQueueRetentionNonTerminalMax = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX",
+      "DISPATCH_QUEUE_RETENTION_NON_TERMINAL_MAX",
+    ]),
+    5000,
+  );
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -382,6 +394,7 @@ export function loadUnifiedRuntimeEnvConfig(
     capabilityExecutionTimeoutMs,
     unifiedDispatchAuditLogPath,
     dispatchDurabilityQueuePath,
+    durabilityQueueRetentionNonTerminalMax,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

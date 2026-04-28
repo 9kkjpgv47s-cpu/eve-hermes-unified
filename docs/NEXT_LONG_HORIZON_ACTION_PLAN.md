@@ -180,11 +180,7 @@ Primary risks:
 - Drift between documented horizons and `VALID_HORIZONS` in tooling.
 
 Mitigations:
-- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H9**).
-
-### Post-H9 operations
-
-After **H9** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h9-closeout`**. Optionally **`npm run validate:post-h9-sustainment-manifest`** checks the latest **`evidence/post-h9-sustainment-loop-*.json`**. Legacy: **`verify:sustainment-loop:h8-legacy`** / **`validate:post-h8-sustainment-manifest`**, **`verify:sustainment-loop:h7-legacy`**, **`verify:sustainment-loop:h6-legacy`**.
+- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H10**).
 
 ### Horizon H7 - Dispatch audit lifecycle (rotation and retention)
 
@@ -253,6 +249,33 @@ Primary risks:
 Mitigations:
 
 - Temp file lives beside the primary JSON file; next successful persist overwrites behavior remains deterministic.
+
+### Horizon H10 - Dispatch durability queue bounded retention
+
+Goal: close the remaining **durability queue lifecycle** gap from H3 by bounding on-disk growth of **completed** (`dispatched` / `failed`) entries without dropping **`pending`** replay work.
+
+Workstreams:
+
+- Configurable max retained non-terminal entries via **`UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX`** (alias **`DISPATCH_QUEUE_RETENTION_NON_TERMINAL_MAX`**); **`0`** disables pruning (legacy unbounded behavior).
+- After each queue mutation, prune **oldest** dispatched/failed rows first (sort by `enqueuedAtIso`, then `id`).
+- Executable proof via **`npm run run:h10-assurance-bundle`** (extends H9 gates with **`test/dispatch-durability-queue-retention.test.ts`**) and **`validate:h10-closeout`**.
+
+Exit evidence:
+
+- **`npm run run:h10-assurance-bundle`** passes and artifact matches **`evidence/h10-assurance-bundle-*.json`** (includes **`dispatchDurabilityQueueRetentionPass`**).
+- **`npm run validate:h10-closeout`** passes when evidence is present (H10 is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- Operators set retention too low and lose forensic history for incident review.
+
+Mitigations:
+
+- Sensible default (**5000**); document **`0`** for unlimited retention when disk is not a concern.
+
+### Post-H10 operations
+
+After **H10** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h10-closeout`**. Optionally **`npm run validate:post-h10-sustainment-manifest`** checks the latest **`evidence/post-h10-sustainment-loop-*.json`**. Legacy: **`verify:sustainment-loop:h9-legacy`** / **`validate:post-h9-sustainment-manifest`**, **`verify:sustainment-loop:h8-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 

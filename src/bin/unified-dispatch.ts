@@ -172,7 +172,10 @@ async function main() {
   const { text, chatId, messageId, tenantId, regionId, compactJson, enqueueFailedPrimary, replayQueue } = args;
 
   const { runtime, config } = await buildDispatchRuntime();
-  const durabilityQueue = new FileDispatchDurabilityQueue(config.dispatchDurabilityQueuePath);
+  const durabilityQueue = new FileDispatchDurabilityQueue(
+    config.dispatchDurabilityQueuePath,
+    config.durabilityQueueRetentionNonTerminalMax,
+  );
 
   if (replayQueue) {
     const replayed = await replayPendingDispatches(runtime, durabilityQueue);

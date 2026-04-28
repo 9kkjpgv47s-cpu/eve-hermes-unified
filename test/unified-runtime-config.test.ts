@@ -213,6 +213,29 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(fromAlias.dispatchDurabilityQueuePath).toBe("/tmp/queue-b.json");
   });
 
+  it("parses durability queue retention max for non-terminal entries", () => {
+    const defaults = loadUnifiedRuntimeEnvConfig(readFrom(baseEnv({})));
+    expect(defaults.durabilityQueueRetentionNonTerminalMax).toBe(5000);
+
+    const zero = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX: "0",
+        }),
+      ),
+    );
+    expect(zero.durabilityQueueRetentionNonTerminalMax).toBe(0);
+
+    const capped = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          DISPATCH_QUEUE_RETENTION_NON_TERMINAL_MAX: "100",
+        }),
+      ),
+    );
+    expect(capped.durabilityQueueRetentionNonTerminalMax).toBe(100);
+  });
+
   it("parses Hermes-primary chat allowlist", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

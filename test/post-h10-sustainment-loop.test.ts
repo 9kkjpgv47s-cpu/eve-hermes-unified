@@ -6,16 +6,16 @@ import { runCommandWithTimeout } from "../src/process/exec.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-describe("run-post-h9-sustainment-loop.mjs (legacy)", () => {
-  it("npm script verify:sustainment-loop:h9-legacy invokes post-H9 loop", async () => {
+describe("run-post-h10-sustainment-loop.mjs", () => {
+  it("exposes verify:sustainment-loop npm script", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop:h9-legacy"]).toContain("run-post-h9-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h10-sustainment-loop.mjs");
   });
 
   it("emits pass and structured checks in sustainment loop manifest", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/run-post-h9-sustainment-loop.mjs")],
+      ["node", path.join(repoRoot, "scripts/run-post-h10-sustainment-loop.mjs")],
       { timeoutMs: 120_000 },
     );
     expect(result.code).toBe(0);
@@ -26,19 +26,19 @@ describe("run-post-h9-sustainment-loop.mjs (legacy)", () => {
       pass?: boolean;
       checks?: {
         horizonStatusPass?: boolean;
-        h9AssuranceBundlePass?: boolean;
-        h9CloseoutGatePass?: boolean;
+        h10AssuranceBundlePass?: boolean;
+        h10CloseoutGatePass?: boolean;
       };
     };
     expect(payload.pass).toBe(true);
     expect(payload.checks?.horizonStatusPass).toBe(true);
-    expect(payload.checks?.h9AssuranceBundlePass).toBe(true);
-    expect(payload.checks?.h9CloseoutGatePass).toBe(true);
+    expect(payload.checks?.h10AssuranceBundlePass).toBe(true);
+    expect(payload.checks?.h10CloseoutGatePass).toBe(true);
   });
 
-  it("validate:post-h9-sustainment-manifest passes on latest loop output", async () => {
+  it("validate:post-h10-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/validate-post-h9-sustainment-manifest.mjs")],
+      ["node", path.join(repoRoot, "scripts/validate-post-h10-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

@@ -62,13 +62,13 @@ Every PR should include:
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
 - **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H6**.
 
-## Sustainment assurance (terminal H9)
+## Sustainment assurance (terminal H10)
 
-- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h8-assurance-bundle`**.
-- **H9 bundle** (current): `npm run run:h9-assurance-bundle` adds crash-safe file memory proof (`test/unified-memory-atomic-persistence.test.ts`) on top of H8 gates.
-- **Closeout gate**: `npm run validate:h9-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
-- **Horizon index**: orchestration scripts include **H9** as the terminal horizon sequence entry.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H9** assurance bundle + `validate:h9-closeout` → `evidence/post-h9-sustainment-loop-*.json`. **`npm run validate:post-h9-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h8-legacy`** / **`validate:post-h8-sustainment-manifest`**; **`verify:sustainment-loop:h7-legacy`** … **`h6-legacy`**.
+- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h9-assurance-bundle`**.
+- **H10 bundle** (current): `npm run run:h10-assurance-bundle` adds dispatch durability queue retention proof (`test/dispatch-durability-queue-retention.test.ts`) on top of H9 gates.
+- **Closeout gate**: `npm run validate:h10-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
+- **Horizon index**: orchestration scripts include **H10** as the terminal horizon sequence entry.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H10** assurance bundle + `validate:h10-closeout` → `evidence/post-h10-sustainment-loop-*.json`. **`npm run validate:post-h10-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h9-legacy`** / **`validate:post-h9-sustainment-manifest`**; **`verify:sustainment-loop:h8-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 
@@ -83,6 +83,11 @@ Every PR should include:
 ## File-backed unified memory crash safety (H9)
 
 - **`FileUnifiedMemoryStore`** commits snapshots by writing **`${UNIFIED_MEMORY_FILE_PATH}.tmp`** then **`rename`** into place so readers rarely observe partial JSON during crashes (same directory as the primary path).
+
+## Dispatch durability queue retention (H10)
+
+- **Env**: **`UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX`** (alias **`DISPATCH_QUEUE_RETENTION_NON_TERMINAL_MAX`**) — max **`dispatched`** / **`failed`** rows to keep (**oldest** pruned first after each mutation). **`0`** = unlimited. **`pending`** entries are never removed by pruning.
+- **Runtime**: **`FileDispatchDurabilityQueue`** passes retention into each atomic queue save via **`pruneCompletedDispatchQueueEntries`**.
 
 ## Cutover and Rollback Commands
 

@@ -16,12 +16,12 @@ Use this ordered reading path before touching code:
 8. `docs/VALIDATION_HARDENING_MATRIX.md`
 9. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
 
-Long-horizon status lives in `docs/HORIZON_STATUS.json` (currently **H1–H9 completed** with **post-H9 sustainment** commands). After `npm install`, periodic operators/agents should:
+Long-horizon status lives in `docs/HORIZON_STATUS.json` (currently **H1–H10 completed** with **post-H10 sustainment** commands). After `npm install`, periodic operators/agents should:
 
 ```bash
 mkdir -p evidence
 npm run verify:sustainment-loop
-npm run validate:post-h9-sustainment-manifest
+npm run validate:post-h10-sustainment-manifest
 ```
 
 Validation command set:

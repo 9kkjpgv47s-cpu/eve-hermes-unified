@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T22:00:00Z",
+  "updatedAtIso": "2026-04-29T23:30:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H9",
+  "activeHorizon": "H10",
   "activeStatus": "completed",
-  "summary": "Horizon H9 (crash-safe memory persistence): FileUnifiedMemoryStore persists via temp file + atomic rename; run-h9-assurance-bundle adds unified-memory-atomic-persistence vitest to H8 gates; terminal sustainment via verify:sustainment-loop (post-H9 + validate:h9-closeout).",
+  "summary": "Horizon H10 (dispatch durability queue bounded retention): prune oldest dispatched/failed entries via UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX (default 5000); pending entries never pruned; run-h10-assurance-bundle adds dispatch-durability-queue-retention tests on top of H9 gates; terminal sustainment via verify:sustainment-loop (post-H10 + validate:h10-closeout).",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -97,6 +97,13 @@
       "artifactPattern": "evidence/h9-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H9"]
+    },
+    {
+      "id": "h10-assurance-bundle",
+      "command": "node ./scripts/run-h10-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h10-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H10"]
     }
   ],
   "nextActions": [
@@ -363,6 +370,27 @@
       "targetHorizon": "H9",
       "status": "completed",
       "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h10-action-1",
+      "summary": "Configurable retention cap for dispatched/failed FileDispatchDurabilityQueue entries (default 5000; 0 = unlimited); pruning runs after each queue mutation.",
+      "targetHorizon": "H10",
+      "status": "completed",
+      "tags": ["durability", "operations", "runtime"]
+    },
+    {
+      "id": "h10-action-2",
+      "summary": "H10 assurance bundle extends H9 with dispatch-durability-queue-retention vitest; validate:h10-closeout and post-H10 sustainment loop manifest.",
+      "targetHorizon": "H10",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h10-action-3",
+      "summary": "Goal policy H9→H10 transition and documentation; verify:sustainment-loop now runs post-H10; verify:sustainment-loop:h9-legacy for prior chain.",
+      "targetHorizon": "H10",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -471,6 +499,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H9->H10": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -519,7 +562,11 @@
     },
     "H9": {
       "status": "completed",
-      "summary": "Crash-safe file memory: atomic rename commit for UNIFIED_MEMORY_STORE_KIND=file; H9 assurance adds unified-memory-atomic-persistence tests; terminal sustainment post-H9."
+      "summary": "Crash-safe file memory: atomic rename commit for UNIFIED_MEMORY_STORE_KIND=file; H9 assurance adds unified-memory-atomic-persistence tests."
+    },
+    "H10": {
+      "status": "completed",
+      "summary": "Durability queue lifecycle: bounded retention for dispatched/failed JSON queue entries (default max 5000); H10 assurance adds retention vitest; terminal sustainment post-H10 via verify:sustainment-loop."
     }
   },
   "history": [
@@ -690,6 +737,12 @@
       "horizon": "H9",
       "status": "completed",
       "note": "H9 atomic file memory: FileUnifiedMemoryStore writes memory.json.tmp then renames to memory.json for crash-safe commits; run-h9-assurance-bundle + post-H9 sustainment; terminal closeout at H9."
+    },
+    {
+      "timestamp": "2026-04-29T23:30:00Z",
+      "horizon": "H10",
+      "status": "completed",
+      "note": "H10 durability queue retention: prune oldest dispatched/failed entries after each mutation when UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX is set (default 5000); run-h10-assurance-bundle + post-H10 sustainment; terminal closeout at H10."
     }
   ]
 }

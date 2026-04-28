@@ -14,6 +14,10 @@ export type UnifiedRuntimeEnvConfig = {
   unifiedDispatchAuditLogPath: string;
   /** File path for durable dispatch replay queue (JSON). */
   dispatchDurabilityQueuePath: string;
+  /** When true, wrap in-memory (or any) store with serialized writes for ordered mutation under concurrency. */
+  unifiedMemorySerializeWrites: boolean;
+  /** Wall-clock budget (ms) for capability executor body; 0 = unlimited. */
+  capabilityExecutionTimeoutMs: number;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -117,6 +121,14 @@ const FAILURE_CLASS_SET = new Set<FailureClass>([
   "policy_failure",
 ]);
 
+function parsePositiveIntMs(raw: string | undefined, fallback: number): number {
+  const n = Number.parseInt(String(raw), 10);
+  if (Number.isFinite(n) && n > 0) {
+    return n;
+  }
+  return fallback;
+}
+
 function parseNoFallbackFailureClasses(raw: string | undefined): FailureClass[] | undefined {
   const tokens = parseCsvList(raw);
   if (tokens.length === 0) {
@@ -153,6 +165,17 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
+  const unifiedMemorySerializeWrites = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_MEMORY_SERIALIZE_WRITES", "MEMORY_SERIALIZE_WRITES"]),
+    false,
+  );
+  const capabilityExecutionTimeoutMs = parsePositiveIntMs(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS",
+      "CAPABILITY_EXECUTION_TIMEOUT_MS",
+    ]),
+    0,
+  );
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
@@ -302,6 +325,8 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
+    unifiedMemorySerializeWrites,
+    capabilityExecutionTimeoutMs,
     unifiedDispatchAuditLogPath,
     dispatchDurabilityQueuePath,
     capabilityPolicy: {

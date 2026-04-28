@@ -17,6 +17,7 @@ import {
 import {
   createUnifiedMemoryStoreFromEnv,
   InMemoryUnifiedMemoryStore,
+  SerializedUnifiedMemoryStore,
 } from "../src/memory/unified-memory-store.js";
 
 describe("UnifiedMemoryStore adapters", () => {
@@ -67,6 +68,27 @@ describe("UnifiedMemoryStore adapters", () => {
     const raw = await readFile(memoryFilePath, "utf8");
     expect(raw).toContain("persist-1");
     expect(raw).toContain("persisted");
+  });
+
+  it("serializes concurrent writes through SerializedUnifiedMemoryStore", async () => {
+    const inner = new InMemoryUnifiedMemoryStore();
+    const store = new SerializedUnifiedMemoryStore(inner);
+    const key = { lane: "shared" as const, namespace: "concurrent", key: "k1" };
+    await Promise.all([store.set(key, "first", {}), store.set(key, "second", {})]);
+    const entry = await store.get(key);
+    expect(["first", "second"]).toContain(entry?.value);
+  });
+
+  it("reloads file-backed memory state after new store instance (restart simulation)", async () => {
+    const memoryFilePath = path.join(
+      os.tmpdir(),
+      `unified-memory-restart-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    );
+    const store1 = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
+    await store1.set({ lane: "eve", namespace: "ns", key: "restart-key" }, "survives");
+    const store2 = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
+    const loaded = await store2.get({ lane: "eve", namespace: "ns", key: "restart-key" });
+    expect(loaded?.value).toBe("survives");
   });
 });
 

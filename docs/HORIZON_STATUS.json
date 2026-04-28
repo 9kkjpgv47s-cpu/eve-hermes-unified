@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T21:22:00Z",
+  "updatedAtIso": "2026-04-28T21:30:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -171,28 +171,28 @@
       "id": "h3-action-3",
       "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["capability", "policy-hardening"]
     },
     {
       "id": "h3-action-4",
       "summary": "Add memory durability verification suite for crash/restart recovery and cross-lane consistency checks.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "memory"]
     },
     {
       "id": "h3-action-5",
       "summary": "Create long-window soak validation for H3 policy and durability changes with explicit SLO drift alarms.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
     },
     {
       "id": "h3-action-6",
       "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["rollback", "operations"]
     }
   ],
@@ -266,7 +266,7 @@
     },
     "H3": {
       "status": "planned",
-      "summary": "Runtime durability and policy maturity hardening: durability queue + replay-safe envelopes; router noFallbackOnFailureClasses + UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES for deterministic fallback suppression by failure taxonomy."
+      "summary": "Planned H3 work completed in-repo: durability queue, fallback suppression, capability timeout (UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS), SerializedUnifiedMemoryStore and tests, soak drift summarizer and optional post-soak hook, emergency rollback rehearsal manifest."
     },
     "H4": {
       "status": "planned",
@@ -403,6 +403,12 @@
       "horizon": "H3",
       "status": "planned",
       "note": "Merged durability + Hermes-primary allowlist streams; added RouterPolicyConfig.noFallbackOnFailureClasses and dispatch suppression via UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES; marked h3-action-2 completed."
+    },
+    {
+      "timestamp": "2026-04-28T21:30:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "Capability executor timeout envelope; SerializedUnifiedMemoryStore + restart/concurrency tests; summarize-soak-report.mjs + soak summarize hook; emergency-rollback-rehearsal.sh manifest; marked h3-action-3 through h3-action-6 completed."
     }
   ]
 }

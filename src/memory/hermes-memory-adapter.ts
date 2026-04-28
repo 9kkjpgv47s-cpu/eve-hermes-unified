@@ -43,6 +43,7 @@ export function createFileBackedHermesStore(filePath: string): UnifiedMemoryStor
 export function createHermesMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
+  options?: { serializeWrites?: boolean },
 ): UnifiedMemoryStore {
-  return createUnifiedMemoryStoreFromEnv(kind, filePath);
+  return createUnifiedMemoryStoreFromEnv(kind, filePath, options);
 }

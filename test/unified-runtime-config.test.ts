@@ -183,4 +183,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     );
     expect(config.routerConfig.noFallbackOnFailureClasses).toEqual(["policy_failure", "dispatch_failure"]);
   });
+
+  it("parses memory serialize writes and capability execution timeout", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_SERIALIZE_WRITES: "1",
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "120000",
+        }),
+      ),
+    );
+    expect(config.unifiedMemorySerializeWrites).toBe(true);
+    expect(config.capabilityExecutionTimeoutMs).toBe(120000);
+  });
 });

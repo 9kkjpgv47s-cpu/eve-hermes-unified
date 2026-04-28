@@ -229,6 +229,48 @@ describe("UnifiedCapabilityEngine", () => {
     expect(result.response.failureClass).toBe("none");
   });
 
+  it("fails capability execution with policy_failure when executor exceeds timeout budget", async () => {
+    const registry = new CapabilityRegistry();
+    registry.register(
+      {
+        id: "slow_ping",
+        description: "slow",
+        owner: "eve",
+      },
+      async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 500));
+        return buildCapabilityResult("too late");
+      },
+    );
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore: new FileUnifiedMemoryStore(path.join(os.tmpdir(), "unified-cap-timeout.json")),
+      dispatchLane: async () => fakeLaneState("eve"),
+      executionTimeoutMs: 50,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@cap slow_ping",
+    });
+
+    expect(result.capabilityExecution?.status).toBe("failed");
+    expect(result.capabilityExecution?.reason).toBe("capability_execution_timeout");
+    expect(result.capabilityExecution?.failureClass).toBe("policy_failure");
+  });
+
   it("denies capability execution when policy is default deny", async () => {
     const registry = new CapabilityRegistry();
     const memoryStore = new FileUnifiedMemoryStore(

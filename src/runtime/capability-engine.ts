@@ -38,7 +38,36 @@ export type CapabilityExecutionDependencies = {
   memoryStore: UnifiedMemoryStore;
   dispatchLane: CapabilityLaneDispatcher;
   policy?: CapabilityPolicy;
+  /** Wall-clock budget for executor body; omit or 0 for no limit. */
+  executionTimeoutMs?: number;
 };
+
+async function withCapabilityExecutorTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<{ ok: true; value: T } | { ok: false; timedOut: true }> {
+  if (!timeoutMs || timeoutMs <= 0) {
+    const value = await promise;
+    return { ok: true, value };
+  }
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const value = await Promise.race([
+      promise,
+      new Promise<"__timeout__">((resolve) => {
+        timeoutHandle = setTimeout(() => resolve("__timeout__"), timeoutMs);
+      }),
+    ]);
+    if (value === "__timeout__") {
+      return { ok: false, timedOut: true };
+    }
+    return { ok: true, value };
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
+}
 
 function parseExplicitCapabilityText(text: string): { capabilityId: string; argsText: string } | undefined {
   const trimmed = text.trim();
@@ -158,21 +187,40 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
 
     const parsed = parseExplicitCapabilityText(envelope.text);
     const argsText = parsed?.argsText ?? "";
-    const execution = await executor({
-      text: envelope.text,
-      argsText,
-      chatId: envelope.chatId,
-      messageId: envelope.messageId,
-      traceId: envelope.traceId,
-      memoryStore: this.dependencies.memoryStore,
-      dispatchLane: async (input) =>
-        this.dependencies.dispatchLane({
-          ...input,
-          chatId: envelope.chatId,
-          messageId: envelope.messageId,
-          traceId: envelope.traceId,
-        }),
-    });
+    const timeoutMs = this.dependencies.executionTimeoutMs ?? 0;
+    const executorPromise = Promise.resolve(
+      executor({
+        text: envelope.text,
+        argsText,
+        chatId: envelope.chatId,
+        messageId: envelope.messageId,
+        traceId: envelope.traceId,
+        memoryStore: this.dependencies.memoryStore,
+        dispatchLane: async (input) =>
+          this.dependencies.dispatchLane({
+            ...input,
+            chatId: envelope.chatId,
+            messageId: envelope.messageId,
+            traceId: envelope.traceId,
+          }),
+      }),
+    );
+    const raced = await withCapabilityExecutorTimeout(executorPromise, timeoutMs);
+    let execution: Awaited<typeof executorPromise>;
+    if (!raced.ok) {
+      execution = {
+        consumed: false,
+        reason: "capability_execution_timeout",
+        responseText: `Capability '${selection.id}' exceeded execution budget (${timeoutMs}ms).`,
+        failureClass: "policy_failure",
+        metadata: {
+          envelope: "capability_execution_timeout",
+          timeoutMsBudget: String(timeoutMs),
+        },
+      };
+    } else {
+      execution = raced.value;
+    }
     const status: "pass" | "failed" = execution.consumed ? "pass" : "failed";
     const reason = execution.reason?.trim() || resultReason(selection.id, status);
     const failureClass =

@@ -81,6 +81,7 @@ async function buildDispatchRuntime(): Promise<{
   const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
+    { serializeWrites: config.unifiedMemorySerializeWrites },
   );
   const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
   const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);
@@ -115,6 +116,8 @@ async function buildDispatchRuntime(): Promise<{
     memoryStore: sharedMemoryStore,
     dispatchLane,
     policy: capabilityPolicy,
+    executionTimeoutMs:
+      config.capabilityExecutionTimeoutMs > 0 ? config.capabilityExecutionTimeoutMs : undefined,
   });
 
   const preflightIssues = await runRuntimePreflight({

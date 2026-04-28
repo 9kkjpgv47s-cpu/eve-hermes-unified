@@ -245,12 +245,54 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 }
 
+/**
+ * Serializes mutating operations on a backing store (useful for in-memory backends
+ * when multiple capability/dispatch tasks may interleave writes).
+ */
+export class SerializedUnifiedMemoryStore implements UnifiedMemoryStore {
+  private writeChain = Promise.resolve();
+
+  constructor(private readonly inner: UnifiedMemoryStore) {}
+
+  private async runSerialized<T>(operation: () => Promise<T>): Promise<T> {
+    const task = this.writeChain.then(() => operation());
+    this.writeChain = task.then(
+      () => undefined,
+      () => undefined,
+    );
+    return task;
+  }
+
+  async get(target: UnifiedMemoryKey): Promise<UnifiedMemoryEntry | undefined> {
+    return this.runSerialized(() => this.inner.get(target));
+  }
+
+  async set(
+    target: UnifiedMemoryKey,
+    value: string,
+    metadata?: Record<string, string>,
+  ): Promise<UnifiedMemoryEntry> {
+    return this.runSerialized(() => this.inner.set(target, value, metadata));
+  }
+
+  async delete(target: UnifiedMemoryKey): Promise<boolean> {
+    return this.runSerialized(() => this.inner.delete(target));
+  }
+
+  async list(query?: UnifiedMemoryListQuery): Promise<UnifiedMemoryEntry[]> {
+    return this.runSerialized(() => this.inner.list(query));
+  }
+}
+
 export function createUnifiedMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
+  options?: { serializeWrites?: boolean },
 ): UnifiedMemoryStore {
-  if (kind === "file") {
-    return new FileUnifiedMemoryStore(filePath);
+  const base =
+    kind === "file" ? new FileUnifiedMemoryStore(filePath) : new InMemoryUnifiedMemoryStore();
+  if (options?.serializeWrites) {
+    return new SerializedUnifiedMemoryStore(base);
   }
-  return new InMemoryUnifiedMemoryStore();
+  return base;
 }

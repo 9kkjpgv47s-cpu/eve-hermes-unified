@@ -181,6 +181,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.capabilityAbortLaneOnTimeout).toBe(true);
   });
 
+  it("parses tenant strict and allowlist", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_TENANT_STRICT: "1",
+          UNIFIED_TENANT_ALLOWLIST: "acme,beta",
+        }),
+      ),
+    );
+    expect(config.tenantStrict).toBe(true);
+    expect(config.tenantAllowlist).toEqual(["acme", "beta"]);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

@@ -36,6 +36,10 @@ export type UnifiedRuntimeEnvConfig = {
   capabilityExecutionTimeoutMs: number;
   /** When true with a positive execution timeout, SIGTERM lane subprocess on budget expiry. */
   capabilityAbortLaneOnTimeout: boolean;
+  /** When true, reject dispatches that omit a tenant id (after metadata resolution). */
+  tenantStrict: boolean;
+  /** When non-empty, only these tenant ids are accepted (fail-closed for others). */
+  tenantAllowlist: string[];
   /** When true with file store + journal, re-read disk after each persist and verify snapshot matches memory. */
   unifiedMemoryVerifyPersist: boolean;
   /** When true with file store + journal, before each persist verify snapshot+WAL replay matches in-memory map. */
@@ -93,6 +97,17 @@ function parseCsvList(raw: string | undefined): string[] {
     .split(",")
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
+}
+
+function normalizeTenantAllowlistEntry(raw: string): string | undefined {
+  const t = raw.trim();
+  if (!t || t.length > 128) {
+    return undefined;
+  }
+  if (t.includes("/") || t.includes("\\")) {
+    return undefined;
+  }
+  return t;
 }
 
 function parseCapabilityDefaultMode(raw: string | undefined): "allow" | "deny" {
@@ -275,6 +290,15 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     false,
   );
+  const tenantStrict = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_TENANT_STRICT", "TENANT_STRICT"]),
+    false,
+  );
+  const tenantAllowlist = parseCsvList(
+    firstDefined(reader, ["UNIFIED_TENANT_ALLOWLIST", "TENANT_ALLOWLIST"]),
+  )
+    .map((entry) => normalizeTenantAllowlistEntry(entry))
+    .filter((entry): entry is string => entry !== undefined);
   const unifiedMemoryVerifyPersist = parseBooleanFlag(
     firstDefined(reader, [
       "UNIFIED_MEMORY_VERIFY_PERSIST",
@@ -352,6 +376,8 @@ export function loadUnifiedRuntimeEnvConfig(
     auditLogRotationRetainBytes,
     capabilityExecutionTimeoutMs,
     capabilityAbortLaneOnTimeout,
+    tenantStrict,
+    tenantAllowlist,
     unifiedMemoryVerifyPersist,
     unifiedMemoryVerifyJournalReplay,
     routerConfig: {

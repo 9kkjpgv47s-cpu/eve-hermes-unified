@@ -17,6 +17,8 @@ export type UnifiedMessageEnvelope = {
   messageId: string;
   receivedAtIso: string;
   text: string;
+  /** Optional tenant scope for isolation (see metadata.tenantId override). */
+  tenantId?: string;
   metadata?: Record<string, string>;
 };
 

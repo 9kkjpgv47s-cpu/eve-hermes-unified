@@ -64,6 +64,14 @@ Optional crash recovery for file-backed unified memory:
 - **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`** (alias `CAPABILITY_EXECUTION_TIMEOUT_MS`) — wall-clock limit for `@cap` handlers; `0` disables.
 - **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT=1`** (alias `CAPABILITY_ABORT_LANE_ON_TIMEOUT`) — when enabled with a positive timeout, abort the in-flight lane subprocess (`SIGTERM`) if the handler exceeds the budget.
 
+## Tenant isolation (dispatch + capability memory)
+
+- **`tenantId`** on `UnifiedMessageEnvelope` (optional) and **`metadata.tenantId`** (optional); metadata wins when both are set. Values must be non-empty, ≤128 chars, and must not contain `/` or `\`.
+- **`UNIFIED_TENANT_STRICT=1`** — fail closed with reason `tenant_id_required` when no tenant is present after resolution.
+- **`UNIFIED_TENANT_ALLOWLIST`** — comma-separated list; when non-empty, require a tenant id and reject with `tenant_id_not_allowed` if not listed.
+- **`npm run dispatch`** accepts **`--tenant-id <id>`** (sets envelope `tenantId`).
+- When `memoryStore` is wired on the runtime and a valid tenant id is present, **`@cap` handlers** receive a **`TenantScopedMemoryStore`** so capability execution namespaces are prefixed (`tenant:<id>:...`); lane dispatch and non-capability paths use the shared store unless extended later.
+
 ## Cutover and Rollback Commands
 
 Stage:

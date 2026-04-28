@@ -19,13 +19,41 @@ function isLane(value: string): value is "eve" | "hermes" {
   return value === "eve" || value === "hermes";
 }
 
+function normalizeTenantIdField(raw: string | undefined, label: string): string | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  const t = raw.trim();
+  if (t.length === 0) {
+    return undefined;
+  }
+  ensure(t.length <= 128, `${label} must be at most 128 characters.`);
+  ensure(!t.includes("/") && !t.includes("\\"), `${label} must not contain path separators.`);
+  return t;
+}
+
 export function validateEnvelope(value: UnifiedMessageEnvelope): UnifiedMessageEnvelope {
   ensure(value.traceId.length > 0, "Envelope traceId is required.");
   ensure(value.channel === "telegram", "Envelope channel must be telegram.");
   ensure(value.chatId.length > 0, "Envelope chatId is required.");
   ensure(value.messageId.length > 0, "Envelope messageId is required.");
   ensure(value.text.length > 0, "Envelope text is required.");
-  return value;
+  let metadata = value.metadata;
+  if (metadata) {
+    const metaTenant = normalizeTenantIdField(metadata.tenantId, "metadata.tenantId");
+    metadata = { ...metadata };
+    if (metaTenant === undefined) {
+      delete metadata.tenantId;
+    } else {
+      metadata.tenantId = metaTenant;
+    }
+  }
+  const tenantId = normalizeTenantIdField(value.tenantId, "tenantId");
+  return {
+    ...value,
+    tenantId,
+    metadata,
+  };
 }
 
 export function validateRoutingDecision(value: RoutingDecision): RoutingDecision {

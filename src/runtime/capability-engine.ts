@@ -30,6 +30,7 @@ export interface CapabilityEngine {
   execute(
     selection: CapabilityExecutionSelection,
     envelope: UnifiedMessageEnvelope,
+    options?: { memoryStore?: UnifiedMemoryStore },
   ): Promise<CapabilityExecutionResult>;
 }
 
@@ -125,8 +126,10 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
   async execute(
     selection: CapabilityExecutionSelection,
     envelope: UnifiedMessageEnvelope,
+    options?: { memoryStore?: UnifiedMemoryStore },
   ): Promise<CapabilityExecutionResult> {
     const started = Date.now();
+    const memoryStore = options?.memoryStore ?? this.dependencies.memoryStore;
     if (this.dependencies.policy) {
       const authorization = this.dependencies.policy.authorize({
         capabilityId: selection.id,
@@ -140,7 +143,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           started,
           authorization.reason ?? "capability_policy_denied",
         );
-        await this.writeExecutionMemory(selection, envelope, denied);
+        await this.writeExecutionMemory(selection, envelope, denied, memoryStore);
         return denied;
       }
     }
@@ -157,7 +160,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
         runId: `capability-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
         elapsedMs: Math.max(0, Date.now() - started),
       });
-      await this.writeExecutionMemory(selection, envelope, missingResult);
+      await this.writeExecutionMemory(selection, envelope, missingResult, memoryStore);
       return missingResult;
     }
 
@@ -180,7 +183,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           messageId: envelope.messageId,
           traceId: envelope.traceId,
           signal: abortLaneOnTimeout ? runAbort.signal : undefined,
-          memoryStore: this.dependencies.memoryStore,
+          memoryStore,
           dispatchLane: async (input) =>
             this.dependencies.dispatchLane({
               ...input,
@@ -221,7 +224,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
             laneAbort: abortLaneOnTimeout ? "1" : "0",
           },
         });
-        await this.writeExecutionMemory(selection, envelope, timedOut);
+        await this.writeExecutionMemory(selection, envelope, timedOut, memoryStore);
         return timedOut;
       }
       execution = outcome.value;
@@ -233,7 +236,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           chatId: envelope.chatId,
           messageId: envelope.messageId,
           traceId: envelope.traceId,
-          memoryStore: this.dependencies.memoryStore,
+          memoryStore,
           dispatchLane: async (input) =>
             this.dependencies.dispatchLane({
               ...input,
@@ -259,7 +262,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
       elapsedMs: Math.max(0, Date.now() - started),
       metadata: execution.metadata,
     });
-    await this.writeExecutionMemory(selection, envelope, normalized);
+    await this.writeExecutionMemory(selection, envelope, normalized, memoryStore);
     return normalized;
   }
 
@@ -267,8 +270,9 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
     selection: CapabilityExecutionSelection,
     envelope: UnifiedMessageEnvelope,
     result: CapabilityExecutionResult,
+    memoryStore: UnifiedMemoryStore,
   ): Promise<void> {
-    await this.dependencies.memoryStore.set(
+    await memoryStore.set(
       {
         lane: selection.lane,
         namespace: "capability-execution",

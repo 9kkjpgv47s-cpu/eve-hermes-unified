@@ -223,7 +223,12 @@ async function seedReadinessArtifacts(evidenceDir: string): Promise<void> {
   );
 }
 
-async function seedHorizonStatus(statusPath: string): Promise<void> {
+async function seedHorizonStatus(
+  statusPath: string,
+  options?: { activeHorizon?: string; summary?: string },
+): Promise<void> {
+  const activeHorizon = options?.activeHorizon ?? "H2";
+  const summary = options?.summary ?? "H2 closeout runner fixture";
   await writeFile(
     statusPath,
     JSON.stringify(
@@ -231,9 +236,9 @@ async function seedHorizonStatus(statusPath: string): Promise<void> {
         schemaVersion: "v1",
         updatedAtIso: new Date().toISOString(),
         owner: "cloud-agent",
-        activeHorizon: "H2",
+        activeHorizon,
         activeStatus: "in_progress",
-        summary: "H2 closeout runner fixture",
+        summary,
         blockers: [],
         requiredEvidence: [
           {
@@ -530,6 +535,50 @@ describe("run-h2-closeout.mjs", () => {
         [
           "node",
           "scripts/run-h2-closeout.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+        ],
+        { timeoutMs: 180_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("horizon_closeout_gate_failed");
+      expect(payload.failures).toContain("h2_closeout_gate_failed");
+    });
+  });
+
+  it("dual-reports h2 closeout gate failure alias for H3 source horizon", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h3-closeout-runner.json");
+
+      await seedValidationSummaries(evidenceDir);
+      await seedReadinessArtifacts(evidenceDir);
+      await seedHorizonStatus(horizonPath, { activeHorizon: "H3", summary: "H3 closeout runner fixture" });
+      await seedEnvFile(envPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-closeout.mjs",
+          "--horizon",
+          "H3",
+          "--next-horizon",
+          "H4",
           "--evidence-dir",
           evidenceDir,
           "--horizon-status-file",

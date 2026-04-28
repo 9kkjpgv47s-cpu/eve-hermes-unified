@@ -4,6 +4,8 @@ import { dispatchUnifiedMessage } from "../src/runtime/unified-dispatch.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
 import type { CapabilityEngine } from "../src/runtime/capability-engine.js";
 import type { RouterPolicyConfig } from "../src/router/policy-router.js";
+import { InMemoryUnifiedMemoryStore } from "../src/memory/unified-memory-store.js";
+import { TenantScopedMemoryStore } from "../src/memory/tenant-scoped-memory-store.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   lastSignal: AbortSignal | undefined;
@@ -20,6 +22,8 @@ class FakeLaneAdapter implements LaneAdapter {
 }
 
 class FakeCapabilityEngine implements CapabilityEngine {
+  lastMemoryStore: unknown;
+
   constructor(
     private readonly decision?: UnifiedCapabilityDecision,
     private readonly execution?: CapabilityExecutionResult,
@@ -32,7 +36,9 @@ class FakeCapabilityEngine implements CapabilityEngine {
   async execute(
     _selection: UnifiedCapabilityDecision,
     _envelope: { traceId: string },
+    options?: { memoryStore?: unknown },
   ): Promise<CapabilityExecutionResult> {
+    this.lastMemoryStore = options?.memoryStore;
     if (!this.execution) {
       throw new Error("Execution was not configured.");
     }
@@ -288,5 +294,156 @@ describe("dispatchUnifiedMessage", () => {
 
     expect(eve.lastSignal).toBe(ac.signal);
     expect(hermes.lastSignal).toBeUndefined();
+  });
+
+  it("fails closed when tenantStrict and tenant id missing", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig(),
+      tenantStrict: true,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+
+    expect(result.primaryState.reason).toBe("tenant_id_required");
+    expect(result.response.failureClass).toBe("policy_failure");
+    expect(result.routing.reason).toBe("tenant_gate");
+  });
+
+  it("fails closed when tenant not in allowlist", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig(),
+      tenantAllowlist: ["acme"],
+    };
+
+    const blocked = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+      tenantId: "other",
+    });
+    expect(blocked.primaryState.reason).toBe("tenant_id_not_allowed");
+
+    const allowed = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+      tenantId: "acme",
+    });
+    expect(allowed.response.failureClass).toBe("none");
+  });
+
+  it("passes tenant-scoped memory store to capability execute", async () => {
+    const shared = new InMemoryUnifiedMemoryStore();
+    const fakeCap = new FakeCapabilityEngine(
+      {
+        id: "x",
+        lane: "eve",
+        routeReason: "explicit_capability_command",
+      },
+      {
+        capability: { id: "x", lane: "eve", routeReason: "explicit_capability_command" },
+        status: "pass",
+        consumed: true,
+        reason: "capability_x_success",
+        outputText: "ok",
+        failureClass: "none",
+        runId: "c1",
+        elapsedMs: 1,
+      },
+    );
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig(),
+      capabilityEngine: fakeCap,
+      memoryStore: shared,
+    };
+
+    await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@cap x",
+      tenantId: "acme",
+    });
+
+    expect(fakeCap.lastMemoryStore).toBeInstanceOf(TenantScopedMemoryStore);
   });
 });

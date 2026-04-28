@@ -36,8 +36,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Horizon-neutral failure taxonomy** — extend dual-report aliases wherever orchestration still emits H2-only ids (`promote-horizon.mjs` now aliases `closeout_run_horizon_*` → `closeout_run_h2_*` for H2+ source horizons).
-2. **Tenant-scoped** non-capability memory (optional) if product requires full store isolation per tenant.
+1. **Horizon-neutral failure taxonomy** — `run-h2-closeout.mjs` appends **`h2_closeout_gate_failed`** for any closeout source horizon **H2+** (aligned with `promote-horizon.mjs` closeout-run gate aliases).
+2. **Tenant isolation** — `UNIFIED_TENANT_STRICT`, **`UNIFIED_TENANT_ALLOWLIST`**, envelope `tenantId` / `metadata.tenantId`, scoped capability memory via `TenantScopedMemoryStore`; extend to full dispatch memory if product requires it.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

@@ -136,7 +136,9 @@ function deriveNextHorizon(sourceHorizon) {
 
 function appendCloseoutGateFailure(failures, sourceHorizon) {
   failures.push("horizon_closeout_gate_failed");
-  if (sourceHorizon === "H2") {
+  const h2Index = HORIZON_SEQUENCE.indexOf("H2");
+  const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
+  if (h2Index >= 0 && sourceIndex >= h2Index) {
     failures.push("h2_closeout_gate_failed");
   }
 }

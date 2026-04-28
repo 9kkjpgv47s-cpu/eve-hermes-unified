@@ -29,4 +29,6 @@ Unit tests use **`FakeLaneAdapter`** or **`LaneAdapter`** mocks. They must **not
 
 ## Contract conformance
 
-`npm run validate:dispatch-contract` validates every `test/fixtures/unified-dispatch-result-v*.json` file with `validateUnifiedDispatchResult` (see `docs/DISPATCH_CONTRACT_V1.md`).
+`npm run validate:dispatch-contract` validates every `test/fixtures/unified-dispatch-result-v*.json` file with `validateUnifiedDispatchResult` (see `docs/DISPATCH_CONTRACT_V1.md`). Bundled examples include primary-pass, Hermes fallback, fail-closed primary failure, and capability-pass shapes.
+
+`scripts/regression-eve-primary.sh` optionally validates each per-case dispatch JSON via the same CLI when **`UNIFIED_REGRESSION_VALIDATE_DISPATCH_CONTRACT`** is not `0` (default: on).

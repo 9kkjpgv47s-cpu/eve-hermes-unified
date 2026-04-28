@@ -1,0 +1,37 @@
+{
+  "contractVersion": "v1",
+  "envelope": {
+    "traceId": "fixture-trace-fail-closed",
+    "channel": "telegram",
+    "chatId": "1",
+    "messageId": "2",
+    "receivedAtIso": "2026-04-28T12:00:00.000Z",
+    "text": "hello fixture"
+  },
+  "routing": {
+    "primaryLane": "eve",
+    "fallbackLane": "hermes",
+    "reason": "default_policy_lane",
+    "policyVersion": "v1",
+    "failClosed": true
+  },
+  "primaryState": {
+    "status": "failed",
+    "reason": "policy_blocked",
+    "runtimeUsed": "eve",
+    "runId": "r1",
+    "elapsedMs": 5,
+    "failureClass": "policy_failure",
+    "sourceLane": "eve",
+    "sourceChatId": "1",
+    "sourceMessageId": "2",
+    "traceId": "fixture-trace-fail-closed"
+  },
+  "response": {
+    "consumed": true,
+    "responseText": "Unified dispatch failed via eve.\nrun_id: r1\nreason: policy_blocked",
+    "failureClass": "policy_failure",
+    "laneUsed": "eve",
+    "traceId": "fixture-trace-fail-closed"
+  }
+}

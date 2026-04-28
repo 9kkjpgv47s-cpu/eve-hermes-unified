@@ -141,6 +141,12 @@ run_case() {
     failures+=("${name}:assertion_failed")
     return
   fi
+  if [[ "${UNIFIED_REGRESSION_VALIDATE_DISPATCH_CONTRACT:-1}" != "0" ]]; then
+    if ! npx --no-install tsx "$ROOT_DIR/src/bin/validate-dispatch-contracts.ts" --file "$output_path"; then
+      failures+=("${name}:dispatch_contract_validation_failed")
+      return
+    fi
+  fi
   case_records+=("$name")
 }
 

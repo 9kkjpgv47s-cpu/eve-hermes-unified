@@ -1,0 +1,55 @@
+{
+  "contractVersion": "v1",
+  "envelope": {
+    "traceId": "fixture-trace-fallback-hermes",
+    "channel": "telegram",
+    "chatId": "1",
+    "messageId": "2",
+    "receivedAtIso": "2026-04-28T12:00:00.000Z",
+    "text": "hello fixture"
+  },
+  "routing": {
+    "primaryLane": "eve",
+    "fallbackLane": "hermes",
+    "reason": "default_policy_lane",
+    "policyVersion": "v1",
+    "failClosed": false
+  },
+  "primaryState": {
+    "status": "failed",
+    "reason": "primary_failed",
+    "runtimeUsed": "eve",
+    "runId": "r1",
+    "elapsedMs": 12,
+    "failureClass": "dispatch_failure",
+    "sourceLane": "eve",
+    "sourceChatId": "1",
+    "sourceMessageId": "2",
+    "traceId": "fixture-trace-fallback-hermes"
+  },
+  "fallbackState": {
+    "status": "pass",
+    "reason": "fallback_ok",
+    "runtimeUsed": "hermes",
+    "runId": "r2",
+    "elapsedMs": 10,
+    "failureClass": "none",
+    "sourceLane": "hermes",
+    "sourceChatId": "1",
+    "sourceMessageId": "2",
+    "traceId": "fixture-trace-fallback-hermes"
+  },
+  "fallbackInfo": {
+    "attempted": true,
+    "reason": "primary_failed",
+    "fromLane": "eve",
+    "toLane": "hermes"
+  },
+  "response": {
+    "consumed": true,
+    "responseText": "Unified dispatch succeeded via hermes.\nrun_id: r2\nreason: fallback_ok",
+    "failureClass": "none",
+    "laneUsed": "hermes",
+    "traceId": "fixture-trace-fallback-hermes"
+  }
+}

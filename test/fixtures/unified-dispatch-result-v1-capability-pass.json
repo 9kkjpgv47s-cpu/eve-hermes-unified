@@ -1,0 +1,56 @@
+{
+  "contractVersion": "v1",
+  "envelope": {
+    "traceId": "fixture-trace-capability-pass",
+    "channel": "telegram",
+    "chatId": "1",
+    "messageId": "2",
+    "receivedAtIso": "2026-04-28T12:00:00.000Z",
+    "text": "@cap summarize_state"
+  },
+  "routing": {
+    "primaryLane": "hermes",
+    "fallbackLane": "none",
+    "reason": "explicit_capability_command",
+    "policyVersion": "v1",
+    "failClosed": true
+  },
+  "primaryState": {
+    "status": "pass",
+    "reason": "capability_summarize_state_success",
+    "runtimeUsed": "capability-engine",
+    "runId": "cap-1",
+    "elapsedMs": 3,
+    "failureClass": "none",
+    "sourceLane": "hermes",
+    "sourceChatId": "1",
+    "sourceMessageId": "2",
+    "traceId": "fixture-trace-capability-pass"
+  },
+  "capabilityDecision": {
+    "id": "summarize_state",
+    "lane": "hermes",
+    "routeReason": "explicit_capability_command"
+  },
+  "capabilityExecution": {
+    "capability": {
+      "id": "summarize_state",
+      "lane": "hermes",
+      "routeReason": "explicit_capability_command"
+    },
+    "status": "pass",
+    "consumed": true,
+    "reason": "capability_summarize_state_success",
+    "outputText": "Capability summarize_state executed (Hermes owner).",
+    "failureClass": "none",
+    "runId": "cap-1",
+    "elapsedMs": 3
+  },
+  "response": {
+    "consumed": true,
+    "responseText": "Unified dispatch succeeded via hermes.\nrun_id: cap-1\nreason: capability_summarize_state_success",
+    "failureClass": "none",
+    "laneUsed": "hermes",
+    "traceId": "fixture-trace-capability-pass"
+  }
+}

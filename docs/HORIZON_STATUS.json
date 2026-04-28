@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T23:26:00Z",
+  "updatedAtIso": "2026-04-28T21:15:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -157,7 +157,7 @@
       "id": "h3-action-1",
       "summary": "Harden runtime durability boundaries with persistent queue/replay semantics for cross-lane dispatch recovery.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "runtime"]
     },
     {
@@ -266,7 +266,7 @@
     },
     "H3": {
       "status": "planned",
-      "summary": "Runtime durability and policy maturity hardening."
+      "summary": "Runtime durability and policy maturity hardening: file-backed dispatch durability queue with replay-safe envelopes (dispatchUnifiedEnvelope), CLI --enqueue-failed-primary and --replay-queue, UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH."
     },
     "H4": {
       "status": "planned",
@@ -391,6 +391,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
+    },
+    {
+      "timestamp": "2026-04-28T21:15:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "Implemented dispatch durability queue (JSON file, atomic writes), replay-safe dispatchUnifiedEnvelope path, CLI enqueue/replay flags, and config UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH; marked h3-action-1 completed."
     }
   ]
 }

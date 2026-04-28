@@ -21,6 +21,9 @@ jobs:
       - name: Install
         run: npm install
 
+      - name: Prepare workspace dirs
+        run: mkdir -p evidence
+
       - name: Typecheck
         run: npm run check
 

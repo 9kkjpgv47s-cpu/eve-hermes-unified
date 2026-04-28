@@ -12,6 +12,8 @@ export type UnifiedRuntimeEnvConfig = {
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
   unifiedDispatchAuditLogPath: string;
+  /** File path for durable dispatch replay queue (JSON). */
+  dispatchDurabilityQueuePath: string;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -129,6 +131,9 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const dispatchDurabilityQueuePath =
+    firstDefined(reader, ["UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH", "DISPATCH_QUEUE_PATH"]) ??
+    "/tmp/eve-hermes-unified-dispatch-queue.json";
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -262,6 +267,7 @@ export function loadUnifiedRuntimeEnvConfig(
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
     unifiedDispatchAuditLogPath,
+    dispatchDurabilityQueuePath,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

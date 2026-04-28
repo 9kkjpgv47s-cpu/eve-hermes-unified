@@ -140,4 +140,25 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.hashSalt).toBe("salt-1");
     expect(config.preflight.enabled).toBe(false);
   });
+
+  it("parses dispatch durability queue path and alias", () => {
+    const fromUnified = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH: "/tmp/queue-a.json",
+        }),
+      ),
+    );
+    expect(fromUnified.dispatchDurabilityQueuePath).toBe("/tmp/queue-a.json");
+
+    const fromAlias = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH: "",
+          DISPATCH_QUEUE_PATH: "/tmp/queue-b.json",
+        }),
+      ),
+    );
+    expect(fromAlias.dispatchDurabilityQueuePath).toBe("/tmp/queue-b.json");
+  });
 });

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { EveAdapter } from "../adapters/eve-adapter.js";
 import { HermesAdapter } from "../adapters/hermes-adapter.js";
@@ -13,11 +14,27 @@ import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
+import {
+  FileDispatchDurabilityQueue,
+  replayPendingDispatches,
+} from "../runtime/dispatch-durability-queue.js";
 
-function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
+export type UnifiedDispatchCliArgs = {
+  text: string;
+  chatId: string;
+  messageId: string;
+  compactJson: boolean;
+  enqueueFailedPrimary: boolean;
+  replayQueue: boolean;
+};
+
+export function parseUnifiedDispatchCliArgs(argv: string[]): UnifiedDispatchCliArgs {
   let text = "";
   let chatId = "0";
   let messageId = "0";
+  let compactJson = false;
+  let enqueueFailedPrimary = false;
+  let replayQueue = false;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--text") {
@@ -29,18 +46,37 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
     } else if (arg === "--message-id") {
       messageId = argv[i + 1] ?? "0";
       i += 1;
+    } else if (arg === "--compact-json") {
+      compactJson = true;
+    } else if (arg === "--enqueue-failed-primary") {
+      enqueueFailedPrimary = true;
+    } else if (arg === "--replay-queue") {
+      replayQueue = true;
     }
   }
-  if (!text.trim()) {
+  if (!replayQueue && !text.trim()) {
     throw new Error("Missing required --text argument.");
   }
-  return { text, chatId, messageId };
+  return { text, chatId, messageId, compactJson, enqueueFailedPrimary, replayQueue };
 }
 
-async function main() {
-  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-  await loadDotEnvFile(rootDir);
-  const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
+function primaryFailedNeedingRecovery(
+  result: Awaited<ReturnType<typeof dispatchUnifiedMessage>>,
+): boolean {
+  if (result.primaryState.status !== "failed") {
+    return false;
+  }
+  if (result.capabilityExecution) {
+    return result.capabilityExecution.status === "failed";
+  }
+  const routing = result.routing;
+  return routing.fallbackLane !== "none" && !routing.failClosed;
+}
+
+async function buildDispatchRuntime(): Promise<{
+  runtime: Parameters<typeof dispatchUnifiedMessage>[0];
+  config: ReturnType<typeof loadUnifiedRuntimeEnvConfig>;
+}> {
   const config = loadUnifiedRuntimeEnvConfig();
   const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
@@ -103,6 +139,24 @@ async function main() {
     routerConfig: config.routerConfig,
     capabilityEngine,
   };
+  return { runtime, config };
+}
+
+async function main() {
+  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  await loadDotEnvFile(rootDir);
+  const args = parseUnifiedDispatchCliArgs(process.argv.slice(2));
+  const { text, chatId, messageId, compactJson, enqueueFailedPrimary, replayQueue } = args;
+
+  const { runtime, config } = await buildDispatchRuntime();
+  const durabilityQueue = new FileDispatchDurabilityQueue(config.dispatchDurabilityQueuePath);
+
+  if (replayQueue) {
+    const replayed = await replayPendingDispatches(runtime, durabilityQueue);
+    const payload = compactJson ? JSON.stringify(replayed) : JSON.stringify(replayed, null, 2);
+    process.stdout.write(`${payload}\n`);
+    return;
+  }
 
   const result = await dispatchUnifiedMessage(runtime, {
     channel: "telegram",
@@ -110,11 +164,33 @@ async function main() {
     messageId,
     text,
   });
-  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+
+  let durability:
+    | { queued: false }
+    | { queued: true; queueEntryId: string; reason: string }
+    | undefined;
+
+  if (enqueueFailedPrimary && primaryFailedNeedingRecovery(result)) {
+    const queueEntryId = await durabilityQueue.appendEnvelope(result.envelope);
+    durability = {
+      queued: true,
+      queueEntryId,
+      reason: "primary_failed_cross_lane_recovery_pending",
+    };
+  }
+
+  const output = durability !== undefined ? { ...result, durability } : result;
+
+  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, output);
+  const payload = compactJson ? JSON.stringify(output) : JSON.stringify(output, null, 2);
+  process.stdout.write(`${payload}\n`);
 }
 
-main().catch((error) => {
-  process.stderr.write(`${String(error)}\n`);
-  process.exitCode = 1;
-});
+const entryPath = process.argv[1] ? path.resolve(process.argv[1]) : "";
+const thisFile = fileURLToPath(import.meta.url);
+if (entryPath && entryPath === thisFile) {
+  main().catch((error) => {
+    process.stderr.write(`${String(error)}\n`);
+    process.exitCode = 1;
+  });
+}

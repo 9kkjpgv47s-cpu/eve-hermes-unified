@@ -14,10 +14,19 @@ import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
 
-function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
+export type UnifiedDispatchCliArgs = {
+  text: string;
+  chatId: string;
+  messageId: string;
+  /** Single-line JSON on stdout (log pipelines); default is pretty-printed JSON. */
+  compactJson: boolean;
+};
+
+export function parseUnifiedDispatchCliArgs(argv: string[]): UnifiedDispatchCliArgs {
   let text = "";
   let chatId = "0";
   let messageId = "0";
+  let compactJson = false;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--text") {
@@ -29,18 +38,20 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
     } else if (arg === "--message-id") {
       messageId = argv[i + 1] ?? "0";
       i += 1;
+    } else if (arg === "--compact-json") {
+      compactJson = true;
     }
   }
   if (!text.trim()) {
     throw new Error("Missing required --text argument.");
   }
-  return { text, chatId, messageId };
+  return { text, chatId, messageId, compactJson };
 }
 
 async function main() {
   const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
   await loadDotEnvFile(rootDir);
-  const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
+  const { text, chatId, messageId, compactJson } = parseUnifiedDispatchCliArgs(process.argv.slice(2));
   const config = loadUnifiedRuntimeEnvConfig();
   const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
@@ -111,10 +122,15 @@ async function main() {
     text,
   });
   await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  const payload = compactJson ? JSON.stringify(result) : JSON.stringify(result, null, 2);
+  process.stdout.write(`${payload}\n`);
 }
 
-main().catch((error) => {
-  process.stderr.write(`${String(error)}\n`);
-  process.exitCode = 1;
-});
+const entryPath = process.argv[1] ? path.resolve(process.argv[1]) : "";
+const thisFile = fileURLToPath(import.meta.url);
+if (entryPath && entryPath === thisFile) {
+  main().catch((error) => {
+    process.stderr.write(`${String(error)}\n`);
+    process.exitCode = 1;
+  });
+}

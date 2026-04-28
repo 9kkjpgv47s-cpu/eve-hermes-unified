@@ -44,6 +44,12 @@ Every PR should include:
 - Preserve canonical `traceId` continuity from envelope to response.
 - Keep explicit lane directives (`@cursor`, `@hermes`) deterministic.
 
+## Unified dispatch CLI (`npm run dispatch`)
+
+- Default stdout is pretty-printed JSON (full `dispatchUnifiedMessage` result).
+- Pass **`--compact-json`** for one JSON object per line (newline-terminated), suitable for log shippers and line-oriented parsers.
+- The module exports `parseUnifiedDispatchCliArgs` for tests; `main` runs only when the file is the process entrypoint (importing the module does not execute dispatch).
+
 ## Cutover and Rollback Commands
 
 Stage:

@@ -85,6 +85,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.unifiedMemoryFilePath).toBe("/tmp/custom-memory.json");
   });
 
+  it("parses wal-file memory store kind", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_STORE_KIND: "wal-file",
+          UNIFIED_MEMORY_FILE_PATH: "/tmp/wal-memory.json",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryStoreKind).toBe("wal-file");
+    expect(config.unifiedMemoryFilePath).toBe("/tmp/wal-memory.json");
+  });
+
   it("parses capability policy controls", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

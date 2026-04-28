@@ -9,7 +9,7 @@ export type RuntimePreflightConfig = {
   eveDispatchScript: string;
   eveDispatchResultPath: string;
   hermesLaunchCommand: string;
-  unifiedMemoryStoreKind: "file" | "memory";
+  unifiedMemoryStoreKind: "file" | "memory" | "wal-file";
   unifiedMemoryFilePath: string;
   auditEnabled?: boolean;
   auditLogPath: string;
@@ -71,7 +71,7 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     issues.push(`Hermes launch command is unavailable: ${config.hermesLaunchCommand}`);
   }
 
-  if (config.unifiedMemoryStoreKind === "file") {
+  if (config.unifiedMemoryStoreKind === "file" || config.unifiedMemoryStoreKind === "wal-file") {
     const memoryWritable = await checkWritableParent(config.unifiedMemoryFilePath);
     if (!memoryWritable) {
       issues.push(`Unified memory file path is not writable: ${config.unifiedMemoryFilePath}`);

@@ -58,6 +58,12 @@ Rollback:
 npm run cutover:rollback
 ```
 
+## Unified memory backends (H3 durability)
+
+- **`UNIFIED_MEMORY_STORE_KIND`**: `memory` (default in-process), `file` (single JSON snapshot), or **`wal-file`** (append-only `${UNIFIED_MEMORY_FILE_PATH}.wal.jsonl` + periodic atomic snapshot of the same path).
+- **`file`**: snapshot writes use a temp file + `rename` for crash-safe replacement of the main JSON file.
+- **`wal-file`**: each `set`/`delete` appends one JSON line to the WAL, then compacts every 32 mutations (writes fresh snapshot, truncates WAL). Restart replays WAL after loading snapshot so commits after the last compaction are not lost.
+
 ## Evidence Expectations
 
 Before marking a phase complete, include artifacts from:

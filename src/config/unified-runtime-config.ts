@@ -68,7 +68,14 @@ function parseBooleanFlag(raw: string | undefined, fallback: boolean): boolean {
 }
 
 function parseMemoryStoreKind(raw: string | undefined): UnifiedMemoryStoreKind {
-  return raw === "memory" ? "memory" : "file";
+  const normalized = raw?.trim().toLowerCase();
+  if (normalized === "memory") {
+    return "memory";
+  }
+  if (normalized === "wal-file" || normalized === "wal_file" || normalized === "wal") {
+    return "wal-file";
+  }
+  return "file";
 }
 
 function parseCsvList(raw: string | undefined): string[] {

@@ -17,6 +17,7 @@ import {
 import {
   createUnifiedMemoryStoreFromEnv,
   InMemoryUnifiedMemoryStore,
+  WalFileUnifiedMemoryStore,
 } from "../src/memory/unified-memory-store.js";
 
 describe("UnifiedMemoryStore adapters", () => {
@@ -67,6 +68,35 @@ describe("UnifiedMemoryStore adapters", () => {
     const raw = await readFile(memoryFilePath, "utf8");
     expect(raw).toContain("persist-1");
     expect(raw).toContain("persisted");
+  });
+
+  it("wal-file store replays WAL after snapshot and survives crash between compactions", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-wal-memory-test-"));
+    const snapshotPath = path.join(tempDir, "memory.json");
+    const walPath = `${snapshotPath}.wal.jsonl`;
+    const store = new WalFileUnifiedMemoryStore(snapshotPath, { compactEvery: 100 });
+    const eve = new EveMemoryAdapter(store);
+    await eve.set({ lane: "eve", namespace: "chat", key: "k1" }, "v1");
+    await eve.set({ lane: "eve", namespace: "chat", key: "k2" }, "v2");
+    const walBefore = await readFile(walPath, "utf8");
+    expect(walBefore.split("\n").filter(Boolean).length).toBeGreaterThanOrEqual(2);
+
+    const store2 = new WalFileUnifiedMemoryStore(snapshotPath, { compactEvery: 100 });
+    expect((await store2.get({ lane: "eve", namespace: "chat", key: "k1" }))?.value).toBe("v1");
+    expect((await store2.get({ lane: "eve", namespace: "chat", key: "k2" }))?.value).toBe("v2");
+  });
+
+  it("wal-file store serializes concurrent writes without losing keys", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-wal-concurrent-test-"));
+    const snapshotPath = path.join(tempDir, "memory.json");
+    const store = new WalFileUnifiedMemoryStore(snapshotPath, { compactEvery: 10_000 });
+    await Promise.all(
+      Array.from({ length: 40 }, (_, i) =>
+        store.set({ lane: "shared", namespace: "n", key: `key-${i}` }, `val-${i}`),
+      ),
+    );
+    const listed = await store.list({ lane: "shared", namespace: "n" });
+    expect(listed).toHaveLength(40);
   });
 });
 

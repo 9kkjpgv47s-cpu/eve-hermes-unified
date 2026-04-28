@@ -206,15 +206,34 @@ function resolveBooleanCandidate(checks, keys) {
   return false;
 }
 
+function resolveCloseoutGateSignals(closeoutRunPayload) {
+  const checks =
+    closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
+      ? closeoutRunPayload.checks
+      : {};
+  const reported =
+    typeof checks.h2CloseoutGatePass === "boolean" ||
+    typeof checks.horizonCloseoutGatePass === "boolean";
+  const pass = resolveBooleanCandidate(checks, [
+    "h2CloseoutGatePass",
+    "horizonCloseoutGatePass",
+  ]);
+  return {
+    reported,
+    pass,
+    h2Reported: typeof checks.h2CloseoutGatePass === "boolean",
+    h2Pass: checks.h2CloseoutGatePass === true,
+    horizonReported: typeof checks.horizonCloseoutGatePass === "boolean",
+    horizonPass: checks.horizonCloseoutGatePass === true,
+  };
+}
+
 function resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload) {
   const checks =
     closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
       ? closeoutRunPayload.checks
       : {};
-  const supervisedSimulationPass = resolveBooleanCandidate(checks, [
-    "supervisedSimulationPass",
-    "h2CloseoutGatePass",
-  ]);
+  const supervisedSimulationPass = resolveBooleanCandidate(checks, ["supervisedSimulationPass"]);
   const validationPropagationPass = resolveBooleanCandidate(checks, [
     "supervisedSimulationStageGoalPolicyPropagationPassed",
     "supervisedSimulationStageGoalPolicyValidationPropagationPassed",
@@ -250,9 +269,15 @@ function resolveCloseoutRunH2CloseoutGate(closeoutRunPayload) {
     closeoutRunPayload?.checks && typeof closeoutRunPayload.checks === "object"
       ? closeoutRunPayload.checks
       : {};
+  const reported =
+    typeof checks.h2CloseoutGatePass === "boolean"
+    || typeof checks.horizonCloseoutGatePass === "boolean";
+  const pass =
+    checks.h2CloseoutGatePass === true
+    || checks.horizonCloseoutGatePass === true;
   return {
-    reported: typeof checks.h2CloseoutGatePass === "boolean",
-    pass: checks.h2CloseoutGatePass === true,
+    reported,
+    pass,
   };
 }
 
@@ -655,6 +680,7 @@ async function main() {
     allAligned: false,
     resolvedPath: "",
   };
+  let closeoutRunCloseoutGate = { reported: false, pass: false };
   let closeoutRunH2CloseoutGate = { reported: false, pass: false };
   let closeoutRunStageGoalPolicySignals = { reported: false, pass: false };
   let closeoutRunSchemaValidation = { valid: false, errors: ["closeout_run_not_loaded"] };
@@ -675,7 +701,8 @@ async function main() {
         nextHorizon,
       );
       closeoutRunPathSignals = resolveCloseoutRunCloseoutPathSignals(closeoutRunPayload, closeoutRunFile);
-      closeoutRunH2CloseoutGate = resolveCloseoutRunH2CloseoutGate(closeoutRunPayload);
+      closeoutRunCloseoutGate = resolveCloseoutRunH2CloseoutGate(closeoutRunPayload);
+      closeoutRunH2CloseoutGate = closeoutRunCloseoutGate;
       closeoutRunStageGoalPolicySignals = resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload);
       if (closeoutRunPayload?.pass !== true) {
         failures.push("closeout_run_not_passed");
@@ -704,11 +731,17 @@ async function main() {
           );
         }
       }
-      if (sourceHorizon === "H2" && failures.length === 0) {
-        if (!closeoutRunH2CloseoutGate.reported) {
-          failures.push("closeout_run_h2_closeout_gate_not_reported");
-        } else if (!closeoutRunH2CloseoutGate.pass) {
-          failures.push("closeout_run_h2_closeout_gate_not_passed");
+      if (failures.length === 0) {
+        if (!closeoutRunCloseoutGate.reported) {
+          failures.push("closeout_run_horizon_closeout_gate_not_reported");
+          if (sourceHorizon === "H2") {
+            failures.push("closeout_run_h2_closeout_gate_not_reported");
+          }
+        } else if (!closeoutRunCloseoutGate.pass) {
+          failures.push("closeout_run_horizon_closeout_gate_not_passed");
+          if (sourceHorizon === "H2") {
+            failures.push("closeout_run_h2_closeout_gate_not_passed");
+          }
         } else if (!closeoutRunStageGoalPolicySignals.validationReported) {
           failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported");
         } else if (!closeoutRunStageGoalPolicySignals.sourceConsistencyReported) {
@@ -1137,6 +1170,8 @@ async function main() {
         closeoutRunTransition.nextReported && closeoutTransition.nextReported
           ? closeoutRunTransition.next === closeoutTransition.next
           : null,
+      closeoutRunCloseoutGateReported: closeoutRunCloseoutGate.reported,
+      closeoutRunCloseoutGatePass: closeoutRunCloseoutGate.pass,
       closeoutRunH2CloseoutGateReported: closeoutRunH2CloseoutGate.reported,
       closeoutRunH2CloseoutGatePass: closeoutRunH2CloseoutGate.pass,
       closeoutRunSupervisedSimulationPass:

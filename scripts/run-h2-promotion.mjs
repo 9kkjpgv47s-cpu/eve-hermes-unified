@@ -260,6 +260,22 @@ function closeoutRunFailureCode(sourceHorizon, detail) {
     : `horizon_closeout_run_${sourceHorizon.toLowerCase()}_${detail}`;
 }
 
+function closeoutRunFailureCodes(sourceHorizon, detail) {
+  const canonical = `horizon_closeout_run_${detail}`;
+  const scoped = closeoutRunFailureCode(sourceHorizon, detail);
+  if (canonical === scoped) {
+    return [canonical];
+  }
+  return [canonical, scoped];
+}
+
+function addCloseoutRunFailure(failures, sourceHorizon, detail, reason = "") {
+  const normalizedReason = String(reason ?? "").trim();
+  for (const code of closeoutRunFailureCodes(sourceHorizon, detail)) {
+    failures.push(normalizedReason.length > 0 ? `${code}:${normalizedReason}` : code);
+  }
+}
+
 function resolveBooleanCandidate(checks, keys) {
   for (const key of keys) {
     if (checks?.[key] === true) {
@@ -818,11 +834,9 @@ async function main() {
     closeoutRunPayload = await readJsonMaybe(closeoutRunOut);
     closeoutRunSchemaValidation = validateManifestSchema(closeoutRunManifestType, closeoutRunPayload);
     if (!closeoutRunSchemaValidation.valid) {
-      failures.push(
-        ...closeoutRunSchemaValidation.errors.map(
-          (error) => `${closeoutRunFailureCode(sourceHorizon, "schema_invalid")}:${error}`,
-        ),
-      );
+      for (const error of closeoutRunSchemaValidation.errors) {
+        addCloseoutRunFailure(failures, sourceHorizon, "schema_invalid", error);
+      }
     }
     const forceMissingCloseoutRunSimulationSignals = resolveBooleanCandidate(process.env, [
       "UNIFIED_FORCE_MISSING_SIMULATION_STAGE_SIGNALS",
@@ -852,27 +866,27 @@ async function main() {
     );
     closeoutRunSimulationSignals = resolveCloseoutRunSimulationSignals(closeoutRunPayload);
     if (closeoutRunCommand.code !== 0 || closeoutRunPayload?.pass !== true) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "failed"));
+      addCloseoutRunFailure(failures, sourceHorizon, "failed");
     } else if (closeoutRunTransition.sourceInvalid) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_source_invalid"));
+      addCloseoutRunFailure(failures, sourceHorizon, "horizon_source_invalid");
     } else if (!closeoutRunTransition.sourceReported) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_source_not_reported"));
+      addCloseoutRunFailure(failures, sourceHorizon, "horizon_source_not_reported");
     } else if (closeoutRunTransition.sourceAliasConflict) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_source_alias_conflict"));
+      addCloseoutRunFailure(failures, sourceHorizon, "horizon_source_alias_conflict");
     } else if (!closeoutRunTransition.sourceMatches) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_source_mismatch"));
+      addCloseoutRunFailure(failures, sourceHorizon, "horizon_source_mismatch");
     } else if (closeoutRunTransition.nextInvalid) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_next_invalid"));
+      addCloseoutRunFailure(failures, sourceHorizon, "horizon_next_invalid");
     } else if (!closeoutRunTransition.nextReported) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_next_not_reported"));
+      addCloseoutRunFailure(failures, sourceHorizon, "horizon_next_not_reported");
     } else if (closeoutRunTransition.nextAliasConflict) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_next_alias_conflict"));
+      addCloseoutRunFailure(failures, sourceHorizon, "horizon_next_alias_conflict");
     } else if (!closeoutRunTransition.nextMatches) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "horizon_next_mismatch"));
+      addCloseoutRunFailure(failures, sourceHorizon, "horizon_next_mismatch");
     } else if (closeoutArtifactReference.conflict) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "conflicting_closeout_out_paths"));
+      addCloseoutRunFailure(failures, sourceHorizon, "conflicting_closeout_out_paths");
     } else if (!closeoutArtifactReference.reported) {
-      failures.push(closeoutRunFailureCode(sourceHorizon, "missing_closeout_out"));
+      addCloseoutRunFailure(failures, sourceHorizon, "missing_closeout_out");
     } else {
       closeoutArtifactPayload = await readJsonMaybe(closeoutArtifactReference.path);
       closeoutArtifactSchemaValidation = validateManifestSchema(
@@ -895,63 +909,69 @@ async function main() {
         closeoutArtifactTransition,
       );
       if (!closeoutArtifactPayload) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_missing"));
+        addCloseoutRunFailure(failures, sourceHorizon, "closeout_artifact_missing");
       } else if (!closeoutArtifactSchemaValidation.valid) {
-        failures.push(
-          ...closeoutArtifactSchemaValidation.errors.map(
-            (error) =>
-              `${closeoutRunFailureCode(sourceHorizon, "closeout_artifact_schema_invalid")}:${error}`,
-          ),
-        );
+        for (const error of closeoutArtifactSchemaValidation.errors) {
+          addCloseoutRunFailure(
+            failures,
+            sourceHorizon,
+            "closeout_artifact_schema_invalid",
+            error,
+          );
+        }
       } else if (!closeoutArtifactPass) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_not_passed"));
+        addCloseoutRunFailure(failures, sourceHorizon, "closeout_artifact_not_passed");
       } else if (closeoutArtifactTransition.sourceInvalid) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_source_invalid"));
+        addCloseoutRunFailure(failures, sourceHorizon, "closeout_artifact_horizon_source_invalid");
       } else if (!closeoutArtifactTransition.sourceReported) {
-        failures.push(
-          closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_source_not_reported"),
-        );
+        addCloseoutRunFailure(failures, sourceHorizon, "closeout_artifact_horizon_source_not_reported");
       } else if (closeoutArtifactTransition.sourceAliasConflict) {
-        failures.push(
-          closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_source_alias_conflict"),
+        addCloseoutRunFailure(
+          failures,
+          sourceHorizon,
+          "closeout_artifact_horizon_source_alias_conflict",
         );
       } else if (!closeoutArtifactTransition.sourceMatches) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_source_mismatch"));
+        addCloseoutRunFailure(failures, sourceHorizon, "closeout_artifact_horizon_source_mismatch");
       } else if (closeoutArtifactTransition.nextInvalid) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_next_invalid"));
+        addCloseoutRunFailure(failures, sourceHorizon, "closeout_artifact_horizon_next_invalid");
       } else if (!closeoutArtifactTransition.nextReported) {
-        failures.push(
-          closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_next_not_reported"),
-        );
+        addCloseoutRunFailure(failures, sourceHorizon, "closeout_artifact_horizon_next_not_reported");
       } else if (closeoutArtifactTransition.nextAliasConflict) {
-        failures.push(
-          closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_next_alias_conflict"),
+        addCloseoutRunFailure(
+          failures,
+          sourceHorizon,
+          "closeout_artifact_horizon_next_alias_conflict",
         );
       } else if (!closeoutArtifactTransition.nextMatches) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "closeout_artifact_horizon_next_mismatch"));
+        addCloseoutRunFailure(failures, sourceHorizon, "closeout_artifact_horizon_next_mismatch");
       } else if (!closeoutTransitionAlignment.sourceComparable) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "transition_source_alignment_not_comparable"));
+        addCloseoutRunFailure(failures, sourceHorizon, "transition_source_alignment_not_comparable");
       } else if (!closeoutTransitionAlignment.sourceAligned) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "transition_source_misaligned"));
+        addCloseoutRunFailure(failures, sourceHorizon, "transition_source_misaligned");
       } else if (!closeoutTransitionAlignment.nextComparable) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "transition_next_alignment_not_comparable"));
+        addCloseoutRunFailure(failures, sourceHorizon, "transition_next_alignment_not_comparable");
       } else if (!closeoutTransitionAlignment.nextAligned) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "transition_next_misaligned"));
+        addCloseoutRunFailure(failures, sourceHorizon, "transition_next_misaligned");
       } else if (!closeoutRunSimulationSignals.h2CloseoutGateReported) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "gate_not_reported"));
+        addCloseoutRunFailure(failures, sourceHorizon, "gate_not_reported");
       } else if (!closeoutRunSimulationSignals.h2CloseoutGatePass) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "gate_not_passed"));
+        addCloseoutRunFailure(failures, sourceHorizon, "gate_not_passed");
       } else if (!closeoutRunSimulationSignals.validationPropagationReported) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "missing_supervised_stage_goal_policy"));
+        addCloseoutRunFailure(failures, sourceHorizon, "missing_supervised_stage_goal_policy");
       } else if (!closeoutRunSimulationSignals.sourceConsistencyPropagationReported) {
-        failures.push(
-          closeoutRunFailureCode(sourceHorizon, "missing_supervised_stage_goal_policy_source_consistency"),
+        addCloseoutRunFailure(
+          failures,
+          sourceHorizon,
+          "missing_supervised_stage_goal_policy_source_consistency",
         );
       } else if (!closeoutRunSimulationSignals.validationPropagationPassed) {
-        failures.push(closeoutRunFailureCode(sourceHorizon, "supervised_stage_goal_policy_not_passed"));
+        addCloseoutRunFailure(failures, sourceHorizon, "supervised_stage_goal_policy_not_passed");
       } else if (!closeoutRunSimulationSignals.sourceConsistencyPropagationPassed) {
-        failures.push(
-          closeoutRunFailureCode(sourceHorizon, "supervised_stage_goal_policy_source_consistency_not_passed"),
+        addCloseoutRunFailure(
+          failures,
+          sourceHorizon,
+          "supervised_stage_goal_policy_source_consistency_not_passed",
         );
       }
     }
@@ -1176,6 +1196,8 @@ async function main() {
           : null,
       closeoutRunH2CloseoutGateReported: closeoutRunSimulationSignals.h2CloseoutGateReported,
       closeoutRunH2CloseoutGatePass: closeoutRunSimulationSignals.h2CloseoutGatePass,
+      closeoutRunCloseoutGateReported: closeoutRunSimulationSignals.closeoutGateReported,
+      closeoutRunCloseoutGatePass: closeoutRunSimulationSignals.closeoutGatePass,
       closeoutRunSupervisedSimulationPass: closeoutRunSimulationSignals.supervisedSimulationPass,
       closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported:
         closeoutRunSimulationSignals.propagationReported,

@@ -416,6 +416,7 @@ describe("run-h2-closeout.mjs", () => {
           calibrationPass: boolean;
           supervisedSimulationPass: boolean;
           supervisedSimulationStageGoalPolicyPropagationPassed: boolean;
+          horizonCloseoutGatePass: boolean;
           h2CloseoutGatePass: boolean;
         };
         failures: string[];
@@ -424,6 +425,7 @@ describe("run-h2-closeout.mjs", () => {
       expect(payload.checks.calibrationPass).toBe(true);
       expect(payload.checks.supervisedSimulationPass).toBe(true);
       expect(payload.checks.supervisedSimulationStageGoalPolicyPropagationPassed).toBe(true);
+      expect(payload.checks.horizonCloseoutGatePass).toBe(true);
       expect(payload.checks.h2CloseoutGatePass).toBe(true);
       expect(payload.failures).toEqual([]);
     });
@@ -547,6 +549,7 @@ describe("run-h2-closeout.mjs", () => {
         failures: string[];
       };
       expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("horizon_closeout_gate_failed");
       expect(payload.failures).toContain("h2_closeout_gate_failed");
     });
   });

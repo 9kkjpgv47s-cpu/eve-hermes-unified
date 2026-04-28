@@ -730,12 +730,15 @@ describe("promote-horizon.mjs", () => {
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
         checks: {
+          closeoutRunCloseoutGatePass: boolean;
           closeoutRunH2CloseoutGatePass: boolean;
         };
         failures: string[];
       };
       expect(payload.pass).toBe(false);
+      expect(payload.checks.closeoutRunCloseoutGatePass).toBe(false);
       expect(payload.checks.closeoutRunH2CloseoutGatePass).toBe(false);
+      expect(payload.failures).toContain("closeout_run_horizon_closeout_gate_not_passed");
       expect(payload.failures).toContain("closeout_run_h2_closeout_gate_not_passed");
     });
   });

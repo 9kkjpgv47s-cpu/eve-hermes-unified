@@ -134,6 +134,13 @@ function deriveNextHorizon(sourceHorizon) {
   return HORIZON_SEQUENCE[sourceIndex + 1];
 }
 
+function appendCloseoutGateFailure(failures, sourceHorizon) {
+  failures.push("horizon_closeout_gate_failed");
+  if (sourceHorizon === "H2") {
+    failures.push("h2_closeout_gate_failed");
+  }
+}
+
 function resolveBooleanCandidate(checks, keys) {
   for (const key of keys) {
     if (checks?.[key] === true) {
@@ -567,8 +574,7 @@ async function main() {
       failures.push(`closeout_next_horizon_mismatch:${closeoutNext}!=${nextHorizon}`);
     }
     if (closeoutCommand.code !== 0 || closeoutPayload?.pass !== true) {
-      failures.push("horizon_closeout_gate_failed");
-      failures.push("h2_closeout_gate_failed");
+      appendCloseoutGateFailure(failures, sourceHorizon);
     }
   }
 
@@ -644,11 +650,13 @@ async function main() {
       shadowRestored: simulationPayload?.checks?.shadowRestored === true,
       requireCompletedActions: options.requireCompletedActions,
       requireActiveNextHorizon: options.requireActiveNextHorizon,
+      sourceHorizon,
       nextHorizon,
     },
     commands: {
       calibration: calibrationCommand,
       supervisedSimulation: simulationCommand,
+      horizonCloseout: closeoutCommand,
       h2Closeout: closeoutCommand,
     },
     failures,

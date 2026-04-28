@@ -253,6 +253,12 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
+  const hermesPrimaryChatIds = parseCsvList(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_HERMES_PRIMARY_CHAT_IDS",
+      "ROUTER_HERMES_PRIMARY_CHAT_IDS",
+    ]),
+  );
 
   return {
     eveDispatchScript,
@@ -281,6 +287,7 @@ export function loadUnifiedRuntimeEnvConfig(
       defaultFallback,
       failClosed,
       policyVersion,
+      hermesPrimaryChatIds,
       cutoverStage,
       canaryChatIds,
       majorityPercent,

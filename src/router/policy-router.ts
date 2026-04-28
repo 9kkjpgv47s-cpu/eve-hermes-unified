@@ -8,6 +8,8 @@ export type RouterPolicyConfig = {
   defaultFallback: LaneId | "none";
   failClosed: boolean;
   policyVersion: string;
+  /** When set, these chats use Hermes as primary without enabling full cutover staging. */
+  hermesPrimaryChatIds?: string[];
   cutoverStage?: RouterCutoverStage;
   canaryChatIds?: string[];
   majorityPercent?: number;
@@ -119,6 +121,17 @@ export function routeMessage(
       primaryLane: "hermes",
       fallbackLane: config.defaultFallback,
       reason: "explicit_hermes_passthrough",
+      policyVersion: config.policyVersion,
+      failClosed: config.failClosed,
+    });
+  }
+
+  const hermesPrimaryChats = normalizeChatIds(config.hermesPrimaryChatIds);
+  if (hermesPrimaryChats.has(envelope.chatId)) {
+    return validateRoutingDecision({
+      primaryLane: "hermes",
+      fallbackLane: config.defaultFallback,
+      reason: "router_hermes_primary_allowlist",
       policyVersion: config.policyVersion,
       failClosed: config.failClosed,
     });

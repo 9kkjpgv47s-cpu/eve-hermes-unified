@@ -140,4 +140,15 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.hashSalt).toBe("salt-1");
     expect(config.preflight.enabled).toBe(false);
   });
+
+  it("parses Hermes-primary chat allowlist", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_HERMES_PRIMARY_CHAT_IDS: "vip-1, vip-2 ",
+        }),
+      ),
+    );
+    expect(config.routerConfig.hermesPrimaryChatIds).toEqual(["vip-1", "vip-2"]);
+  });
 });

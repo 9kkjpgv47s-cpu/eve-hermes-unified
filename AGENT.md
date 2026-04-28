@@ -9,8 +9,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 ## Current Program State
 
 - Horizon: `H5` (`docs/HORIZON_STATUS.json`, in progress)
-- Completed in-repo slices: H3–H5 through **h5-action-10** (H6 program scaffolded in `docs/HORIZON_STATUS.json` and `docs/GOAL_POLICIES.json`; `validate:all` runs `validate:h5-evidence-bundle` for the H5 evidence bundle).
-- Primary focus: **h6-action-4** (H6 closeout evidence bundle + promote:horizon H5→H6 documentation) per `docs/H6_PROGRAM.md`
+- Completed in-repo slices: H3–H5 through **h5-action-10**; H6 **h6-action-1..4** (partition evidence + **`validate:h6-closeout`** in **`validate:all`**). Optional **h6-action-5** when advancing status after promotion.
+- Primary focus: optional **h6-action-5** (post-promotion status / next horizon seeding) when operators run **`promote:horizon`**
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -62,6 +62,7 @@ npm run run:remediation-playbook-dry-run
 npm run run:h5-region-misalignment-drill
 npm run run:h6-partition-drill
 npm run validate:h5-evidence-bundle
+npm run validate:h6-closeout
 npm run validate:h5-closeout
 ```
 

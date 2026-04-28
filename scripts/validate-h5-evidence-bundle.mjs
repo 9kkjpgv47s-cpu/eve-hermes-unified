@@ -4,6 +4,7 @@
  * (validation summary soak dimensions, region drill v2, H6 partition drill, rollback rehearsal, remediation dry-run).
  * Emits a horizon-closeout schema manifest for optional promote:horizon --closeout-file.
  * Full H5 horizon closeout (required evidence + this bundle) is `npm run validate:h5-closeout`.
+ * After a passing bundle, `npm run validate:h6-closeout` wraps the latest `h5-closeout-*.json` for H5→H6 promotion pinning (h6-action-4).
  */
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";

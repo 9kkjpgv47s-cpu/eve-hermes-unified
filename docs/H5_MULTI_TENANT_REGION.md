@@ -58,6 +58,16 @@ This selects the newest `validation-summary-*.json`, `h5-region-misalignment-dri
 
 Full **H5 horizon closeout** (required global evidence plus the bundle above) uses `npm run validate:h5-closeout`, which runs `validate-horizon-closeout.mjs` for `--horizon H5 --next-horizon H6` with `--require-h5-evidence-bundle` so the evidence bundle gate runs in the same process as standard closeout checks. Operators may pin the emitted manifest for **`npm run promote:horizon`** when marking H5 completed per `docs/CLOUD_AGENT_HANDOFF.md` and local promotion policy.
 
+## H6 closeout wrapper (h6-action-4)
+
+After **`npm run validate:h5-evidence-bundle`** produces a passing **`h5-closeout-*.json`**, run:
+
+```bash
+npm run validate:h6-closeout
+```
+
+This writes **`evidence/h6-closeout-*.json`** (`schemaVersion: h6-closeout-v1`) with **`closeout.horizon: H5`**, **`closeout.nextHorizon: H6`**, and an **`upstream`** snapshot of the latest H5 bundle — suitable for **`promote:horizon --closeout-file`** with **`--goal-policy-key H5->H6`**. See **`docs/H6_PROGRAM.md`** for the full promotion recipe.
+
 ## H6 partition operator drill (h6-action-3)
 
 ```bash

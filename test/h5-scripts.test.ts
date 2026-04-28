@@ -278,6 +278,57 @@ describe("H5 operator scripts", () => {
     });
   });
 
+  it("validate-h6-closeout fails when no h5-closeout manifest exists", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const outPath = path.join(evidenceDir, "h6-closeout-fail.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h6-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as { pass?: boolean; failures?: string[] };
+      expect(parsed.pass).toBe(false);
+      expect(parsed.failures?.some((f) => f.includes("missing_h5_evidence_closeout_manifest"))).toBe(true);
+    });
+  });
+
+  it("validate-h6-closeout passes when latest h5-closeout bundle passed", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990104-000000";
+      await writeFile(
+        path.join(evidenceDir, `h5-closeout-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          pass: true,
+          closeout: { horizon: "H5", nextHorizon: null, canCloseHorizon: true, canStartNextHorizon: false },
+          checks: { horizonCloseoutGatePass: true },
+          failures: [],
+        }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h6-closeout-pass.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h6-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(0);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as {
+        pass?: boolean;
+        schemaVersion?: string;
+        closeout?: { horizon?: string; nextHorizon?: string };
+        checks?: { h6HorizonCloseoutGatePass?: boolean; horizonCloseoutGatePass?: boolean };
+      };
+      expect(parsed.pass).toBe(true);
+      expect(parsed.schemaVersion).toBe("h6-closeout-v1");
+      expect(parsed.closeout?.horizon).toBe("H5");
+      expect(parsed.closeout?.nextHorizon).toBe("H6");
+      expect(parsed.checks?.h6HorizonCloseoutGatePass).toBe(true);
+      expect(parsed.checks?.horizonCloseoutGatePass).toBe(true);
+    });
+  });
+
   it("validate-h5-tenant-isolation emits valid JSON", async () => {
     const result = await runCommandWithTimeout(["node", "scripts/validate-h5-tenant-isolation.mjs"], {
       timeoutMs: 10_000,

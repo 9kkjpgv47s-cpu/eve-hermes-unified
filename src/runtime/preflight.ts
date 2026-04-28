@@ -11,8 +11,13 @@ export type RuntimePreflightConfig = {
   hermesLaunchCommand: string;
   unifiedMemoryStoreKind: "file" | "memory";
   unifiedMemoryFilePath: string;
+  unifiedMemoryDualWriteFilePath?: string;
+  dispatchDurableWalPath?: string;
   auditEnabled?: boolean;
   auditLogPath: string;
+  tenantIsolationStrict?: boolean;
+  /** Effective tenant id after CLI/env merge; used when strict isolation is on. */
+  dispatchTenantId?: string;
 };
 
 function shellEscape(value: string): string {
@@ -76,6 +81,31 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     if (!memoryWritable) {
       issues.push(`Unified memory file path is not writable: ${config.unifiedMemoryFilePath}`);
     }
+    const shadow = config.unifiedMemoryDualWriteFilePath?.trim();
+    if (shadow && shadow.length > 0) {
+      const resolvedPrimary = path.resolve(config.unifiedMemoryFilePath);
+      const resolvedShadow = path.resolve(shadow);
+      if (resolvedPrimary === resolvedShadow) {
+        issues.push("Unified memory dual-write shadow path must differ from primary memory file path.");
+      } else {
+        const shadowWritable = await checkWritableParent(shadow);
+        if (!shadowWritable) {
+          issues.push(`Unified memory dual-write shadow path is not writable: ${shadow}`);
+        }
+      }
+    }
+  }
+
+  const wal = config.dispatchDurableWalPath?.trim();
+  if (wal && wal.length > 0) {
+    const walWritable = await checkWritableParent(wal);
+    if (!walWritable) {
+      issues.push(`Dispatch durable WAL path is not writable: ${wal}`);
+    }
+  }
+
+  if (config.tenantIsolationStrict && !config.dispatchTenantId?.trim()) {
+    issues.push("Tenant isolation strict mode requires a non-empty tenant id (set UNIFIED_DISPATCH_DEFAULT_TENANT_ID or pass --tenant-id).");
   }
 
   if (config.auditEnabled) {

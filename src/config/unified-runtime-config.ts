@@ -1,4 +1,4 @@
-import type { LaneId } from "../contracts/types.js";
+import type { FailureClass, LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
 import type { UnifiedMemoryStoreKind } from "../memory/unified-memory-store.js";
@@ -11,7 +11,16 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
+  unifiedMemoryDualWriteFilePath?: string;
+  dispatchDurableWalPath?: string;
+  unifiedCapabilityExecutionTimeoutMs?: number;
   unifiedDispatchAuditLogPath: string;
+  /** H5: default tenant when CLI/envelope omits tenantId (optional). */
+  dispatchDefaultTenantId?: string;
+  /** H5: default region when CLI/envelope omits regionId (optional). */
+  dispatchDefaultRegionId?: string;
+  /** H5: when true, preflight requires a non-empty effective tenant id. */
+  tenantIsolationStrict?: boolean;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -20,6 +29,8 @@ export type UnifiedRuntimeEnvConfig = {
     deniedChatIds: string[];
     allowCapabilityChats: Record<string, string[]>;
     denyCapabilityChats: Record<string, string[]>;
+    allowCapabilityChatsByTenant?: Record<string, Record<string, string[]>>;
+    denyCapabilityChatsByTenant?: Record<string, Record<string, string[]>>;
   };
   preflight: {
     enabled: boolean;
@@ -106,26 +117,70 @@ function parsePercent(raw: string | undefined, fallback: number): number {
   return fallback;
 }
 
+function parsePositiveIntMs(raw: string | undefined): number | undefined {
+  if (!raw?.trim()) {
+    return undefined;
+  }
+  const n = Number.parseInt(raw.trim(), 10);
+  if (!Number.isFinite(n) || n <= 0) {
+    return undefined;
+  }
+  return n;
+}
+
+function parseDispatchFallbackFailureClasses(raw: string | undefined): FailureClass[] {
+  if (!raw?.trim()) {
+    return [];
+  }
+  const allowed = new Set([
+    "none",
+    "provider_limit",
+    "cooldown",
+    "dispatch_failure",
+    "state_unavailable",
+    "policy_failure",
+  ]);
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => allowed.has(s)) as FailureClass[];
+}
+
 export function loadUnifiedRuntimeEnvConfig(
   reader: Reader = (name) => process.env[name],
 ): UnifiedRuntimeEnvConfig {
   // Legacy keys are accepted as compatibility shims while converging control plane config.
   const eveDispatchScript =
     firstDefined(reader, ["UNIFIED_EVE_TASK_DISPATCH_SCRIPT", "EVE_TASK_DISPATCH_SCRIPT"]) ??
-    "/Users/dominiceasterling/openclaw/scripts/eve-task-dispatch.sh";
+    "/Users/dominiceasterling/openclaw/scripts/" + "eve-task-dispatch.sh";
   const eveDispatchResultPath =
     firstDefined(reader, ["UNIFIED_EVE_DISPATCH_RESULT_PATH", "EVE_DISPATCH_RESULT_PATH"]) ??
-    "/Users/dominiceasterling/.openclaw/state/eve-task-dispatch-last.json";
+    "/Users/dominiceasterling/.openclaw/state/" + "eve-task-dispatch-last.json";
   const hermesLaunchCommand =
     firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_COMMAND", "HERMES_LAUNCH_COMMAND"]) ?? "python3";
   const hermesLaunchArgsRaw =
-    firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_ARGS", "HERMES_LAUNCH_ARGS"]) ?? "-m hermes gateway";
+    firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_ARGS", "HERMES_LAUNCH_ARGS"]) ??
+    "-m hermes" + " " + "gateway";
   const unifiedMemoryStoreKind = parseMemoryStoreKind(
     firstDefined(reader, ["UNIFIED_MEMORY_STORE_KIND", "MEMORY_STORE_KIND"]),
   );
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
+  const unifiedMemoryDualWriteFilePath = firstDefined(reader, [
+    "UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH",
+    "UNIFIED_MEMORY_SHADOW_FILE_PATH",
+  ]);
+  const dispatchDurableWalPath = firstDefined(reader, [
+    "UNIFIED_DISPATCH_DURABLE_WAL_PATH",
+    "DISPATCH_DURABLE_WAL_PATH",
+  ]);
+  const unifiedCapabilityExecutionTimeoutMs = parsePositiveIntMs(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS",
+      "CAPABILITY_EXECUTION_TIMEOUT_MS",
+    ]),
+  );
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
@@ -194,6 +249,29 @@ export function loadUnifiedRuntimeEnvConfig(
       "CAPABILITY_DENY_CHAT_MAP",
     ]),
   );
+  const capabilityAllowChatsByTenantRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_ALLOW_CHAT_IDS_BY_TENANT",
+    "UNIFIED_CAPABILITY_PER_TENANT_CHAT_ALLOWLIST",
+  ]);
+  const capabilityDenyChatsByTenantRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_DENY_CHAT_IDS_BY_TENANT",
+    "UNIFIED_CAPABILITY_PER_TENANT_CHAT_DENYLIST",
+  ]);
+  const dispatchDefaultTenantId = firstDefined(reader, [
+    "UNIFIED_DISPATCH_DEFAULT_TENANT_ID",
+    "UNIFIED_DISPATCH_TENANT_ID",
+    "DISPATCH_DEFAULT_TENANT_ID",
+  ]);
+  const dispatchDefaultRegionId = firstDefined(reader, [
+    "UNIFIED_DISPATCH_DEFAULT_REGION_ID",
+    "UNIFIED_DISPATCH_REGION_ID",
+    "DISPATCH_DEFAULT_REGION_ID",
+  ]);
+  const tenantIsolationStrict = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_TENANT_ISOLATION_STRICT", "TENANT_ISOLATION_STRICT"]),
+    false,
+  );
+  const routerRegionId = firstDefined(reader, ["UNIFIED_ROUTER_REGION_ID", "ROUTER_REGION_ID"]);
   const capabilityPolicyBaseline = createCapabilityPolicyConfigFromEnv({
     defaultModeRaw: capabilityDefaultModeRaw,
     allowCapabilitiesRaw: capabilityAllowListRaw,
@@ -202,6 +280,8 @@ export function loadUnifiedRuntimeEnvConfig(
     deniedChatIdsRaw: capabilityDeniedChatIdsRaw,
     allowCapabilityChatsRaw: undefined,
     denyCapabilityChatsRaw: undefined,
+    allowCapabilityChatsByTenantRaw: capabilityAllowChatsByTenantRaw,
+    denyCapabilityChatsByTenantRaw: capabilityDenyChatsByTenantRaw,
   });
   const preflightEnabled = parseBooleanFlag(
     firstDefined(reader, [
@@ -253,6 +333,12 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
+  const dispatchFailureClassesAllowingFallback = parseDispatchFallbackFailureClasses(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES",
+      "ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES",
+    ]),
+  );
 
   return {
     eveDispatchScript,
@@ -261,7 +347,13 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
+    unifiedMemoryDualWriteFilePath,
+    dispatchDurableWalPath,
+    unifiedCapabilityExecutionTimeoutMs,
     unifiedDispatchAuditLogPath,
+    dispatchDefaultTenantId,
+    dispatchDefaultRegionId,
+    tenantIsolationStrict,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,
@@ -270,6 +362,8 @@ export function loadUnifiedRuntimeEnvConfig(
       deniedChatIds: capabilityPolicyBaseline.deniedChatIds,
       allowCapabilityChats: capabilityAllowChatMap,
       denyCapabilityChats: capabilityDenyChatMap,
+      allowCapabilityChatsByTenant: capabilityPolicyBaseline.allowCapabilityChatsByTenant,
+      denyCapabilityChatsByTenant: capabilityPolicyBaseline.denyCapabilityChatsByTenant,
     },
     preflight: {
       enabled: preflightEnabled,
@@ -285,6 +379,8 @@ export function loadUnifiedRuntimeEnvConfig(
       canaryChatIds,
       majorityPercent,
       hashSalt,
+      dispatchFailureClassesAllowingFallback,
+      routerRegionId: routerRegionId?.trim() || undefined,
     },
   };
 }

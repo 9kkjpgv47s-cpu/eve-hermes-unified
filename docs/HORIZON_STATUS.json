@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T23:26:00Z",
+  "updatedAtIso": "2026-04-28T22:05:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H2",
+  "activeHorizon": "H5",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, supervised rollback simulation evidence generation, a machine-checkable H2 closeout gate, one-command closeout/promotion runners, a gated horizon-promotion command, and progressive goal-runway enforcement so each promotion can require larger next-horizon scope.",
+  "summary": "H5 autonomous operations slice is active: tenant-scoped memory and capability policy, region-aware deterministic routing, WAL replay parity for tenant/region, remediation dry-run manifests, and strict tenant preflight. Prior horizons H1–H4 remain closed in-repo with machine-verified validate:all evidence.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -157,43 +157,106 @@
       "id": "h3-action-1",
       "summary": "Harden runtime durability boundaries with persistent queue/replay semantics for cross-lane dispatch recovery.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "runtime"]
     },
     {
       "id": "h3-action-2",
       "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["policy-hardening", "runtime"]
     },
     {
       "id": "h3-action-3",
       "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["capability", "policy-hardening"]
     },
     {
       "id": "h3-action-4",
       "summary": "Add memory durability verification suite for crash/restart recovery and cross-lane consistency checks.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "memory"]
     },
     {
       "id": "h3-action-5",
       "summary": "Create long-window soak validation for H3 policy and durability changes with explicit SLO drift alarms.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
     },
     {
       "id": "h3-action-6",
       "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["rollback", "operations"]
+    },
+    {
+      "id": "h4-action-1",
+      "summary": "Pin versioned UnifiedDispatchResult contract metadata and propagate through audit logs.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["validation", "policy-hardening"]
+    },
+    {
+      "id": "h4-action-2",
+      "summary": "Add static scan gate blocking legacy Eve/Hermes adapter ingress outside unified dispatch allowlists.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["validation", "runtime"]
+    },
+    {
+      "id": "h4-action-3",
+      "summary": "Publish H4 unified dispatch contract documentation and conformance fixtures.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["validation", "memory"]
+    },
+    {
+      "id": "h4-action-4",
+      "summary": "Emit compact single-line JSON from unified-dispatch CLI for JSONL evidence pipelines.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h5-action-1",
+      "summary": "Tenant isolation model: optional envelope tenantId, tenant-scoped unified memory keys, per-tenant capability chat policy maps, and strict-tenant preflight.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["automation", "policy-hardening"]
+    },
+    {
+      "id": "h5-action-2",
+      "summary": "Region-aware deterministic routing (routerRegionId vs envelope regionId) with primary/fallback swap on mismatch; WAL attempt records and replay carry tenantId/regionId.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h5-action-3",
+      "summary": "Remediation playbook dry-run script emitting bounded operator manifest; tenant isolation validation wired into validate:all.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["rollback", "operations"]
+    },
+    {
+      "id": "h5-action-4",
+      "summary": "Extend soak and evidence summaries with explicit multi-tenant and multi-region drill dimensions.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "automation"]
+    },
+    {
+      "id": "h5-action-5",
+      "summary": "Optional tenant-scoped audit log partitioning and retention policy hooks.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["durability", "operations"]
     }
   ],
   "goalPolicies": {
@@ -261,20 +324,20 @@
       "summary": "Operationalization baseline closed with passing unified CI, artifact upload reliability, and downloaded artifact verification workflow."
     },
     "H2": {
-      "status": "in_progress",
+      "status": "completed",
       "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, H2-specific closeout evidence is machine-validated, one-command closeout and promotion runners are available, horizon advancement can consume pinned closeout-run evidence, and progressive goal-runway gates can require larger next-horizon scope before promotion."
     },
     "H3": {
-      "status": "planned",
-      "summary": "Runtime durability and policy maturity hardening."
+      "status": "completed",
+      "summary": "Dispatch durable WAL with replay closure, atomic and dual-write file memory, policy-gated fallback classes, capability execution timeout, soak drift summarization, and emergency rollback rehearsal manifests are implemented and covered by tests."
     },
     "H4": {
-      "status": "planned",
-      "summary": "Legacy path retirement and contract tightening."
+      "status": "completed",
+      "summary": "Versioned dispatch contract stamping, legacy ingress static scan in validate:all, contract documentation, and JSONL-friendly CLI output are in place."
     },
     "H5": {
-      "status": "planned",
-      "summary": "Autonomous operations and scale envelope."
+      "status": "in_progress",
+      "summary": "Tenant-scoped memory and capability policy, region-aware routing swap, WAL/audit tenant and region fields, remediation dry-run manifests, and follow-on validation runway actions are tracked here."
     }
   },
   "history": [
@@ -391,6 +454,24 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
+    },
+    {
+      "timestamp": "2026-04-28T21:50:00Z",
+      "horizon": "H3",
+      "status": "completed",
+      "note": "Closed H3 durability slice: durable dispatch WAL, replay CLI, atomic and dual-write memory, fallback failure-class gate, capability timeout, soak summarizer, emergency rollback rehearsal script, and shared dispatch runtime builder."
+    },
+    {
+      "timestamp": "2026-04-28T21:55:00Z",
+      "horizon": "H4",
+      "status": "completed",
+      "note": "Closed H4 contract slice: UNIFIED_DISPATCH_CONTRACT stamping, legacy dispatch entrypoint scan in CI validate:all, H4 contract doc, and compact JSON CLI output for evidence tooling."
+    },
+    {
+      "timestamp": "2026-04-28T22:05:00Z",
+      "horizon": "H5",
+      "status": "in_progress",
+      "note": "H5 core slice landed: tenantId/regionId on envelopes and WAL, tenant-scoped memory keys and capability execution records, routerRegionId region failover swap, per-tenant capability chat env maps, strict tenant preflight, remediation-playbook-dry-run and validate:h5-tenant-isolation in validate:all; seeded h5-action-4 and h5-action-5 for follow-on work."
     }
   ]
 }

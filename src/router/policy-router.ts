@@ -1,4 +1,4 @@
-import type { LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
+import type { FailureClass, LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
 import { validateRoutingDecision } from "../contracts/validate.js";
 
 export type RouterCutoverStage = "shadow" | "canary" | "majority" | "full";
@@ -8,10 +8,17 @@ export type RouterPolicyConfig = {
   defaultFallback: LaneId | "none";
   failClosed: boolean;
   policyVersion: string;
+  /**
+   * When non-empty, only these primary `DispatchState.failureClass` values may trigger automatic fallback.
+   * When empty/omitted, any primary failure may trigger fallback (subject to `failClosed` and `fallbackLane`).
+   */
+  dispatchFailureClassesAllowingFallback?: FailureClass[];
   cutoverStage?: RouterCutoverStage;
   canaryChatIds?: string[];
   majorityPercent?: number;
   hashSalt?: string;
+  /** H5: home region for the router instance; used with envelope.regionId for alignment. */
+  routerRegionId?: string;
 };
 
 function normalizeCutoverStage(value: RouterCutoverStage | undefined): RouterCutoverStage {
@@ -43,6 +50,37 @@ function stableBucketFromChatId(chatId: string, hashSalt: string | undefined): n
     hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
   }
   return hash % 100;
+}
+
+export function mergeRegionRouting(
+  envelope: UnifiedMessageEnvelope,
+  config: RouterPolicyConfig,
+  base: RoutingDecision,
+): RoutingDecision {
+  const dispatchRegionId = envelope.regionId?.trim();
+  const routerRegionId = config.routerRegionId?.trim();
+  const regionAligned =
+    !dispatchRegionId || !routerRegionId || dispatchRegionId === routerRegionId;
+  return validateRoutingDecision({
+    ...base,
+    dispatchRegionId: dispatchRegionId || undefined,
+    routerRegionId: routerRegionId || undefined,
+    regionAligned,
+  });
+}
+
+function swapLanesForRegionFailover(
+  base: Pick<RoutingDecision, "primaryLane" | "fallbackLane" | "reason">,
+): Pick<RoutingDecision, "primaryLane" | "fallbackLane" | "reason"> {
+  const { primaryLane, fallbackLane } = base;
+  if (fallbackLane === "none" || primaryLane === fallbackLane) {
+    return { ...base, reason: `${base.reason}_region_misaligned_no_swap` };
+  }
+  return {
+    primaryLane: fallbackLane,
+    fallbackLane: primaryLane,
+    reason: `${base.reason}_region_failover_swap`,
+  };
 }
 
 function defaultRouteForStage(
@@ -104,43 +142,91 @@ export function routeMessage(
   const text = envelope.text.trim();
   const lower = text.toLowerCase();
 
+  const regionMisaligned = Boolean(
+    envelope.regionId?.trim() &&
+      config.routerRegionId?.trim() &&
+      envelope.regionId.trim() !== config.routerRegionId.trim(),
+  );
+
   // Explicit lane commands take priority and are message-local.
   if (lower.startsWith("@cursor ")) {
-    return validateRoutingDecision({
-      primaryLane: "eve",
-      fallbackLane: config.defaultFallback,
-      reason: "explicit_cursor_passthrough",
-      policyVersion: config.policyVersion,
-      failClosed: config.failClosed,
-    });
+    const lanes = regionMisaligned
+      ? swapLanesForRegionFailover({
+          primaryLane: "eve",
+          fallbackLane: config.defaultFallback,
+          reason: "explicit_cursor_passthrough",
+        })
+      : { primaryLane: "eve" as const, fallbackLane: config.defaultFallback, reason: "explicit_cursor_passthrough" };
+    return mergeRegionRouting(
+      envelope,
+      config,
+      validateRoutingDecision({
+        primaryLane: lanes.primaryLane,
+        fallbackLane: lanes.fallbackLane,
+        reason: lanes.reason,
+        policyVersion: config.policyVersion,
+        failClosed: config.failClosed,
+      }),
+    );
   }
   if (lower.startsWith("@hermes ")) {
-    return validateRoutingDecision({
-      primaryLane: "hermes",
-      fallbackLane: config.defaultFallback,
-      reason: "explicit_hermes_passthrough",
-      policyVersion: config.policyVersion,
-      failClosed: config.failClosed,
-    });
+    const lanes = regionMisaligned
+      ? swapLanesForRegionFailover({
+          primaryLane: "hermes",
+          fallbackLane: config.defaultFallback,
+          reason: "explicit_hermes_passthrough",
+        })
+      : { primaryLane: "hermes" as const, fallbackLane: config.defaultFallback, reason: "explicit_hermes_passthrough" };
+    return mergeRegionRouting(
+      envelope,
+      config,
+      validateRoutingDecision({
+        primaryLane: lanes.primaryLane,
+        fallbackLane: lanes.fallbackLane,
+        reason: lanes.reason,
+        policyVersion: config.policyVersion,
+        failClosed: config.failClosed,
+      }),
+    );
   }
 
   // Default policy lane ownership can be stage-aware for cutover.
   if (config.cutoverStage) {
     const stagedDefaultRoute = defaultRouteForStage(envelope, config);
-    return validateRoutingDecision({
-      primaryLane: stagedDefaultRoute.primaryLane,
-      fallbackLane: stagedDefaultRoute.fallbackLane,
-      reason: stagedDefaultRoute.reason,
-      policyVersion: config.policyVersion,
-      failClosed: config.failClosed,
-    });
+    const lanes = regionMisaligned ? swapLanesForRegionFailover(stagedDefaultRoute) : stagedDefaultRoute;
+    return mergeRegionRouting(
+      envelope,
+      config,
+      validateRoutingDecision({
+        primaryLane: lanes.primaryLane,
+        fallbackLane: lanes.fallbackLane,
+        reason: lanes.reason,
+        policyVersion: config.policyVersion,
+        failClosed: config.failClosed,
+      }),
+    );
   }
 
-  return validateRoutingDecision({
-    primaryLane: config.defaultPrimary,
-    fallbackLane: config.defaultFallback,
-    reason: "default_policy_lane",
-    policyVersion: config.policyVersion,
-    failClosed: config.failClosed,
-  });
+  const defaultLanes = regionMisaligned
+    ? swapLanesForRegionFailover({
+        primaryLane: config.defaultPrimary,
+        fallbackLane: config.defaultFallback,
+        reason: "default_policy_lane",
+      })
+    : {
+        primaryLane: config.defaultPrimary,
+        fallbackLane: config.defaultFallback,
+        reason: "default_policy_lane",
+      };
+  return mergeRegionRouting(
+    envelope,
+    config,
+    validateRoutingDecision({
+      primaryLane: defaultLanes.primaryLane,
+      fallbackLane: defaultLanes.fallbackLane,
+      reason: defaultLanes.reason,
+      policyVersion: config.policyVersion,
+      failClosed: config.failClosed,
+    }),
+  );
 }

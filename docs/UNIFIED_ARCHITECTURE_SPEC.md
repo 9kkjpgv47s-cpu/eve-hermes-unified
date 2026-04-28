@@ -49,7 +49,7 @@ Every message receives:
 
 ## Lane Adapters
 
-- `EveAdapter` uses current `eve-task-dispatch.sh` contract and maps to canonical `DispatchState`.
+- `EveAdapter` uses the configured Eve dispatch script contract and maps to canonical `DispatchState`.
 - `HermesAdapter` runs a configurable Hermes launch command and maps result to canonical `DispatchState`.
 
 ## Security and Rollback

@@ -8,12 +8,9 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Branch (at handoff time): `cursor/h2-stage-drill-orchestrator-0f91`
-- Latest completed hardening slice:
-  - closeout taxonomy normalization toward horizon-neutral signals
-  - compatibility aliases preserved for H2-prefixed checks/failures
-  - full validation passing
+- Active horizon: `H5` (`docs/HORIZON_STATUS.json`, in progress)
+- Latest in-repo slice: tenant/region on envelopes and WAL, tenant-scoped memory keys, `UNIFIED_ROUTER_REGION_ID` failover swap, per-tenant capability chat env maps, `validate:h5-tenant-isolation` + `run:remediation-playbook-dry-run` in `validate:all`
+- See `docs/H5_MULTI_TENANT_REGION.md` for env and CLI details
 
 ## What Was Just Completed
 

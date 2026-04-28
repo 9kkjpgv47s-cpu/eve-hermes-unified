@@ -18,6 +18,10 @@ export type UnifiedMessageEnvelope = {
   receivedAtIso: string;
   text: string;
   metadata?: Record<string, string>;
+  /** H5: optional tenant scope for memory isolation and capability policy. */
+  tenantId?: string;
+  /** H5: optional region hint for routing alignment checks. */
+  regionId?: string;
 };
 
 export type RoutingDecision = {
@@ -26,6 +30,12 @@ export type RoutingDecision = {
   reason: string;
   policyVersion: string;
   failClosed: boolean;
+  /** H5: region from envelope when present. */
+  dispatchRegionId?: string;
+  /** H5: configured router home region when set. */
+  routerRegionId?: string;
+  /** H5: false when both region ids are set and differ (primary/fallback may be swapped). */
+  regionAligned?: boolean;
 };
 
 export type DispatchState = {
@@ -80,7 +90,13 @@ export type UnifiedDispatchResult = {
   primaryState: DispatchState;
   fallbackState?: DispatchState;
   fallbackInfo?: DispatchFallbackInfo;
+  /** When true, automatic cross-lane fallback was skipped by policy (failure class not allowlisted). */
+  primaryFallbackLimited?: boolean;
   capabilityDecision?: UnifiedCapabilityDecision;
   capabilityExecution?: CapabilityExecutionResult;
   response: UnifiedResponse;
+  /** H4: pinned contract version for downstream consumers. */
+  contractVersion?: string;
+  /** H4: human-readable schema reference (path or URL). */
+  contractSchemaRef?: string;
 };

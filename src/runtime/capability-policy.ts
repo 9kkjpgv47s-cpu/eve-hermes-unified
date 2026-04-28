@@ -6,6 +6,15 @@ export type CapabilityPolicyConfig = {
   deniedChatIds: string[];
   allowCapabilityChats: Record<string, string[]>;
   denyCapabilityChats: Record<string, string[]>;
+  /**
+   * H5: per-tenant per-capability chat allowlists.
+   * Parsed from env segments `tenant/capability_id:chatA,chatB`.
+   */
+  allowCapabilityChatsByTenant?: Record<string, Record<string, string[]>>;
+  /**
+   * H5: per-tenant per-capability chat denylists.
+   */
+  denyCapabilityChatsByTenant?: Record<string, Record<string, string[]>>;
 };
 
 export type CapabilityPolicy = {
@@ -13,6 +22,7 @@ export type CapabilityPolicy = {
     capabilityId: string;
     lane: "eve" | "hermes";
     chatId: string;
+    tenantId?: string;
   }): CapabilityPolicyDecision;
 };
 
@@ -74,6 +84,46 @@ export function parseCapabilityChatMaps(raw: string | undefined): Record<string,
   );
 }
 
+function normalizeTenantId(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
+ * Parses `tenant/capability_id:chat1,chat2;tenant2/other_cap:chat3`.
+ */
+export function parseTenantCapabilityChatMaps(raw: string | undefined): Record<string, Record<string, string[]>> {
+  if (!raw || raw.trim().length === 0) {
+    return {};
+  }
+  const out: Record<string, Record<string, string[]>> = {};
+  const rules = raw
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  for (const rule of rules) {
+    const colon = rule.indexOf(":");
+    if (colon <= 0) {
+      continue;
+    }
+    const left = rule.slice(0, colon).trim();
+    const slash = left.indexOf("/");
+    if (slash <= 0 || slash >= left.length - 1) {
+      continue;
+    }
+    const tenant = normalizeTenantId(left.slice(0, slash));
+    const capabilityId = normalizeCapabilityId(left.slice(slash + 1));
+    const chats = parseCsvSet(rule.slice(colon + 1));
+    if (!tenant || !capabilityId || !chats) {
+      continue;
+    }
+    if (!out[tenant]) {
+      out[tenant] = {};
+    }
+    out[tenant][capabilityId] = [...chats.values()];
+  }
+  return out;
+}
+
 export function createCapabilityPolicyConfigFromEnv(input: {
   defaultModeRaw: string | undefined;
   allowCapabilitiesRaw: string | undefined;
@@ -82,6 +132,8 @@ export function createCapabilityPolicyConfigFromEnv(input: {
   deniedChatIdsRaw: string | undefined;
   allowCapabilityChatsRaw: string | undefined;
   denyCapabilityChatsRaw: string | undefined;
+  allowCapabilityChatsByTenantRaw?: string | undefined;
+  denyCapabilityChatsByTenantRaw?: string | undefined;
 }): CapabilityPolicyConfig {
   const defaultMode = input.defaultModeRaw?.trim().toLowerCase() === "deny" ? "deny" : "allow";
   const allowCapabilities = [...(parseCsvSet(input.allowCapabilitiesRaw) ?? [])].map((item) =>
@@ -102,6 +154,8 @@ export function createCapabilityPolicyConfigFromEnv(input: {
       ([capabilityId, chatIds]) => [capabilityId, [...chatIds.values()]],
     ),
   );
+  const allowCapabilityChatsByTenant = parseTenantCapabilityChatMaps(input.allowCapabilityChatsByTenantRaw);
+  const denyCapabilityChatsByTenant = parseTenantCapabilityChatMaps(input.denyCapabilityChatsByTenantRaw);
   return {
     defaultMode,
     allowCapabilities,
@@ -110,6 +164,10 @@ export function createCapabilityPolicyConfigFromEnv(input: {
     deniedChatIds,
     allowCapabilityChats,
     denyCapabilityChats,
+    allowCapabilityChatsByTenant:
+      Object.keys(allowCapabilityChatsByTenant).length > 0 ? allowCapabilityChatsByTenant : undefined,
+    denyCapabilityChatsByTenant:
+      Object.keys(denyCapabilityChatsByTenant).length > 0 ? denyCapabilityChatsByTenant : undefined,
   };
 }
 
@@ -130,10 +188,54 @@ export function createCapabilityPolicy(config: CapabilityPolicyConfig): Capabili
       new Set(chats.map((chatId) => chatId.trim()).filter(Boolean)),
     ]),
   );
+  const denyByTenant = new Map<string, Map<string, Set<string>>>();
+  for (const [tenant, capMap] of Object.entries(config.denyCapabilityChatsByTenant ?? {})) {
+    const t = normalizeTenantId(tenant);
+    if (!t) {
+      continue;
+    }
+    const inner = new Map<string, Set<string>>();
+    for (const [capabilityId, chats] of Object.entries(capMap)) {
+      inner.set(
+        normalizeCapabilityId(capabilityId),
+        new Set(chats.map((chatId) => chatId.trim()).filter(Boolean)),
+      );
+    }
+    denyByTenant.set(t, inner);
+  }
+  const allowByTenant = new Map<string, Map<string, Set<string>>>();
+  for (const [tenant, capMap] of Object.entries(config.allowCapabilityChatsByTenant ?? {})) {
+    const t = normalizeTenantId(tenant);
+    if (!t) {
+      continue;
+    }
+    const inner = new Map<string, Set<string>>();
+    for (const [capabilityId, chats] of Object.entries(capMap)) {
+      inner.set(
+        normalizeCapabilityId(capabilityId),
+        new Set(chats.map((chatId) => chatId.trim()).filter(Boolean)),
+      );
+    }
+    allowByTenant.set(t, inner);
+  }
 
   return {
     authorize(input): CapabilityPolicyDecision {
       const capabilityId = normalizeCapabilityId(input.capabilityId);
+      const tenant = input.tenantId?.trim() ? normalizeTenantId(input.tenantId) : "";
+
+      if (tenant) {
+        const tenantDeny = denyByTenant.get(tenant)?.get(capabilityId);
+        if (tenantDeny?.has(input.chatId)) {
+          return { allowed: false, reason: "capability_chat_denied_by_tenant_policy" };
+        }
+        const tenantAllow = allowByTenant.get(tenant)?.get(capabilityId);
+        if (tenantAllow !== undefined) {
+          if (!tenantAllow.has(input.chatId)) {
+            return { allowed: false, reason: "chat_not_in_tenant_capability_allowlist" };
+          }
+        }
+      }
 
       if (deniedChats.has(input.chatId)) {
         return { allowed: false, reason: "chat_denied_by_policy" };

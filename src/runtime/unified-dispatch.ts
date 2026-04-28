@@ -3,6 +3,7 @@ import type {
   CapabilityExecutionResult,
   DispatchFallbackInfo,
   DispatchState,
+  FailureClass,
   LaneId,
   RoutingDecision,
   UnifiedCapabilityDecision,
@@ -10,15 +11,17 @@ import type {
   UnifiedMessageEnvelope,
   UnifiedResponse,
 } from "../contracts/types.js";
+import { stampUnifiedDispatchContract } from "../contracts/dispatch-contract.js";
 import {
   validateCapabilityDecision,
   validateCapabilityExecutionResult,
   validateDispatchState,
   validateEnvelope,
+  validateRoutingDecision,
   validateUnifiedResponse,
 } from "../contracts/validate.js";
 import type { LaneAdapter } from "../adapters/lane-adapter.js";
-import { routeMessage, type RouterPolicyConfig } from "../router/policy-router.js";
+import { routeMessage, mergeRegionRouting, type RouterPolicyConfig } from "../router/policy-router.js";
 import type { CapabilityEngine } from "./capability-engine.js";
 
 export type UnifiedRuntime = {
@@ -26,6 +29,11 @@ export type UnifiedRuntime = {
   hermesAdapter: LaneAdapter;
   routerConfig: RouterPolicyConfig;
   capabilityEngine?: CapabilityEngine;
+  /** H5: applied when envelope omits tenantId/regionId. */
+  dispatchDefaults?: {
+    defaultTenantId?: string;
+    defaultRegionId?: string;
+  };
 };
 
 export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -51,6 +59,16 @@ function responseFromState(state: DispatchState, traceId: string): UnifiedRespon
 
 function withCanonicalTraceId(state: DispatchState, traceId: string): DispatchState {
   return validateDispatchState({ ...state, traceId });
+}
+
+function failureClassAllowsFallback(
+  failureClass: FailureClass,
+  allowlist: FailureClass[] | undefined,
+): boolean {
+  if (!allowlist || allowlist.length === 0) {
+    return true;
+  }
+  return allowlist.includes(failureClass);
 }
 
 function toDispatchStateFromCapability(
@@ -80,6 +98,7 @@ function buildResult(
   options?: {
     fallbackState?: DispatchState;
     fallbackInfo?: DispatchFallbackInfo;
+    primaryFallbackLimited?: boolean;
     capabilityDecision?: UnifiedCapabilityDecision;
     capabilityExecution?: CapabilityExecutionResult;
   },
@@ -96,24 +115,45 @@ function buildResult(
     validateCapabilityExecutionResult(capabilityExecution);
   }
 
-  return {
+  return stampUnifiedDispatchContract({
     envelope,
     routing,
     primaryState,
     fallbackState: options?.fallbackState,
     fallbackInfo,
+    primaryFallbackLimited: options?.primaryFallbackLimited,
     capabilityDecision,
     capabilityExecution,
     response,
-  };
+  });
 }
 
 export async function dispatchUnifiedMessage(
   runtime: UnifiedRuntime,
   input: Omit<UnifiedMessageEnvelope, "traceId" | "receivedAtIso">,
 ): Promise<UnifiedDispatchResult> {
+  const tenantFromInput = input.tenantId?.trim();
+  const tenantFromDefaults = runtime.dispatchDefaults?.defaultTenantId?.trim();
+  const tenantId =
+    tenantFromInput && tenantFromInput.length > 0
+      ? tenantFromInput
+      : tenantFromDefaults && tenantFromDefaults.length > 0
+        ? tenantFromDefaults
+        : undefined;
+
+  const regionFromInput = input.regionId?.trim();
+  const regionFromDefaults = runtime.dispatchDefaults?.defaultRegionId?.trim();
+  const regionId =
+    regionFromInput && regionFromInput.length > 0
+      ? regionFromInput
+      : regionFromDefaults && regionFromDefaults.length > 0
+        ? regionFromDefaults
+        : undefined;
+
   const envelope = validateEnvelope({
     ...input,
+    tenantId,
+    regionId,
     traceId: `unified-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`,
     receivedAtIso: new Date().toISOString(),
   });
@@ -125,18 +165,21 @@ export async function dispatchUnifiedMessage(
       const executed = await runtime.capabilityEngine.execute(validatedDecision, envelope);
       const validatedExecution = validateCapabilityExecutionResult(executed);
       const capabilityState = toDispatchStateFromCapability(validatedDecision, validatedExecution, envelope);
-      const routing: RoutingDecision = {
-        primaryLane: validatedDecision.lane,
-        fallbackLane: "none",
-        reason: validatedDecision.routeReason,
-        policyVersion: runtime.routerConfig.policyVersion,
-        failClosed: true,
-      };
-      const result = buildResult(envelope, routing, capabilityState, capabilityState, {
+      const routing = mergeRegionRouting(
+        envelope,
+        runtime.routerConfig,
+        validateRoutingDecision({
+          primaryLane: validatedDecision.lane,
+          fallbackLane: "none",
+          reason: validatedDecision.routeReason,
+          policyVersion: runtime.routerConfig.policyVersion,
+          failClosed: true,
+        }),
+      );
+      return buildResult(envelope, routing, capabilityState, capabilityState, {
         capabilityDecision: validatedDecision,
         capabilityExecution: validatedExecution,
       });
-      return result;
     }
   }
 
@@ -149,8 +192,21 @@ export async function dispatchUnifiedMessage(
     }),
     envelope.traceId,
   );
+  const allowlist = runtime.routerConfig.dispatchFailureClassesAllowingFallback;
+  const fallbackAllowed =
+    primaryState.status !== "pass" &&
+    routing.fallbackLane !== "none" &&
+    !routing.failClosed &&
+    failureClassAllowsFallback(primaryState.failureClass, allowlist);
+
   if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed) {
     return buildResult(envelope, routing, primaryState, primaryState);
+  }
+
+  if (!fallbackAllowed) {
+    return buildResult(envelope, routing, primaryState, primaryState, {
+      primaryFallbackLimited: true,
+    });
   }
 
   const fallback = getLaneAdapter(runtime, routing.fallbackLane);
@@ -161,7 +217,7 @@ export async function dispatchUnifiedMessage(
     }),
     envelope.traceId,
   );
-  const result = buildResult(envelope, routing, primaryState, fallbackState, {
+  return buildResult(envelope, routing, primaryState, fallbackState, {
     fallbackState,
     fallbackInfo: {
       attempted: true,
@@ -170,5 +226,4 @@ export async function dispatchUnifiedMessage(
       toLane: fallbackState.sourceLane,
     },
   });
-  return result;
 }

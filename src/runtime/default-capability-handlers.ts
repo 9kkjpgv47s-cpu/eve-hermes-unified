@@ -135,6 +135,7 @@ export function registerDefaultCapabilityExecutors(
       const recent = await context.memoryStore.list({
         lane: "hermes",
         namespace: "capability-execution",
+        ...(context.tenantId?.trim() ? { tenantId: context.tenantId.trim() } : {}),
       });
       return {
         consumed: state.status === "pass",

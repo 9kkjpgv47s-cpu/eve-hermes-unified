@@ -149,9 +149,27 @@ async function newestFileInDir(dir, prefix) {
   return matches[matches.length - 1];
 }
 
+async function newestSoakDispatchJsonl(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const matches = entries
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.startsWith("soak-") &&
+        entry.name.endsWith(".jsonl") &&
+        !entry.name.startsWith("soak-summary"),
+    )
+    .map((entry) => path.join(dir, entry.name));
+  if (matches.length === 0) {
+    return null;
+  }
+  matches.sort();
+  return matches[matches.length - 1];
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const soakFile = await newestFileInDir(options.evidenceDir, "soak-");
+  const soakFile = (await newestSoakDispatchJsonl(options.evidenceDir)) ?? (await newestFileInDir(options.evidenceDir, "soak-"));
   const failureFile = await newestFileInDir(options.evidenceDir, "failure-injection-");
   if (!soakFile) {
     throw new Error("No soak report found.");

@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { LaneId } from "../contracts/types.js";
 
@@ -8,6 +9,8 @@ export type UnifiedMemoryKey = {
   lane: MemoryLane;
   namespace: string;
   key: string;
+  /** H5: when set, isolates storage from other tenants (default / unset shares legacy key space). */
+  tenantId?: string;
 };
 
 export type UnifiedMemoryEntry = UnifiedMemoryKey & {
@@ -20,6 +23,7 @@ export type UnifiedMemoryListQuery = {
   lane?: MemoryLane;
   namespace?: string;
   keyPrefix?: string;
+  tenantId?: string;
 };
 
 export interface UnifiedMemoryStore {
@@ -28,12 +32,17 @@ export interface UnifiedMemoryStore {
     target: UnifiedMemoryKey,
     value: string,
     metadata?: Record<string, string>,
+    options?: { updatedAtIso?: string },
   ): Promise<UnifiedMemoryEntry>;
   delete(target: UnifiedMemoryKey): Promise<boolean>;
   list(query?: UnifiedMemoryListQuery): Promise<UnifiedMemoryEntry[]>;
 }
 
 export type UnifiedMemoryStoreKind = "memory" | "file";
+
+export type UnifiedMemoryStoreFactoryOptions = {
+  dualWriteShadowFilePath?: string;
+};
 
 export function validateUnifiedMemoryKey(target: UnifiedMemoryKey): void {
   if (target.lane !== "eve" && target.lane !== "hermes" && target.lane !== "shared") {
@@ -49,15 +58,19 @@ export function validateUnifiedMemoryKey(target: UnifiedMemoryKey): void {
 
 export function normalizeMemoryKey(target: UnifiedMemoryKey): UnifiedMemoryKey {
   validateUnifiedMemoryKey(target);
+  const tenant = target.tenantId?.trim();
   return {
     lane: target.lane,
     namespace: target.namespace.trim(),
     key: target.key.trim(),
+    ...(tenant && tenant.length > 0 ? { tenantId: tenant } : {}),
   };
 }
 
 function storageKey(target: UnifiedMemoryKey): string {
-  return `${target.lane}::${target.namespace}::${target.key}`;
+  const tenant = target.tenantId?.trim();
+  const prefix = tenant && tenant.length > 0 ? `tenant:${tenant}::` : "";
+  return `${prefix}${target.lane}::${target.namespace}::${target.key}`;
 }
 
 function cloneEntry(entry: UnifiedMemoryEntry): UnifiedMemoryEntry {
@@ -69,6 +82,14 @@ function cloneEntry(entry: UnifiedMemoryEntry): UnifiedMemoryEntry {
 
 function serializeRecordMap(records: Map<string, UnifiedMemoryEntry>): string {
   return JSON.stringify([...records.values()], null, 2);
+}
+
+export async function writeJsonFileAtomically(filePath: string, payload: string): Promise<void> {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  const dir = path.dirname(filePath);
+  const tmp = path.join(dir, `.${path.basename(filePath)}.${randomUUID()}.tmp`);
+  await writeFile(tmp, payload, "utf8");
+  await rename(tmp, filePath);
 }
 
 function parseRecordList(raw: string): UnifiedMemoryEntry[] {
@@ -86,7 +107,8 @@ function parseRecordList(raw: string): UnifiedMemoryEntry[] {
       typeof entry.namespace === "string" &&
       typeof entry.key === "string" &&
       typeof entry.value === "string" &&
-      typeof entry.updatedAtIso === "string"
+      typeof entry.updatedAtIso === "string" &&
+      (entry.tenantId === undefined || typeof entry.tenantId === "string")
     );
   });
 }
@@ -108,12 +130,13 @@ export class InMemoryUnifiedMemoryStore implements UnifiedMemoryStore {
     target: UnifiedMemoryKey,
     value: string,
     metadata?: Record<string, string>,
+    options?: { updatedAtIso?: string },
   ): Promise<UnifiedMemoryEntry> {
     const normalized = normalizeMemoryKey(target);
     const entry: UnifiedMemoryEntry = {
       ...normalized,
       value,
-      updatedAtIso: new Date().toISOString(),
+      updatedAtIso: options?.updatedAtIso ?? new Date().toISOString(),
       metadata: metadata ? { ...metadata } : undefined,
     };
     this.records.set(storageKey(normalized), entry);
@@ -129,6 +152,7 @@ export class InMemoryUnifiedMemoryStore implements UnifiedMemoryStore {
     const lane = query?.lane;
     const namespace = query?.namespace;
     const keyPrefix = query?.keyPrefix;
+    const tenantId = query?.tenantId?.trim();
 
     const matches = [...this.records.values()].filter((entry) => {
       if (lane && entry.lane !== lane) {
@@ -139,6 +163,12 @@ export class InMemoryUnifiedMemoryStore implements UnifiedMemoryStore {
       }
       if (keyPrefix && !entry.key.startsWith(keyPrefix)) {
         return false;
+      }
+      if (tenantId) {
+        const entryTenant = entry.tenantId?.trim() ?? "";
+        if (entryTenant !== tenantId) {
+          return false;
+        }
       }
       return true;
     });
@@ -172,8 +202,7 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 
   private async persist(): Promise<void> {
-    await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(this.filePath, serializeRecordMap(this.records), "utf8");
+    await writeJsonFileAtomically(this.filePath, serializeRecordMap(this.records));
   }
 
   private async queueWrite(operation: () => Promise<void>): Promise<void> {
@@ -192,13 +221,14 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
     target: UnifiedMemoryKey,
     value: string,
     metadata?: Record<string, string>,
+    options?: { updatedAtIso?: string },
   ): Promise<UnifiedMemoryEntry> {
     const normalized = normalizeMemoryKey(target);
     await this.ensureLoaded();
     const entry: UnifiedMemoryEntry = {
       ...normalized,
       value,
-      updatedAtIso: new Date().toISOString(),
+      updatedAtIso: options?.updatedAtIso ?? new Date().toISOString(),
       metadata: metadata ? { ...metadata } : undefined,
     };
     await this.queueWrite(async () => {
@@ -226,6 +256,7 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
     const lane = query?.lane;
     const namespace = query?.namespace;
     const keyPrefix = query?.keyPrefix;
+    const tenantId = query?.tenantId?.trim();
 
     const matches = [...this.records.values()].filter((entry) => {
       if (lane && entry.lane !== lane) {
@@ -237,6 +268,12 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
       if (keyPrefix && !entry.key.startsWith(keyPrefix)) {
         return false;
       }
+      if (tenantId) {
+        const entryTenant = entry.tenantId?.trim() ?? "";
+        if (entryTenant !== tenantId) {
+          return false;
+        }
+      }
       return true;
     });
     return matches
@@ -245,12 +282,53 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 }
 
+export class DualWriteUnifiedMemoryStore implements UnifiedMemoryStore {
+  constructor(
+    private readonly primary: FileUnifiedMemoryStore,
+    private readonly shadow: FileUnifiedMemoryStore,
+  ) {}
+
+  async get(target: UnifiedMemoryKey): Promise<UnifiedMemoryEntry | undefined> {
+    return this.primary.get(target);
+  }
+
+  async set(
+    target: UnifiedMemoryKey,
+    value: string,
+    metadata?: Record<string, string>,
+    options?: { updatedAtIso?: string },
+  ): Promise<UnifiedMemoryEntry> {
+    const entry = await this.primary.set(target, value, metadata, options);
+    await this.shadow.set(target, value, metadata, { updatedAtIso: entry.updatedAtIso });
+    return entry;
+  }
+
+  async delete(target: UnifiedMemoryKey): Promise<boolean> {
+    const deleted = await this.primary.delete(target);
+    await this.shadow.delete(target);
+    return deleted;
+  }
+
+  async list(query?: UnifiedMemoryListQuery): Promise<UnifiedMemoryEntry[]> {
+    return this.primary.list(query);
+  }
+}
+
 export function createUnifiedMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
+  options?: UnifiedMemoryStoreFactoryOptions,
 ): UnifiedMemoryStore {
   if (kind === "file") {
-    return new FileUnifiedMemoryStore(filePath);
+    const primary = new FileUnifiedMemoryStore(filePath);
+    const shadowPath = options?.dualWriteShadowFilePath?.trim();
+    if (shadowPath && shadowPath.length > 0) {
+      if (path.resolve(shadowPath) === path.resolve(filePath)) {
+        throw new Error("dualWriteShadowFilePath must differ from unified memory file path.");
+      }
+      return new DualWriteUnifiedMemoryStore(primary, new FileUnifiedMemoryStore(shadowPath));
+    }
+    return primary;
   }
   return new InMemoryUnifiedMemoryStore();
 }

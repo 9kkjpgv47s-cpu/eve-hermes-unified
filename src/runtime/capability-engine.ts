@@ -15,6 +15,7 @@ import type { RouterPolicyConfig } from "../router/policy-router.js";
 import type {
   CapabilityLaneDispatcher,
   CapabilityRegistry,
+  CapabilityExecutionResult as RegistryCapabilityExecutionResult,
 } from "../skills/capability-registry.js";
 import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
 import type { CapabilityPolicy } from "./capability-policy.js";
@@ -38,7 +39,29 @@ export type CapabilityExecutionDependencies = {
   memoryStore: UnifiedMemoryStore;
   dispatchLane: CapabilityLaneDispatcher;
   policy?: CapabilityPolicy;
+  capabilityExecutionTimeoutMs?: number;
 };
+
+function raceExecutorWithTimeout<T>(promise: Promise<T>, timeoutMs: number, onTimeout: () => T): Promise<T> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return promise;
+  }
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      resolve(onTimeout());
+    }, timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
 
 function parseExplicitCapabilityText(text: string): { capabilityId: string; argsText: string } | undefined {
   const trimmed = text.trim();
@@ -127,6 +150,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
         capabilityId: selection.id,
         lane: selection.lane,
         chatId: envelope.chatId,
+        tenantId: envelope.tenantId,
       });
       if (!authorization.allowed) {
         const denied = denialExecutionResult(
@@ -158,21 +182,33 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
 
     const parsed = parseExplicitCapabilityText(envelope.text);
     const argsText = parsed?.argsText ?? "";
-    const execution = await executor({
-      text: envelope.text,
-      argsText,
-      chatId: envelope.chatId,
-      messageId: envelope.messageId,
-      traceId: envelope.traceId,
-      memoryStore: this.dependencies.memoryStore,
-      dispatchLane: async (input) =>
-        this.dependencies.dispatchLane({
-          ...input,
-          chatId: envelope.chatId,
-          messageId: envelope.messageId,
-          traceId: envelope.traceId,
-        }),
+    const timeoutMs = this.dependencies.capabilityExecutionTimeoutMs ?? 0;
+    const executionPromise = Promise.resolve(
+      executor({
+        text: envelope.text,
+        argsText,
+        chatId: envelope.chatId,
+        messageId: envelope.messageId,
+        traceId: envelope.traceId,
+        tenantId: envelope.tenantId,
+        memoryStore: this.dependencies.memoryStore,
+        dispatchLane: async (input) =>
+          this.dependencies.dispatchLane({
+            ...input,
+            chatId: envelope.chatId,
+            messageId: envelope.messageId,
+            traceId: envelope.traceId,
+          }),
+      }),
+    );
+    const timeoutResult = (): RegistryCapabilityExecutionResult => ({
+      consumed: false,
+      responseText: `Capability '${selection.id}' exceeded execution timeout of ${timeoutMs}ms.`,
+      reason: "capability_execution_timeout",
+      failureClass: "dispatch_failure",
+      metadata: { capabilityId: selection.id, timeoutMs: String(timeoutMs) },
     });
+    const execution = await raceExecutorWithTimeout(executionPromise, timeoutMs, timeoutResult);
     const status: "pass" | "failed" = execution.consumed ? "pass" : "failed";
     const reason = execution.reason?.trim() || resultReason(selection.id, status);
     const failureClass =
@@ -202,6 +238,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
         lane: selection.lane,
         namespace: "capability-execution",
         key: envelope.traceId,
+        ...(envelope.tenantId?.trim() ? { tenantId: envelope.tenantId.trim() } : {}),
       },
       JSON.stringify({
         capabilityId: selection.id,

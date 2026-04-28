@@ -25,6 +25,12 @@ npm run build
 npm run validate:failure-injection
 npm run validate:soak
 npm run validate:evidence-summary
+npm run summarize:soak
+npm run run:emergency-rollback-rehearsal
+npm run scan:legacy-dispatch-entrypoints
+npm run replay:dispatch-wal -- --dry-run
+npm run validate:h5-tenant-isolation
+npm run run:remediation-playbook-dry-run
 npm run validate:regression-eve-primary
 npm run validate:cutover-readiness
 npm run validate:release-readiness
@@ -92,6 +98,12 @@ Run one unified-dispatch request with explicit message envelope:
 
 ```bash
 npm run dispatch -- --text "check project status" --chat-id 123 --message-id 456
+```
+
+Optional multi-tenant / multi-region flags (see `docs/H5_MULTI_TENANT_REGION.md`):
+
+```bash
+npm run dispatch -- --text "hello" --chat-id 123 --message-id 456 --tenant-id acme --region-id us-west
 ```
 
 Key environment controls are in `.env.example`.

@@ -25,6 +25,12 @@ export function validateEnvelope(value: UnifiedMessageEnvelope): UnifiedMessageE
   ensure(value.chatId.length > 0, "Envelope chatId is required.");
   ensure(value.messageId.length > 0, "Envelope messageId is required.");
   ensure(value.text.length > 0, "Envelope text is required.");
+  if (value.tenantId !== undefined) {
+    ensure(typeof value.tenantId === "string" && value.tenantId.trim().length > 0, "tenantId must be non-empty when set.");
+  }
+  if (value.regionId !== undefined) {
+    ensure(typeof value.regionId === "string" && value.regionId.trim().length > 0, "regionId must be non-empty when set.");
+  }
   return value;
 }
 
@@ -36,6 +42,24 @@ export function validateRoutingDecision(value: RoutingDecision): RoutingDecision
     isLane(value.fallbackLane) || value.fallbackLane === "none",
     "Invalid fallback lane.",
   );
+  if (value.dispatchRegionId !== undefined) {
+    ensure(
+      typeof value.dispatchRegionId === "string" && value.dispatchRegionId.trim().length > 0,
+      "dispatchRegionId must be non-empty when set.",
+    );
+  }
+  if (value.routerRegionId !== undefined) {
+    ensure(
+      typeof value.routerRegionId === "string" && value.routerRegionId.trim().length > 0,
+      "routerRegionId must be non-empty when set.",
+    );
+  }
+  if (value.regionAligned === false) {
+    ensure(
+      Boolean(value.dispatchRegionId && value.routerRegionId),
+      "regionAligned=false requires dispatchRegionId and routerRegionId.",
+    );
+  }
   return value;
 }
 
@@ -106,12 +130,22 @@ export function validateUnifiedDispatchResult(value: UnifiedDispatchResult): Uni
   if (value.fallbackState) {
     validateDispatchState(value.fallbackState);
   }
+  if (value.primaryFallbackLimited === true) {
+    ensure(!value.fallbackState, "primaryFallbackLimited must not include fallbackState.");
+    ensure(!value.fallbackInfo, "primaryFallbackLimited must not include fallbackInfo.");
+  }
   validateUnifiedResponse(value.response);
   if (value.capabilityDecision) {
     validateCapabilityDecision(value.capabilityDecision);
   }
   if (value.capabilityExecution) {
     validateCapabilityExecutionResult(value.capabilityExecution);
+  }
+  if (value.contractVersion !== undefined) {
+    ensure(typeof value.contractVersion === "string" && value.contractVersion.trim().length > 0, "contractVersion must be non-empty when set.");
+  }
+  if (value.contractSchemaRef !== undefined) {
+    ensure(typeof value.contractSchemaRef === "string" && value.contractSchemaRef.trim().length > 0, "contractSchemaRef must be non-empty when set.");
   }
   return value;
 }

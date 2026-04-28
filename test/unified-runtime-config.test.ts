@@ -140,4 +140,43 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.hashSalt).toBe("salt-1");
     expect(config.preflight.enabled).toBe(false);
   });
+
+  it("parses H3 durability and router fallback policy env knobs", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH: "/tmp/shadow-memory.json",
+          UNIFIED_DISPATCH_DURABLE_WAL_PATH: "/tmp/dispatch.wal.jsonl",
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "15000",
+          UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES: "dispatch_failure,state_unavailable,bogus",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryDualWriteFilePath).toBe("/tmp/shadow-memory.json");
+    expect(config.dispatchDurableWalPath).toBe("/tmp/dispatch.wal.jsonl");
+    expect(config.unifiedCapabilityExecutionTimeoutMs).toBe(15000);
+    expect(config.routerConfig.dispatchFailureClassesAllowingFallback).toEqual([
+      "dispatch_failure",
+      "state_unavailable",
+    ]);
+  });
+
+  it("parses H5 tenant, region, and per-tenant capability policy env knobs", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DEFAULT_TENANT_ID: "acme",
+          UNIFIED_DISPATCH_DEFAULT_REGION_ID: "us-west",
+          UNIFIED_ROUTER_REGION_ID: "eu-central",
+          UNIFIED_TENANT_ISOLATION_STRICT: "1",
+          UNIFIED_CAPABILITY_DENY_CHAT_IDS_BY_TENANT: "acme/summarize_state:1,2",
+        }),
+      ),
+    );
+    expect(config.dispatchDefaultTenantId).toBe("acme");
+    expect(config.dispatchDefaultRegionId).toBe("us-west");
+    expect(config.tenantIsolationStrict).toBe(true);
+    expect(config.routerConfig.routerRegionId).toBe("eu-central");
+    expect(config.capabilityPolicy.denyCapabilityChatsByTenant?.acme?.summarize_state).toEqual(["1", "2"]);
+  });
 });

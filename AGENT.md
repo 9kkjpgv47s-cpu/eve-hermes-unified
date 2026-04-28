@@ -8,8 +8,9 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Primary focus: staged promotion drills + rollback-policy enforcement with auditable artifacts
+- Horizon: `H5` (`docs/HORIZON_STATUS.json`, in progress)
+- Completed in-repo slices: H3 durability (WAL, atomic memory, fallback gate, cap timeout, soak summary, rollback rehearsal), H4 contract + legacy scan, H5 core (tenant/region envelope, memory scoping, region failover routing, WAL replay parity, remediation dry-run, strict-tenant preflight).
+- Primary focus: extend H5 evidence dimensions (soak/audit partitioning) and operator drill coverage
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -51,6 +52,13 @@ npm run check:stage-promotion-readiness -- --target-stage canary --evidence-dir 
 npm run promote:stage -- --target-stage canary --dry-run --evidence-dir evidence
 npm run evaluate:auto-rollback-policy -- --stage canary --evidence-dir evidence
 npm run run:stage-drill -- --target-stage canary --dry-run --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
+```
+
+### H5 tenant / region / remediation
+
+```bash
+npm run validate:h5-tenant-isolation
+npm run run:remediation-playbook-dry-run
 ```
 
 ### Readiness / Evidence Gates

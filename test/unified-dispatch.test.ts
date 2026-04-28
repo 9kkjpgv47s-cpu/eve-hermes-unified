@@ -90,6 +90,8 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.primaryState.traceId).toBe(result.envelope.traceId);
     expect(result.response.traceId).toBe(result.envelope.traceId);
     expect(result.fallbackState).toBeUndefined();
+    expect(result.contractVersion).toBeDefined();
+    expect(result.contractSchemaRef).toContain("H4_UNIFIED_DISPATCH_CONTRACT");
   });
 
   it("falls back when primary fails and failClosed=false", async () => {
@@ -136,6 +138,51 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.fallbackInfo?.reason).toBe("primary_failed");
   });
 
+  it("skips fallback when primary failure class is not in allowlist", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "failed",
+        reason: "policy_blocked",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 5,
+        failureClass: "policy_failure",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "should_not_run",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig({
+        failClosed: false,
+        dispatchFailureClassesAllowingFallback: ["dispatch_failure"],
+      }),
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+
+    expect(result.response.laneUsed).toBe("eve");
+    expect(result.primaryFallbackLimited).toBe(true);
+    expect(result.fallbackState).toBeUndefined();
+    expect(result.fallbackInfo).toBeUndefined();
+  });
+
   it("stops on primary failure when failClosed=true", async () => {
     const runtime = {
       eveAdapter: new FakeLaneAdapter("eve", {
@@ -177,6 +224,53 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.fallbackState).toBeUndefined();
     expect(result.primaryState.traceId).toBe(result.envelope.traceId);
     expect(result.fallbackInfo).toBeUndefined();
+  });
+
+  it("swaps primary and fallback lanes on region mismatch (H5)", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "failed",
+        reason: "eve_fail",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "dispatch_failure",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "hermes_ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig({
+        routerRegionId: "us-east",
+      }),
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+      regionId: "eu-west",
+    });
+
+    expect(result.routing.regionAligned).toBe(false);
+    expect(result.routing.primaryLane).toBe("hermes");
+    expect(result.routing.fallbackLane).toBe("eve");
+    expect(result.routing.reason).toContain("region_failover_swap");
+    expect(result.response.laneUsed).toBe("hermes");
+    expect(result.primaryState.sourceLane).toBe("hermes");
   });
 
   it("uses capability engine path when explicit capability command resolves", async () => {

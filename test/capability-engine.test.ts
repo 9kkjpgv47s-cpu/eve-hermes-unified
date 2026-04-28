@@ -429,4 +429,98 @@ describe("UnifiedCapabilityEngine", () => {
     expect(allowed.capabilityExecution?.status).toBe("pass");
     expect(allowed.capabilityExecution?.failureClass).toBe("none");
   });
+
+  it("denies capability when per-tenant chat denylist matches (H5)", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(
+      path.join(os.tmpdir(), `unified-cap-tenant-deny-${Date.now()}.json`),
+    );
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => fakeLaneState("hermes", "should_not_run"),
+      memoryStore,
+    });
+    const policy = createCapabilityPolicy({
+      defaultMode: "allow",
+      allowCapabilities: [],
+      denyCapabilities: [],
+      allowedChatIds: [],
+      deniedChatIds: [],
+      allowCapabilityChats: {},
+      denyCapabilityChats: {},
+      denyCapabilityChatsByTenant: {
+        acme: { summarize_state: ["chat-tenant-blocked"] },
+      },
+    });
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("hermes", "should_not_run"),
+      policy,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "hermes" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "chat-tenant-blocked",
+      messageId: "1",
+      text: "@cap summarize_state x",
+      tenantId: "acme",
+    });
+
+    expect(result.capabilityExecution?.status).toBe("failed");
+    expect(result.capabilityExecution?.reason).toBe("capability_chat_denied_by_tenant_policy");
+  });
+
+  it("fails with timeout when executor exceeds configured wall clock", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(
+      path.join(os.tmpdir(), `unified-cap-timeout-${Date.now()}.json`),
+    );
+    registry.register(
+      {
+        id: "slow_cap",
+        description: "slow executor",
+        owner: "eve",
+      },
+      async () => {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 200);
+        });
+        return buildCapabilityResult("late");
+      },
+    );
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("eve"),
+      capabilityExecutionTimeoutMs: 30,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "1",
+      text: "@cap slow_cap",
+    });
+    expect(result.capabilityExecution?.reason).toBe("capability_execution_timeout");
+    expect(result.capabilityExecution?.failureClass).toBe("dispatch_failure");
+  });
 });

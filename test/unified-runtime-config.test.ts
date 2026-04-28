@@ -232,6 +232,20 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.capabilityPolicyAuditRotationRetainBytes).toBe(2048);
   });
 
+  it("parses router no-fallback-on-primary failure class list", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES: "policy_failure,state_unavailable,invalid",
+        }),
+      ),
+    );
+    expect(config.routerConfig.noFallbackOnPrimaryFailureClasses).toEqual([
+      "policy_failure",
+      "state_unavailable",
+    ]);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

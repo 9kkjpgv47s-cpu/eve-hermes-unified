@@ -252,7 +252,28 @@ export async function dispatchUnifiedMessage(
     }),
     envelope.traceId,
   );
-  if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed) {
+  const noFallbackClasses = runtime.routerConfig.noFallbackOnPrimaryFailureClasses ?? [];
+  const blockFallback =
+    primaryState.status === "failed"
+    && routing.fallbackLane !== "none"
+    && !routing.failClosed
+    && noFallbackClasses.length > 0
+    && noFallbackClasses.includes(primaryState.failureClass);
+  if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed || blockFallback) {
+    if (blockFallback) {
+      const toLane = routing.fallbackLane;
+      if (toLane === "none") {
+        return buildResult(envelope, routing, primaryState, primaryState);
+      }
+      return buildResult(envelope, routing, primaryState, primaryState, {
+        fallbackInfo: {
+          attempted: false,
+          reason: "no_fallback_for_primary_failure_class",
+          fromLane: primaryState.sourceLane,
+          toLane,
+        },
+      });
+    }
     return buildResult(envelope, routing, primaryState, primaryState);
   }
 

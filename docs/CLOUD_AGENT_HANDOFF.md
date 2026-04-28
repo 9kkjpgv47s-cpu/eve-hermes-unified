@@ -73,6 +73,10 @@ Optional crash recovery for file-backed unified memory:
 - Stable fingerprint: `capabilityPolicyFingerprintSha256` in `src/config/capability-policy-fingerprint.ts`.
 - Preflight checks the audit path parent is writable when the path is non-empty.
 
+## Router fallback hardening (H3 policy maturity)
+
+- **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** — comma-separated **`FailureClass`** values (`policy_failure`, `state_unavailable`, `dispatch_failure`, `provider_limit`, `cooldown`, never `none`). When the primary lane returns **`failed`** with a class in this set, unified dispatch **does not invoke the fallback lane** even if **`UNIFIED_ROUTER_FAIL_CLOSED=0`**; **`fallbackInfo.attempted`** is **`false`** and **`fallbackInfo.reason`** is **`no_fallback_for_primary_failure_class`**.
+
 ## Tenant isolation (dispatch + capability memory)
 
 - **`tenantId`** on `UnifiedMessageEnvelope` (optional) and **`metadata.tenantId`** (optional); metadata wins when both are set. Values must be non-empty, ≤128 chars, and must not contain `/` or `\`.

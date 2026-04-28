@@ -150,6 +150,52 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.fallbackInfo?.reason).toBe("primary_failed");
   });
 
+  it("skips fallback when primary failure class is in noFallbackOnPrimaryFailureClasses", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "failed",
+        reason: "policy_blocked",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 5,
+        failureClass: "policy_failure",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "should_not_run",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig({
+        failClosed: false,
+        noFallbackOnPrimaryFailureClasses: ["policy_failure", "state_unavailable"],
+      }),
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+
+    expect(result.response.laneUsed).toBe("eve");
+    expect(result.response.failureClass).toBe("policy_failure");
+    expect(result.fallbackState).toBeUndefined();
+    expect(result.fallbackInfo?.attempted).toBe(false);
+    expect(result.fallbackInfo?.reason).toBe("no_fallback_for_primary_failure_class");
+  });
+
   it("stops on primary failure when failClosed=true", async () => {
     const runtime = {
       eveAdapter: new FakeLaneAdapter("eve", {

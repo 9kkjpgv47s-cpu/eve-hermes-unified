@@ -1,4 +1,4 @@
-import type { LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
+import type { FailureClass, LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
 import { validateRoutingDecision } from "../contracts/validate.js";
 
 export type RouterCutoverStage = "shadow" | "canary" | "majority" | "full";
@@ -12,6 +12,11 @@ export type RouterPolicyConfig = {
   canaryChatIds?: string[];
   majorityPercent?: number;
   hashSalt?: string;
+  /**
+   * When primary dispatch fails with one of these failure classes, do not invoke the fallback lane
+   * (same outcome as failClosed for that request). Empty = disabled.
+   */
+  noFallbackOnPrimaryFailureClasses?: FailureClass[];
 };
 
 function normalizeCutoverStage(value: RouterCutoverStage | undefined): RouterCutoverStage {

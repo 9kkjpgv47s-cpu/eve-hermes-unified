@@ -1,4 +1,4 @@
-import type { LaneId } from "../contracts/types.js";
+import type { FailureClass, LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
 import type { UnifiedMemoryStoreKind } from "../memory/unified-memory-store.js";
@@ -154,6 +154,32 @@ function parseNonNegativeInt(raw: string | undefined, fallback: number): number 
     return fallback;
   }
   return Math.floor(numeric);
+}
+
+const FAILURE_CLASS_SET = new Set<string>([
+  "none",
+  "provider_limit",
+  "cooldown",
+  "dispatch_failure",
+  "state_unavailable",
+  "policy_failure",
+]);
+
+function parseFailureClassList(raw: string | undefined): FailureClass[] {
+  if (!raw) {
+    return [];
+  }
+  const out: FailureClass[] = [];
+  for (const part of raw.split(",")) {
+    const t = part.trim();
+    if (!t) {
+      continue;
+    }
+    if (FAILURE_CLASS_SET.has(t)) {
+      out.push(t as FailureClass);
+    }
+  }
+  return out;
 }
 
 export function loadUnifiedRuntimeEnvConfig(
@@ -391,6 +417,12 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
+  const noFallbackOnPrimaryFailureClasses = parseFailureClassList(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES",
+      "ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES",
+    ]),
+  );
 
   return {
     eveDispatchScript,
@@ -437,6 +469,7 @@ export function loadUnifiedRuntimeEnvConfig(
       canaryChatIds,
       majorityPercent,
       hashSalt,
+      noFallbackOnPrimaryFailureClasses,
     },
   };
 }

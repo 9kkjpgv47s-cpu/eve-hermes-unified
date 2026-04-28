@@ -564,26 +564,36 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     const schema = validateManifestSchema("h2-drill-suite", payload);
     const checks = [];
     if (!schema.valid) {
-      checks.push(...schema.errors.map((error) => `h2_drill_suite_schema_invalid:${error}`));
+      for (const error of schema.errors) {
+        checks.push(`horizon_drill_suite_schema_invalid:${error}`);
+        checks.push(`h2_drill_suite_schema_invalid:${error}`);
+      }
     }
     if (payload.pass !== true) {
+      checks.push("horizon_drill_suite_not_passed");
       checks.push("h2_drill_suite_not_passed");
     }
     if (payload?.checks?.canaryHoldPass !== true) {
+      checks.push("horizon_drill_canary_hold_failed");
       checks.push("h2_drill_canary_hold_failed");
     }
     if (payload?.checks?.majorityHoldPass !== true) {
+      checks.push("horizon_drill_majority_hold_failed");
       checks.push("h2_drill_majority_hold_failed");
     }
     if (payload?.checks?.rollbackSimulationPass !== true) {
+      checks.push("horizon_drill_rollback_simulation_failed");
       checks.push("h2_drill_rollback_simulation_failed");
     }
     if (payload?.checks?.rollbackSimulationTriggered !== true) {
+      checks.push("horizon_drill_rollback_simulation_not_triggered");
       checks.push("h2_drill_rollback_simulation_not_triggered");
     }
     if (payload?.checks?.rollbackPolicySourceConsistencySignalsReported !== true) {
+      checks.push("horizon_drill_rollback_source_consistency_signals_not_reported");
       checks.push("h2_drill_rollback_source_consistency_signals_not_reported");
     } else if (payload?.checks?.rollbackPolicySourceConsistencySignalsPass !== true) {
+      checks.push("horizon_drill_rollback_source_consistency_signals_not_passed");
       checks.push("h2_drill_rollback_source_consistency_signals_not_passed");
     }
     return { pass: checks.length === 0, checks };

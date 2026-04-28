@@ -68,6 +68,28 @@ describe("UnifiedMemoryStore adapters", () => {
     expect(raw).toContain("persist-1");
     expect(raw).toContain("persisted");
   });
+
+  it("serializes concurrent file-backed writes without losing entries", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-memory-concurrent-"));
+    const memoryFilePath = path.join(tempDir, "memory.json");
+    const store = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
+    await Promise.all(
+      Array.from({ length: 24 }, (_, index) =>
+        store.set(
+          { lane: "shared", namespace: "concurrent", key: `key-${index}` },
+          `value-${index}`,
+        ),
+      ),
+    );
+
+    const reader = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
+    const listed = await reader.list({ namespace: "concurrent" });
+    expect(listed).toHaveLength(24);
+    const keys = new Set(listed.map((e) => e.key));
+    for (let index = 0; index < 24; index += 1) {
+      expect(keys.has(`key-${index}`)).toBe(true);
+    }
+  });
 });
 
 describe("CapabilityRegistry", () => {

@@ -13,7 +13,7 @@ Use this document when one cloud agent hands execution to another. The objective
 2. Install and verify:
    - `npm install`
    - `npm run check`
-   - `npm test`
+   - `npm test` (Vitest `globalSetup` ensures `./evidence` exists; the directory is gitignored but some script integration tests default to it.)
 3. Confirm runtime command compiles and runs:
    - `npm run dispatch -- --text "startup verification" --chat-id 1 --message-id 1`
 

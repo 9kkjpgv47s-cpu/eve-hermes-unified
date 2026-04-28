@@ -8,24 +8,18 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Branch (at handoff time): `cursor/h2-stage-drill-orchestrator-0f91`
-- Latest completed hardening slice:
-  - closeout taxonomy normalization toward horizon-neutral signals
-  - compatibility aliases preserved for H2-prefixed checks/failures
-  - full validation passing
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 actions remain `planned` until promotion closes H2.
+- Work branch: `cursor/h3-memory-atomic-closeout-taxonomy-cc15` (or latest `cursor/*` per PR).
+- Recent increment:
+  - `FileUnifiedMemoryStore` persists via write-to-temp + `rename` (atomic replace on POSIX).
+  - `validate-horizon-closeout.mjs` emits **both** `horizon_drill_*` and legacy `h2_drill_*` failure IDs for drill-suite evidence.
+  - Vitest `globalSetup` creates `./evidence` so script integration tests do not depend on a pre-existing gitignored folder.
 
 ## What Was Just Completed
 
-1. Canonical closeout gate signal added and propagated:
-   - `horizon_closeout_gate_failed`
-   - `horizonCloseoutGatePass`
-2. Promotion/closeout gating now accepts canonical + legacy aliases:
-   - canonical: `horizonCloseoutGatePass`, `closeoutRunCloseoutGate*`
-   - legacy: `h2CloseoutGatePass`, `closeoutRunH2CloseoutGate*`
-3. `run-h2-promotion` closeout-run failures now dual-report:
-   - canonical: `horizon_closeout_run_*`
-   - legacy/scoped aliases retained (including `h2_closeout_run_*` for H2)
+1. Atomic file persistence for unified memory (`src/memory/unified-memory-store.ts`).
+2. Horizon-neutral drill-suite closeout checks with legacy `h2_*` aliases preserved.
+3. Concurrent file-backed memory regression test; Vitest global setup for `evidence/`.
 
 ## Read Order (Zero-Context Startup)
 
@@ -38,10 +32,10 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. Complete horizon-neutral taxonomy migration in `validate-horizon-closeout.mjs` for remaining H2-specific drill/check failure labels (keep compatibility aliases).
-2. Extend canonical naming propagation into any remaining H2-specific orchestrator outputs that feed closeout/promotion gates.
-3. Add targeted tests for canonical-first assertions with legacy alias compatibility.
-4. Keep artifacts and gate outputs schema-valid under `scripts/validate-manifest-schema.mjs`.
+1. Run real H2 closeout + promotion dry-runs with repo `evidence/` populated from `validate:all`, then `validate:h2-closeout` / `promote:horizon` as documented in `README.md` (advances `HORIZON_STATUS.json` only when intentional).
+2. H3 runtime: extend memory layer (optional WAL / journal) and wire capability execution budgets into `capability-engine.ts` per `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md` H3 workstreams.
+3. Continue de-H2-prefixing orchestrator **outputs** where gates already accept aliases; keep dual IDs until all consumers migrate.
+4. Keep full gate chain green: `npm run check && npm test && npm run validate:all`.
 
 ## Validation Pack
 

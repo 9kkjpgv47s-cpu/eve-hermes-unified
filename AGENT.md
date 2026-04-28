@@ -16,6 +16,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
   - `git branch --show-current`
   - `git log --oneline -n 1`
   - `gh pr view --json number,title,headRefName,baseRefName,state`
+- Vitest creates `./evidence` at test start (`test/global-setup.ts`) because it is gitignored but required by several script integration tests.
 
 ## Read Order (Do Not Skip)
 

@@ -549,6 +549,7 @@ describe("validate-horizon-closeout.mjs (H2)", () => {
             id: "h2-drill-suite",
             pass: false,
             checks: expect.arrayContaining([
+              expect.stringContaining("horizon_drill_suite_schema_invalid:checks must be an object"),
               expect.stringContaining("h2_drill_suite_schema_invalid:checks must be an object"),
             ]),
           }),

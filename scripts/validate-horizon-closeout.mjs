@@ -41,6 +41,15 @@ function splitNormalizedCommand(command) {
     .filter((token) => token.length > 0);
 }
 
+/** Emit horizon-neutral drill-suite failure codes plus legacy `h2_drill_*` aliases. */
+function pushHorizonDrillSuiteCheck(checks, canonicalCode) {
+  checks.push(canonicalCode);
+  const legacyCode = canonicalCode.replace(/^horizon_drill_/, "h2_drill_");
+  if (legacyCode !== canonicalCode) {
+    checks.push(legacyCode);
+  }
+}
+
 function readCommandOptionValue(tokens, optionNames) {
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
@@ -271,8 +280,9 @@ function commandVerificationType(command) {
   if (command === "npm run validate:cutover-readiness") {
     return "pass-only";
   }
-  if (command === "npm run run:h2-drill-suite") {
-    return "h2-drill-suite";
+  const normalizedCommand = normalizeCommand(command);
+  if (/^npm run run:h[1-5]-drill-suite(?:\s|$)/.test(normalizedCommand)) {
+    return "horizon-drill-suite";
   }
   if (command === "npm run calibrate:rollback-thresholds") {
     return "rollback-threshold-calibration";
@@ -560,31 +570,42 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
-  if (verificationType === "h2-drill-suite") {
+  if (verificationType === "horizon-drill-suite") {
     const schema = validateManifestSchema("h2-drill-suite", payload);
     const checks = [];
     if (!schema.valid) {
-      checks.push(...schema.errors.map((error) => `h2_drill_suite_schema_invalid:${error}`));
+      for (const error of schema.errors) {
+        pushHorizonDrillSuiteCheck(
+          checks,
+          `horizon_drill_suite_schema_invalid:${error}`,
+        );
+      }
     }
     if (payload.pass !== true) {
-      checks.push("h2_drill_suite_not_passed");
+      pushHorizonDrillSuiteCheck(checks, "horizon_drill_suite_not_passed");
     }
     if (payload?.checks?.canaryHoldPass !== true) {
-      checks.push("h2_drill_canary_hold_failed");
+      pushHorizonDrillSuiteCheck(checks, "horizon_drill_canary_hold_failed");
     }
     if (payload?.checks?.majorityHoldPass !== true) {
-      checks.push("h2_drill_majority_hold_failed");
+      pushHorizonDrillSuiteCheck(checks, "horizon_drill_majority_hold_failed");
     }
     if (payload?.checks?.rollbackSimulationPass !== true) {
-      checks.push("h2_drill_rollback_simulation_failed");
+      pushHorizonDrillSuiteCheck(checks, "horizon_drill_rollback_simulation_failed");
     }
     if (payload?.checks?.rollbackSimulationTriggered !== true) {
-      checks.push("h2_drill_rollback_simulation_not_triggered");
+      pushHorizonDrillSuiteCheck(checks, "horizon_drill_rollback_simulation_not_triggered");
     }
     if (payload?.checks?.rollbackPolicySourceConsistencySignalsReported !== true) {
-      checks.push("h2_drill_rollback_source_consistency_signals_not_reported");
+      pushHorizonDrillSuiteCheck(
+        checks,
+        "horizon_drill_rollback_source_consistency_signals_not_reported",
+      );
     } else if (payload?.checks?.rollbackPolicySourceConsistencySignalsPass !== true) {
-      checks.push("h2_drill_rollback_source_consistency_signals_not_passed");
+      pushHorizonDrillSuiteCheck(
+        checks,
+        "horizon_drill_rollback_source_consistency_signals_not_passed",
+      );
     }
     return { pass: checks.length === 0, checks };
   }

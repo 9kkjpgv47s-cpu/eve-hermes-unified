@@ -9,11 +9,10 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Branch (at handoff time): `cursor/h2-stage-drill-orchestrator-0f91`
+- Branch (at handoff time): `cursor/horizon-drill-closeout-taxonomy-7d5a`
 - Latest completed hardening slice:
-  - closeout taxonomy normalization toward horizon-neutral signals
-  - compatibility aliases preserved for H2-prefixed checks/failures
-  - full validation passing
+  - horizon-closeout drill-suite verification uses canonical `horizon_drill_*` failure codes with legacy `h2_drill_*` dual-reporting
+  - `run:h[1-5]-drill-suite` commands map to the same drill-suite evaluation path as `run:h2-drill-suite`
 
 ## What Was Just Completed
 
@@ -38,7 +37,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. Complete horizon-neutral taxonomy migration in `validate-horizon-closeout.mjs` for remaining H2-specific drill/check failure labels (keep compatibility aliases).
+1. Complete horizon-neutral taxonomy migration for any remaining H2-only strings outside drill-suite closeout evaluation (keep compatibility aliases).
 2. Extend canonical naming propagation into any remaining H2-specific orchestrator outputs that feed closeout/promotion gates.
 3. Add targeted tests for canonical-first assertions with legacy alias compatibility.
 4. Keep artifacts and gate outputs schema-valid under `scripts/validate-manifest-schema.mjs`.

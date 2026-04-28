@@ -17,6 +17,16 @@ Use this document when one cloud agent hands execution to another. The objective
 3. Confirm runtime command compiles and runs:
    - `npm run dispatch -- --text "startup verification" --chat-id 1 --message-id 1`
 
+## Future task scope (H2 closeout and horizon promotion)
+
+Use this backlog when continuing H2 convergence without chat context. Order is a suggestion, not a hard dependency graph.
+
+1. **Horizon-neutral taxonomy** — Finish migrating H2-prefixed drill and closeout failure labels to horizon-scoped names in validators and orchestrator outputs; keep dual-reporting or alias acceptance so existing evidence and operators keep working (`h2_*` / `closeoutRunH2*` compatibility).
+2. **Command coverage** — Treat `npm run run:h[1-5]-drill-suite` uniformly in closeout evidence evaluation (same schema and gate semantics as today’s H2 drill suite).
+3. **Tests** — Extend assertions to expect canonical codes first while still accepting legacy aliases where compatibility is required.
+4. **Schema and manifests** — Keep `scripts/validate-manifest-schema.mjs` and emitted JSON aligned with any renamed check keys; update fixtures when adding new horizons.
+5. **H3+ runway** — After H2 closeout is stable, execute planned H3 actions in `docs/HORIZON_STATUS.json` (durability, policy hardening, capability envelopes) with evidence under `evidence/`.
+
 ## Baseline Status Fields to Record
 
 When taking over, capture and report:

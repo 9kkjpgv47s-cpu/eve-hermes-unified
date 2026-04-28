@@ -21,7 +21,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 1. `README.md`
 2. `AGENTS.md`
-3. `docs/CLOUD_AGENT_HANDOFF.md`
+3. `docs/CLOUD_AGENT_HANDOFF.md` (includes **Future task scope** for H2/H3 backlog)
 4. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 5. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
 6. `docs/HORIZON_STATUS.json`

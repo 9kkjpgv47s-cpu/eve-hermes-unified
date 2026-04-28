@@ -43,6 +43,16 @@ When `UNIFIED_TENANT_ISOLATION_STRICT=1`, runtime preflight requires a non-empty
 
 Both run as part of `npm run validate:all`.
 
+## H5 closeout gate (h5-action-9)
+
+After a full `validate:all` (or equivalent evidence generation), run:
+
+```bash
+npm run validate:h5-closeout
+```
+
+This selects the newest `validation-summary-*.json`, `h5-region-misalignment-drill-*.json`, `emergency-rollback-rehearsal-*.json`, and `remediation-playbook-dry-run-*.json` under `evidence/`, checks soak tenant/region drill diversity (≥2 non-`_none` keys each), and writes `evidence/h5-closeout-*.json` as a **`horizon-closeout`** manifest (`checks.horizonCloseoutGatePass`). Operators may pin this file for **`npm run promote:horizon`** when the program is ready to mark H5 completed per `docs/CLOUD_AGENT_HANDOFF.md` and local promotion policy.
+
 ## Region misalignment operator drill (h5-action-6)
 
 The third scenario (`@hermes`) temporarily sets **`UNIFIED_ROUTER_DEFAULT_FALLBACK=eve`** so primary and fallback differ (swap is otherwise a no-op when both lanes would be `hermes`).

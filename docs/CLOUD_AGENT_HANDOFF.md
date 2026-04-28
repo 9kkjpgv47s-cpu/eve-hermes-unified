@@ -334,7 +334,7 @@ The merge-bundle validation wrapper also enforces initial-scope goal-policy prop
 
 ## H3–H5 unified dispatch validation pack
 
-`npm run validate:all` now includes durability, contract, and scale-slice gates in order: `scan:legacy-dispatch-entrypoints`, `summarize:soak`, `run:emergency-rollback-rehearsal`, `validate:h5-tenant-isolation`, `run:remediation-playbook-dry-run`, `run:h5-region-misalignment-drill`, then regression and cutover readiness.
+`npm run validate:all` now includes durability, contract, and scale-slice gates in order: `scan:legacy-dispatch-entrypoints`, `summarize:soak`, `run:emergency-rollback-rehearsal`, `validate:h5-tenant-isolation`, `run:remediation-playbook-dry-run`, `run:h5-region-misalignment-drill`, `validate:h5-closeout`, then regression and cutover readiness.
 
 Additional operator commands:
 
@@ -343,4 +343,4 @@ Additional operator commands:
 
 ## Future task scope (post H5 core)
 
-- Optional follow-on: `h5-action-9` in `docs/HORIZON_STATUS.json` (H5 closeout evidence gate when ready).
+- Optional follow-on: `h5-action-10` in `docs/HORIZON_STATUS.json` (post-H5 program horizon definition when scope is ready).

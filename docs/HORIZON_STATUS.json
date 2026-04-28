@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T22:45:00Z",
+  "updatedAtIso": "2026-04-28T23:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H5",
   "activeStatus": "in_progress",
@@ -283,6 +283,13 @@
       "id": "h5-action-9",
       "summary": "H5 closeout: machine gate for H5 evidence bundle (region drill v2, tenant isolation, soak dimensions) and optional horizon promotion to completed.",
       "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h5-action-10",
+      "summary": "Post-H5: define next program horizon (H6) goals in HORIZON_STATUS and goalPolicies when product scope is ready.",
+      "targetHorizon": "H5",
       "status": "planned",
       "tags": ["validation", "operations"]
     }
@@ -365,7 +372,7 @@
     },
     "H5": {
       "status": "in_progress",
-      "summary": "H5 slice includes region misalignment operator drill in validate:all, cross-tenant memory list isolation tests, tenant-scoped capability memory, optional audit partition/rotation, and optional follow-on for extended region/WAL drills."
+      "summary": "H5 slice is machine-closeout-gated via validate:h5-closeout (evidence bundle: soak drill dimensions, region drill v2, rollback rehearsal, remediation dry-run). Optional promote:horizon H5 with --closeout-file. Post-H5 runway tracked as h5-action-10."
     }
   },
   "history": [
@@ -517,7 +524,13 @@
       "timestamp": "2026-04-28T22:45:00Z",
       "horizon": "H5",
       "status": "in_progress",
-      "note": "Completed h5-action-8: region drill v2 runs default + @cursor + @hermes misalignment cases with temp WAL correlation validation; dispatch_complete WAL records include envelopeRegionId, routerRegionId, regionAligned, tenantId, regionId; seeded h5-action-9 for H5 closeout gate."
+      "note": "Completed h5-action-8: region drill v2 (default + @cursor + @hermes), temp WAL correlation validation, dispatch_complete WAL correlation fields; seeded h5-action-9 for H5 closeout gate."
+    },
+    {
+      "timestamp": "2026-04-28T23:00:00Z",
+      "horizon": "H5",
+      "status": "in_progress",
+      "note": "Completed h5-action-9: added scripts/validate-h5-closeout.mjs (horizon-closeout manifest, soak tenant/region diversity checks, region drill v2 + rollback + remediation artifacts) and npm run validate:h5-closeout in validate:all; seeded h5-action-10 for post-H5 program definition."
     }
   ]
 }

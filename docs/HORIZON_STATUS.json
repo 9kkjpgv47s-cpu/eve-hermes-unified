@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T21:30:00Z",
+  "updatedAtIso": "2026-04-28T21:45:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H2",
+  "activeHorizon": "H4",
   "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, supervised rollback simulation evidence generation, a machine-checkable H2 closeout gate, one-command closeout/promotion runners, a gated horizon-promotion command, and progressive goal-runway enforcement so each promotion can require larger next-horizon scope.",
+  "summary": "Horizon H4 legacy-path retirement and contract tightening: canonical unified dispatch entrypoint enforcement (validate:unified-entrypoints), LEGACY_ENTRYPOINT_DEPRECATION_MAP, UNIFIED_DISPATCH_CONTRACT_VERSION v1 fixture gate.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -194,6 +194,27 @@
       "targetHorizon": "H3",
       "status": "completed",
       "tags": ["rollback", "operations"]
+    },
+    {
+      "id": "h4-action-1",
+      "summary": "Identify and deprecate direct Eve/Hermes invocation paths outside unified dispatch.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "runtime"]
+    },
+    {
+      "id": "h4-action-2",
+      "summary": "Remove compatibility shims that are no longer required by production integrations.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "config"]
+    },
+    {
+      "id": "h4-action-3",
+      "summary": "Freeze a versioned unified dispatch contract and publish upgrade notes.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["contract", "validation"]
     }
   ],
   "goalPolicies": {
@@ -261,16 +282,16 @@
       "summary": "Operationalization baseline closed with passing unified CI, artifact upload reliability, and downloaded artifact verification workflow."
     },
     "H2": {
-      "status": "in_progress",
-      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, H2-specific closeout evidence is machine-validated, one-command closeout and promotion runners are available, horizon advancement can consume pinned closeout-run evidence, and progressive goal-runway gates can require larger next-horizon scope before promotion."
+      "status": "completed",
+      "summary": "Cutover drills, rollback calibration, supervised simulation, closeout/promotion orchestration, and progressive goal gates delivered; operational baseline preserved for replay."
     },
     "H3": {
-      "status": "planned",
-      "summary": "Planned H3 work completed in-repo: durability queue, fallback suppression, capability timeout (UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS), SerializedUnifiedMemoryStore and tests, soak drift summarizer and optional post-soak hook, emergency rollback rehearsal manifest."
+      "status": "completed",
+      "summary": "Durability queue and replay; fallback suppression by failure class; capability execution timeout; SerializedUnifiedMemoryStore; soak drift summarizer; emergency rollback rehearsal manifests."
     },
     "H4": {
-      "status": "planned",
-      "summary": "Legacy path retirement and contract tightening."
+      "status": "in_progress",
+      "summary": "Legacy retirement gates: validate-unified-entrypoints CI script, LEGACY_ENTRYPOINT_DEPRECATION_MAP, contract version constant v1 + fixture validation tests."
     },
     "H5": {
       "status": "planned",
@@ -405,10 +426,10 @@
       "note": "Merged durability + Hermes-primary allowlist streams; added RouterPolicyConfig.noFallbackOnFailureClasses and dispatch suppression via UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES; marked h3-action-2 completed."
     },
     {
-      "timestamp": "2026-04-28T21:30:00Z",
-      "horizon": "H3",
-      "status": "planned",
-      "note": "Capability executor timeout envelope; SerializedUnifiedMemoryStore + restart/concurrency tests; summarize-soak-report.mjs + soak summarize hook; emergency-rollback-rehearsal.sh manifest; marked h3-action-3 through h3-action-6 completed."
+      "timestamp": "2026-04-28T21:45:00Z",
+      "horizon": "H4",
+      "status": "in_progress",
+      "note": "H4 slice: UNIFIED_DISPATCH_CONTRACT_VERSION v1, LEGACY_ENTRYPOINT_DEPRECATION_MAP, validate-unified-entrypoints.mjs + CI, fixture test unified-dispatch-result-v1-pass.json; activeHorizon advanced to H4; H3 marked completed."
     }
   ]
 }

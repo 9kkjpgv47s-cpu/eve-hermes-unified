@@ -44,6 +44,13 @@ Every PR should include:
 - Preserve canonical `traceId` continuity from envelope to response.
 - Keep explicit lane directives (`@cursor`, `@hermes`) deterministic.
 
+## Unified dispatch ingress (H4)
+
+- **Canonical binary**: `src/bin/unified-dispatch.ts` — only location that may construct `EveAdapter` / `HermesAdapter` for production-shaped runs.
+- **CI gate**: `npm run validate:unified-entrypoints` scans `src/**/*.ts` for stray adapter constructors.
+- **Contract**: `UNIFIED_DISPATCH_CONTRACT_VERSION` in `src/contracts/schema-version.ts`; fixtures under `test/fixtures/contracts/` validate with `validateUnifiedDispatchResult`.
+- **Deprecation map**: `docs/LEGACY_ENTRYPOINT_DEPRECATION_MAP.md`.
+
 ## Cutover and Rollback Commands
 
 Stage:

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CapabilityExecutionResult, DispatchState, UnifiedCapabilityDecision } from "../src/contracts/types.js";
+import { UNIFIED_DISPATCH_CONTRACT_VERSION } from "../src/contracts/schema-version.js";
 import { dispatchUnifiedMessage } from "../src/runtime/unified-dispatch.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
 import type { CapabilityEngine } from "../src/runtime/capability-engine.js";
@@ -48,6 +49,43 @@ function baseRouterConfig(overrides?: Partial<RouterPolicyConfig>): RouterPolicy
 }
 
 describe("dispatchUnifiedMessage", () => {
+  it("includes the canonical dispatch contract version on every result", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r-contract",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t-contract",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig(),
+    };
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "contract probe",
+    });
+    expect(result.contractVersion).toBe(UNIFIED_DISPATCH_CONTRACT_VERSION);
+  });
+
   it("uses primary lane when successful", async () => {
     const runtime = {
       eveAdapter: new FakeLaneAdapter("eve", {

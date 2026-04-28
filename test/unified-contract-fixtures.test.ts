@@ -18,7 +18,15 @@ describe("unified dispatch contract fixtures", () => {
     const parsed = JSON.parse(raw) as UnifiedDispatchResult;
     expect(() => validateUnifiedDispatchResult(parsed)).not.toThrow();
     const result = validateUnifiedDispatchResult(parsed);
+    expect(result.contractVersion).toBe(UNIFIED_DISPATCH_CONTRACT_VERSION);
     expect(result.envelope.traceId).toBe("fixture-trace-v1");
     expect(result.response.traceId).toBe("fixture-trace-v1");
+  });
+
+  it("rejects dispatch results with wrong contractVersion", () => {
+    const raw = readFileSync(join(fixtureDir, "fixtures/contracts/unified-dispatch-result-v1-pass.json"), "utf8");
+    const parsed = JSON.parse(raw) as UnifiedDispatchResult;
+    parsed.contractVersion = "v0" as UnifiedDispatchResult["contractVersion"];
+    expect(() => validateUnifiedDispatchResult(parsed)).toThrow(/contractVersion/);
   });
 });

@@ -57,7 +57,16 @@ run_dispatch_json() {
   EVE_DISPATCH_RESULT_PATH="${EVE_DISPATCH_RESULT_PATH:-/tmp/eve-dispatch-result.json}" \
   UNIFIED_MEMORY_STORE_KIND="${UNIFIED_MEMORY_STORE_KIND:-file}" \
   UNIFIED_MEMORY_FILE_PATH="${UNIFIED_MEMORY_FILE_PATH:-/tmp/eve-hermes-unified-memory.json}" \
-    "${dispatch_runner[@]}" "$dispatch_entry" --text "$text" --chat-id "$chat_id" --message-id "$message_id"
+    "${dispatch_runner[@]}" "$dispatch_entry" --compact-json --text "$text" --chat-id "$chat_id" --message-id "$message_id"
+}
+
+validate_dispatch_contract_json() {
+  local payload="$1"
+  local scratch="$tmp_dir/contract-${RANDOM}.json"
+  printf '%s' "$payload" >"$scratch"
+  if [[ "${UNIFIED_CUTOVER_READINESS_VALIDATE_DISPATCH_CONTRACT:-1}" != "0" ]]; then
+    npx --no-install tsx "$ROOT_DIR/src/bin/validate-dispatch-contracts.ts" --file "$scratch" >/dev/null
+  fi
 }
 
 extract_json_field() {
@@ -99,6 +108,7 @@ build_stage_record() {
 
   local json
   json="$(run_dispatch_json "$text" "$chat_id" "$message_id")"
+  validate_dispatch_contract_json "$json"
   local lane reason fallback fail_closed
   lane="$(extract_json_field "$json" "routing.primaryLane")"
   reason="$(extract_json_field "$json" "routing.reason")"
@@ -156,6 +166,7 @@ while IFS= read -r line; do
 done <"$env_file"
 
 rollback_json="$(run_dispatch_json "rollback verification probe" "rollback-chat" "7")"
+validate_dispatch_contract_json "$rollback_json"
 rollback_lane="$(extract_json_field "$rollback_json" "routing.primaryLane")"
 rollback_reason="$(extract_json_field "$rollback_json" "routing.reason")"
 

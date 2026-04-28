@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T23:26:00Z",
+  "updatedAtIso": "2026-04-28T21:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -194,6 +194,27 @@
       "targetHorizon": "H3",
       "status": "planned",
       "tags": ["rollback", "operations"]
+    },
+    {
+      "id": "h5-action-1",
+      "summary": "Define tenant isolation model for routing, memory, and capability policy scopes with machine-checkable invariants.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["tenant", "isolation", "validation"]
+    },
+    {
+      "id": "h5-action-2",
+      "summary": "Add region-aware failover and replay-safe dispatch behavior with simulation evidence.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["region", "durability", "runtime"]
+    },
+    {
+      "id": "h5-action-3",
+      "summary": "Build remediation playbooks that cloud agents can dry-run under bounded policy controls with auditable manifests.",
+      "targetHorizon": "H5",
+      "status": "completed",
+      "tags": ["remediation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -274,7 +295,7 @@
     },
     "H5": {
       "status": "planned",
-      "summary": "Autonomous operations and scale envelope."
+      "summary": "First H5 slice landed: tenant-scoped memory keys and capability policy, optional strict tenant preflight, envelope tenant/region fields, deterministic region-mismatch routing to fallback lane, validate:h5-tenant-isolation gate, and remediation-playbook dry-run manifest script."
     }
   },
   "history": [
@@ -391,6 +412,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
+    },
+    {
+      "timestamp": "2026-04-28T21:00:00Z",
+      "horizon": "H5",
+      "status": "planned",
+      "note": "Implemented tenant isolation (memory + capability policy + strict preflight), region metadata and deterministic region-mismatch failover routing, remediation dry-run manifest script, npm run validate:h5-tenant-isolation gate, summarize-evidence soak file selection fix (soak-*.jsonl vs soak-summary), and docs/H5_MULTI_TENANT_REGION.md."
     }
   ]
 }

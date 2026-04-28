@@ -4,6 +4,11 @@ import { dispatchUnifiedMessage } from "../src/runtime/unified-dispatch.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
 import type { CapabilityEngine } from "../src/runtime/capability-engine.js";
 import type { RouterPolicyConfig } from "../src/router/policy-router.js";
+import { CapabilityRegistry } from "../src/skills/capability-registry.js";
+import { registerDefaultCapabilityExecutors } from "../src/runtime/default-capability-handlers.js";
+import { UnifiedCapabilityEngine } from "../src/runtime/capability-engine.js";
+import { createCapabilityPolicy } from "../src/runtime/capability-policy.js";
+import { InMemoryUnifiedMemoryStore } from "../src/memory/unified-memory-store.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   constructor(
@@ -241,5 +246,144 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.routing.reason).toBe("explicit_capability_command");
     expect(result.response.laneUsed).toBe("hermes");
     expect(result.response.failureClass).toBe("none");
+  });
+
+  it("denies capability when tenant chat denylist blocks chat", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new InMemoryUnifiedMemoryStore();
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => ({
+        status: "pass" as const,
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none" as const,
+        sourceLane: "eve" as const,
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      memoryStore,
+    });
+    const policy = createCapabilityPolicy({
+      defaultMode: "allow",
+      allowCapabilities: [],
+      denyCapabilities: [],
+      allowedChatIds: [],
+      deniedChatIds: [],
+      allowCapabilityChats: {},
+      denyCapabilityChats: {},
+      allowChatIdsByTenant: {},
+      denyChatIdsByTenant: { acme: ["42"] },
+    });
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => ({
+        status: "pass" as const,
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none" as const,
+        sourceLane: "eve" as const,
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      policy,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "unused",
+        runtimeUsed: "eve",
+        runId: "r0",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t0",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "unused",
+        runtimeUsed: "hermes",
+        runId: "r0",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t0",
+      }),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "42",
+      messageId: "500",
+      text: "@cap status",
+      tenantId: "acme",
+    });
+
+    expect(result.capabilityExecution?.status).toBe("failed");
+    expect(result.capabilityExecution?.reason).toBe("chat_denied_by_tenant_policy");
+  });
+
+  it("uses hermes primary when envelope region mismatches router region pin", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "eve_should_not_win",
+        runtimeUsed: "eve",
+        runId: "r-eve",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t-eve",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "hermes_region_failover",
+        runtimeUsed: "hermes",
+        runId: "r-hermes",
+        elapsedMs: 2,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t-hermes",
+      }),
+      routerConfig: baseRouterConfig({
+        routerRegionId: "us-east",
+        defaultPrimary: "eve",
+        defaultFallback: "hermes",
+      }),
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+      regionId: "eu-west",
+    });
+
+    expect(result.routing.regionAligned).toBe(false);
+    expect(result.routing.reason).toBe("region_mismatch_failover_to_fallback_lane");
+    expect(result.routing.primaryLane).toBe("hermes");
+    expect(result.response.laneUsed).toBe("hermes");
+    expect(result.primaryState.sourceLane).toBe("hermes");
   });
 });

@@ -331,3 +331,11 @@ The merge-bundle validation wrapper also enforces initial-scope goal-policy prop
 - missing/failed release signal surfaces as:
   - `missing_release_goal_policy_validation_check`
   - `release_goal_policy_validation_not_passed`
+
+## H5 multi-tenant and region slice (operational)
+
+- Human-readable model: `docs/H5_MULTI_TENANT_REGION.md`.
+- Tenant-scoped memory keys and per-tenant capability chat policy; optional `UNIFIED_TENANT_ISOLATION_STRICT=1` requires a resolved tenant id before dispatch (CLI `--tenant-id` or `UNIFIED_DISPATCH_TENANT_ID`).
+- Region metadata on routing decisions; deterministic region mismatch uses primary lane = configured fallback with reason `region_mismatch_failover_to_fallback_lane`.
+- Machine check: `npm run validate:h5-tenant-isolation` (also runs inside `npm run validate:all`).
+- Remediation dry-run manifest: `npm run run:remediation-playbook-dry-run` (writes `evidence/remediation-playbook-dry-run-*.json`).

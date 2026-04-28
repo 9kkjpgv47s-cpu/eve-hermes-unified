@@ -71,4 +71,28 @@ describe("runRuntimePreflight", () => {
       );
     });
   });
+
+  it("fails strict preflight when tenant isolation strict without tenant id", async () => {
+    await withTempDir(async (dir) => {
+      const config = {
+        ...baseConfig(dir),
+        tenantIsolationStrict: true,
+        dispatchTenantId: "",
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "Tenant isolation strict mode requires a non-empty tenant id",
+      );
+    });
+  });
+
+  it("passes strict preflight when tenant id is provided with tenant isolation strict", async () => {
+    await withTempDir(async (dir) => {
+      const config = {
+        ...baseConfig(dir),
+        tenantIsolationStrict: true,
+        dispatchTenantId: "tenant-1",
+      };
+      await expect(runRuntimePreflight(config)).resolves.toEqual([]);
+    });
+  });
 });

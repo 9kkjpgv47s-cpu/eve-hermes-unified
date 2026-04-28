@@ -78,6 +78,11 @@ npm run verify:merge-bundle -- --evidence-dir evidence --latest
 4. Runbook tightening for operator replay of canary/majority incidents.
 5. Extend closeout/promotion orchestration to horizon-generic operation (H3/H4) while preserving H2 command compatibility.
 
+## H5 slice (landed in repo)
+
+- Tenant/region dispatch envelope, tenant memory isolation, tenant capability policy, and region-mismatch routing: `docs/H5_MULTI_TENANT_REGION.md`.
+- Gates: `npm run validate:h5-tenant-isolation`, `npm run run:remediation-playbook-dry-run`.
+
 ## Done Signal for Each Iteration
 
 - New behavior implemented and covered by tests.

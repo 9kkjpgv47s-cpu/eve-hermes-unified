@@ -17,6 +17,10 @@ export type UnifiedMessageEnvelope = {
   messageId: string;
   receivedAtIso: string;
   text: string;
+  /** H5: optional tenant scope for isolation (memory keys, policy). */
+  tenantId?: string;
+  /** H5: optional region label for routing metadata / failover simulation. */
+  regionId?: string;
   metadata?: Record<string, string>;
 };
 
@@ -26,6 +30,12 @@ export type RoutingDecision = {
   reason: string;
   policyVersion: string;
   failClosed: boolean;
+  /** H5: region from envelope when present. */
+  dispatchRegionId?: string;
+  /** H5: region pinned in router policy when present. */
+  routerRegionId?: string;
+  /** H5: true when both region ids are set and equal, or when neither is set. */
+  regionAligned?: boolean;
 };
 
 export type DispatchState = {

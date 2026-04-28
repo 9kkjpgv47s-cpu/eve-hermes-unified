@@ -16,6 +16,8 @@ export type CapabilityExecutionContext = {
   chatId: string;
   messageId: string;
   traceId: string;
+  /** H5: optional tenant for scoped memory and policy. */
+  tenantId?: string;
   dispatchLane: (input: CapabilityLaneDispatchInput) => Promise<DispatchState>;
   memoryStore: UnifiedMemoryStore;
 };
@@ -240,6 +242,7 @@ export function registerHermesTools(
           const recentExecutions = await context.memoryStore.list({
             lane: "hermes",
             namespace: "capability-execution",
+            ...(context.tenantId ? { tenantId: context.tenantId } : {}),
           });
           const recentCount = String(recentExecutions.length);
           return {

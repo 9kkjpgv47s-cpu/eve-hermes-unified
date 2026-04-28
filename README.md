@@ -34,6 +34,7 @@ npm run bundle:merge-readiness
 npm run verify:merge-bundle
 npm run validate:manifest-schemas -- --latest-only
 npm run validate:horizon-status
+npm run validate:h5-tenant-isolation
 npm run validate:horizon-closeout -- --horizon H1 --next-horizon H2
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
 npm run validate:goal-policy-file -- --horizon-status-file docs/HORIZON_STATUS.json --goal-policy-file docs/GOAL_POLICIES.json --source-horizon H2 --until-horizon H5 --require-tagged-requirements --require-positive-pending-min
@@ -93,5 +94,7 @@ Run one unified-dispatch request with explicit message envelope:
 ```bash
 npm run dispatch -- --text "check project status" --chat-id 123 --message-id 456
 ```
+
+Optional H5 envelope fields: `--tenant-id` and `--region-id` (or `UNIFIED_DISPATCH_TENANT_ID` / `UNIFIED_DISPATCH_REGION_ID`). See `docs/H5_MULTI_TENANT_REGION.md`.
 
 Key environment controls are in `.env.example`.

@@ -14,10 +14,18 @@ import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
 
-function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
+function parseArgs(argv: string[]): {
+  text: string;
+  chatId: string;
+  messageId: string;
+  tenantId?: string;
+  regionId?: string;
+} {
   let text = "";
   let chatId = "0";
   let messageId = "0";
+  let tenantId: string | undefined;
+  let regionId: string | undefined;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--text") {
@@ -29,19 +37,27 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
     } else if (arg === "--message-id") {
       messageId = argv[i + 1] ?? "0";
       i += 1;
+    } else if (arg === "--tenant-id") {
+      tenantId = argv[i + 1]?.trim();
+      i += 1;
+    } else if (arg === "--region-id") {
+      regionId = argv[i + 1]?.trim();
+      i += 1;
     }
   }
   if (!text.trim()) {
     throw new Error("Missing required --text argument.");
   }
-  return { text, chatId, messageId };
+  return { text, chatId, messageId, tenantId, regionId };
 }
 
 async function main() {
   const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
   await loadDotEnvFile(rootDir);
-  const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
+  const { text, chatId, messageId, tenantId: tenantArg, regionId: regionArg } = parseArgs(process.argv.slice(2));
   const config = loadUnifiedRuntimeEnvConfig();
+  const tenantId = tenantArg?.trim() || config.dispatchDefaultTenantId?.trim();
+  const regionId = regionArg?.trim() || config.dispatchDefaultRegionId?.trim();
   const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
@@ -91,6 +107,8 @@ async function main() {
     unifiedMemoryFilePath: config.unifiedMemoryFilePath,
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
+    tenantIsolationStrict: config.tenantIsolationStrict,
+    dispatchTenantId: tenantId,
   });
   if (preflightIssues.length > 0) {
     const reasons = preflightIssues.join("; ");
@@ -109,9 +127,11 @@ async function main() {
     chatId,
     messageId,
     text,
+    ...(tenantId ? { tenantId } : {}),
+    ...(regionId ? { regionId } : {}),
   });
   await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
 main().catch((error) => {

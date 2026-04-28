@@ -25,7 +25,13 @@ export function validateEnvelope(value: UnifiedMessageEnvelope): UnifiedMessageE
   ensure(value.chatId.length > 0, "Envelope chatId is required.");
   ensure(value.messageId.length > 0, "Envelope messageId is required.");
   ensure(value.text.length > 0, "Envelope text is required.");
-  return value;
+  const tenantId = value.tenantId?.trim();
+  const regionId = value.regionId?.trim();
+  return {
+    ...value,
+    ...(tenantId && tenantId.length > 0 ? { tenantId } : {}),
+    ...(regionId && regionId.length > 0 ? { regionId } : {}),
+  };
 }
 
 export function validateRoutingDecision(value: RoutingDecision): RoutingDecision {
@@ -36,6 +42,15 @@ export function validateRoutingDecision(value: RoutingDecision): RoutingDecision
     isLane(value.fallbackLane) || value.fallbackLane === "none",
     "Invalid fallback lane.",
   );
+  if (value.dispatchRegionId !== undefined) {
+    ensure(value.dispatchRegionId.trim().length > 0, "dispatchRegionId must be non-empty when set.");
+  }
+  if (value.routerRegionId !== undefined) {
+    ensure(value.routerRegionId.trim().length > 0, "routerRegionId must be non-empty when set.");
+  }
+  if (value.regionAligned !== undefined) {
+    ensure(typeof value.regionAligned === "boolean", "regionAligned must be boolean when set.");
+  }
   return value;
 }
 

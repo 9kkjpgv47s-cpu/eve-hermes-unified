@@ -8,6 +8,8 @@ export type UnifiedMemoryKey = {
   lane: MemoryLane;
   namespace: string;
   key: string;
+  /** H5: when set, isolates storage from other tenants. */
+  tenantId?: string;
 };
 
 export type UnifiedMemoryEntry = UnifiedMemoryKey & {
@@ -20,6 +22,8 @@ export type UnifiedMemoryListQuery = {
   lane?: MemoryLane;
   namespace?: string;
   keyPrefix?: string;
+  /** When set, only entries for this tenant (omit for legacy / cross-tenant list). */
+  tenantId?: string;
 };
 
 export interface UnifiedMemoryStore {
@@ -49,15 +53,24 @@ export function validateUnifiedMemoryKey(target: UnifiedMemoryKey): void {
 
 export function normalizeMemoryKey(target: UnifiedMemoryKey): UnifiedMemoryKey {
   validateUnifiedMemoryKey(target);
-  return {
+  const tenantTrimmed = target.tenantId?.trim();
+  const normalized: UnifiedMemoryKey = {
     lane: target.lane,
     namespace: target.namespace.trim(),
     key: target.key.trim(),
   };
+  if (tenantTrimmed && tenantTrimmed.length > 0) {
+    normalized.tenantId = tenantTrimmed;
+  }
+  return normalized;
 }
 
 function storageKey(target: UnifiedMemoryKey): string {
-  return `${target.lane}::${target.namespace}::${target.key}`;
+  const normalized = normalizeMemoryKey(target);
+  if (!normalized.tenantId) {
+    return `${normalized.lane}::${normalized.namespace}::${normalized.key}`;
+  }
+  return `tenant:${normalized.tenantId}::${normalized.lane}::${normalized.namespace}::${normalized.key}`;
 }
 
 function cloneEntry(entry: UnifiedMemoryEntry): UnifiedMemoryEntry {
@@ -81,7 +94,12 @@ function parseRecordList(raw: string): UnifiedMemoryEntry[] {
       return false;
     }
     const entry = item as Partial<UnifiedMemoryEntry>;
+    const tenantOk =
+      entry.tenantId === undefined ||
+      entry.tenantId === null ||
+      (typeof entry.tenantId === "string" && entry.tenantId.trim().length > 0);
     return (
+      tenantOk &&
       (entry.lane === "eve" || entry.lane === "hermes" || entry.lane === "shared") &&
       typeof entry.namespace === "string" &&
       typeof entry.key === "string" &&
@@ -129,6 +147,7 @@ export class InMemoryUnifiedMemoryStore implements UnifiedMemoryStore {
     const lane = query?.lane;
     const namespace = query?.namespace;
     const keyPrefix = query?.keyPrefix;
+    const tenantFilter = query?.tenantId?.trim();
 
     const matches = [...this.records.values()].filter((entry) => {
       if (lane && entry.lane !== lane) {
@@ -139,6 +158,12 @@ export class InMemoryUnifiedMemoryStore implements UnifiedMemoryStore {
       }
       if (keyPrefix && !entry.key.startsWith(keyPrefix)) {
         return false;
+      }
+      if (tenantFilter) {
+        const entryTenant = entry.tenantId?.trim() ?? "";
+        if (entryTenant !== tenantFilter) {
+          return false;
+        }
       }
       return true;
     });
@@ -226,6 +251,7 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
     const lane = query?.lane;
     const namespace = query?.namespace;
     const keyPrefix = query?.keyPrefix;
+    const tenantFilter = query?.tenantId?.trim();
 
     const matches = [...this.records.values()].filter((entry) => {
       if (lane && entry.lane !== lane) {
@@ -236,6 +262,12 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
       }
       if (keyPrefix && !entry.key.startsWith(keyPrefix)) {
         return false;
+      }
+      if (tenantFilter) {
+        const entryTenant = entry.tenantId?.trim() ?? "";
+        if (entryTenant !== tenantFilter) {
+          return false;
+        }
       }
       return true;
     });

@@ -8,6 +8,8 @@ export type RouterPolicyConfig = {
   defaultFallback: LaneId | "none";
   failClosed: boolean;
   policyVersion: string;
+  /** H5: optional region pin for policy metadata and alignment checks. */
+  routerRegionId?: string;
   cutoverStage?: RouterCutoverStage;
   canaryChatIds?: string[];
   majorityPercent?: number;
@@ -43,6 +45,34 @@ function stableBucketFromChatId(chatId: string, hashSalt: string | undefined): n
     hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
   }
   return hash % 100;
+}
+
+function mergeRegionRouting(
+  envelope: UnifiedMessageEnvelope,
+  config: RouterPolicyConfig,
+  base: Omit<RoutingDecision, "dispatchRegionId" | "routerRegionId" | "regionAligned">,
+): RoutingDecision {
+  const dispatchRegionId = envelope.regionId?.trim() || undefined;
+  const routerRegionId = config.routerRegionId?.trim() || undefined;
+  const regionAligned =
+    !dispatchRegionId && !routerRegionId
+      ? true
+      : Boolean(dispatchRegionId && routerRegionId && dispatchRegionId === routerRegionId);
+  return validateRoutingDecision({
+    ...base,
+    dispatchRegionId,
+    routerRegionId,
+    regionAligned,
+  });
+}
+
+/** H5: attach dispatch/router region metadata to any routing decision. */
+export function stampRoutingRegions(
+  envelope: UnifiedMessageEnvelope,
+  config: RouterPolicyConfig,
+  base: Omit<RoutingDecision, "dispatchRegionId" | "routerRegionId" | "regionAligned">,
+): RoutingDecision {
+  return mergeRegionRouting(envelope, config, base);
 }
 
 function defaultRouteForStage(
@@ -106,7 +136,7 @@ export function routeMessage(
 
   // Explicit lane commands take priority and are message-local.
   if (lower.startsWith("@cursor ")) {
-    return validateRoutingDecision({
+    return mergeRegionRouting(envelope, config, {
       primaryLane: "eve",
       fallbackLane: config.defaultFallback,
       reason: "explicit_cursor_passthrough",
@@ -115,7 +145,7 @@ export function routeMessage(
     });
   }
   if (lower.startsWith("@hermes ")) {
-    return validateRoutingDecision({
+    return mergeRegionRouting(envelope, config, {
       primaryLane: "hermes",
       fallbackLane: config.defaultFallback,
       reason: "explicit_hermes_passthrough",
@@ -127,7 +157,7 @@ export function routeMessage(
   // Default policy lane ownership can be stage-aware for cutover.
   if (config.cutoverStage) {
     const stagedDefaultRoute = defaultRouteForStage(envelope, config);
-    return validateRoutingDecision({
+    return mergeRegionRouting(envelope, config, {
       primaryLane: stagedDefaultRoute.primaryLane,
       fallbackLane: stagedDefaultRoute.fallbackLane,
       reason: stagedDefaultRoute.reason,
@@ -136,10 +166,31 @@ export function routeMessage(
     });
   }
 
-  return validateRoutingDecision({
+  return mergeRegionRouting(envelope, config, {
     primaryLane: config.defaultPrimary,
     fallbackLane: config.defaultFallback,
     reason: "default_policy_lane",
+    policyVersion: config.policyVersion,
+    failClosed: config.failClosed,
+  });
+}
+
+/**
+ * H5: when envelope region and router region disagree, prefer configured fallback lane
+ * (replay-safe: deterministic lane choice for a given envelope + policy).
+ */
+export function routeMessageWithRegionFailover(
+  envelope: UnifiedMessageEnvelope,
+  config: RouterPolicyConfig,
+): RoutingDecision {
+  const base = routeMessage(envelope, config);
+  if (base.regionAligned !== false || config.defaultFallback === "none") {
+    return base;
+  }
+  return mergeRegionRouting(envelope, config, {
+    primaryLane: config.defaultFallback,
+    fallbackLane: "none",
+    reason: "region_mismatch_failover_to_fallback_lane",
     policyVersion: config.policyVersion,
     failClosed: config.failClosed,
   });

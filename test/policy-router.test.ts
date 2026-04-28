@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { routeMessage } from "../src/router/policy-router.js";
+import { routeMessage, routeMessageWithRegionFailover } from "../src/router/policy-router.js";
 
 const baseConfig = {
   defaultPrimary: "eve" as const,
@@ -206,5 +206,59 @@ describe("routeMessage", () => {
     );
     expect(decision.primaryLane).toBe("hermes");
     expect(decision.reason).toBe("stage_full_force_hermes");
+  });
+
+  it("stamps region metadata and alignment on routing decisions", () => {
+    const aligned = routeMessage(
+      {
+        traceId: "t-r1",
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        receivedAtIso: new Date().toISOString(),
+        text: "hello",
+        regionId: "us-east",
+      },
+      { ...baseConfig, routerRegionId: "us-east" },
+    );
+    expect(aligned.dispatchRegionId).toBe("us-east");
+    expect(aligned.routerRegionId).toBe("us-east");
+    expect(aligned.regionAligned).toBe(true);
+
+    const misaligned = routeMessage(
+      {
+        traceId: "t-r2",
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        receivedAtIso: new Date().toISOString(),
+        text: "hello",
+        regionId: "eu-west",
+      },
+      { ...baseConfig, routerRegionId: "us-east" },
+    );
+    expect(misaligned.regionAligned).toBe(false);
+  });
+
+  it("routeMessageWithRegionFailover moves primary to fallback lane on region mismatch", () => {
+    const envelope = {
+      traceId: "t-r3",
+      channel: "telegram" as const,
+      chatId: "1",
+      messageId: "2",
+      receivedAtIso: new Date().toISOString(),
+      text: "hello",
+      regionId: "eu-west",
+    };
+    const failover = routeMessageWithRegionFailover(envelope, {
+      ...baseConfig,
+      routerRegionId: "us-east",
+      defaultPrimary: "eve",
+      defaultFallback: "hermes",
+    });
+    expect(failover.regionAligned).toBe(false);
+    expect(failover.primaryLane).toBe("hermes");
+    expect(failover.fallbackLane).toBe("none");
+    expect(failover.reason).toBe("region_mismatch_failover_to_fallback_lane");
   });
 });

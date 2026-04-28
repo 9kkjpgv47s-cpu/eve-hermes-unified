@@ -127,6 +127,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
         capabilityId: selection.id,
         lane: selection.lane,
         chatId: envelope.chatId,
+        tenantId: envelope.tenantId,
       });
       if (!authorization.allowed) {
         const denied = denialExecutionResult(
@@ -164,6 +165,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
       chatId: envelope.chatId,
       messageId: envelope.messageId,
       traceId: envelope.traceId,
+      tenantId: envelope.tenantId,
       memoryStore: this.dependencies.memoryStore,
       dispatchLane: async (input) =>
         this.dependencies.dispatchLane({
@@ -202,6 +204,7 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
         lane: selection.lane,
         namespace: "capability-execution",
         key: envelope.traceId,
+        tenantId: envelope.tenantId,
       },
       JSON.stringify({
         capabilityId: selection.id,

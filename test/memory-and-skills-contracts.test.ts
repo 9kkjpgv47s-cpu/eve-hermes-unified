@@ -43,6 +43,20 @@ describe("UnifiedMemoryStore adapters", () => {
     expect(value?.lane).toBe("hermes");
   });
 
+  it("isolates keys by tenant id when present", async () => {
+    const store = new InMemoryUnifiedMemoryStore();
+    const base = { lane: "eve" as const, namespace: "n", key: "k" };
+    await store.set({ ...base, tenantId: "a" }, "va");
+    await store.set({ ...base, tenantId: "b" }, "vb");
+    await store.set(base, "legacy");
+    expect((await store.get({ ...base, tenantId: "a" }))?.value).toBe("va");
+    expect((await store.get({ ...base, tenantId: "b" }))?.value).toBe("vb");
+    expect((await store.get(base))?.value).toBe("legacy");
+    const listA = await store.list({ tenantId: "a" });
+    expect(listA).toHaveLength(1);
+    expect(listA[0]?.tenantId).toBe("a");
+  });
+
   it("lists entries by lane and key prefix", async () => {
     const store = new InMemoryUnifiedMemoryStore();
     const eve = new EveMemoryAdapter(store);

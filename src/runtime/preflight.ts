@@ -13,6 +13,10 @@ export type RuntimePreflightConfig = {
   unifiedMemoryFilePath: string;
   auditEnabled?: boolean;
   auditLogPath: string;
+  /** H5: when strict and true, reject dispatch without tenant id. */
+  tenantIsolationStrict?: boolean;
+  /** H5: resolved tenant id after CLI/env merge (empty = missing). */
+  dispatchTenantId?: string;
 };
 
 function shellEscape(value: string): string {
@@ -82,6 +86,13 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     const auditWritable = await checkWritableParent(config.auditLogPath);
     if (!auditWritable) {
       issues.push(`Unified audit log path is not writable: ${config.auditLogPath}`);
+    }
+  }
+
+  if (config.strict && config.tenantIsolationStrict) {
+    const tid = config.dispatchTenantId?.trim() ?? "";
+    if (!tid) {
+      issues.push("Tenant isolation strict mode requires a non-empty tenant id (CLI --tenant-id or UNIFIED_DISPATCH_TENANT_ID).");
     }
   }
 

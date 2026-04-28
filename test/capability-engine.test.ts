@@ -16,6 +16,11 @@ import {
   type CapabilityPolicyConfig,
 } from "../src/runtime/capability-policy.js";
 
+const emptyTenantChatPolicy = {
+  allowChatIdsByTenant: {} as Record<string, string[]>,
+  denyChatIdsByTenant: {} as Record<string, string[]>,
+};
+
 class FakeLaneAdapter implements LaneAdapter {
   constructor(
     public laneId: "eve" | "hermes",
@@ -246,6 +251,7 @@ describe("UnifiedCapabilityEngine", () => {
       deniedChatIds: [],
       allowCapabilityChats: {},
       denyCapabilityChats: {},
+      ...emptyTenantChatPolicy,
     });
     const engine = new UnifiedCapabilityEngine(registry, {
       memoryStore,
@@ -295,6 +301,7 @@ describe("UnifiedCapabilityEngine", () => {
       deniedChatIds: [],
       allowCapabilityChats: {},
       denyCapabilityChats: {},
+      ...emptyTenantChatPolicy,
     };
     const engine = new UnifiedCapabilityEngine(registry, {
       memoryStore,
@@ -344,6 +351,7 @@ describe("UnifiedCapabilityEngine", () => {
       denyCapabilityChats: {
         summarize_state: ["chat-9"],
       },
+      ...emptyTenantChatPolicy,
     });
     const engine = new UnifiedCapabilityEngine(registry, {
       memoryStore,
@@ -393,6 +401,7 @@ describe("UnifiedCapabilityEngine", () => {
         summarize_state: ["chat-42"],
       },
       denyCapabilityChats: {},
+      ...emptyTenantChatPolicy,
     });
     const engine = new UnifiedCapabilityEngine(registry, {
       memoryStore,

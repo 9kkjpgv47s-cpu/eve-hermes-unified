@@ -20,7 +20,15 @@ export type UnifiedRuntimeEnvConfig = {
     deniedChatIds: string[];
     allowCapabilityChats: Record<string, string[]>;
     denyCapabilityChats: Record<string, string[]>;
+    allowChatIdsByTenant: Record<string, string[]>;
+    denyChatIdsByTenant: Record<string, string[]>;
   };
+  /** H5: when true, require tenant id on every dispatch envelope (preflight). */
+  tenantIsolationStrict: boolean;
+  /** H5: default tenant id when CLI/env does not override. */
+  dispatchDefaultTenantId?: string;
+  /** H5: default region id when CLI/env does not override. */
+  dispatchDefaultRegionId?: string;
   preflight: {
     enabled: boolean;
     strict: boolean;
@@ -194,6 +202,14 @@ export function loadUnifiedRuntimeEnvConfig(
       "CAPABILITY_DENY_CHAT_MAP",
     ]),
   );
+  const capabilityAllowChatIdsByTenantRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_ALLOW_CHAT_IDS_BY_TENANT",
+    "CAPABILITY_ALLOW_CHAT_IDS_BY_TENANT",
+  ]);
+  const capabilityDenyChatIdsByTenantRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_DENY_CHAT_IDS_BY_TENANT",
+    "CAPABILITY_DENY_CHAT_IDS_BY_TENANT",
+  ]);
   const capabilityPolicyBaseline = createCapabilityPolicyConfigFromEnv({
     defaultModeRaw: capabilityDefaultModeRaw,
     allowCapabilitiesRaw: capabilityAllowListRaw,
@@ -202,6 +218,8 @@ export function loadUnifiedRuntimeEnvConfig(
     deniedChatIdsRaw: capabilityDeniedChatIdsRaw,
     allowCapabilityChatsRaw: undefined,
     denyCapabilityChatsRaw: undefined,
+    allowChatIdsByTenantRaw: capabilityAllowChatIdsByTenantRaw,
+    denyChatIdsByTenantRaw: capabilityDenyChatIdsByTenantRaw,
   });
   const preflightEnabled = parseBooleanFlag(
     firstDefined(reader, [
@@ -253,6 +271,20 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
+  const routerRegionId = firstDefined(reader, ["UNIFIED_ROUTER_REGION_ID", "ROUTER_REGION_ID"]);
+  const dispatchDefaultTenantId = firstDefined(reader, [
+    "UNIFIED_DISPATCH_TENANT_ID",
+    "DISPATCH_TENANT_ID",
+    "UNIFIED_DEFAULT_TENANT_ID",
+  ]);
+  const dispatchDefaultRegionId = firstDefined(reader, [
+    "UNIFIED_DISPATCH_REGION_ID",
+    "DISPATCH_REGION_ID",
+  ]);
+  const tenantIsolationStrict = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_TENANT_ISOLATION_STRICT", "TENANT_ISOLATION_STRICT"]),
+    false,
+  );
 
   return {
     eveDispatchScript,
@@ -270,7 +302,12 @@ export function loadUnifiedRuntimeEnvConfig(
       deniedChatIds: capabilityPolicyBaseline.deniedChatIds,
       allowCapabilityChats: capabilityAllowChatMap,
       denyCapabilityChats: capabilityDenyChatMap,
+      allowChatIdsByTenant: capabilityPolicyBaseline.allowChatIdsByTenant,
+      denyChatIdsByTenant: capabilityPolicyBaseline.denyChatIdsByTenant,
     },
+    tenantIsolationStrict,
+    dispatchDefaultTenantId,
+    dispatchDefaultRegionId,
     preflight: {
       enabled: preflightEnabled,
       strict: preflightStrict,
@@ -285,6 +322,7 @@ export function loadUnifiedRuntimeEnvConfig(
       canaryChatIds,
       majorityPercent,
       hashSalt,
+      routerRegionId,
     },
   };
 }

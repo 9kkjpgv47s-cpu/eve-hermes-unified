@@ -38,10 +38,16 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. Complete horizon-neutral taxonomy migration in `validate-horizon-closeout.mjs` for remaining H2-specific drill/check failure labels (keep compatibility aliases).
-2. Extend canonical naming propagation into any remaining H2-specific orchestrator outputs that feed closeout/promotion gates.
-3. Add targeted tests for canonical-first assertions with legacy alias compatibility.
-4. Keep artifacts and gate outputs schema-valid under `scripts/validate-manifest-schema.mjs`.
+1. H3/H4 planned actions in `docs/HORIZON_STATUS.json` (durability, policy, legacy ingress) when H2 closeout permits promotion.
+2. Complete horizon-neutral taxonomy migration in `validate-horizon-closeout.mjs` for remaining H2-specific drill/check failure labels (keep compatibility aliases).
+3. Extend canonical naming propagation into any remaining H2-specific orchestrator outputs that feed closeout/promotion gates.
+4. Add targeted tests for canonical-first assertions with legacy alias compatibility.
+5. Keep artifacts and gate outputs schema-valid under `scripts/validate-manifest-schema.mjs`.
+
+## H5 slice (in tree)
+
+- `docs/H5_MULTI_TENANT_REGION.md` — tenant memory, tenant capability policy, region routing, remediation dry-run.
+- `npm run validate:h5-tenant-isolation` — memory key invariant gate (part of `validate:all`).
 
 ## Validation Pack
 

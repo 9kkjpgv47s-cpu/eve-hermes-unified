@@ -18,7 +18,8 @@ import {
   validateUnifiedResponse,
 } from "../contracts/validate.js";
 import type { LaneAdapter } from "../adapters/lane-adapter.js";
-import { routeMessage, type RouterPolicyConfig } from "../router/policy-router.js";
+import { routeMessageWithRegionFailover, stampRoutingRegions } from "../router/policy-router.js";
+import type { RouterPolicyConfig } from "../router/policy-router.js";
 import type { CapabilityEngine } from "./capability-engine.js";
 
 export type UnifiedRuntime = {
@@ -125,13 +126,13 @@ export async function dispatchUnifiedMessage(
       const executed = await runtime.capabilityEngine.execute(validatedDecision, envelope);
       const validatedExecution = validateCapabilityExecutionResult(executed);
       const capabilityState = toDispatchStateFromCapability(validatedDecision, validatedExecution, envelope);
-      const routing: RoutingDecision = {
+      const routing = stampRoutingRegions(envelope, runtime.routerConfig, {
         primaryLane: validatedDecision.lane,
         fallbackLane: "none",
         reason: validatedDecision.routeReason,
         policyVersion: runtime.routerConfig.policyVersion,
         failClosed: true,
-      };
+      });
       const result = buildResult(envelope, routing, capabilityState, capabilityState, {
         capabilityDecision: validatedDecision,
         capabilityExecution: validatedExecution,
@@ -140,7 +141,7 @@ export async function dispatchUnifiedMessage(
     }
   }
 
-  const routing = routeMessage(envelope, runtime.routerConfig);
+  const routing = routeMessageWithRegionFailover(envelope, runtime.routerConfig);
   const primary = getLaneAdapter(runtime, routing.primaryLane);
   const primaryState = withCanonicalTraceId(
     await primary.dispatch({

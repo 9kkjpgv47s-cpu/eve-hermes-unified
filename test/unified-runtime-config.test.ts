@@ -140,4 +140,25 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.hashSalt).toBe("salt-1");
     expect(config.preflight.enabled).toBe(false);
   });
+
+  it("parses H5 tenant, region, and tenant-scoped capability chat policy", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_REGION_ID: "us-east",
+          UNIFIED_DISPATCH_TENANT_ID: "acme",
+          UNIFIED_DISPATCH_REGION_ID: "us-west",
+          UNIFIED_TENANT_ISOLATION_STRICT: "1",
+          UNIFIED_CAPABILITY_ALLOW_CHAT_IDS_BY_TENANT: "acme:1,2",
+          UNIFIED_CAPABILITY_DENY_CHAT_IDS_BY_TENANT: "other:9",
+        }),
+      ),
+    );
+    expect(config.routerConfig.routerRegionId).toBe("us-east");
+    expect(config.dispatchDefaultTenantId).toBe("acme");
+    expect(config.dispatchDefaultRegionId).toBe("us-west");
+    expect(config.tenantIsolationStrict).toBe(true);
+    expect(config.capabilityPolicy.allowChatIdsByTenant).toEqual({ acme: ["1", "2"] });
+    expect(config.capabilityPolicy.denyChatIdsByTenant).toEqual({ other: ["9"] });
+  });
 });

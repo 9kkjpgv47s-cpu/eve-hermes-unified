@@ -186,4 +186,70 @@ describe("validate-manifest-schema.mjs", () => {
       expect(payload.validatedCount).toBe(2);
     });
   });
+
+  it("passes for a valid horizon-closeout manifest", async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, "horizon-closeout-H2-20260426-000000.json");
+      await writeFile(
+        manifestPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            closeout: {
+              horizon: "H2",
+              nextHorizon: "H3",
+              canCloseHorizon: true,
+              canStartNextHorizon: false,
+            },
+            files: {
+              evidenceDir: path.join(dir, "evidence"),
+              horizonStatusFile: path.join(dir, "HORIZON_STATUS.json"),
+              outPath: manifestPath,
+            },
+            checks: {
+              horizonValidationPass: true,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-manifest-schema.mjs", "--type", "horizon-closeout", "--file", manifestPath],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
+  it("fails for invalid h2-closeout-run manifest", async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, "h2-closeout-run-20260426-000000.json");
+      await writeFile(
+        manifestPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            checks: {},
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-manifest-schema.mjs", "--type", "h2-closeout-run", "--file", manifestPath],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain("Manifest schema validation failed");
+    });
+  });
 });

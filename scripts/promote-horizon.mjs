@@ -3,6 +3,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 
 const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
@@ -656,11 +657,18 @@ async function main() {
   };
   let closeoutRunH2CloseoutGate = { reported: false, pass: false };
   let closeoutRunStageGoalPolicySignals = { reported: false, pass: false };
+  let closeoutRunSchemaValidation = { valid: false, errors: ["closeout_run_not_loaded"] };
   if (failures.length === 0 && closeoutRunFile.length > 0) {
     if (!(await exists(closeoutRunFile))) {
       failures.push(`missing_closeout_run_file:${closeoutRunFile}`);
     } else {
       closeoutRunPayload = await readJson(closeoutRunFile);
+      closeoutRunSchemaValidation = validateManifestSchema("h2-closeout-run", closeoutRunPayload);
+      if (!closeoutRunSchemaValidation.valid) {
+        failures.push(
+          ...closeoutRunSchemaValidation.errors.map((error) => `closeout_run_schema_invalid:${error}`),
+        );
+      }
       closeoutRunTransition = resolveCloseoutRunTransition(
         closeoutRunPayload,
         sourceHorizon,
@@ -735,6 +743,7 @@ async function main() {
   let goalPolicyCoveragePayload = null;
   let goalPolicyFileValidationPayload = null;
   let goalPolicyReadinessAuditPayload = null;
+  let closeoutSchemaValidation = { valid: false, errors: ["closeout_not_loaded"] };
   let closeoutTransition = {
     source: null,
     next: null,
@@ -782,6 +791,10 @@ async function main() {
     failures.push(`missing_closeout_file:${closeoutFile}`);
   } else {
     closeoutPayload = await readJson(closeoutFile);
+    closeoutSchemaValidation = validateManifestSchema("horizon-closeout", closeoutPayload);
+    if (!closeoutSchemaValidation.valid) {
+      failures.push(...closeoutSchemaValidation.errors.map((error) => `closeout_schema_invalid:${error}`));
+    }
     if (closeoutPayload?.pass !== true) {
       failures.push("closeout_not_passed");
     }
@@ -1142,6 +1155,16 @@ async function main() {
         closeoutRunStageGoalPolicySignals.sourceConsistencyReported,
       closeoutRunSupervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed:
         closeoutRunStageGoalPolicySignals.sourceConsistencyPass,
+      closeoutRunSchemaValid: closeoutRunSchemaValidation.valid,
+      closeoutRunSchemaErrors:
+        closeoutRunSchemaValidation.valid || closeoutRunSchemaValidation.errors.length === 0
+          ? null
+          : closeoutRunSchemaValidation.errors,
+      closeoutSchemaValid: closeoutSchemaValidation.valid,
+      closeoutSchemaErrors:
+        closeoutSchemaValidation.valid || closeoutSchemaValidation.errors.length === 0
+          ? null
+          : closeoutSchemaValidation.errors,
       requireProgressiveGoals: options.requireProgressiveGoals,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
       requireGoalPolicySourceConsistency: options.requireGoalPolicySourceConsistency,

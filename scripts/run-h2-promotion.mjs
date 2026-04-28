@@ -3,6 +3,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
 function parseArgs(argv) {
   const options = {
@@ -608,6 +609,7 @@ async function main() {
 
   let closeoutRunCommand = null;
   let closeoutRunPayload = null;
+  let closeoutRunSchemaValidation = { valid: false, errors: ["closeout_run_not_loaded"] };
   let closeoutRunTransition = {
     source: null,
     next: null,
@@ -632,6 +634,7 @@ async function main() {
   };
   let closeoutArtifactPayload = null;
   let closeoutArtifactPass = false;
+  let closeoutArtifactSchemaValidation = { valid: false, errors: ["closeout_artifact_not_loaded"] };
   let closeoutArtifactTransition = {
     source: "",
     next: "",
@@ -663,6 +666,7 @@ async function main() {
   };
   let horizonPromotionCommand = null;
   let horizonPromotionPayload = null;
+  let horizonPromotionSchemaValidation = { valid: false, errors: ["horizon_promotion_not_loaded"] };
 
   if (failures.length === 0) {
     const closeoutRunOutPreExisted = await exists(closeoutRunOut);
@@ -741,6 +745,12 @@ async function main() {
       });
     }
     closeoutRunPayload = await readJsonMaybe(closeoutRunOut);
+    closeoutRunSchemaValidation = validateManifestSchema("h2-closeout-run", closeoutRunPayload);
+    if (!closeoutRunSchemaValidation.valid) {
+      failures.push(
+        ...closeoutRunSchemaValidation.errors.map((error) => `h2_closeout_run_schema_invalid:${error}`),
+      );
+    }
     const forceMissingCloseoutRunSimulationSignals = resolveBooleanCandidate(process.env, [
       "UNIFIED_FORCE_MISSING_SIMULATION_STAGE_SIGNALS",
       "UNIFIED_FORCE_MISSING_SUPERVISED_SIMULATION_STAGE_SIGNALS",
@@ -792,6 +802,10 @@ async function main() {
       failures.push("h2_closeout_run_missing_closeout_out");
     } else {
       closeoutArtifactPayload = await readJsonMaybe(closeoutArtifactReference.path);
+      closeoutArtifactSchemaValidation = validateManifestSchema(
+        "horizon-closeout",
+        closeoutArtifactPayload,
+      );
       closeoutArtifactPass = closeoutArtifactPayload?.pass === true;
       const closeoutArtifactResolved = resolveCloseoutArtifactTransition(closeoutArtifactPayload);
       closeoutArtifactTransition = {
@@ -809,6 +823,12 @@ async function main() {
       );
       if (!closeoutArtifactPayload) {
         failures.push("h2_closeout_run_closeout_artifact_missing");
+      } else if (!closeoutArtifactSchemaValidation.valid) {
+        failures.push(
+          ...closeoutArtifactSchemaValidation.errors.map(
+            (error) => `h2_closeout_run_closeout_artifact_schema_invalid:${error}`,
+          ),
+        );
       } else if (!closeoutArtifactPass) {
         failures.push("h2_closeout_run_closeout_artifact_not_passed");
       } else if (closeoutArtifactTransition.sourceInvalid) {
@@ -955,6 +975,17 @@ async function main() {
 
     horizonPromotionCommand = await runCommand(promoteArgv, { timeoutMs: options.timeoutMs });
     horizonPromotionPayload = await readJsonMaybe(horizonPromotionOut);
+    horizonPromotionSchemaValidation = validateManifestSchema(
+      "horizon-promotion",
+      horizonPromotionPayload,
+    );
+    if (!horizonPromotionSchemaValidation.valid) {
+      failures.push(
+        ...horizonPromotionSchemaValidation.errors.map(
+          (error) => `horizon_promotion_schema_invalid:${error}`,
+        ),
+      );
+    }
     if (horizonPromotionCommand.code !== 0 || horizonPromotionPayload?.pass !== true) {
       failures.push("horizon_promotion_failed");
     }
@@ -1066,7 +1097,22 @@ async function main() {
         closeoutRunSimulationSignals.sourceConsistencyPropagationReported,
       closeoutRunSupervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed:
         closeoutRunSimulationSignals.sourceConsistencyPropagationPassed,
+      closeoutRunSchemaValid: closeoutRunSchemaValidation.valid,
+      closeoutRunSchemaErrors:
+        closeoutRunSchemaValidation.valid || closeoutRunSchemaValidation.errors.length === 0
+          ? null
+          : closeoutRunSchemaValidation.errors,
+      closeoutRunCloseoutArtifactSchemaValid: closeoutArtifactSchemaValidation.valid,
+      closeoutRunCloseoutArtifactSchemaErrors:
+        closeoutArtifactSchemaValidation.valid || closeoutArtifactSchemaValidation.errors.length === 0
+          ? null
+          : closeoutArtifactSchemaValidation.errors,
       horizonPromotionPass: horizonPromotionPayload?.pass === true,
+      horizonPromotionSchemaValid: horizonPromotionSchemaValidation.valid,
+      horizonPromotionSchemaErrors:
+        horizonPromotionSchemaValidation.valid || horizonPromotionSchemaValidation.errors.length === 0
+          ? null
+          : horizonPromotionSchemaValidation.errors,
       horizonAdvanced: horizonPromotionPayload?.checks?.activeAdvanced === true,
       statusUpdated: horizonPromotionPayload?.checks?.statusUpdated === true,
       nextHorizon,

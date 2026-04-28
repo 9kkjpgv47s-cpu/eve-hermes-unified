@@ -316,6 +316,179 @@ export function validateMergeBundleValidationManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
+export function validateHorizonCloseoutManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(errors, payload.closeout && typeof payload.closeout === "object", "closeout must be an object");
+  if (payload.closeout && typeof payload.closeout === "object") {
+    pushError(
+      errors,
+      isStringOrNullOrUndefined(payload.closeout.horizon),
+      "closeout.horizon must be string, null, or undefined",
+    );
+    pushError(
+      errors,
+      isStringOrNullOrUndefined(payload.closeout.nextHorizon),
+      "closeout.nextHorizon must be string, null, or undefined",
+    );
+    pushError(
+      errors,
+      payload.closeout.canCloseHorizon === undefined
+        || typeof payload.closeout.canCloseHorizon === "boolean",
+      "closeout.canCloseHorizon must be boolean or undefined",
+    );
+    pushError(
+      errors,
+      payload.closeout.canStartNextHorizon === undefined
+        || typeof payload.closeout.canStartNextHorizon === "boolean",
+      "closeout.canStartNextHorizon must be boolean or undefined",
+    );
+  }
+
+  pushError(
+    errors,
+    payload.files === undefined || (payload.files && typeof payload.files === "object"),
+    "files must be an object or undefined",
+  );
+  if (payload.files && typeof payload.files === "object") {
+    for (const key of ["evidenceDir", "horizonStatusFile", "outPath"]) {
+      pushError(
+        errors,
+        isStringOrNullOrUndefined(payload.files[key]),
+        `files.${key} must be string, null, or undefined`,
+      );
+    }
+  }
+  pushError(
+    errors,
+    payload.checks === undefined || (payload.checks && typeof payload.checks === "object"),
+    "checks must be an object or undefined",
+  );
+  pushError(
+    errors,
+    payload.failures === undefined || Array.isArray(payload.failures),
+    "failures must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateH2CloseoutRunManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(
+    errors,
+    payload.files && typeof payload.files === "object",
+    "files must be an object",
+  );
+  if (payload.files && typeof payload.files === "object") {
+    for (const key of [
+      "evidenceDir",
+      "horizonStatusFile",
+      "envFile",
+      "outPath",
+      "calibrationOut",
+      "simulationOut",
+      "closeoutOut",
+      "closeoutFile",
+    ]) {
+      pushError(
+        errors,
+        isStringOrNullOrUndefined(payload.files[key]),
+        `files.${key} must be string, null, or undefined`,
+      );
+    }
+  }
+  pushError(
+    errors,
+    payload.checks && typeof payload.checks === "object",
+    "checks must be an object",
+  );
+  pushError(
+    errors,
+    payload.failures === undefined || Array.isArray(payload.failures),
+    "failures must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateHorizonPromotionManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(
+    errors,
+    payload.horizon && typeof payload.horizon === "object",
+    "horizon must be an object",
+  );
+  if (payload.horizon && typeof payload.horizon === "object") {
+    pushError(
+      errors,
+      isStringOrNullOrUndefined(payload.horizon.source),
+      "horizon.source must be string, null, or undefined",
+    );
+    pushError(
+      errors,
+      isStringOrNullOrUndefined(payload.horizon.next),
+      "horizon.next must be string, null, or undefined",
+    );
+  }
+  pushError(
+    errors,
+    payload.checks && typeof payload.checks === "object",
+    "checks must be an object",
+  );
+  pushError(
+    errors,
+    payload.failures === undefined || Array.isArray(payload.failures),
+    "failures must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateH2PromotionRunManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(
+    errors,
+    payload.files && typeof payload.files === "object",
+    "files must be an object",
+  );
+  pushError(
+    errors,
+    payload.checks && typeof payload.checks === "object",
+    "checks must be an object",
+  );
+  pushError(
+    errors,
+    payload.failures === undefined || Array.isArray(payload.failures),
+    "failures must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateManifestSchema(type, payload) {
   if (type === "release-readiness") {
     return validateReleaseReadinessManifest(payload);
@@ -325,6 +498,18 @@ export function validateManifestSchema(type, payload) {
   }
   if (type === "merge-bundle-validation") {
     return validateMergeBundleValidationManifest(payload);
+  }
+  if (type === "horizon-closeout") {
+    return validateHorizonCloseoutManifest(payload);
+  }
+  if (type === "h2-closeout-run") {
+    return validateH2CloseoutRunManifest(payload);
+  }
+  if (type === "horizon-promotion") {
+    return validateHorizonPromotionManifest(payload);
+  }
+  if (type === "h2-promotion-run") {
+    return validateH2PromotionRunManifest(payload);
   }
   return { valid: false, errors: [`Unsupported manifest type: ${type}`] };
 }
@@ -371,6 +556,10 @@ async function listAllManifestTargets(evidenceDir) {
   const entries = await readdir(evidenceDir, { withFileTypes: true });
   const releaseTargets = [];
   const mergeBundleValidationTargets = [];
+  const horizonCloseoutTargets = [];
+  const h2CloseoutRunTargets = [];
+  const horizonPromotionTargets = [];
+  const h2PromotionRunTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -385,13 +574,41 @@ async function listAllManifestTargets(evidenceDir) {
         type: "merge-bundle-validation",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("horizon-closeout-") && entry.name.endsWith(".json")) {
+      horizonCloseoutTargets.push({
+        type: "horizon-closeout",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("h2-closeout-run-") && entry.name.endsWith(".json")) {
+      h2CloseoutRunTargets.push({
+        type: "h2-closeout-run",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("horizon-promotion-") && entry.name.endsWith(".json")) {
+      horizonPromotionTargets.push({
+        type: "horizon-promotion",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("h2-promotion-run-") && entry.name.endsWith(".json")) {
+      h2PromotionRunTargets.push({
+        type: "h2-promotion-run",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
   mergeBundleValidationTargets.sort((a, b) => a.file.localeCompare(b.file));
+  horizonCloseoutTargets.sort((a, b) => a.file.localeCompare(b.file));
+  h2CloseoutRunTargets.sort((a, b) => a.file.localeCompare(b.file));
+  horizonPromotionTargets.sort((a, b) => a.file.localeCompare(b.file));
+  h2PromotionRunTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
+    horizonCloseoutTargets,
+    h2CloseoutRunTargets,
+    horizonPromotionTargets,
+    h2PromotionRunTargets,
   };
 }
 
@@ -408,7 +625,9 @@ function formatFailureMessage(results) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
-    throw new Error("Missing --type (release-readiness|merge-bundle|merge-bundle-validation|all)");
+    throw new Error(
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-promotion|h2-promotion-run|all)",
+    );
   }
 
   if (options.type === "all") {
@@ -429,8 +648,27 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.horizonCloseoutTargets.length > 0
+            ? [targetGroups.horizonCloseoutTargets[targetGroups.horizonCloseoutTargets.length - 1]]
+            : []),
+          ...(targetGroups.h2CloseoutRunTargets.length > 0
+            ? [targetGroups.h2CloseoutRunTargets[targetGroups.h2CloseoutRunTargets.length - 1]]
+            : []),
+          ...(targetGroups.horizonPromotionTargets.length > 0
+            ? [targetGroups.horizonPromotionTargets[targetGroups.horizonPromotionTargets.length - 1]]
+            : []),
+          ...(targetGroups.h2PromotionRunTargets.length > 0
+            ? [targetGroups.h2PromotionRunTargets[targetGroups.h2PromotionRunTargets.length - 1]]
+            : []),
         ]
-      : [...targetGroups.releaseTargets, ...targetGroups.mergeBundleValidationTargets];
+      : [
+          ...targetGroups.releaseTargets,
+          ...targetGroups.mergeBundleValidationTargets,
+          ...targetGroups.horizonCloseoutTargets,
+          ...targetGroups.h2CloseoutRunTargets,
+          ...targetGroups.horizonPromotionTargets,
+          ...targetGroups.h2PromotionRunTargets,
+        ];
     const results = [];
     for (const target of targets) {
       results.push(await validateSingleFile(target.type, target.file));

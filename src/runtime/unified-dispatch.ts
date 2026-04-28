@@ -15,9 +15,11 @@ import {
   validateCapabilityExecutionResult,
   validateDispatchState,
   validateEnvelope,
+  validateUnifiedDispatchResult,
   validateUnifiedResponse,
 } from "../contracts/validate.js";
 import type { LaneAdapter } from "../adapters/lane-adapter.js";
+import { stampUnifiedDispatchContract } from "../contracts/dispatch-contract.js";
 import { routeMessage, type RouterPolicyConfig } from "../router/policy-router.js";
 import type { CapabilityEngine } from "./capability-engine.js";
 
@@ -96,16 +98,18 @@ function buildResult(
     validateCapabilityExecutionResult(capabilityExecution);
   }
 
-  return {
-    envelope,
-    routing,
-    primaryState,
-    fallbackState: options?.fallbackState,
-    fallbackInfo,
-    capabilityDecision,
-    capabilityExecution,
-    response,
-  };
+  return validateUnifiedDispatchResult(
+    stampUnifiedDispatchContract({
+      envelope,
+      routing,
+      primaryState,
+      fallbackState: options?.fallbackState,
+      fallbackInfo,
+      capabilityDecision,
+      capabilityExecution,
+      response,
+    }),
+  );
 }
 
 export async function dispatchUnifiedMessage(

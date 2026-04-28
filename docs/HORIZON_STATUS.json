@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T23:26:00Z",
+  "updatedAtIso": "2026-04-28T20:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -194,6 +194,27 @@
       "targetHorizon": "H3",
       "status": "planned",
       "tags": ["rollback", "operations"]
+    },
+    {
+      "id": "h4-action-1",
+      "summary": "Add CI/static scan gate ensuring unified dispatch is the only production ingress for EveAdapter/HermesAdapter construction and dispatchUnifiedMessage invocation.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "validation"]
+    },
+    {
+      "id": "h4-action-2",
+      "summary": "Publish deprecation map for legacy direct Eve/Hermes paths and operator shell bypasses in docs/H4_UNIFIED_DISPATCH_CONTRACT.md.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "documentation"]
+    },
+    {
+      "id": "h4-action-3",
+      "summary": "Freeze versioned unified dispatch contract surface (contractVersion + contractSchemaRef on UnifiedDispatchResult) with Vitest fixture conformance.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["contract", "validation"]
     }
   ],
   "goalPolicies": {
@@ -270,7 +291,7 @@
     },
     "H4": {
       "status": "planned",
-      "summary": "Legacy path retirement and contract tightening."
+      "summary": "First H4 slice landed: versioned UnifiedDispatchResult contract fields, audit log propagation, docs/H4_UNIFIED_DISPATCH_CONTRACT.md deprecation map, npm run scan:legacy-dispatch-entrypoints in validate:all, and fixture conformance tests."
     },
     "H5": {
       "status": "planned",
@@ -385,6 +406,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal-policy coverage gate for future horizon transitions and promotion enforcement flags so operators can require policy-backed progression beyond the immediate transition."
+    },
+    {
+      "timestamp": "2026-04-28T20:00:00Z",
+      "horizon": "H4",
+      "status": "planned",
+      "note": "H4 contract tightening: UNIFIED_DISPATCH_CONTRACT_VERSION on dispatch results, validateUnifiedDispatchResult contract field checks, audit log includes contractVersion, scan-legacy-dispatch-entrypoints.sh + npm run scan:legacy-dispatch-entrypoints wired into validate:all, docs/H4_UNIFIED_DISPATCH_CONTRACT.md + test/fixtures/unified-dispatch-v1-pass.json."
     },
     {
       "timestamp": "2026-04-26T23:26:00Z",

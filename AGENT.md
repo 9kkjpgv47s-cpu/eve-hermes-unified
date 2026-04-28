@@ -8,8 +8,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Primary focus: staged promotion drills + rollback-policy enforcement with auditable artifacts
+- Horizon: `H2` (`docs/HORIZON_STATUS.json`); **H4 first slice** in-repo (`h4-action-1`–`h4-action-3`): unified dispatch contract stamping + legacy ingress scan in `validate:all` (see `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`).
+- Primary focus: H2 operationalization; extend H4 legacy-path retirement beyond `src/` when ready.
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -22,9 +22,10 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 1. `README.md`
 2. `AGENTS.md`
 3. `docs/CLOUD_AGENT_HANDOFF.md`
-4. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
-5. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
-6. `docs/HORIZON_STATUS.json`
+4. `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`
+5. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
+6. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
+7. `docs/HORIZON_STATUS.json`
 
 ## High-Output Execution Loop
 
@@ -42,6 +43,12 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 ```bash
 npm run check
 npm test
+```
+
+### H4 unified dispatch ingress scan
+
+```bash
+npm run scan:legacy-dispatch-entrypoints
 ```
 
 ### H2 Promotion/Policy Flow
@@ -77,6 +84,7 @@ npm run verify:merge-bundle -- --evidence-dir evidence --latest
 3. Evidence freshness rules so stage drill reliably selects latest passing artifacts for all dependent gates.
 4. Runbook tightening for operator replay of canary/majority incidents.
 5. Extend closeout/promotion orchestration to horizon-generic operation (H3/H4) while preserving H2 command compatibility.
+6. **H4 next:** broaden legacy-path scan (scripts/docs allowlist), remove obsolete shims once parity is proven.
 
 ## Done Signal for Each Iteration
 

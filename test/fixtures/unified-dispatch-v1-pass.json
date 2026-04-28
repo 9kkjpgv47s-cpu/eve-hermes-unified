@@ -1,0 +1,38 @@
+{
+  "envelope": {
+    "traceId": "fixture-trace-v1",
+    "channel": "telegram",
+    "chatId": "1",
+    "messageId": "2",
+    "receivedAtIso": "2026-04-28T12:00:00.000Z",
+    "text": "fixture hello"
+  },
+  "routing": {
+    "primaryLane": "eve",
+    "fallbackLane": "hermes",
+    "reason": "default_policy_lane",
+    "policyVersion": "v1",
+    "failClosed": false
+  },
+  "primaryState": {
+    "status": "pass",
+    "reason": "ok",
+    "runtimeUsed": "eve",
+    "runId": "run-fixture-1",
+    "elapsedMs": 1,
+    "failureClass": "none",
+    "sourceLane": "eve",
+    "sourceChatId": "1",
+    "sourceMessageId": "2",
+    "traceId": "fixture-trace-v1"
+  },
+  "response": {
+    "consumed": true,
+    "responseText": "Unified dispatch succeeded via eve.\nrun_id: run-fixture-1\nreason: ok",
+    "failureClass": "none",
+    "laneUsed": "eve",
+    "traceId": "fixture-trace-v1"
+  },
+  "contractVersion": "2026-04-28-h4-v1",
+  "contractSchemaRef": "docs/H4_UNIFIED_DISPATCH_CONTRACT.md"
+}

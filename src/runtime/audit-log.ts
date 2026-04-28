@@ -10,6 +10,8 @@ export async function appendDispatchAuditLog(
   await mkdir(dir, { recursive: true });
   const record = JSON.stringify({
     recordedAtIso: new Date().toISOString(),
+    contractVersion: result.contractVersion ?? null,
+    contractSchemaRef: result.contractSchemaRef ?? null,
     traceId: result.envelope.traceId,
     chatId: result.envelope.chatId,
     messageId: result.envelope.messageId,

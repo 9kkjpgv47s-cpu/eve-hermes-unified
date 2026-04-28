@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { CapabilityExecutionResult, DispatchState, UnifiedCapabilityDecision } from "../src/contracts/types.js";
+import {
+  UNIFIED_DISPATCH_CONTRACT_SCHEMA_REF,
+  UNIFIED_DISPATCH_CONTRACT_VERSION,
+} from "../src/contracts/dispatch-contract.js";
 import { dispatchUnifiedMessage } from "../src/runtime/unified-dispatch.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
 import type { CapabilityEngine } from "../src/runtime/capability-engine.js";
@@ -90,6 +94,8 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.primaryState.traceId).toBe(result.envelope.traceId);
     expect(result.response.traceId).toBe(result.envelope.traceId);
     expect(result.fallbackState).toBeUndefined();
+    expect(result.contractVersion).toBe(UNIFIED_DISPATCH_CONTRACT_VERSION);
+    expect(result.contractSchemaRef).toBe(UNIFIED_DISPATCH_CONTRACT_SCHEMA_REF);
   });
 
   it("falls back when primary fails and failClosed=false", async () => {

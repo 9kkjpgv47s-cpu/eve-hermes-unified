@@ -83,4 +83,8 @@ export type UnifiedDispatchResult = {
   capabilityDecision?: UnifiedCapabilityDecision;
   capabilityExecution?: CapabilityExecutionResult;
   response: UnifiedResponse;
+  /** H4: semantic version string for downstream contract pinning (see docs/H4_UNIFIED_DISPATCH_CONTRACT.md). */
+  contractVersion?: string;
+  /** H4: path or URI to human-readable contract notes (repo-relative path is typical). */
+  contractSchemaRef?: string;
 };

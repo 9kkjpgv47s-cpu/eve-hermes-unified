@@ -113,6 +113,18 @@ export function validateUnifiedDispatchResult(value: UnifiedDispatchResult): Uni
   if (value.capabilityExecution) {
     validateCapabilityExecutionResult(value.capabilityExecution);
   }
+  if (value.contractVersion !== undefined) {
+    ensure(
+      typeof value.contractVersion === "string" && value.contractVersion.trim().length > 0,
+      "Unified dispatch contractVersion must be a non-empty string when present.",
+    );
+  }
+  if (value.contractSchemaRef !== undefined) {
+    ensure(
+      typeof value.contractSchemaRef === "string" && value.contractSchemaRef.trim().length > 0,
+      "Unified dispatch contractSchemaRef must be a non-empty string when present.",
+    );
+  }
   return value;
 }
 

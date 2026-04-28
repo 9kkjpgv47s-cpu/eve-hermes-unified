@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -77,6 +77,48 @@ describe("capability policy audit", () => {
       await maybeAppendCapabilityPolicyConfigLoadedAudit(logPath, "c".repeat(64));
       const lines = (await readFile(logPath, "utf8")).trim().split("\n").filter(Boolean);
       expect(lines).toHaveLength(2);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rotates before append when maxBytes exceeded", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "cap-policy-rot-"));
+    const logPath = path.join(dir, "policy.jsonl");
+    const fp = "a".repeat(64);
+    try {
+      const filler = `${"y".repeat(500)}\n`;
+      await writeFile(logPath, filler.repeat(20), "utf8");
+      const before = await stat(logPath);
+      await appendCapabilityPolicyDenialAudit(
+        logPath,
+        {
+          traceId: "t-rot",
+          chatId: "1",
+          messageId: "2",
+          capabilityId: "status",
+          lane: "eve",
+          policyReason: "capability_policy_denied",
+          policyFingerprintSha256: fp,
+          envelope: {
+            traceId: "t-rot",
+            channel: "telegram",
+            chatId: "1",
+            messageId: "2",
+            receivedAtIso: new Date().toISOString(),
+            text: "@cap status",
+          },
+        },
+        { maxBytesBeforeRotate: 4000, retainBytesAfterRotate: 2000 },
+      );
+      const afterPrimary = await stat(logPath);
+      expect(afterPrimary.size).toBeLessThanOrEqual(5000);
+      const rotated = await stat(`${logPath}.1`);
+      expect(rotated.size).toBe(before.size);
+      const tail = await readFile(logPath, "utf8");
+      expect(tail.trim().split("\n").length).toBeGreaterThanOrEqual(1);
+      const last = JSON.parse(tail.trim().split("\n").pop()!) as { eventType: string };
+      expect(last.eventType).toBe("policy_denial");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

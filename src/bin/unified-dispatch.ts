@@ -99,6 +99,13 @@ async function main() {
   const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
   const policyFingerprintSha256 = capabilityPolicyFingerprintSha256(config.capabilityPolicy);
   const policyAuditPath = config.capabilityPolicyAuditLogPath.trim();
+  const policyAuditRotation =
+    policyAuditPath.length > 0
+      ? {
+          maxBytesBeforeRotate: config.capabilityPolicyAuditRotationMaxBytes,
+          retainBytesAfterRotate: config.capabilityPolicyAuditRotationRetainBytes,
+        }
+      : undefined;
   const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
     memoryStore: sharedMemoryStore,
     dispatchLane,
@@ -109,16 +116,20 @@ async function main() {
     ...(policyAuditPath.length > 0
       ? {
           onPolicyDenial: async (payload) => {
-            await appendCapabilityPolicyDenialAudit(policyAuditPath, {
-              traceId: payload.traceId,
-              chatId: payload.chatId,
-              messageId: payload.messageId,
-              capabilityId: payload.capabilityId,
-              lane: payload.lane,
-              policyReason: payload.policyReason,
-              policyFingerprintSha256: payload.policyFingerprintSha256,
-              envelope: payload.envelope,
-            });
+            await appendCapabilityPolicyDenialAudit(
+              policyAuditPath,
+              {
+                traceId: payload.traceId,
+                chatId: payload.chatId,
+                messageId: payload.messageId,
+                capabilityId: payload.capabilityId,
+                lane: payload.lane,
+                policyReason: payload.policyReason,
+                policyFingerprintSha256: payload.policyFingerprintSha256,
+                envelope: payload.envelope,
+              },
+              policyAuditRotation,
+            );
           },
         }
       : {}),
@@ -142,7 +153,11 @@ async function main() {
     throw new Error(`Runtime preflight failed: ${reasons}`);
   }
   if (policyAuditPath.length > 0 && config.capabilityPolicyAuditVerifyLoad) {
-    await maybeAppendCapabilityPolicyConfigLoadedAudit(policyAuditPath, policyFingerprintSha256);
+    await maybeAppendCapabilityPolicyConfigLoadedAudit(
+      policyAuditPath,
+      policyFingerprintSha256,
+      policyAuditRotation,
+    );
   }
 
   const runtime = {

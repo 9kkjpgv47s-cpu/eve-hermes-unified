@@ -9,21 +9,14 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 durability advances in code ahead of promotion.
-- Branch: **`cursor/h5-tenant-runtime-cc15`** (extend with new commit) — tenant gates, **`UNIFIED_TENANT_MEMORY_ISOLATION`**, capability envelope→lane propagation, adapter tenant env vars.
+- Branch: **`cursor/h5-tenant-runtime-cc15`** — tenant + policy audit + dispatch audit v2; shared **JSONL rotation** for dispatch and capability policy audit logs.
 
 ## What Was Just Completed (large chunk)
 
-### H3
+### H3 / H4
 
-1. **File memory WAL** — `UNIFIED_MEMORY_JOURNAL_PATH` (append/replay/truncate on persist).
-2. **Persist verify** — `UNIFIED_MEMORY_VERIFY_PERSIST=1` re-reads snapshot + hash/map compare after each persist.
-3. **Journal replay verify** — `UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY=1` verifies snapshot+WAL vs memory before each persist.
-4. **Dispatch audit schema** — `auditSchemaVersion` **v2** on each JSONL line (`tenantId` null or normalized string; `src/contracts/dispatch-audit-version.ts`).
-
-### Tooling
-
-1. **`validate-horizon-closeout.mjs`** — drill `horizon_drill_*` / `h2_drill_*`; **h2_closeout_run_*** / **h2_promotion_run_*** aliases for horizon closeout/promotion run checks.
-2. **`validate-manifest-schema.mjs`** — `--type unified-dispatch-audit-jsonl`; `evidence/unified-dispatch-audit-*.jsonl` in `--type all` sweep.
+1. **Capability policy audit JSONL** — denials + optional startup fingerprint; **`validate-manifest-schema`** gate **`capability-policy-audit-jsonl`**.
+2. **Policy audit rotation** — **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_*`**; shared **`maybeRotateJsonlLogInPlace`** with dispatch audit.
 
 ## Read Order (Zero-Context Startup)
 
@@ -37,7 +30,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Immediate Next High-Output Targets
 
 1. **Horizon-neutral failure taxonomy** — inventory remaining scripts that emit H2-only failure ids without H2+ dual-report aliases.
-2. **Policy audit rotation / retention** — optional size-based rotation for `capability-policy-audit` JSONL when logs grow large in production.
+2. **Router / policy hardening** — stricter failure-class-to-action mappings per H3 action runway (`docs/HORIZON_STATUS.json` `h3-action-2`).
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

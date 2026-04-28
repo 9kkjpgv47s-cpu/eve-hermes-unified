@@ -69,6 +69,7 @@ Optional crash recovery for file-backed unified memory:
 
 - **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** (alias `CAPABILITY_POLICY_AUDIT_LOG_PATH`) — append-only JSONL for **`policy_denial`** events (capability id, lane, policy reason, **`policyFingerprintSha256`** of stable config JSON, optional **`tenantId`**) and optional **`policy_config_loaded`** on startup.
 - **`UNIFIED_CAPABILITY_POLICY_AUDIT_VERIFY_LOAD`** — when `1` (default when an audit path is set), append **`policy_config_loaded`** only if the fingerprint differs from the last `policy_config_loaded` line (idempotent restarts); set `0` to append every process start.
+- **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`** / **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_BYTES`** — same semantics as dispatch audit rotation (`0` = disabled); line-aligned tail retained in the primary file after rotate.
 - Stable fingerprint: `capabilityPolicyFingerprintSha256` in `src/config/capability-policy-fingerprint.ts`.
 - Preflight checks the audit path parent is writable when the path is non-empty.
 

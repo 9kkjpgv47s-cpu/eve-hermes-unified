@@ -18,6 +18,10 @@ export type UnifiedRuntimeEnvConfig = {
   capabilityPolicyAuditLogPath: string;
   /** When true, append policy_config_loaded on startup only if fingerprint changed vs last line in audit log. */
   capabilityPolicyAuditVerifyLoad: boolean;
+  /** When > 0, rotate capability policy audit log before append if file exceeds this many bytes. */
+  capabilityPolicyAuditRotationMaxBytes: number;
+  /** Bytes of tail to keep in the primary policy audit log after rotation (line-aligned). */
+  capabilityPolicyAuditRotationRetainBytes: number;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -278,6 +282,20 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     capabilityPolicyAuditLogPath.length > 0,
   );
+  const capabilityPolicyAuditRotationMaxBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES",
+      "CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES",
+    ]),
+    0,
+  );
+  const capabilityPolicyAuditRotationRetainBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_BYTES",
+      "CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_BYTES",
+    ]),
+    0,
+  );
   const auditLogRotationMaxBytes = parseNonNegativeInt(
     firstDefined(reader, [
       "UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES",
@@ -385,6 +403,8 @@ export function loadUnifiedRuntimeEnvConfig(
     unifiedDispatchAuditLogPath,
     capabilityPolicyAuditLogPath,
     capabilityPolicyAuditVerifyLoad,
+    capabilityPolicyAuditRotationMaxBytes,
+    capabilityPolicyAuditRotationRetainBytes,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

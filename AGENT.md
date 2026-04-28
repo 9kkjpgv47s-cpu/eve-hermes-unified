@@ -19,11 +19,12 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 - Vitest creates `./evidence` at test start (`test/global-setup.ts`) because it is gitignored but required by several script integration tests.
 - **H3 file memory:** optional **`UNIFIED_MEMORY_JOURNAL_PATH`** WAL; optional **`UNIFIED_MEMORY_VERIFY_PERSIST`** / **`UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY`** — see `docs/CLOUD_AGENT_HANDOFF.md`.
 - **Dispatch audit:** JSONL lines include **`auditSchemaVersion`** (**v2** includes **`tenantId`** `null` or string); validate with `validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl` (v1 and v2 accepted).
+- **Capability policy audit:** validate with `validate-manifest-schema.mjs --type capability-policy-audit-jsonl`; evidence sweep uses `capability-policy-audit-*.jsonl` — see `docs/CLOUD_AGENT_HANDOFF.md`.
 - **Closeout validator:** `validate-horizon-closeout.mjs` dual-reports **`horizon_drill_*` / `h2_drill_*`** and appends **`h2_closeout_run_*` / `h2_promotion_run_*`** aliases for horizon closeout/promotion run failure ids.
 - **Horizon promotion:** `promote-horizon.mjs` emits **`closeout_run_horizon_closeout_gate_*`** and appends legacy **`closeout_run_h2_closeout_gate_*`** when the promotion source horizon is H2 or later (so H3→H4 promotions keep H2-keyed monitors working).
 - **H2 closeout runner:** `run-h2-closeout.mjs` appends **`h2_closeout_gate_failed`** alongside **`horizon_closeout_gate_failed`** when the closeout `--horizon` is H2 or later.
 - **Capability budget + lane abort:** **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`** and **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT`** — see `docs/CLOUD_AGENT_HANDOFF.md`.
-- **Tenant gate + scoped capability memory:** **`UNIFIED_TENANT_STRICT`**, **`UNIFIED_TENANT_ALLOWLIST`**, **`UNIFIED_TENANT_MEMORY_ISOLATION`**, envelope **`tenantId`** / **`metadata.tenantId`**, **`npm run dispatch -- --tenant-id`**; Eve/Hermes adapters pass **`EVE_TASK_DISPATCH_TENANT_ID`** / **`HERMES_UNIFIED_TENANT_ID`** when set — see `docs/CLOUD_AGENT_HANDOFF.md`.
+- **Capability policy audit trail:** append-only **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** JSONL, **`validate-manifest-schema.mjs --type capability-policy-audit-jsonl`**, optional startup **`policy_config_loaded`** fingerprint line — see `docs/CLOUD_AGENT_HANDOFF.md`.
 
 ## Read Order (Do Not Skip)
 

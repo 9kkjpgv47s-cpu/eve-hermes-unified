@@ -57,12 +57,20 @@ Optional crash recovery for file-backed unified memory:
 
 - Each append includes **`auditSchemaVersion`** (see `src/contracts/dispatch-audit-version.ts`; current **v2** adds optional provenance field **`tenantId`** as `null` or a normalized tenant string, omitted in v1 lines). Bump the constant when changing the record shape.
 - Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>` (accepts **v1** and **v2** lines; v2 requires **`tenantId`** key present as `null` or string).
-- `npm run validate:manifest-schemas` includes `evidence/unified-dispatch-audit-*.jsonl` when present.
+- Capability policy audit: `node scripts/validate-manifest-schema.mjs --type capability-policy-audit-jsonl --file <path>` (expects `evidence/capability-policy-audit-*.jsonl` naming for `--type all` sweep).
+- `npm run validate:manifest-schemas` includes `evidence/unified-dispatch-audit-*.jsonl` and `evidence/capability-policy-audit-*.jsonl` when present.
 
 ## Capability execution budget and lane abort
 
 - **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`** (alias `CAPABILITY_EXECUTION_TIMEOUT_MS`) — wall-clock limit for `@cap` handlers; `0` disables.
 - **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT=1`** (alias `CAPABILITY_ABORT_LANE_ON_TIMEOUT`) — when enabled with a positive timeout, abort the in-flight lane subprocess (`SIGTERM`) if the handler exceeds the budget.
+
+## Capability policy audit (append-only JSONL)
+
+- **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** (alias `CAPABILITY_POLICY_AUDIT_LOG_PATH`) — append-only JSONL for **`policy_denial`** events (capability id, lane, policy reason, **`policyFingerprintSha256`** of stable config JSON, optional **`tenantId`**) and optional **`policy_config_loaded`** on startup.
+- **`UNIFIED_CAPABILITY_POLICY_AUDIT_VERIFY_LOAD`** — when `1` (default when an audit path is set), append **`policy_config_loaded`** only if the fingerprint differs from the last `policy_config_loaded` line (idempotent restarts); set `0` to append every process start.
+- Stable fingerprint: `capabilityPolicyFingerprintSha256` in `src/config/capability-policy-fingerprint.ts`.
+- Preflight checks the audit path parent is writable when the path is non-empty.
 
 ## Tenant isolation (dispatch + capability memory)
 

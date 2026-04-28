@@ -14,6 +14,11 @@ import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
+import { capabilityPolicyFingerprintSha256 } from "../config/capability-policy-fingerprint.js";
+import {
+  appendCapabilityPolicyDenialAudit,
+  maybeAppendCapabilityPolicyConfigLoadedAudit,
+} from "../runtime/capability-policy-audit.js";
 
 function parseArgs(argv: string[]): {
   text: string;
@@ -92,12 +97,31 @@ async function main() {
     memoryStore: sharedMemoryStore,
   });
   const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
+  const policyFingerprintSha256 = capabilityPolicyFingerprintSha256(config.capabilityPolicy);
+  const policyAuditPath = config.capabilityPolicyAuditLogPath.trim();
   const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
     memoryStore: sharedMemoryStore,
     dispatchLane,
     policy: capabilityPolicy,
+    policyFingerprintSha256,
     executionTimeoutMs: config.capabilityExecutionTimeoutMs,
     abortLaneOnCapabilityTimeout: config.capabilityAbortLaneOnTimeout,
+    ...(policyAuditPath.length > 0
+      ? {
+          onPolicyDenial: async (payload) => {
+            await appendCapabilityPolicyDenialAudit(policyAuditPath, {
+              traceId: payload.traceId,
+              chatId: payload.chatId,
+              messageId: payload.messageId,
+              capabilityId: payload.capabilityId,
+              lane: payload.lane,
+              policyReason: payload.policyReason,
+              policyFingerprintSha256: payload.policyFingerprintSha256,
+              envelope: payload.envelope,
+            });
+          },
+        }
+      : {}),
   });
 
   const preflightIssues = await runRuntimePreflight({
@@ -111,10 +135,14 @@ async function main() {
     unifiedMemoryJournalPath: journalPath,
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
+    capabilityPolicyAuditLogPath: policyAuditPath.length > 0 ? policyAuditPath : undefined,
   });
   if (preflightIssues.length > 0) {
     const reasons = preflightIssues.join("; ");
     throw new Error(`Runtime preflight failed: ${reasons}`);
+  }
+  if (policyAuditPath.length > 0 && config.capabilityPolicyAuditVerifyLoad) {
+    await maybeAppendCapabilityPolicyConfigLoadedAudit(policyAuditPath, policyFingerprintSha256);
   }
 
   const runtime = {

@@ -533,6 +533,51 @@ describe("validate-manifest-schema.mjs", () => {
     });
   });
 
+  it("passes for valid capability-policy-audit jsonl", async () => {
+    await withTempDir(async (dir) => {
+      const fp = "a".repeat(64);
+      const auditPath = path.join(dir, "capability-policy-audit-20260428-000000.jsonl");
+      const lines = [
+        {
+          auditSchemaVersion: 1,
+          eventType: "policy_config_loaded",
+          recordedAtIso: new Date().toISOString(),
+          policyFingerprintSha256: fp,
+        },
+        {
+          auditSchemaVersion: 1,
+          eventType: "policy_denial",
+          recordedAtIso: new Date().toISOString(),
+          traceId: "t-pol",
+          chatId: "1",
+          messageId: "2",
+          capabilityId: "status",
+          lane: "eve",
+          policyReason: "capability_policy_denied",
+          policyFingerprintSha256: fp,
+          tenantId: null,
+        },
+      ];
+      await writeFile(
+        auditPath,
+        lines.map((l) => JSON.stringify(l)).join("\n") + "\n",
+        "utf8",
+      );
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "capability-policy-audit-jsonl",
+          "--file",
+          auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
   it("passes for valid stage-drill and auto-rollback-policy manifests", async () => {
     await withTempDir(async (dir) => {
       const stageDrillPath = path.join(dir, "stage-drill-canary-20260426-000000.json");

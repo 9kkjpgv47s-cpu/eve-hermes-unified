@@ -205,6 +205,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.tenantMemoryIsolation).toBe(true);
   });
 
+  it("parses capability policy audit log path and verify load flag", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH: "/tmp/cap-policy-audit.jsonl",
+          UNIFIED_CAPABILITY_POLICY_AUDIT_VERIFY_LOAD: "0",
+        }),
+      ),
+    );
+    expect(config.capabilityPolicyAuditLogPath).toBe("/tmp/cap-policy-audit.jsonl");
+    expect(config.capabilityPolicyAuditVerifyLoad).toBe(false);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

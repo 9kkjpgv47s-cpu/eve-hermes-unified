@@ -36,10 +36,25 @@ export interface CapabilityEngine {
 
 export type DispatchLaneResult = DispatchState;
 
+export type CapabilityPolicyDenialAuditHook = (input: {
+  traceId: string;
+  chatId: string;
+  messageId: string;
+  capabilityId: string;
+  lane: LaneId;
+  policyReason: string;
+  policyFingerprintSha256: string;
+  envelope: UnifiedMessageEnvelope;
+}) => void | Promise<void>;
+
 export type CapabilityExecutionDependencies = {
   memoryStore: UnifiedMemoryStore;
   dispatchLane: CapabilityLaneDispatcher;
   policy?: CapabilityPolicy;
+  /** SHA-256 of stable JSON capability policy config; used for audit trail. */
+  policyFingerprintSha256?: string;
+  /** When set, invoked after a policy denial (before execution memory write). */
+  onPolicyDenial?: CapabilityPolicyDenialAuditHook;
   /** When > 0, reject capability handler if it exceeds this duration (ms). */
   executionTimeoutMs?: number;
   /** When true with executionTimeoutMs, SIGTERM in-flight lane subprocess on budget expiry. */
@@ -137,6 +152,19 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
         chatId: envelope.chatId,
       });
       if (!authorization.allowed) {
+        const fp = this.dependencies.policyFingerprintSha256 ?? "";
+        if (this.dependencies.onPolicyDenial && fp.length > 0) {
+          await this.dependencies.onPolicyDenial({
+            traceId: envelope.traceId,
+            chatId: envelope.chatId,
+            messageId: envelope.messageId,
+            capabilityId: selection.id,
+            lane: selection.lane,
+            policyReason: authorization.reason ?? "capability_policy_denied",
+            policyFingerprintSha256: fp,
+            envelope,
+          });
+        }
         const denied = denialExecutionResult(
           selection,
           envelope,

@@ -1008,6 +1008,73 @@ export function validateUnifiedDispatchAuditJsonlText(raw) {
   return { valid: errors.length === 0, errors };
 }
 
+const CAPABILITY_POLICY_AUDIT_LINE_SCHEMA_VERSION = 1;
+
+function isSha256Hex(value) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
+}
+
+export function validateCapabilityPolicyAuditJsonlLine(record, lineIndex) {
+  const prefix = `line ${String(lineIndex + 1)}`;
+  const errors = [];
+  pushError(errors, record && typeof record === "object", `${prefix}: must be a JSON object`);
+  if (!record || typeof record !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    record.auditSchemaVersion === CAPABILITY_POLICY_AUDIT_LINE_SCHEMA_VERSION,
+    `${prefix}: auditSchemaVersion must be ${String(CAPABILITY_POLICY_AUDIT_LINE_SCHEMA_VERSION)}`,
+  );
+  pushError(errors, isNonEmptyString(record.recordedAtIso), `${prefix}: recordedAtIso required`);
+  const eventType = record.eventType;
+  pushError(
+    errors,
+    eventType === "policy_denial" || eventType === "policy_config_loaded",
+    `${prefix}: eventType must be policy_denial or policy_config_loaded`,
+  );
+  if (eventType === "policy_config_loaded") {
+    pushError(errors, isSha256Hex(record.policyFingerprintSha256), `${prefix}: policyFingerprintSha256 must be sha256 hex`);
+    return { valid: errors.length === 0, errors };
+  }
+  pushError(errors, isNonEmptyString(record.traceId), `${prefix}: traceId required`);
+  pushError(errors, isNonEmptyString(record.chatId), `${prefix}: chatId required`);
+  pushError(errors, isNonEmptyString(record.messageId), `${prefix}: messageId required`);
+  pushError(errors, isNonEmptyString(record.capabilityId), `${prefix}: capabilityId required`);
+  pushError(errors, isLaneId(record.lane), `${prefix}: lane invalid`);
+  pushError(errors, isNonEmptyString(record.policyReason), `${prefix}: policyReason required`);
+  pushError(errors, isSha256Hex(record.policyFingerprintSha256), `${prefix}: policyFingerprintSha256 must be sha256 hex`);
+  if (record.tenantId !== undefined && record.tenantId !== null) {
+    pushError(
+      errors,
+      isValidDispatchAuditTenantId(record.tenantId),
+      `${prefix}: tenantId must be null or valid tenant string`,
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateCapabilityPolicyAuditJsonlText(raw) {
+  const errors = [];
+  const lines = String(raw ?? "").split(/\r?\n/);
+  const nonEmpty = lines.map((l) => l.trim()).filter((l) => l.length > 0);
+  pushError(errors, nonEmpty.length > 0, "file must contain at least one non-empty JSON line");
+  if (nonEmpty.length === 0) {
+    return { valid: false, errors };
+  }
+  for (let i = 0; i < nonEmpty.length; i += 1) {
+    let parsed;
+    try {
+      parsed = JSON.parse(nonEmpty[i]);
+    } catch {
+      errors.push(`line ${String(i + 1)}: invalid JSON`);
+      continue;
+    }
+    errors.push(...validateCapabilityPolicyAuditJsonlLine(parsed, i).errors);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateManifestSchema(type, payload) {
   if (type === "release-readiness") {
     return validateReleaseReadinessManifest(payload);
@@ -1065,6 +1132,16 @@ async function validateTypedArtifact(type, filePath) {
   if (type === "unified-dispatch-audit-jsonl") {
     const raw = await readFile(resolved, "utf8");
     const validation = validateUnifiedDispatchAuditJsonlText(raw);
+    return {
+      type,
+      file: resolved,
+      valid: validation.valid,
+      errors: validation.errors,
+    };
+  }
+  if (type === "capability-policy-audit-jsonl") {
+    const raw = await readFile(resolved, "utf8");
+    const validation = validateCapabilityPolicyAuditJsonlText(raw);
     return {
       type,
       file: resolved,
@@ -1130,6 +1207,7 @@ async function listAllManifestTargets(evidenceDir) {
   const autoRollbackPolicyTargets = [];
   const stageDrillTargets = [];
   const dispatchAuditJsonlTargets = [];
+  const capabilityPolicyAuditJsonlTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1220,6 +1298,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "unified-dispatch-audit-jsonl",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("capability-policy-audit-") && entry.name.endsWith(".jsonl")) {
+      capabilityPolicyAuditJsonlTargets.push({
+        type: "capability-policy-audit-jsonl",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -1238,6 +1321,7 @@ async function listAllManifestTargets(evidenceDir) {
   autoRollbackPolicyTargets.sort((a, b) => a.file.localeCompare(b.file));
   stageDrillTargets.sort((a, b) => a.file.localeCompare(b.file));
   dispatchAuditJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
+  capabilityPolicyAuditJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1255,6 +1339,7 @@ async function listAllManifestTargets(evidenceDir) {
     autoRollbackPolicyTargets,
     stageDrillTargets,
     dispatchAuditJsonlTargets,
+    capabilityPolicyAuditJsonlTargets,
   };
 }
 
@@ -1272,7 +1357,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|all)",
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|all)",
     );
   }
 
@@ -1364,6 +1449,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.capabilityPolicyAuditJsonlTargets.length > 0
+            ? [
+                targetGroups.capabilityPolicyAuditJsonlTargets[
+                  targetGroups.capabilityPolicyAuditJsonlTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1382,6 +1474,7 @@ async function main() {
           ...targetGroups.autoRollbackPolicyTargets,
           ...targetGroups.stageDrillTargets,
           ...targetGroups.dispatchAuditJsonlTargets,
+          ...targetGroups.capabilityPolicyAuditJsonlTargets,
         ];
     const results = [];
     for (const target of targets) {

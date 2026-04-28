@@ -14,6 +14,8 @@ export type RuntimePreflightConfig = {
   unifiedMemoryJournalPath?: string;
   auditEnabled?: boolean;
   auditLogPath: string;
+  /** When set and non-empty, parent directory must be writable (append-only policy audit). */
+  capabilityPolicyAuditLogPath?: string;
 };
 
 function shellEscape(value: string): string {
@@ -89,6 +91,14 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     const auditWritable = await checkWritableParent(config.auditLogPath);
     if (!auditWritable) {
       issues.push(`Unified audit log path is not writable: ${config.auditLogPath}`);
+    }
+  }
+
+  const policyAudit = config.capabilityPolicyAuditLogPath?.trim();
+  if (policyAudit && policyAudit.length > 0) {
+    const policyAuditWritable = await checkWritableParent(policyAudit);
+    if (!policyAuditWritable) {
+      issues.push(`Capability policy audit log path is not writable: ${policyAudit}`);
     }
   }
 

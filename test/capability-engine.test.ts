@@ -15,6 +15,7 @@ import {
   createCapabilityPolicy,
   type CapabilityPolicyConfig,
 } from "../src/runtime/capability-policy.js";
+import { capabilityPolicyFingerprintSha256 } from "../src/config/capability-policy-fingerprint.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   constructor(
@@ -276,6 +277,60 @@ describe("UnifiedCapabilityEngine", () => {
     expect(result.capabilityExecution?.reason).toBe("capability_policy_denied");
     expect(result.capabilityExecution?.failureClass).toBe("policy_failure");
     expect(result.response.failureClass).toBe("policy_failure");
+  });
+
+  it("invokes onPolicyDenial when policy rejects execution", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(
+      path.join(os.tmpdir(), "unified-capability-policy-deny-hook.json"),
+    );
+    registerDefaultCapabilityExecutors(registry, {
+      dispatchLane: async () => fakeLaneState("eve", "should_not_run"),
+      memoryStore,
+    });
+    const policyConfig: CapabilityPolicyConfig = {
+      defaultMode: "deny",
+      allowCapabilities: [],
+      denyCapabilities: [],
+      allowedChatIds: [],
+      deniedChatIds: [],
+      allowCapabilityChats: {},
+      denyCapabilityChats: {},
+    };
+    const policy = buildCapabilityPolicyFromConfig(policyConfig);
+    const fp = capabilityPolicyFingerprintSha256(policyConfig);
+    const denials: string[] = [];
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("eve", "should_not_run"),
+      policy,
+      policyFingerprintSha256: fp,
+      onPolicyDenial: (payload) => {
+        denials.push(`${payload.policyReason}:${payload.policyFingerprintSha256}`);
+      },
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "none" as const,
+        failClosed: true,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+
+    await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "42",
+      messageId: "500",
+      text: "@cap status",
+    });
+
+    expect(denials).toHaveLength(1);
+    expect(denials[0]).toMatch(/^capability_policy_denied:/);
+    expect(denials[0]).toContain(fp);
   });
 
   it("allows capability execution when capability and chat are explicitly allowlisted", async () => {

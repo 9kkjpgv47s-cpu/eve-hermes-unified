@@ -36,8 +36,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Horizon-neutral failure taxonomy** — extend dual-report aliases in any remaining scripts that still emit H2-only ids only for `sourceHorizon === "H2"` (inventory + align with `promote-horizon` / `run-h2-closeout` patterns).
-2. **Policy / capability audit trail** — immutable append-only log for capability policy denials and config fingerprint changes (H3 action runway).
+1. **Horizon-neutral failure taxonomy** — inventory remaining scripts that emit H2-only failure ids without H2+ dual-report aliases.
+2. **Policy audit rotation / retention** — optional size-based rotation for `capability-policy-audit` JSONL when logs grow large in production.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

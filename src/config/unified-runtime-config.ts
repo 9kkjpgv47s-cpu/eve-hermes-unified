@@ -14,6 +14,10 @@ export type UnifiedRuntimeEnvConfig = {
   /** Optional append-only journal for file-backed memory (crash recovery between snapshot persists). */
   unifiedMemoryJournalPath: string;
   unifiedDispatchAuditLogPath: string;
+  /** Optional append-only JSONL for capability policy denials and config fingerprint events. */
+  capabilityPolicyAuditLogPath: string;
+  /** When true, append policy_config_loaded on startup only if fingerprint changed vs last line in audit log. */
+  capabilityPolicyAuditVerifyLoad: boolean;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -262,6 +266,18 @@ export function loadUnifiedRuntimeEnvConfig(
   const auditLogPath =
     firstDefined(reader, ["UNIFIED_AUDIT_LOG_PATH", "AUDIT_LOG_PATH", "UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const capabilityPolicyAuditLogPath =
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH",
+      "CAPABILITY_POLICY_AUDIT_LOG_PATH",
+    ]) ?? "";
+  const capabilityPolicyAuditVerifyLoad = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_VERIFY_LOAD",
+      "CAPABILITY_POLICY_AUDIT_VERIFY_LOAD",
+    ]),
+    capabilityPolicyAuditLogPath.length > 0,
+  );
   const auditLogRotationMaxBytes = parseNonNegativeInt(
     firstDefined(reader, [
       "UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES",
@@ -367,6 +383,8 @@ export function loadUnifiedRuntimeEnvConfig(
     unifiedMemoryFilePath,
     unifiedMemoryJournalPath,
     unifiedDispatchAuditLogPath,
+    capabilityPolicyAuditLogPath,
+    capabilityPolicyAuditVerifyLoad,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

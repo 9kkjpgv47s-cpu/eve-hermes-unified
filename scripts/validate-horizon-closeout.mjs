@@ -4,13 +4,14 @@ import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
   H3: "majority",
   H4: "full",
   H5: "full",
+  H6: "full",
 };
 
 function isNonEmptyString(value) {
@@ -58,7 +59,7 @@ function readCommandOptionValue(tokens, optionNames) {
 
 function parseHorizonRunnerCommand(command) {
   const normalized = normalizeCommand(command);
-  const match = normalized.match(/^npm run run:h([1-5])-(closeout|promotion)(?:\s+.*)?$/);
+  const match = normalized.match(/^npm run run:h([1-6])-(closeout|promotion)(?:\s+.*)?$/);
   if (match) {
     const source = normalizeHorizon(`H${String(match[1])}`);
     const kind = String(match[2]);
@@ -285,6 +286,9 @@ function commandVerificationType(command) {
   }
   if (command === "node ./scripts/run-h5-closeout-evidence.mjs") {
     return "h5-closeout-evidence";
+  }
+  if (command === "node ./scripts/run-h6-assurance-bundle.mjs") {
+    return "h6-assurance-bundle";
   }
   return "existence-only";
 }
@@ -889,6 +893,26 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "h6-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h6_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("h6_assurance_horizon_status_not_passed");
+    }
+    if (signal.tenantIsolationPass !== true) {
+      checks.push("h6_assurance_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverPass !== true) {
+      checks.push("h6_assurance_region_failover_not_passed");
+    }
+    if (signal.unifiedEntrypointsPass !== true) {
+      checks.push("h6_assurance_unified_entrypoints_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   const checks = payload.pass === true ? [] : ["artifact_not_passed"];
   return { pass: checks.length === 0, checks };
 }
@@ -903,7 +927,6 @@ async function main() {
   const horizonIndex = HORIZON_SEQUENCE.indexOf(targetHorizon);
   const derivedNext = horizonIndex >= 0 ? HORIZON_SEQUENCE[horizonIndex + 1] ?? "" : "";
   const nextHorizon = normalizeHorizon(options.nextHorizon || derivedNext);
-  const terminalHorizonCloseout = Boolean(targetHorizon) && derivedNext === "";
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
   const outPath = path.resolve(
     options.out || path.join(evidenceDir, `horizon-closeout-${targetHorizon || "unknown"}-${stamp}.json`),
@@ -955,7 +978,17 @@ async function main() {
       failures.push(`missing_horizon_state:${targetHorizon}`);
     }
 
-    if (!terminalHorizonCloseout) {
+    const nextHorizonStateEntry =
+      nextHorizon && horizonStatus?.horizonStates?.[nextHorizon]
+        ? horizonStatus.horizonStates[nextHorizon]
+        : null;
+    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H6, or next horizon already completed (retroactive closeout). */
+    const skipStagePromotionReadiness =
+      derivedNext === "" ||
+      targetHorizon === "H6" ||
+      Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
+
+    if (!skipStagePromotionReadiness) {
       const stagePromotionPath = await newestFileInDir(
         evidenceDir,
         "stage-promotion-readiness-",
@@ -1003,7 +1036,7 @@ async function main() {
         }
       }
     } else {
-      stagePromotionEvidence.checks.push("skipped_terminal_horizon_closeout");
+      stagePromotionEvidence.checks.push("skipped_stage_promotion_closeout");
     }
 
     const targetActions = Array.isArray(horizonStatus.nextActions)

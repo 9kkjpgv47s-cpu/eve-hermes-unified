@@ -6,7 +6,7 @@ import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
 
 function parseArgs(argv) {
   const options = {
@@ -33,7 +33,7 @@ function parseArgs(argv) {
     requireGoalPolicySourceConsistency: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
-    goalPolicyCoverageUntilHorizon: "H5",
+    goalPolicyCoverageUntilHorizon: "H6",
     goalPolicyCoverageUntilExplicit: false,
     requiredPolicyTransitions: "",
     requireGoalPolicyFileValidation: false,
@@ -879,7 +879,7 @@ async function main() {
   if (failures.length === 0 && options.requireGoalPolicyFileValidation) {
     const policyValidationUntilHorizon = normalizeHorizon(
       options.goalPolicyFileValidationUntilHorizon,
-      nextHorizon || "H5",
+      nextHorizon || "H6",
     );
     const goalPolicyFileValidationArgv = [
       "node",
@@ -949,7 +949,7 @@ async function main() {
   if (failures.length === 0 && options.requireGoalPolicyCoverage) {
     const coverageUntilHorizon = normalizeHorizon(
       options.goalPolicyCoverageUntilHorizon,
-      "H5",
+      "H6",
     );
     const goalPolicyCoverageArgv = [
       "node",
@@ -987,7 +987,7 @@ async function main() {
   if (failures.length === 0 && options.requireGoalPolicyReadinessAudit) {
     const auditUntilHorizon = normalizeHorizon(
       options.goalPolicyReadinessAuditUntilHorizon,
-      nextHorizon || "H5",
+      nextHorizon || "H6",
     );
     const goalPolicyReadinessAuditArgv = [
       "node",
@@ -1227,7 +1227,7 @@ async function main() {
       requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
       goalPolicyCoverageUntilHorizon:
         options.requireGoalPolicyCoverage === true
-          ? normalizeHorizon(options.goalPolicyCoverageUntilHorizon, nextHorizon || "H5") || null
+          ? normalizeHorizon(options.goalPolicyCoverageUntilHorizon, nextHorizon || "H6") || null
           : null,
       requiredPolicyTransitions:
         options.requireGoalPolicyCoverage === true && isNonEmptyString(options.requiredPolicyTransitions)
@@ -1244,7 +1244,7 @@ async function main() {
           : null,
       goalPolicyFileValidationUntilHorizon:
         options.requireGoalPolicyFileValidation === true
-          ? normalizeHorizon(options.goalPolicyFileValidationUntilHorizon, nextHorizon || "H5") || null
+          ? normalizeHorizon(options.goalPolicyFileValidationUntilHorizon, nextHorizon || "H6") || null
           : null,
       allowGoalPolicyFileValidationFallback: options.allowGoalPolicyFileValidationFallback,
       requireGoalPolicyReadinessAudit: options.requireGoalPolicyReadinessAudit,
@@ -1254,7 +1254,7 @@ async function main() {
           : null,
       goalPolicyReadinessAuditUntilHorizon:
         options.requireGoalPolicyReadinessAudit === true
-          ? normalizeHorizon(options.goalPolicyReadinessAuditUntilHorizon, nextHorizon || "H5") || null
+          ? normalizeHorizon(options.goalPolicyReadinessAuditUntilHorizon, nextHorizon || "H6") || null
           : null,
       progressiveGoalsPass:
         options.requireProgressiveGoals === true

@@ -60,7 +60,13 @@ Every PR should include:
 - **Standby region routing**: `UNIFIED_ROUTER_STANDBY_REGION` — when it equals `envelope.regionId`, primary and fallback lanes swap for failover drills (skipped when fallback is `none`).
 - **Lane env passthrough**: Eve receives `EVE_TASK_DISPATCH_TENANT_ID` / `EVE_TASK_DISPATCH_REGION_ID`; Hermes receives `HERMES_UNIFIED_TENANT_ID` / `HERMES_UNIFIED_REGION_ID` when set.
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
-- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout` (requires generated evidence under `evidence/`). Terminal horizon closeout skips stage-promotion readiness in `validate-horizon-closeout`.
+- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H6**.
+
+## Sustainment assurance (H6)
+
+- **Bundle**: `npm run run:h6-assurance-bundle` writes `evidence/h6-assurance-bundle-*.json` (horizon status validation + tenant isolation + region failover rehearsal + unified entrypoints).
+- **Closeout gate**: `npm run validate:h6-closeout` (terminal horizon skips downstream stage-promotion artifact in `validate-horizon-closeout`).
+- **Horizon index**: orchestration scripts include **H6** as the terminal sustainment horizon.
 
 ## Cutover and Rollback Commands
 
@@ -132,7 +138,7 @@ Schema validation expectations:
 - horizon tracking metadata is machine-validated via:
   - `npm run validate:horizon-status`
 - horizon closeout readiness is machine-validated via:
-  - `npm run validate:horizon-closeout -- --horizon <H1|H2|H3|H4|H5> --target-next <H2|H3|H4|H5>`
+  - `npm run validate:horizon-closeout -- --horizon <H1|H2|H3|H4|H5|H6> --target-next <H2|H3|H4|H5|H6>`
   - closeout release evidence now fail-closes on goal-policy signals:
     - `validate:release-readiness` evidence must report and pass `checks.goalPolicyFileValidationPassed`
     - `validate:initial-scope` evidence must report and pass propagated release goal-policy status

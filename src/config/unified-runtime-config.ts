@@ -54,6 +54,14 @@ export type UnifiedRuntimeEnvConfig = {
   capabilityExecutionTimeoutMs: number;
   /** When true with a positive execution timeout, SIGTERM lane subprocess on budget expiry. */
   capabilityAbortLaneOnTimeout: boolean;
+  /**
+   * When > 0, capability handler `responseText` is truncated to this many UTF-16 code units (suffix notes original length).
+   */
+  capabilityMaxOutputChars: number;
+  /**
+   * When > 0, capability handlers may call `dispatchLane` at most this many times per execution (fail closed with auditable error).
+   */
+  capabilityMaxLaneDispatches: number;
   /** When true, reject dispatches that omit a tenant id (after metadata resolution). */
   tenantStrict: boolean;
   /** When non-empty, only these tenant ids are accepted (fail-closed for others). */
@@ -403,6 +411,26 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     false,
   );
+  const capabilityMaxOutputChars = Math.min(
+    2_000_000,
+    parseNonNegativeInt(
+      firstDefined(reader, [
+        "UNIFIED_CAPABILITY_MAX_OUTPUT_CHARS",
+        "CAPABILITY_MAX_OUTPUT_CHARS",
+      ]),
+      0,
+    ),
+  );
+  const capabilityMaxLaneDispatches = Math.min(
+    500,
+    parseNonNegativeInt(
+      firstDefined(reader, [
+        "UNIFIED_CAPABILITY_MAX_LANE_DISPATCHES",
+        "CAPABILITY_MAX_LANE_DISPATCHES",
+      ]),
+      0,
+    ),
+  );
   const tenantStrict = parseBooleanFlag(
     firstDefined(reader, ["UNIFIED_TENANT_STRICT", "TENANT_STRICT"]),
     false,
@@ -509,6 +537,8 @@ export function loadUnifiedRuntimeEnvConfig(
     dispatchQueueJournalRotationRetainBytes,
     capabilityExecutionTimeoutMs,
     capabilityAbortLaneOnTimeout,
+    capabilityMaxOutputChars,
+    capabilityMaxLaneDispatches,
     tenantStrict,
     tenantAllowlist,
     tenantMemoryIsolation,

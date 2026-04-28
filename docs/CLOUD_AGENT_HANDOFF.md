@@ -60,12 +60,14 @@ Optional crash recovery for file-backed unified memory:
 - **`fallbackInfo`** may include router telemetry when fallback is skipped by policy: **`primaryFailureClass`** and **`noFallbackOnPrimaryFailureClasses`** (same **`auditSchemaVersion`**; manifest validator accepts these optional fields).
 - Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>` (accepts **v1** and **v2** lines; v2 requires **`tenantId`** key present as `null` or string).
 - Capability policy audit: `node scripts/validate-manifest-schema.mjs --type capability-policy-audit-jsonl --file <path>` (expects `evidence/capability-policy-audit-*.jsonl` naming for `--type all` sweep).
-- **`npm run validate:manifest-schemas`** includes `evidence/unified-dispatch-audit-*.jsonl`, `evidence/capability-policy-audit-*.jsonl`, `evidence/router-telemetry-*.jsonl`, and `evidence/dispatch-queue-journal-*.jsonl` when present.
+- **`npm run validate:manifest-schemas`** includes `evidence/unified-dispatch-audit-*.jsonl`, `evidence/capability-policy-audit-*.jsonl`, `evidence/router-telemetry-*.jsonl`, `evidence/dispatch-queue-journal-*.jsonl`, and `evidence/emergency-rollback-bundle-*.json` when present.
 
 ## Capability execution budget and lane abort
 
 - **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`** (alias `CAPABILITY_EXECUTION_TIMEOUT_MS`) — wall-clock limit for `@cap` handlers; `0` disables.
 - **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT=1`** (alias `CAPABILITY_ABORT_LANE_ON_TIMEOUT`) — when enabled with a positive timeout, abort the in-flight lane subprocess (`SIGTERM`) if the handler exceeds the budget.
+- **`UNIFIED_CAPABILITY_MAX_OUTPUT_CHARS`** — when `> 0`, truncate capability **`responseText`** to this many UTF-16 code units (suffix records original length).
+- **`UNIFIED_CAPABILITY_MAX_LANE_DISPATCHES`** — when `> 0`, each `@cap` handler may call **`dispatchLane`** at most this many times; exceeding fails with **`capability_lane_dispatch_budget_exceeded`** (**`policy_failure`**).
 
 ## Capability policy audit (append-only JSONL)
 
@@ -89,6 +91,22 @@ Optional crash recovery for file-backed unified memory:
 - **`UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH`** (alias **`DISPATCH_QUEUE_JOURNAL_PATH`**) — optional append-only JSONL. Each dispatch writes **`dispatch_queue_accepted`** (routing snapshot + `dispatchPath`: `lane` \| `capability`) then **`dispatch_queue_finished`** (outcome summary). **`UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES`** / **`UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES`** — same semantics as other JSONL logs (`0` = disabled).
 - **Reconcile** (find accepted rows missing a matching finished by `traceId`): `node scripts/reconcile-dispatch-queue.mjs --file <path>` (exit `2` if orphans or parse errors).
 - Validate: `node scripts/validate-manifest-schema.mjs --type dispatch-queue-journal-jsonl --file <path>`. Evidence sweep **`--type all`** includes `evidence/dispatch-queue-journal-*.jsonl` when present.
+
+## Soak simulation and SLO drift (H3)
+
+- **`npm run validate:soak`** — `scripts/soak-simulate.sh` writes `evidence/soak-*.jsonl`: each iteration appends the **dispatch JSON** (stdout) then an optional **`soakMeta`** line (iteration, exit code, stderr excerpt, trace summary) so `summarize-evidence.mjs` still parses dispatch records. **`scripts/soak-append-meta.mjs`** is plain Node ESM (no TypeScript-only syntax).
+- **`npm run validate:soak-slo`** — `scripts/validate-soak-slo.mjs --file <soak.jsonl>` writes **`evidence/soak-slo-*.json`** with success rate / policy-failure rate / P95 latency. Thresholds: **`UNIFIED_SOAK_SLO_MIN_SUCCESS_RATE`** (default `0.5`), **`UNIFIED_SOAK_SLO_MAX_POLICY_FAILURE_RATE`** (default `0.45`); CLI overrides **`--min-success-rate`** / **`--max-policy-failure-rate`**.
+- **Release readiness gate:** set **`UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO=1`** so `scripts/release-readiness.mjs` requires a passing **`soak-slo-*.json`** in the evidence dir.
+
+## Emergency rollback rehearsal bundle (H3)
+
+- **`npm run bundle:emergency-rollback`** — `scripts/build-emergency-rollback-bundle.mjs --evidence-dir ./evidence` writes **`evidence/emergency-rollback-bundle-<timestamp>.json`** (pinned paths to latest validation summary, soak, failure injection, cutover, regression).
+- Validate: `node scripts/validate-manifest-schema.mjs --type emergency-rollback-bundle --file <path>`.
+
+## H4 legacy retirement scope + dispatch fixtures
+
+- **Inventory:** `docs/H4_DIRECT_LANE_INVOCATION_INVENTORY.md` — canonical production path is **`src/bin/unified-dispatch.ts`** constructing **`EveAdapter` / `HermesAdapter`** and calling **`dispatchUnifiedMessage`**; no other `src/` constructors for those adapters.
+- **Conformance:** `fixtures/dispatch/*.json` use **`dispatchFixtureSchemaVersion`** (align with **`DISPATCH_FIXTURE_SCHEMA_VERSION`** in `src/contracts/dispatch-fixture-version.ts`). **`test/dispatch-conformance-fixtures.test.ts`** runs **`dispatchUnifiedMessage`** against fixtures.
 
 ## Horizon-neutral failure id inventory (orchestration scripts)
 

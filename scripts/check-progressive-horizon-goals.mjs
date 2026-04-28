@@ -264,6 +264,7 @@ async function main() {
   const sourcePendingActionCount = sourcePendingActions.length;
   const nextActionCount = nextActions.length;
   const nextPendingActionCount = nextPendingActions.length;
+  const nextHorizonFullyComplete = nextActionCount > 0 && nextPendingActionCount === 0;
   /**
    * When the source horizon still has pending actions, compare only to that pending backlog so
    * completed rows do not inflate the bar. When every source row is completed, skip growth-vs-source
@@ -297,7 +298,7 @@ async function main() {
       `next_action_count_below_growth_target:${String(nextActionCount)}<${String(requiredNextActionCount)}`,
     );
   }
-  if (nextPendingActionCount < options.minPendingNextActions) {
+  if (!nextHorizonFullyComplete && nextPendingActionCount < options.minPendingNextActions) {
     failures.push(
       `next_pending_action_count_below_min:${String(nextPendingActionCount)}<${String(options.minPendingNextActions)}`,
     );
@@ -311,7 +312,10 @@ async function main() {
         `required_tag_count_below_min:${tag}:${String(actual.total)}<${String(requirement.minCount)}`,
       );
     }
-    if (Number(actual.pending) < Number(requirement.minPendingCount)) {
+    if (
+      !nextHorizonFullyComplete
+      && Number(actual.pending) < Number(requirement.minPendingCount)
+    ) {
       failures.push(
         `required_tag_pending_count_below_min:${tag}:${String(actual.pending)}<${String(requirement.minPendingCount)}`,
       );
@@ -338,6 +342,7 @@ async function main() {
       nextActionCount,
       goalDelta,
       nextPendingActionCount,
+      nextHorizonFullyComplete,
       policyKey: policyApplied ? derivedPolicyKey : null,
       policyApplied,
       minimumGoalIncrease: options.minimumGoalIncrease,

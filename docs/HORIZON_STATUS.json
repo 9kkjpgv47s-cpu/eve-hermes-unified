@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T22:20:00Z",
+  "updatedAtIso": "2026-04-28T23:45:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -171,7 +171,7 @@
       "id": "h3-action-3",
       "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["capability", "policy-hardening"]
     },
     {
@@ -185,15 +185,92 @@
       "id": "h3-action-5",
       "summary": "Create long-window soak validation for H3 policy and durability changes with explicit SLO drift alarms.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
     },
     {
       "id": "h3-action-6",
       "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["rollback", "operations"]
+    },
+    {
+      "id": "h4-action-1",
+      "summary": "Inventory direct Eve/Hermes invocation paths outside unified dispatch for H4 retirement scope.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "contract"]
+    },
+    {
+      "id": "h4-action-2",
+      "summary": "Expand contract conformance tests against versioned dispatch fixtures.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["contract", "validation"]
+    },
+    {
+      "id": "h4-action-3",
+      "summary": "Add H5 runway actions for progressive H4->H5 promotion gates (autonomous ops + scale envelope).",
+      "targetHorizon": "H4",
+      "status": "planned",
+      "tags": ["planning", "horizon-runway", "rollback"]
+    },
+    {
+      "id": "h4-action-4",
+      "summary": "Define H4 closeout evidence requirements (legacy path audit + fixture conformance in CI) and wire validate:h4-closeout checks.",
+      "targetHorizon": "H4",
+      "status": "planned",
+      "tags": ["validation", "contract"]
+    },
+    {
+      "id": "h4-action-5",
+      "summary": "Extend H4 capability contract checks (tenant scope, policy denials) beyond fixture lane-only paths.",
+      "targetHorizon": "H4",
+      "status": "planned",
+      "tags": ["capability", "contract"]
+    },
+    {
+      "id": "h4-action-6",
+      "summary": "Audit unified memory surfaces for H4 legacy retirement (cross-lane keys, WAL replay invariants).",
+      "targetHorizon": "H4",
+      "status": "planned",
+      "tags": ["memory", "durability", "validation"]
+    },
+    {
+      "id": "h5-action-1",
+      "summary": "Define autonomous operations envelope (SLOs, alerting hooks, operator escalation paths) for H5.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h5-action-2",
+      "summary": "Define scale envelope targets (throughput, fan-out, evidence volume) and measurement harness for H5.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h5-action-3",
+      "summary": "Add H5 emergency rollback drill requirements tied to unified dispatch evidence bundles.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["rollback", "validation"]
+    },
+    {
+      "id": "h5-action-4",
+      "summary": "Define H5 load-test harness integration with soak SLO gates and evidence retention policy.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h5-action-5",
+      "summary": "Document H5 operator runbook updates for full-stage unified dispatch and incident response.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "rollback"]
     }
   ],
   "goalPolicies": {
@@ -403,6 +480,18 @@
       "horizon": "H3",
       "status": "planned",
       "note": "Completed h3-action-1: optional UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH JSONL (accepted/finished), reconcile-dispatch-queue.mjs, validate-manifest-schema dispatch-queue-journal-jsonl. Completed h3-action-4: validate:memory-durability (tsx verify-memory-durability.ts) for WAL + cross-lane replay after simulated restart."
+    },
+    {
+      "timestamp": "2026-04-28T23:00:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "Completed h3-action-3: UNIFIED_CAPABILITY_MAX_OUTPUT_CHARS and UNIFIED_CAPABILITY_MAX_LANE_DISPATCHES in capability engine. Completed h3-action-5: soak JSONL + soakMeta lines, validate-soak-slo.mjs, optional UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO. Completed h3-action-6: build-emergency-rollback-bundle.mjs + emergency-rollback-bundle manifest validation."
+    },
+    {
+      "timestamp": "2026-04-28T23:45:00Z",
+      "horizon": "H4",
+      "status": "planned",
+      "note": "Completed h4-action-1: docs/H4_DIRECT_LANE_INVOCATION_INVENTORY.md. Completed h4-action-2: fixtures/dispatch/*.json + DISPATCH_FIXTURE_SCHEMA_VERSION + dispatch-conformance-fixtures.test.ts."
     }
   ]
 }

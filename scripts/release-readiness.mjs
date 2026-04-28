@@ -239,6 +239,8 @@ async function main() {
   let goalPolicySourceConsistencyPassed = false;
   let goalPolicySourceConsistencyOverlapTransitions = [];
   let goalPolicySourceConsistencyConflictTransitions = [];
+  let soakSloSummary = null;
+  let soakSloPath = null;
   if (validationSummaryPath) {
     validationSummary = await readJson(validationSummaryPath);
     if (!validationSummary?.gates?.passed) {
@@ -258,6 +260,20 @@ async function main() {
     cutoverSummary = await readJson(cutoverPath);
     if (!cutoverSummary?.pass) {
       failures.push("cutover_readiness_failed");
+    }
+  }
+  const requireSoakSloFromEnv = process.env.UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO;
+  const requireSoakSlo =
+    typeof requireSoakSloFromEnv === "string" && requireSoakSloFromEnv.trim() !== "0";
+  if (requireSoakSlo) {
+    soakSloPath = await newestFileWithPrefixes(evidenceDir, ["soak-slo-"]);
+    if (!soakSloPath) {
+      failures.push("missing_soak_slo_report");
+    } else {
+      soakSloSummary = await readJson(soakSloPath);
+      if (soakSloSummary?.pass !== true) {
+        failures.push("soak_slo_gate_failed");
+      }
     }
   }
   if (goalPolicyValidationPath) {
@@ -400,6 +416,10 @@ async function main() {
         missingRequiredCommands.length === 0 &&
         missingCommandLogFiles.length === 0 &&
         commandFailures.length === 0,
+      soakSloRequired: requireSoakSlo,
+      soakSloPassed:
+        !requireSoakSlo || (Boolean(soakSloPath) && soakSloSummary?.pass === true),
+      soakSloPath: soakSloPath || null,
     },
     failures,
   };

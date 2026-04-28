@@ -26,6 +26,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 - **Router fallback hardening + telemetry:** **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`**; optional **`UNIFIED_ROUTER_TELEMETRY_LOG_PATH`** JSONL (`validate-manifest-schema.mjs --type router-telemetry-jsonl`) — see `docs/CLOUD_AGENT_HANDOFF.md`.
 - **Dispatch queue journal:** optional **`UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH`** JSONL; **`npm run reconcile:dispatch-queue`**; **`validate-manifest-schema.mjs --type dispatch-queue-journal-jsonl`** — see `docs/CLOUD_AGENT_HANDOFF.md`.
 - **Memory durability:** **`npm run validate:memory-durability`** (`verify-memory-durability.ts`) — see `docs/CLOUD_AGENT_HANDOFF.md`.
+- **H4 legacy inventory:** `docs/H4_DIRECT_LANE_INVOCATION_INVENTORY.md` — production lane invocation is **`unified-dispatch` CLI → `LaneAdapter`** only in this repo.
+- **Dispatch contract fixtures:** `fixtures/dispatch/*.json` with **`dispatchFixtureSchemaVersion`** (must match **`DISPATCH_FIXTURE_SCHEMA_VERSION`** in `src/contracts/dispatch-fixture-version.ts`); tests in `test/dispatch-conformance-fixtures.test.ts`.
 
 ## Read Order (Do Not Skip)
 

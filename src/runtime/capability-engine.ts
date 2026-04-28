@@ -14,6 +14,7 @@ import {
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 import type {
   CapabilityExecutionResult as CapabilityExecutorPayload,
+  CapabilityLaneDispatchInput,
   CapabilityLaneDispatcher,
   CapabilityRegistry,
 } from "../skills/capability-registry.js";
@@ -59,6 +60,10 @@ export type CapabilityExecutionDependencies = {
   executionTimeoutMs?: number;
   /** When true with executionTimeoutMs, SIGTERM in-flight lane subprocess on budget expiry. */
   abortLaneOnCapabilityTimeout?: boolean;
+  /** When > 0, truncate capability `responseText` to this many UTF-16 code units. */
+  capabilityMaxOutputChars?: number;
+  /** When > 0, limit `dispatchLane` calls per capability execution (fail closed when exceeded). */
+  capabilityMaxLaneDispatches?: number;
 };
 
 function parseExplicitCapabilityText(text: string): { capabilityId: string; argsText: string } | undefined {
@@ -196,14 +201,37 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
     const argsText = parsed?.argsText ?? "";
     const timeoutMs = this.dependencies.executionTimeoutMs ?? 0;
     const abortLaneOnTimeout = this.dependencies.abortLaneOnCapabilityTimeout === true;
-    let execution: CapabilityExecutorPayload;
-    if (timeoutMs > 0) {
-      const runAbort = new AbortController();
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      const timeoutPromise = new Promise<"__timeout__">((resolve) => {
-        timeoutId = setTimeout(() => resolve("__timeout__"), timeoutMs);
+    const maxOutputChars = this.dependencies.capabilityMaxOutputChars ?? 0;
+    const maxLaneDispatches = this.dependencies.capabilityMaxLaneDispatches ?? 0;
+    let laneDispatchCount = 0;
+
+    const boundedDispatchLane = async (input: CapabilityLaneDispatchInput, outerSignal?: AbortSignal) => {
+      if (maxLaneDispatches > 0 && laneDispatchCount >= maxLaneDispatches) {
+        throw new Error("capability_lane_dispatch_budget_exceeded");
+      }
+      laneDispatchCount += 1;
+      let merged: AbortSignal | undefined = input.signal;
+      if (outerSignal) {
+        if (!merged) {
+          merged = outerSignal;
+        } else if (merged !== outerSignal) {
+          const bridge = new AbortController();
+          const abortBridge = () => {
+            bridge.abort();
+          };
+          outerSignal.addEventListener("abort", abortBridge, { once: true });
+          merged.addEventListener("abort", abortBridge, { once: true });
+          merged = bridge.signal;
+        }
+      }
+      return this.dependencies.dispatchLane({
+        ...input,
+        signal: merged,
       });
-      const runPromise = Promise.resolve(
+    };
+
+    const runExecutor = (outerSignal?: AbortSignal) =>
+      Promise.resolve(
         executor({
           text: envelope.text,
           argsText,
@@ -211,81 +239,103 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
           messageId: envelope.messageId,
           traceId: envelope.traceId,
           envelope,
-          signal: abortLaneOnTimeout ? runAbort.signal : undefined,
+          signal: outerSignal,
           memoryStore,
-          dispatchLane: async (input) =>
-            this.dependencies.dispatchLane({
-              ...input,
-              signal: abortLaneOnTimeout ? (input.signal ?? runAbort.signal) : input.signal,
-            }),
+          dispatchLane: async (input) => boundedDispatchLane(input, outerSignal),
         }),
       );
-      let outcome: { kind: "ok"; value: CapabilityExecutorPayload } | { kind: "timeout" };
-      try {
-        outcome = await Promise.race([
-          runPromise.then((value) => ({ kind: "ok" as const, value })),
-          timeoutPromise.then(() => ({ kind: "timeout" as const })),
-        ]);
-      } finally {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
+
+    let execution: CapabilityExecutorPayload;
+    try {
+      if (timeoutMs > 0) {
+        const runAbort = new AbortController();
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<"__timeout__">((resolve) => {
+          timeoutId = setTimeout(() => resolve("__timeout__"), timeoutMs);
+        });
+        const laneSignal = abortLaneOnTimeout ? runAbort.signal : undefined;
+        const runPromise = runExecutor(laneSignal);
+        let outcome: { kind: "ok"; value: CapabilityExecutorPayload } | { kind: "timeout" };
+        try {
+          outcome = await Promise.race([
+            runPromise.then((value) => ({ kind: "ok" as const, value })),
+            timeoutPromise.then(() => ({ kind: "timeout" as const })),
+          ]);
+        } finally {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
         }
+        if (outcome.kind === "timeout") {
+          if (abortLaneOnTimeout) {
+            runAbort.abort();
+            await runPromise.catch(() => undefined);
+          }
+          const timedOut = validateCapabilityExecutionResult({
+            capability: selection,
+            status: "failed",
+            consumed: false,
+            reason: "capability_execution_timeout",
+            outputText: `Capability '${selection.id}' exceeded execution budget (${timeoutMs}ms).`,
+            failureClass: "dispatch_failure",
+            runId: `capability-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
+            elapsedMs: Math.max(0, Date.now() - started),
+            metadata: {
+              budgetMs: String(timeoutMs),
+              laneAbort: abortLaneOnTimeout ? "1" : "0",
+            },
+          });
+          await this.writeExecutionMemory(selection, envelope, timedOut, memoryStore);
+          return timedOut;
+        }
+        execution = outcome.value;
+      } else {
+        execution = await runExecutor(undefined);
       }
-      if (outcome.kind === "timeout") {
-        if (abortLaneOnTimeout) {
-          runAbort.abort();
-          await runPromise.catch(() => undefined);
-        }
-        const timedOut = validateCapabilityExecutionResult({
+    } catch (err) {
+      if (err instanceof Error && err.message === "capability_lane_dispatch_budget_exceeded") {
+        const budgetFail = validateCapabilityExecutionResult({
           capability: selection,
           status: "failed",
           consumed: false,
-          reason: "capability_execution_timeout",
-          outputText: `Capability '${selection.id}' exceeded execution budget (${timeoutMs}ms).`,
-          failureClass: "dispatch_failure",
+          reason: "capability_lane_dispatch_budget_exceeded",
+          outputText: `Capability '${selection.id}' exceeded lane dispatch budget (${String(maxLaneDispatches)}).`,
+          failureClass: "policy_failure",
           runId: `capability-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
           elapsedMs: Math.max(0, Date.now() - started),
           metadata: {
-            budgetMs: String(timeoutMs),
-            laneAbort: abortLaneOnTimeout ? "1" : "0",
+            maxLaneDispatches: String(maxLaneDispatches),
           },
         });
-        await this.writeExecutionMemory(selection, envelope, timedOut, memoryStore);
-        return timedOut;
+        await this.writeExecutionMemory(selection, envelope, budgetFail, memoryStore);
+        return budgetFail;
       }
-      execution = outcome.value;
-    } else {
-      execution = await Promise.resolve(
-        executor({
-          text: envelope.text,
-          argsText,
-          chatId: envelope.chatId,
-          messageId: envelope.messageId,
-          traceId: envelope.traceId,
-          envelope,
-          memoryStore,
-          dispatchLane: async (input) =>
-            this.dependencies.dispatchLane({
-              ...input,
-              signal: input.signal,
-            }),
-        }),
-      );
+      throw err;
     }
+
+    if (execution.responseText.length > maxOutputChars && maxOutputChars > 0) {
+      const originalLen = execution.responseText.length;
+      const truncated = `${execution.responseText.slice(0, maxOutputChars)}\n…[truncated capability output: ${String(originalLen)} chars]`;
+      execution = { ...execution, responseText: truncated };
+    }
+
     const status: "pass" | "failed" = execution.consumed ? "pass" : "failed";
     const reason = execution.reason?.trim() || resultReason(selection.id, status);
-    const failureClass =
+    const failureClass: FailureClass =
       status === "pass" ? "none" : execution.failureClass ?? "dispatch_failure";
+    const outputText = execution.responseText;
+    const metadata = execution.metadata;
+
     const normalized = validateCapabilityExecutionResult({
       capability: selection,
       status,
       consumed: execution.consumed,
       reason,
-      outputText: execution.responseText,
+      outputText,
       failureClass,
       runId: `capability-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
       elapsedMs: Math.max(0, Date.now() - started),
-      metadata: execution.metadata,
+      metadata,
     });
     await this.writeExecutionMemory(selection, envelope, normalized, memoryStore);
     return normalized;

@@ -181,6 +181,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.capabilityAbortLaneOnTimeout).toBe(true);
   });
 
+  it("parses capability max output chars and max lane dispatches", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_CAPABILITY_MAX_OUTPUT_CHARS: "65536",
+          UNIFIED_CAPABILITY_MAX_LANE_DISPATCHES: "5",
+        }),
+      ),
+    );
+    expect(config.capabilityMaxOutputChars).toBe(65536);
+    expect(config.capabilityMaxLaneDispatches).toBe(5);
+  });
+
   it("parses tenant strict and allowlist", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

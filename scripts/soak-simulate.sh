@@ -33,6 +33,10 @@ for i in $(seq 1 "$iterations"); do
     text="normal message $i"
   fi
 
+  tmp_dispatch="$(mktemp "${TMPDIR:-/tmp}/soak-dispatch-${i}-XXXXXX.json")"
+  tmp_stderr="$(mktemp "${TMPDIR:-/tmp}/soak-stderr-${i}-XXXXXX.txt")"
+  exit_code=0
+  set +e
   env \
     UNIFIED_ROUTER_DEFAULT_PRIMARY=hermes \
     UNIFIED_ROUTER_DEFAULT_FALLBACK=none \
@@ -46,7 +50,18 @@ for i in $(seq 1 "$iterations"); do
     HERMES_LAUNCH_COMMAND="$hermes_launch_command" \
     UNIFIED_HERMES_LAUNCH_ARGS= \
     HERMES_LAUNCH_ARGS= \
-    "${dispatch_cmd[@]}" --text "$text" --chat-id "$chat_id" --message-id "$i" >>"$report" 2>&1 || true
+    "${dispatch_cmd[@]}" --text "$text" --chat-id "$chat_id" --message-id "$i" >"$tmp_dispatch" 2>"$tmp_stderr"
+  exit_code=$?
+  set -e
+
+  cat "$tmp_dispatch" >>"$report"
+  node "$ROOT_DIR/scripts/soak-append-meta.mjs" \
+    --iteration "$i" \
+    --exit-code "$exit_code" \
+    --stderr-file "$tmp_stderr" \
+    --dispatch-file "$tmp_dispatch" >>"$report" || true
+
+  rm -f "$tmp_dispatch" "$tmp_stderr"
 done
 
 echo "Wrote $report"

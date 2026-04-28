@@ -1,0 +1,58 @@
+{
+  "dispatchFixtureSchemaVersion": 1,
+  "description": "Primary fails, fallback succeeds (failClosed=false)",
+  "input": {
+    "channel": "telegram",
+    "chatId": "fixture-chat-2",
+    "messageId": "fixture-msg-2",
+    "text": "fixture lane fallback"
+  },
+  "routerConfig": {
+    "defaultPrimary": "eve",
+    "defaultFallback": "hermes",
+    "failClosed": false,
+    "policyVersion": "v1"
+  },
+  "expected": {
+    "routing": {
+      "primaryLane": "eve",
+      "fallbackLane": "hermes",
+      "reason": "default_policy_lane",
+      "policyVersion": "v1",
+      "failClosed": false
+    },
+    "primaryState": {
+      "status": "failed",
+      "reason": "fixture_primary_fail",
+      "runtimeUsed": "fixture-eve",
+      "runId": "fixture-eve-run",
+      "elapsedMs": 2,
+      "failureClass": "dispatch_failure",
+      "sourceLane": "eve",
+      "sourceChatId": "fixture-chat-2",
+      "sourceMessageId": "fixture-msg-2"
+    },
+    "fallbackState": {
+      "status": "pass",
+      "reason": "fixture_fallback_ok",
+      "runtimeUsed": "fixture-hermes",
+      "runId": "fixture-hermes-run",
+      "elapsedMs": 3,
+      "failureClass": "none",
+      "sourceLane": "hermes",
+      "sourceChatId": "fixture-chat-2",
+      "sourceMessageId": "fixture-msg-2"
+    },
+    "fallbackInfo": {
+      "attempted": true,
+      "reason": "primary_failed",
+      "fromLane": "eve",
+      "toLane": "hermes"
+    },
+    "response": {
+      "consumed": true,
+      "failureClass": "none",
+      "laneUsed": "hermes"
+    }
+  }
+}

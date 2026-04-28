@@ -533,4 +533,112 @@ describe("UnifiedCapabilityEngine", () => {
       await rm(tempDir, { recursive: true, force: true });
     }
   });
+
+  it("truncates capability output when capabilityMaxOutputChars is set", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(path.join(os.tmpdir(), "unified-cap-truncate.json"));
+    registry.register(
+      {
+        id: "longout",
+        description: "long output",
+        owner: "eve",
+      },
+      () => ({
+        consumed: true,
+        responseText: "x".repeat(500),
+        reason: "ok",
+      }),
+    );
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("eve"),
+      capabilityMaxOutputChars: 40,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "hermes" as const,
+        failClosed: false,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@cap longout",
+    });
+    expect(result.capabilityExecution?.status).toBe("pass");
+    expect(result.capabilityExecution?.outputText.length).toBeLessThanOrEqual(120);
+    expect(result.capabilityExecution?.outputText).toContain("[truncated capability output:");
+  });
+
+  it("fails when capability exceeds lane dispatch budget", async () => {
+    const registry = new CapabilityRegistry();
+    const memoryStore = new FileUnifiedMemoryStore(path.join(os.tmpdir(), "unified-cap-lane-budget.json"));
+    registry.register(
+      {
+        id: "multilane",
+        description: "two dispatches",
+        owner: "eve",
+      },
+      async ({ dispatchLane }) => {
+        await dispatchLane({
+          lane: "eve",
+          text: "a",
+          intentRoute: "test:a",
+          envelope: {
+            traceId: "t",
+            channel: "telegram",
+            chatId: "1",
+            messageId: "2",
+            receivedAtIso: new Date().toISOString(),
+            text: "a",
+          },
+        });
+        await dispatchLane({
+          lane: "eve",
+          text: "b",
+          intentRoute: "test:b",
+          envelope: {
+            traceId: "t",
+            channel: "telegram",
+            chatId: "1",
+            messageId: "2",
+            receivedAtIso: new Date().toISOString(),
+            text: "b",
+          },
+        });
+        return { consumed: true, responseText: "done" };
+      },
+    );
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore,
+      dispatchLane: async () => fakeLaneState("eve"),
+      capabilityMaxLaneDispatches: 1,
+    });
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+      hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "hermes" as const,
+        failClosed: false,
+        policyVersion: "v1",
+      },
+      capabilityEngine: engine,
+    };
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@cap multilane",
+    });
+    expect(result.capabilityExecution?.status).toBe("failed");
+    expect(result.capabilityExecution?.reason).toBe("capability_lane_dispatch_budget_exceeded");
+    expect(result.capabilityExecution?.failureClass).toBe("policy_failure");
+  });
 });

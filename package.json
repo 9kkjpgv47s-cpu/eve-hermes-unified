@@ -13,6 +13,8 @@
     "bootstrap:sources": "bash ./scripts/bootstrap-sources.sh",
     "validate:failure-injection": "bash ./scripts/failure-injection-smoke.sh",
     "validate:soak": "bash ./scripts/soak-simulate.sh 20",
+    "validate:soak-slo": "node ./scripts/validate-soak-slo.mjs",
+    "bundle:emergency-rollback": "node ./scripts/build-emergency-rollback-bundle.mjs --evidence-dir ./evidence",
     "validate:evidence-summary": "bash ./scripts/validate-evidence-summary.sh",
     "validate:evidence-gates": "node ./scripts/evidence-gates.mjs",
     "validate:horizon-status": "node ./scripts/validate-horizon-status.mjs --file ./docs/HORIZON_STATUS.json",

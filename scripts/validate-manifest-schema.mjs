@@ -196,9 +196,65 @@ export function validateReleaseReadinessManifest(payload) {
       Array.isArray(checks.discoveredCommandLogs),
       "checks.discoveredCommandLogs must be an array",
     );
+    pushError(
+      errors,
+      checks.soakSloRequired === undefined || typeof checks.soakSloRequired === "boolean",
+      "checks.soakSloRequired must be boolean or undefined",
+    );
+    pushError(
+      errors,
+      checks.soakSloPassed === undefined || typeof checks.soakSloPassed === "boolean",
+      "checks.soakSloPassed must be boolean or undefined",
+    );
+    pushError(
+      errors,
+      checks.soakSloPath === undefined
+        || checks.soakSloPath === null
+        || typeof checks.soakSloPath === "string",
+      "checks.soakSloPath must be string, null, or undefined",
+    );
   }
 
   pushError(errors, Array.isArray(payload.failures), "failures must be an array");
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateEmergencyRollbackBundleManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.schemaVersion === "v1", "schemaVersion must be exactly v1");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(errors, isNonEmptyString(payload.horizon), "horizon must be non-empty string");
+  pushError(errors, isNonEmptyString(payload.summary), "summary must be non-empty string");
+  const files = payload.files;
+  pushError(errors, files && typeof files === "object", "files must be an object");
+  if (files && typeof files === "object") {
+    for (const key of ["validationSummary", "soak", "failureInjection", "cutoverReadiness", "regressionEvePrimary"]) {
+      pushError(
+        errors,
+        files[key] === null || typeof files[key] === "string",
+        `files.${key} must be string or null`,
+      );
+    }
+  }
+  pushError(errors, Array.isArray(payload.steps), "steps must be an array");
+  if (Array.isArray(payload.steps)) {
+    payload.steps.forEach((step, index) => {
+      const prefix = `steps[${String(index)}]`;
+      pushError(errors, step && typeof step === "object", `${prefix} must be an object`);
+      if (!step || typeof step !== "object") {
+        return;
+      }
+      pushError(errors, isNonEmptyString(step.id), `${prefix}.id required`);
+      pushError(errors, isNonEmptyString(step.title), `${prefix}.title required`);
+      pushError(errors, isNonEmptyString(step.command), `${prefix}.command required`);
+      pushError(errors, Array.isArray(step.evidencePaths), `${prefix}.evidencePaths must be array`);
+    });
+  }
   return { valid: errors.length === 0, errors };
 }
 
@@ -1263,6 +1319,9 @@ export function validateManifestSchema(type, payload) {
   if (type === "release-readiness") {
     return validateReleaseReadinessManifest(payload);
   }
+  if (type === "emergency-rollback-bundle") {
+    return validateEmergencyRollbackBundleManifest(payload);
+  }
   if (type === "merge-bundle") {
     return validateMergeBundleManifest(payload);
   }
@@ -1414,6 +1473,7 @@ async function listAllManifestTargets(evidenceDir) {
   const capabilityPolicyAuditJsonlTargets = [];
   const routerTelemetryJsonlTargets = [];
   const dispatchQueueJournalJsonlTargets = [];
+  const emergencyRollbackBundleTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1499,6 +1559,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "stage-drill",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("emergency-rollback-bundle-") && entry.name.endsWith(".json")) {
+      emergencyRollbackBundleTargets.push({
+        type: "emergency-rollback-bundle",
+        file: path.join(evidenceDir, entry.name),
+      });
     } else if (entry.name.startsWith("unified-dispatch-audit-") && entry.name.endsWith(".jsonl")) {
       dispatchAuditJsonlTargets.push({
         type: "unified-dispatch-audit-jsonl",
@@ -1540,6 +1605,7 @@ async function listAllManifestTargets(evidenceDir) {
   capabilityPolicyAuditJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   routerTelemetryJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   dispatchQueueJournalJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
+  emergencyRollbackBundleTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1560,6 +1626,7 @@ async function listAllManifestTargets(evidenceDir) {
     capabilityPolicyAuditJsonlTargets,
     routerTelemetryJsonlTargets,
     dispatchQueueJournalJsonlTargets,
+    emergencyRollbackBundleTargets,
   };
 }
 
@@ -1577,7 +1644,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
+      "Missing --type (release-readiness|emergency-rollback-bundle|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
     );
   }
 
@@ -1690,6 +1757,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.emergencyRollbackBundleTargets.length > 0
+            ? [
+                targetGroups.emergencyRollbackBundleTargets[
+                  targetGroups.emergencyRollbackBundleTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1711,6 +1785,7 @@ async function main() {
           ...targetGroups.capabilityPolicyAuditJsonlTargets,
           ...targetGroups.routerTelemetryJsonlTargets,
           ...targetGroups.dispatchQueueJournalJsonlTargets,
+          ...targetGroups.emergencyRollbackBundleTargets,
         ];
     const results = [];
     for (const target of targets) {

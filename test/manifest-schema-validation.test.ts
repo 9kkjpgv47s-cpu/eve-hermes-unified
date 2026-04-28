@@ -52,6 +52,9 @@ describe("validate-manifest-schema.mjs", () => {
               missingCommandLogFiles: [],
               commandFailures: [],
               validationCommandsPassed: true,
+              soakSloRequired: false,
+              soakSloPassed: true,
+              soakSloPath: null,
             },
             failures: [],
           },
@@ -790,6 +793,54 @@ describe("validate-manifest-schema.mjs", () => {
           "dispatch-queue-journal-jsonl",
           "--file",
           auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
+  it("passes for valid emergency-rollback-bundle manifest", async () => {
+    await withTempDir(async (dir) => {
+      const bundlePath = path.join(dir, "emergency-rollback-bundle-20260428-000000.json");
+      await writeFile(
+        bundlePath,
+        JSON.stringify(
+          {
+            schemaVersion: "v1",
+            generatedAtIso: new Date().toISOString(),
+            horizon: "H3",
+            summary: "Test bundle",
+            pass: true,
+            files: {
+              validationSummary: path.join(dir, "vs.json"),
+              soak: path.join(dir, "soak.jsonl"),
+              failureInjection: path.join(dir, "fi.txt"),
+              cutoverReadiness: path.join(dir, "co.json"),
+              regressionEvePrimary: path.join(dir, "re.json"),
+            },
+            steps: [
+              {
+                id: "step-1",
+                title: "Validate",
+                command: "npm run validate:all",
+                evidencePaths: [path.join(dir, "vs.json")],
+              },
+            ],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "emergency-rollback-bundle",
+          "--file",
+          bundlePath,
         ],
         { timeoutMs: 10_000 },
       );

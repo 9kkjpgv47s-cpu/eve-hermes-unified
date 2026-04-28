@@ -113,6 +113,8 @@ async function main() {
     policyFingerprintSha256,
     executionTimeoutMs: config.capabilityExecutionTimeoutMs,
     abortLaneOnCapabilityTimeout: config.capabilityAbortLaneOnTimeout,
+    capabilityMaxOutputChars: config.capabilityMaxOutputChars,
+    capabilityMaxLaneDispatches: config.capabilityMaxLaneDispatches,
     ...(policyAuditPath.length > 0
       ? {
           onPolicyDenial: async (payload) => {

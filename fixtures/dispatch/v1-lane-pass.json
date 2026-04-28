@@ -1,0 +1,42 @@
+{
+  "dispatchFixtureSchemaVersion": 1,
+  "description": "Primary lane pass, no capability, no fallback",
+  "input": {
+    "channel": "telegram",
+    "chatId": "fixture-chat-1",
+    "messageId": "fixture-msg-1",
+    "text": "fixture lane pass"
+  },
+  "routerConfig": {
+    "defaultPrimary": "eve",
+    "defaultFallback": "hermes",
+    "failClosed": false,
+    "policyVersion": "v1"
+  },
+  "expected": {
+    "routing": {
+      "primaryLane": "eve",
+      "fallbackLane": "hermes",
+      "reason": "default_policy_lane",
+      "policyVersion": "v1",
+      "failClosed": false
+    },
+    "primaryState": {
+      "status": "pass",
+      "reason": "fixture_ok",
+      "runtimeUsed": "fixture-eve",
+      "runId": "fixture-eve-run",
+      "elapsedMs": 1,
+      "failureClass": "none",
+      "sourceLane": "eve",
+      "sourceChatId": "fixture-chat-1",
+      "sourceMessageId": "fixture-msg-1"
+    },
+    "fallbackStateLane": null,
+    "response": {
+      "consumed": true,
+      "failureClass": "none",
+      "laneUsed": "eve"
+    }
+  }
+}

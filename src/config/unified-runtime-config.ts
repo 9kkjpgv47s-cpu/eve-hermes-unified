@@ -30,6 +30,8 @@ export type UnifiedRuntimeEnvConfig = {
   auditLogRotationMaxBytes: number;
   /** Bytes of tail to keep in the primary log after rotation (line-aligned). */
   auditLogRotationRetainBytes: number;
+  /** When > 0, fail capability execution if the handler does not settle within this many ms. */
+  capabilityExecutionTimeoutMs: number;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -246,6 +248,16 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     0,
   );
+  const capabilityExecutionTimeoutMs = Math.min(
+    86_400_000,
+    parseNonNegativeInt(
+      firstDefined(reader, [
+        "UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS",
+        "CAPABILITY_EXECUTION_TIMEOUT_MS",
+      ]),
+      0,
+    ),
+  );
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -306,6 +318,7 @@ export function loadUnifiedRuntimeEnvConfig(
     auditLogPath,
     auditLogRotationMaxBytes,
     auditLogRotationRetainBytes,
+    capabilityExecutionTimeoutMs,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

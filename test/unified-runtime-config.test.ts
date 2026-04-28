@@ -135,6 +135,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.auditLogRotationRetainBytes).toBe(2_097_152);
   });
 
+  it("parses capability execution timeout", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "120000",
+        }),
+      ),
+    );
+    expect(config.capabilityExecutionTimeoutMs).toBe(120_000);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

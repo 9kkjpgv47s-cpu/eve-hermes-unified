@@ -13,6 +13,7 @@ import {
 } from "../contracts/validate.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 import type {
+  CapabilityExecutionResult as CapabilityExecutorPayload,
   CapabilityLaneDispatcher,
   CapabilityRegistry,
 } from "../skills/capability-registry.js";
@@ -38,6 +39,8 @@ export type CapabilityExecutionDependencies = {
   memoryStore: UnifiedMemoryStore;
   dispatchLane: CapabilityLaneDispatcher;
   policy?: CapabilityPolicy;
+  /** When > 0, reject capability handler if it exceeds this duration (ms). */
+  executionTimeoutMs?: number;
 };
 
 function parseExplicitCapabilityText(text: string): { capabilityId: string; argsText: string } | undefined {
@@ -158,21 +161,76 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
 
     const parsed = parseExplicitCapabilityText(envelope.text);
     const argsText = parsed?.argsText ?? "";
-    const execution = await executor({
-      text: envelope.text,
-      argsText,
-      chatId: envelope.chatId,
-      messageId: envelope.messageId,
-      traceId: envelope.traceId,
-      memoryStore: this.dependencies.memoryStore,
-      dispatchLane: async (input) =>
-        this.dependencies.dispatchLane({
-          ...input,
+    const timeoutMs = this.dependencies.executionTimeoutMs ?? 0;
+    let execution: CapabilityExecutorPayload;
+    if (timeoutMs > 0) {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise<"__timeout__">((resolve) => {
+        timeoutId = setTimeout(() => resolve("__timeout__"), timeoutMs);
+      });
+      const runPromise = Promise.resolve(
+        executor({
+          text: envelope.text,
+          argsText,
           chatId: envelope.chatId,
           messageId: envelope.messageId,
           traceId: envelope.traceId,
+          memoryStore: this.dependencies.memoryStore,
+          dispatchLane: async (input) =>
+            this.dependencies.dispatchLane({
+              ...input,
+              chatId: envelope.chatId,
+              messageId: envelope.messageId,
+              traceId: envelope.traceId,
+            }),
         }),
-    });
+      );
+      let outcome: { kind: "ok"; value: CapabilityExecutorPayload } | { kind: "timeout" };
+      try {
+        outcome = await Promise.race([
+          runPromise.then((value) => ({ kind: "ok" as const, value })),
+          timeoutPromise.then(() => ({ kind: "timeout" as const })),
+        ]);
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      }
+      if (outcome.kind === "timeout") {
+        const timedOut = validateCapabilityExecutionResult({
+          capability: selection,
+          status: "failed",
+          consumed: false,
+          reason: "capability_execution_timeout",
+          outputText: `Capability '${selection.id}' exceeded execution budget (${timeoutMs}ms).`,
+          failureClass: "dispatch_failure",
+          runId: `capability-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
+          elapsedMs: Math.max(0, Date.now() - started),
+          metadata: { budgetMs: String(timeoutMs) },
+        });
+        await this.writeExecutionMemory(selection, envelope, timedOut);
+        return timedOut;
+      }
+      execution = outcome.value;
+    } else {
+      execution = await Promise.resolve(
+        executor({
+          text: envelope.text,
+          argsText,
+          chatId: envelope.chatId,
+          messageId: envelope.messageId,
+          traceId: envelope.traceId,
+          memoryStore: this.dependencies.memoryStore,
+          dispatchLane: async (input) =>
+            this.dependencies.dispatchLane({
+              ...input,
+              chatId: envelope.chatId,
+              messageId: envelope.messageId,
+              traceId: envelope.traceId,
+            }),
+        }),
+      );
+    }
     const status: "pass" | "failed" = execution.consumed ? "pass" : "failed";
     const reason = execution.reason?.trim() || resultReason(selection.id, status);
     const failureClass =

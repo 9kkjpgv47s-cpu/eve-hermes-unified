@@ -110,7 +110,10 @@ async function main() {
     messageId,
     text,
   });
-  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
+  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result, {
+    maxBytesBeforeRotate: config.auditLogRotationMaxBytes,
+    retainBytesAfterRotate: config.auditLogRotationRetainBytes,
+  });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 

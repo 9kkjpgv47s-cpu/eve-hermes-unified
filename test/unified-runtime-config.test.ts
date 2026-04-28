@@ -122,6 +122,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.auditLogPath).toBe("/tmp/unified-audit.jsonl");
   });
 
+  it("parses audit log rotation byte limits", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES: "10485760",
+          UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES: "2097152",
+        }),
+      ),
+    );
+    expect(config.auditLogRotationMaxBytes).toBe(10_485_760);
+    expect(config.auditLogRotationRetainBytes).toBe(2_097_152);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

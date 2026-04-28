@@ -26,6 +26,10 @@ export type UnifiedRuntimeEnvConfig = {
     strict: boolean;
   };
   auditLogPath: string;
+  /** When > 0, rotate dispatch audit log before append if file exceeds this many bytes. */
+  auditLogRotationMaxBytes: number;
+  /** Bytes of tail to keep in the primary log after rotation (line-aligned). */
+  auditLogRotationRetainBytes: number;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -104,6 +108,14 @@ function parsePercent(raw: string | undefined, fallback: number): number {
     return Math.floor(numeric);
   }
   return fallback;
+}
+
+function parseNonNegativeInt(raw: string | undefined, fallback: number): number {
+  const numeric = Number(raw);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return fallback;
+  }
+  return Math.floor(numeric);
 }
 
 export function loadUnifiedRuntimeEnvConfig(
@@ -218,6 +230,22 @@ export function loadUnifiedRuntimeEnvConfig(
   const auditLogPath =
     firstDefined(reader, ["UNIFIED_AUDIT_LOG_PATH", "AUDIT_LOG_PATH", "UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const auditLogRotationMaxBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES",
+      "AUDIT_LOG_ROTATION_MAX_BYTES",
+      "UNIFIED_DISPATCH_AUDIT_LOG_ROTATION_MAX_BYTES",
+    ]),
+    0,
+  );
+  const auditLogRotationRetainBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES",
+      "AUDIT_LOG_ROTATION_RETAIN_BYTES",
+      "UNIFIED_DISPATCH_AUDIT_LOG_ROTATION_RETAIN_BYTES",
+    ]),
+    0,
+  );
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -276,6 +304,8 @@ export function loadUnifiedRuntimeEnvConfig(
       strict: preflightStrict,
     },
     auditLogPath,
+    auditLogRotationMaxBytes,
+    auditLogRotationRetainBytes,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

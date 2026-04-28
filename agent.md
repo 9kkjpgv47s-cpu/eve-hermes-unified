@@ -14,6 +14,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
   - `FileUnifiedMemoryStore` persists via write-to-temp + `rename` (atomic replace on POSIX).
   - `validate-horizon-closeout.mjs` emits **both** `horizon_drill_*` and legacy `h2_drill_*` failure IDs for drill-suite evidence.
   - Vitest `globalSetup` creates `./evidence` so script integration tests do not depend on a pre-existing gitignored folder.
+  - Optional **dispatch audit log rotation**: `UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES` / `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES` (0 = disabled); rotates to `<path>.1` before append.
 
 ## What Was Just Completed
 

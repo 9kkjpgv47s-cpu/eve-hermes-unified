@@ -232,6 +232,8 @@ async function seedSharedEvidence(evidenceDir: string): Promise<void> {
           majorityHoldPass: true,
           rollbackSimulationTriggered: true,
           rollbackSimulationPass: true,
+          rollbackPolicySourceConsistencySignalsReported: true,
+          rollbackPolicySourceConsistencySignalsPass: true,
         },
       },
       null,

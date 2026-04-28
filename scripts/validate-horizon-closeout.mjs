@@ -261,6 +261,46 @@ function resolveGoalPolicySourceConsistencyState(payload, checkKeys) {
   return { reported: false, pass: false };
 }
 
+function resolveStagePromotionGoalPolicySignals(payload) {
+  const checks = payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
+  const releaseSourceConsistency = resolveGoalPolicySourceConsistencyState(
+    { checks },
+    [
+      "releaseGoalPolicySourceConsistencyPassed",
+      "releaseGoalPolicySourceConsistencyPass",
+    ],
+  );
+  const mergeBundleReleaseSourceConsistency = resolveGoalPolicySourceConsistencyState(
+    { checks },
+    [
+      "mergeBundleReleaseGoalPolicySourceConsistencyPassed",
+      "mergeBundleGoalPolicySourceConsistencyPassed",
+    ],
+  );
+  const bundleVerificationReleaseSourceConsistency = resolveGoalPolicySourceConsistencyState(
+    { checks },
+    [
+      "bundleVerificationReleaseGoalPolicySourceConsistencyPassed",
+      "bundleVerificationGoalPolicySourceConsistencyPassed",
+    ],
+  );
+  const propagationReported =
+    releaseSourceConsistency.reported
+    && mergeBundleReleaseSourceConsistency.reported
+    && bundleVerificationReleaseSourceConsistency.reported;
+  const propagationPassed =
+    releaseSourceConsistency.pass
+    && mergeBundleReleaseSourceConsistency.pass
+    && bundleVerificationReleaseSourceConsistency.pass;
+  return {
+    releaseSourceConsistency,
+    mergeBundleReleaseSourceConsistency,
+    bundleVerificationReleaseSourceConsistency,
+    propagationReported,
+    propagationPassed,
+  };
+}
+
 function resolveBundleVerificationSelectionSignals(payload) {
   const checks = payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
   const files = payload?.files && typeof payload.files === "object" ? payload.files : {};
@@ -451,6 +491,11 @@ function evaluateCommandPayload(command, payload) {
     if (payload?.checks?.rollbackSimulationTriggered !== true) {
       checks.push("h2_drill_rollback_simulation_not_triggered");
     }
+    if (payload?.checks?.rollbackPolicySourceConsistencySignalsReported !== true) {
+      checks.push("h2_drill_rollback_source_consistency_signals_not_reported");
+    } else if (payload?.checks?.rollbackPolicySourceConsistencySignalsPass !== true) {
+      checks.push("h2_drill_rollback_source_consistency_signals_not_passed");
+    }
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "rollback-threshold-calibration") {
@@ -489,6 +534,26 @@ function evaluateCommandPayload(command, payload) {
     }
     if (payload?.checks?.calibrationPass !== true) {
       checks.push("supervised_rollback_calibration_not_passed");
+    }
+    const stageDrillValidationPropagation = resolveGoalPolicyValidationState(payload, [
+      "stageDrillGoalPolicyValidationPropagationPassed",
+      "stageDrillGoalPolicyPropagationPassed",
+      "stageDrillStageSignalsPass",
+      "stageDrillStagePolicySignalsPass",
+    ]);
+    if (!stageDrillValidationPropagation.reported) {
+      checks.push("supervised_rollback_stage_goal_policy_validation_propagation_not_reported");
+    } else if (!stageDrillValidationPropagation.pass) {
+      checks.push("supervised_rollback_stage_goal_policy_validation_propagation_not_passed");
+    }
+    const stageDrillSourceConsistencyPropagation = resolveGoalPolicySourceConsistencyState(payload, [
+      "stageDrillGoalPolicySourceConsistencyPropagationPassed",
+      "stageDrillStageSourceConsistencySignalsPass",
+    ]);
+    if (!stageDrillSourceConsistencyPropagation.reported) {
+      checks.push("supervised_rollback_stage_goal_policy_source_consistency_not_reported");
+    } else if (!stageDrillSourceConsistencyPropagation.pass) {
+      checks.push("supervised_rollback_stage_goal_policy_source_consistency_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -590,6 +655,18 @@ async function main() {
       const stagePromotionPayload = await readJson(stagePromotionPath);
       if (stagePromotionPayload?.pass === true) {
         stagePromotionEvidence.pass = true;
+        const stagePromotionGoalPolicySignals = resolveStagePromotionGoalPolicySignals(
+          stagePromotionPayload,
+        );
+        if (!stagePromotionGoalPolicySignals.propagationReported) {
+          stagePromotionEvidence.pass = false;
+          stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_reported");
+          failures.push("stage_promotion_goal_policy_source_consistency_not_reported");
+        } else if (!stagePromotionGoalPolicySignals.propagationPassed) {
+          stagePromotionEvidence.pass = false;
+          stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_passed");
+          failures.push("stage_promotion_goal_policy_source_consistency_not_passed");
+        }
       } else {
         stagePromotionEvidence.checks.push("stage_promotion_not_passed");
         failures.push("stage_promotion_readiness_not_passed");
@@ -800,6 +877,14 @@ async function main() {
           && !item.checks.includes("bundle_verify_initial_scope_goal_policy_source_consistency_not_passed"),
       ),
       stagePromotionPassed: stagePromotionEvidence.pass,
+      stagePromotionGoalPolicySourceConsistencyReported:
+        !stagePromotionEvidence.checks.includes(
+          "stage_promotion_goal_policy_source_consistency_not_reported",
+        ),
+      stagePromotionGoalPolicySourceConsistencyPassed:
+        !stagePromotionEvidence.checks.includes(
+          "stage_promotion_goal_policy_source_consistency_not_passed",
+        ),
       stagePromotionEvidence,
       nextActions: horizonActionResults,
       requiredEvidence: requiredEvidenceResults,

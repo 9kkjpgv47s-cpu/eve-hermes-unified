@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T21:15:00Z",
+  "updatedAtIso": "2026-04-28T21:22:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -164,7 +164,7 @@
       "id": "h3-action-2",
       "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["policy-hardening", "runtime"]
     },
     {
@@ -266,7 +266,7 @@
     },
     "H3": {
       "status": "planned",
-      "summary": "Runtime durability and policy maturity hardening: file-backed dispatch durability queue with replay-safe envelopes (dispatchUnifiedEnvelope), CLI --enqueue-failed-primary and --replay-queue, UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH."
+      "summary": "Runtime durability and policy maturity hardening: durability queue + replay-safe envelopes; router noFallbackOnFailureClasses + UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES for deterministic fallback suppression by failure taxonomy."
     },
     "H4": {
       "status": "planned",
@@ -397,6 +397,12 @@
       "horizon": "H3",
       "status": "planned",
       "note": "Implemented dispatch durability queue (JSON file, atomic writes), replay-safe dispatchUnifiedEnvelope path, CLI enqueue/replay flags, and config UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH; marked h3-action-1 completed."
+    },
+    {
+      "timestamp": "2026-04-28T21:22:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "Merged durability + Hermes-primary allowlist streams; added RouterPolicyConfig.noFallbackOnFailureClasses and dispatch suppression via UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES; marked h3-action-2 completed."
     }
   ]
 }

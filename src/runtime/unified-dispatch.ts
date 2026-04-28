@@ -3,6 +3,7 @@ import type {
   CapabilityExecutionResult,
   DispatchFallbackInfo,
   DispatchState,
+  FailureClass,
   LaneId,
   RoutingDecision,
   UnifiedCapabilityDecision,
@@ -108,6 +109,21 @@ function buildResult(
   };
 }
 
+function shouldSkipFallback(
+  routing: RoutingDecision,
+  primaryFailureClass: FailureClass,
+  routerConfig: RouterPolicyConfig,
+): boolean {
+  if (routing.fallbackLane === "none" || routing.failClosed) {
+    return true;
+  }
+  const suppressed = routerConfig.noFallbackOnFailureClasses;
+  if (!suppressed?.length) {
+    return false;
+  }
+  return suppressed.includes(primaryFailureClass);
+}
+
 export function createUnifiedEnvelopeForDispatch(
   input: Omit<UnifiedMessageEnvelope, "traceId" | "receivedAtIso">,
 ): UnifiedMessageEnvelope {
@@ -155,11 +171,19 @@ export async function dispatchUnifiedEnvelope(
     }),
     validated.traceId,
   );
-  if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed) {
+  if (
+    primaryState.status === "pass" ||
+    shouldSkipFallback(routing, primaryState.failureClass, runtime.routerConfig)
+  ) {
     return buildResult(validated, routing, primaryState, primaryState);
   }
 
-  const fallback = getLaneAdapter(runtime, routing.fallbackLane);
+  const fallbackLane = routing.fallbackLane;
+  if (fallbackLane === "none") {
+    return buildResult(validated, routing, primaryState, primaryState);
+  }
+
+  const fallback = getLaneAdapter(runtime, fallbackLane);
   const fallbackState = withCanonicalTraceId(
     await fallback.dispatch({
       envelope: validated,

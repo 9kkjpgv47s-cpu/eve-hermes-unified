@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { FailureClass } from "../src/contracts/types.js";
 import { routeMessage } from "../src/router/policy-router.js";
 
 const baseConfig = {
@@ -6,6 +7,8 @@ const baseConfig = {
   defaultFallback: "hermes" as const,
   failClosed: true,
   policyVersion: "v1",
+  noFallbackOnFailureClasses: [] as FailureClass[],
+  hermesPrimaryChatIds: [] as string[],
   cutoverStage: "shadow" as const,
   canaryChatIds: [],
   majorityPercent: 50,
@@ -186,6 +189,49 @@ describe("routeMessage", () => {
     );
     expect(eveChat.primaryLane).toBe("eve");
     expect(eveChat.reason).toBe("stage_majority_default_primary");
+  });
+
+  it("routes allowlisted chats to Hermes primary without cutover stage", () => {
+    const routed = routeMessage(
+      {
+        traceId: "t11",
+        channel: "telegram",
+        chatId: "vip-chat",
+        messageId: "1",
+        receivedAtIso: new Date().toISOString(),
+        text: "hello",
+      },
+      {
+        defaultPrimary: "eve",
+        defaultFallback: "eve",
+        failClosed: true,
+        policyVersion: "v1",
+        hermesPrimaryChatIds: ["vip-chat"],
+      },
+    );
+    expect(routed.primaryLane).toBe("hermes");
+    expect(routed.reason).toBe("router_hermes_primary_allowlist");
+    expect(routed.fallbackLane).toBe("eve");
+
+    const notListed = routeMessage(
+      {
+        traceId: "t12",
+        channel: "telegram",
+        chatId: "other",
+        messageId: "1",
+        receivedAtIso: new Date().toISOString(),
+        text: "hello",
+      },
+      {
+        defaultPrimary: "eve",
+        defaultFallback: "eve",
+        failClosed: true,
+        policyVersion: "v1",
+        hermesPrimaryChatIds: ["vip-chat"],
+      },
+    );
+    expect(notListed.primaryLane).toBe("eve");
+    expect(notListed.reason).toBe("default_policy_lane");
   });
 
   it("forces hermes primary in full stage", () => {

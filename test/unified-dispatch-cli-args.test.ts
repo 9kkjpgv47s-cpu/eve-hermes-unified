@@ -12,6 +12,24 @@ describe("parseUnifiedDispatchCliArgs", () => {
     expect(parsed.replayQueue).toBe(false);
   });
 
+  it("parses chat and message ids", () => {
+    const parsed = parseUnifiedDispatchCliArgs([
+      "--text",
+      "x",
+      "--chat-id",
+      "42",
+      "--message-id",
+      "99",
+    ]);
+    expect(parsed.chatId).toBe("42");
+    expect(parsed.messageId).toBe("99");
+  });
+
+  it("parses --compact-json flag", () => {
+    const parsed = parseUnifiedDispatchCliArgs(["--text", "hello", "--compact-json"]);
+    expect(parsed.compactJson).toBe(true);
+  });
+
   it("allows --replay-queue without --text", () => {
     const parsed = parseUnifiedDispatchCliArgs(["--replay-queue"]);
     expect(parsed.replayQueue).toBe(true);
@@ -19,7 +37,8 @@ describe("parseUnifiedDispatchCliArgs", () => {
 
   it("parses durability flags", () => {
     expect(
-      parseUnifiedDispatchCliArgs(["--replay-queue", "--text", "x", "--enqueue-failed-primary"]).enqueueFailedPrimary,
+      parseUnifiedDispatchCliArgs(["--replay-queue", "--text", "x", "--enqueue-failed-primary"])
+        .enqueueFailedPrimary,
     ).toBe(true);
   });
 

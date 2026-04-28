@@ -1,4 +1,4 @@
-import type { LaneId } from "../contracts/types.js";
+import type { FailureClass, LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
 import type { UnifiedMemoryStoreKind } from "../memory/unified-memory-store.js";
@@ -106,6 +106,31 @@ function parsePercent(raw: string | undefined, fallback: number): number {
     return Math.floor(numeric);
   }
   return fallback;
+}
+
+const FAILURE_CLASS_SET = new Set<FailureClass>([
+  "none",
+  "provider_limit",
+  "cooldown",
+  "dispatch_failure",
+  "state_unavailable",
+  "policy_failure",
+]);
+
+function parseNoFallbackFailureClasses(raw: string | undefined): FailureClass[] | undefined {
+  const tokens = parseCsvList(raw);
+  if (tokens.length === 0) {
+    return undefined;
+  }
+  const out: FailureClass[] = [];
+  for (const token of tokens) {
+    const normalized = token.trim().toLowerCase().replace(/-/g, "_") as FailureClass;
+    if (!FAILURE_CLASS_SET.has(normalized)) {
+      continue;
+    }
+    out.push(normalized);
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 export function loadUnifiedRuntimeEnvConfig(
@@ -258,6 +283,17 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
+  const hermesPrimaryChatIds = parseCsvList(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_HERMES_PRIMARY_CHAT_IDS",
+      "ROUTER_HERMES_PRIMARY_CHAT_IDS",
+    ]),
+  );
+  const noFallbackFailureClassesRaw = firstDefined(reader, [
+    "UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES",
+    "ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES",
+  ]);
+  const noFallbackOnFailureClasses = parseNoFallbackFailureClasses(noFallbackFailureClassesRaw);
 
   return {
     eveDispatchScript,
@@ -287,6 +323,8 @@ export function loadUnifiedRuntimeEnvConfig(
       defaultFallback,
       failClosed,
       policyVersion,
+      noFallbackOnFailureClasses,
+      hermesPrimaryChatIds,
       cutoverStage,
       canaryChatIds,
       majorityPercent,

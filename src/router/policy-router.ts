@@ -1,4 +1,4 @@
-import type { LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
+import type { FailureClass, LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
 import { validateRoutingDecision } from "../contracts/validate.js";
 
 export type RouterCutoverStage = "shadow" | "canary" | "majority" | "full";
@@ -8,6 +8,13 @@ export type RouterPolicyConfig = {
   defaultFallback: LaneId | "none";
   failClosed: boolean;
   policyVersion: string;
+  /**
+   * When primary fails with one of these failure classes, skip fallback even if a fallback lane exists.
+   * Does not override failClosed or fallbackLane "none".
+   */
+  noFallbackOnFailureClasses?: FailureClass[];
+  /** When set, these chats use Hermes as primary without enabling full cutover staging. */
+  hermesPrimaryChatIds?: string[];
   cutoverStage?: RouterCutoverStage;
   canaryChatIds?: string[];
   majorityPercent?: number;
@@ -119,6 +126,17 @@ export function routeMessage(
       primaryLane: "hermes",
       fallbackLane: config.defaultFallback,
       reason: "explicit_hermes_passthrough",
+      policyVersion: config.policyVersion,
+      failClosed: config.failClosed,
+    });
+  }
+
+  const hermesPrimaryChats = normalizeChatIds(config.hermesPrimaryChatIds);
+  if (hermesPrimaryChats.has(envelope.chatId)) {
+    return validateRoutingDecision({
+      primaryLane: "hermes",
+      fallbackLane: config.defaultFallback,
+      reason: "router_hermes_primary_allowlist",
       policyVersion: config.policyVersion,
       failClosed: config.failClosed,
     });

@@ -161,4 +161,26 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     );
     expect(fromAlias.dispatchDurabilityQueuePath).toBe("/tmp/queue-b.json");
   });
+
+  it("parses Hermes-primary chat allowlist", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_HERMES_PRIMARY_CHAT_IDS: "vip-1, vip-2 ",
+        }),
+      ),
+    );
+    expect(config.routerConfig.hermesPrimaryChatIds).toEqual(["vip-1", "vip-2"]);
+  });
+
+  it("parses no-fallback-on-failure-classes", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES: "policy_failure, dispatch_failure,unknown",
+        }),
+      ),
+    );
+    expect(config.routerConfig.noFallbackOnFailureClasses).toEqual(["policy_failure", "dispatch_failure"]);
+  });
 });

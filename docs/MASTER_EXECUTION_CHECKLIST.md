@@ -85,23 +85,23 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H8 sustainment (continuous)
+## Phase 8 - Post-H9 sustainment (continuous)
 
-After horizon **H8** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H9** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
 - [ ] `npm run validate:horizon-status` exits `0`.
-- [ ] `npm run run:h8-assurance-bundle` exits `0` and emits `evidence/h8-assurance-bundle-*.json`.
-- [ ] `npm run validate:h8-closeout` exits `0` (uses evidence under `evidence/`).
+- [ ] `npm run run:h9-assurance-bundle` exits `0` and emits `evidence/h9-assurance-bundle-*.json`.
+- [ ] `npm run validate:h9-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains the three above and writes `evidence/post-h8-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains the three above and writes `evidence/post-h9-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [ ] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [ ] `npm run validate:post-h8-sustainment-manifest` exits `0`.
+- [ ] `npm run validate:post-h9-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h7-legacy`** / **`validate:post-h7-sustainment-manifest`** (H7 chain); **`verify:sustainment-loop:h6-legacy`** / **`validate:post-h6-sustainment-manifest`** (H6-only chain).
+Historical sustainment: **`npm run verify:sustainment-loop:h8-legacy`** / **`validate:post-h8-sustainment-manifest`** (H8 chain); **`verify:sustainment-loop:h7-legacy`** / **`validate:post-h7-sustainment-manifest`** (H7 chain); **`verify:sustainment-loop:h6-legacy`** / **`validate:post-h6-sustainment-manifest`** (H6-only chain).
 
 Exit criteria:
 

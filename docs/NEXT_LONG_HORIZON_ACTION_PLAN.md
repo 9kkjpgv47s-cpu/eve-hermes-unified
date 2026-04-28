@@ -180,11 +180,11 @@ Primary risks:
 - Drift between documented horizons and `VALID_HORIZONS` in tooling.
 
 Mitigations:
-- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H8**).
+- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H9**).
 
-### Post-H8 operations
+### Post-H9 operations
 
-After **H8** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h8-closeout`**. Optionally **`npm run validate:post-h8-sustainment-manifest`** checks the latest **`evidence/post-h8-sustainment-loop-*.json`**. Legacy chains: **`npm run verify:sustainment-loop:h7-legacy`** / **`validate:post-h7-sustainment-manifest`**, **`verify:sustainment-loop:h6-legacy`** / **`validate:post-h6-sustainment-manifest`**.
+After **H9** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h9-closeout`**. Optionally **`npm run validate:post-h9-sustainment-manifest`** checks the latest **`evidence/post-h9-sustainment-loop-*.json`**. Legacy: **`verify:sustainment-loop:h8-legacy`** / **`validate:post-h8-sustainment-manifest`**, **`verify:sustainment-loop:h7-legacy`**, **`verify:sustainment-loop:h6-legacy`**.
 
 ### Horizon H7 - Dispatch audit lifecycle (rotation and retention)
 
@@ -231,6 +231,28 @@ Primary risks:
 Mitigations:
 
 - Operators pin **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** to rotated filesystems or ship logs to centralized retention; dispatch audit rotation remains separate on **`UNIFIED_AUDIT_LOG_PATH`**.
+
+### Horizon H9 - Crash-safe file-backed unified memory snapshots
+
+Goal: advance the H3 durability theme for **unified memory** by ensuring **`UNIFIED_MEMORY_STORE_KIND=file`** commits complete JSON snapshots without torn writes visible to concurrent readers during process crashes.
+
+Workstreams:
+
+- **`FileUnifiedMemoryStore.persist()`** writes **`${path}.tmp`** then **`rename`** to the primary path (same directory).
+- Vitest proof in **`test/unified-memory-atomic-persistence.test.ts`** included in **`npm run run:h9-assurance-bundle`**.
+
+Exit evidence:
+
+- **`npm run run:h9-assurance-bundle`** passes and artifact matches **`evidence/h9-assurance-bundle-*.json`** (includes **`memoryAtomicPersistencePass`**).
+- **`npm run validate:h9-closeout`** passes when evidence is present (H9 is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- Leftover **`.tmp`** files after hard kills before rename (operators may delete stale `*.tmp` siblings).
+
+Mitigations:
+
+- Temp file lives beside the primary JSON file; next successful persist overwrites behavior remains deterministic.
 
 ## Cross-Horizon Execution Rules
 

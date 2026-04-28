@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T18:00:00Z",
+  "updatedAtIso": "2026-04-29T22:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H8",
+  "activeHorizon": "H9",
   "activeStatus": "completed",
-  "summary": "Horizon H8 (capability policy audit trail): append-only JSONL for each @cap authorization (allowed/denied + policyReason); UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH; run-h8-assurance-bundle adds capability-policy-audit vitest to H7 gates; terminal sustainment via verify:sustainment-loop (post-H8 + validate:h8-closeout).",
+  "summary": "Horizon H9 (crash-safe memory persistence): FileUnifiedMemoryStore persists via temp file + atomic rename; run-h9-assurance-bundle adds unified-memory-atomic-persistence vitest to H8 gates; terminal sustainment via verify:sustainment-loop (post-H9 + validate:h9-closeout).",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -90,6 +90,13 @@
       "artifactPattern": "evidence/h8-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H8"]
+    },
+    {
+      "id": "h9-assurance-bundle",
+      "command": "node ./scripts/run-h9-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h9-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H9"]
     }
   ],
   "nextActions": [
@@ -335,6 +342,27 @@
       "targetHorizon": "H8",
       "status": "completed",
       "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h9-action-1",
+      "summary": "Atomic replace persistence for file-backed UnifiedMemoryStore (write temp JSON then rename) for crash-safe JSON snapshots.",
+      "targetHorizon": "H9",
+      "status": "completed",
+      "tags": ["durability", "memory", "runtime"]
+    },
+    {
+      "id": "h9-action-2",
+      "summary": "H9 assurance bundle extends H8 with unified-memory-atomic-persistence vitest; validate:h9-closeout and post-H9 sustainment loop manifest.",
+      "targetHorizon": "H9",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h9-action-3",
+      "summary": "Goal policy H8→H9 transition and documentation for atomic memory persistence and legacy sustainment npm aliases.",
+      "targetHorizon": "H9",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -428,6 +456,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H8->H9": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "memory": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -473,6 +516,10 @@
     "H8": {
       "status": "completed",
       "summary": "Capability policy authorization audit: append-only JSONL per @cap decision (default path beside dispatch audit); H8 assurance adds capability-policy-audit tests; VALID_HORIZONS H8; verify:sustainment-loop post-H8."
+    },
+    "H9": {
+      "status": "completed",
+      "summary": "Crash-safe file memory: atomic rename commit for UNIFIED_MEMORY_STORE_KIND=file; H9 assurance adds unified-memory-atomic-persistence tests; terminal sustainment post-H9."
     }
   },
   "history": [
@@ -637,6 +684,12 @@
       "horizon": "H8",
       "status": "completed",
       "note": "H8 capability policy audit trail: appendCapabilityPolicyAuditLog + UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH; run-h8-assurance-bundle; promote:sustainment-loop to post-H8; terminal closeout at H8."
+    },
+    {
+      "timestamp": "2026-04-29T22:00:00Z",
+      "horizon": "H9",
+      "status": "completed",
+      "note": "H9 atomic file memory: FileUnifiedMemoryStore writes memory.json.tmp then renames to memory.json for crash-safe commits; run-h9-assurance-bundle + post-H9 sustainment; terminal closeout at H9."
     }
   ]
 }

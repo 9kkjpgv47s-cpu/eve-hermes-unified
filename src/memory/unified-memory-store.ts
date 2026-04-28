@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { LaneId } from "../contracts/types.js";
 
@@ -173,7 +173,10 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
 
   private async persist(): Promise<void> {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(this.filePath, serializeRecordMap(this.records), "utf8");
+    const payload = serializeRecordMap(this.records);
+    const tmpPath = `${this.filePath}.tmp`;
+    await writeFile(tmpPath, payload, "utf8");
+    await rename(tmpPath, this.filePath);
   }
 
   private async queueWrite(operation: () => Promise<void>): Promise<void> {

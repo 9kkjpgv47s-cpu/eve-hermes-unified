@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDuplicateTransitionKeysFromRawJson } from "./goal-policy-source.mjs";
 
-const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8"];
+const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9"];
 const VALID_STATUSES = ["planned", "in_progress", "blocked", "completed"];
 const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];
@@ -234,7 +234,7 @@ export function validateHorizonStatus(payload) {
         if (policyKey === "transitions" && policyContainer === payload.goalPolicies) {
           continue;
         }
-        if (!/^H[1-8]->H[1-8]$/.test(policyKey)) {
+        if (!/^H[1-9]->H[1-9]$/.test(policyKey)) {
           errors.push(`${basePrefix} key must match pattern H<1-8>->H<1-8>`);
         }
         if (!policyValue || typeof policyValue !== "object" || Array.isArray(policyValue)) {

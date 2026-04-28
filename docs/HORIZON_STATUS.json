@@ -1,59 +1,74 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T22:30:00Z",
+  "updatedAtIso": "2026-04-28T23:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H5",
-  "activeStatus": "in_progress",
-  "summary": "Horizon H5 scale envelope: tenant-scoped memory + dispatch/capability tenant gates, standby region routing swap, CLI tenant/region, validation scripts and rehearsal manifests.",
+  "activeStatus": "completed",
+  "summary": "Horizon H5 completed: tenant/region isolation, standby routing, bounded remediation evidence bundle (run-h5-closeout-evidence); legacy merge gates scoped to H1–H4.",
   "blockers": [],
   "requiredEvidence": [
     {
       "id": "h1-validate-all",
       "command": "npm run validate:all",
       "artifactPattern": "evidence/validation-summary-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-release-readiness",
       "command": "npm run validate:release-readiness",
       "artifactPattern": "evidence/release-readiness-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-initial-scope",
       "command": "npm run validate:initial-scope",
       "artifactPattern": "evidence/initial-scope-validation-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-merge-bundle",
       "command": "npm run validate:merge-bundle",
       "artifactPattern": "evidence/merge-bundle-validation-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-manifest-schemas",
       "command": "npm run validate:manifest-schemas",
       "artifactPattern": "evidence/release-readiness-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-bundle-verification",
       "command": "npm run verify:merge-bundle",
       "artifactPattern": "evidence/bundle-verification-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-cutover-readiness",
       "command": "npm run validate:cutover-readiness",
       "artifactPattern": "evidence/cutover-readiness-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-evidence-summary",
       "command": "npm run validate:evidence-summary",
       "artifactPattern": "evidence/validation-summary-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
+    },
+    {
+      "id": "h5-closeout-evidence",
+      "command": "node ./scripts/run-h5-closeout-evidence.mjs",
+      "artifactPattern": "evidence/h5-closeout-evidence-*.json",
+      "required": true,
+      "horizons": ["H5"]
     }
   ],
   "nextActions": [
@@ -288,7 +303,7 @@
     }
   },
   "promotionReadiness": {
-    "targetStage": "canary",
+    "targetStage": "full",
     "gates": {
       "releaseReadinessPass": true,
       "mergeBundlePass": true,
@@ -315,8 +330,8 @@
       "summary": "Legacy retirement gates: validate-unified-entrypoints CI script, LEGACY_ENTRYPOINT_DEPRECATION_MAP, contract version constant v1 + fixture validation tests."
     },
     "H5": {
-      "status": "in_progress",
-      "summary": "Tenant allowlist/denylist at dispatch; capability tenant scopes; TenantScopedUnifiedMemoryStore; UNIFIED_ROUTER_STANDBY_REGION swap; CLI --tenant-id/--region-id; validate:tenant-isolation + rehearse:region-failover + agent-remediation playbook."
+      "status": "completed",
+      "summary": "Tenant/region isolation, standby routing swap, bounded remediation playbook; closeout evidence via run-h5-closeout-evidence.mjs; CI gates validate:tenant-isolation + rehearse:region-failover."
     }
   },
   "history": [
@@ -457,6 +472,12 @@
       "horizon": "H5",
       "status": "in_progress",
       "note": "H5 slice: envelope tenantId/regionId; tenant dispatch allowlist/denylist; capability tenant allow/deny; TenantScopedUnifiedMemoryStore for capability execution; standby region lane swap; Eve/Hermes env passthrough; validate:tenant-isolation, rehearse:region-failover, agent-remediation-playbook; H4 marked completed."
+    },
+    {
+      "timestamp": "2026-04-28T23:00:00Z",
+      "horizon": "H5",
+      "status": "completed",
+      "note": "H5 closeout: requiredEvidence scoped legacy gates to H1–H4; added h5-closeout-evidence; validate-horizon-closeout skips stage-promotion for terminal H5; promotionReadiness.targetStage full; run-h5-closeout-evidence.mjs aggregates bounded playbook manifest."
     }
   ]
 }

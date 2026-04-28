@@ -283,6 +283,9 @@ function commandVerificationType(command) {
   if (command === "npm run validate:initial-scope") {
     return "initial-scope";
   }
+  if (command === "node ./scripts/run-h5-closeout-evidence.mjs") {
+    return "h5-closeout-evidence";
+  }
   return "existence-only";
 }
 
@@ -869,6 +872,23 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "h5-closeout-evidence") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h5_closeout_evidence_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.tenantIsolationExitPass !== true) {
+      checks.push("h5_closeout_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverExitPass !== true) {
+      checks.push("h5_closeout_region_failover_not_passed");
+    }
+    if (signal.remediationExitPass !== true) {
+      checks.push("h5_closeout_remediation_runner_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   const checks = payload.pass === true ? [] : ["artifact_not_passed"];
   return { pass: checks.length === 0, checks };
 }
@@ -883,6 +903,7 @@ async function main() {
   const horizonIndex = HORIZON_SEQUENCE.indexOf(targetHorizon);
   const derivedNext = horizonIndex >= 0 ? HORIZON_SEQUENCE[horizonIndex + 1] ?? "" : "";
   const nextHorizon = normalizeHorizon(options.nextHorizon || derivedNext);
+  const terminalHorizonCloseout = Boolean(targetHorizon) && derivedNext === "";
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
   const outPath = path.resolve(
     options.out || path.join(evidenceDir, `horizon-closeout-${targetHorizon || "unknown"}-${stamp}.json`),
@@ -934,51 +955,55 @@ async function main() {
       failures.push(`missing_horizon_state:${targetHorizon}`);
     }
 
-    const stagePromotionPath = await newestFileInDir(
-      evidenceDir,
-      "stage-promotion-readiness-",
-    );
-    if (!isNonEmptyString(stagePromotionPath)) {
-      stagePromotionEvidence.checks.push("missing_stage_promotion_artifact");
-      failures.push("missing_stage_promotion_readiness_artifact");
-    } else {
-      stagePromotionEvidence.path = stagePromotionPath;
-      stagePromotionEvidence.present = true;
-      const stagePromotionPayload = await readJson(stagePromotionPath);
-      const stagePromotionSchema = validateManifestSchema(
-        "stage-promotion-readiness",
-        stagePromotionPayload,
+    if (!terminalHorizonCloseout) {
+      const stagePromotionPath = await newestFileInDir(
+        evidenceDir,
+        "stage-promotion-readiness-",
       );
-      stagePromotionEvidence.schemaValid = stagePromotionSchema.valid;
-      stagePromotionEvidence.schemaErrors = stagePromotionSchema.valid
-        ? []
-        : [...stagePromotionSchema.errors];
-      if (!stagePromotionSchema.valid) {
-        stagePromotionEvidence.pass = false;
-        stagePromotionEvidence.checks.push(
-          ...stagePromotionSchema.errors.map((error) => `stage_promotion_schema_invalid:${error}`),
-        );
-        failures.push("stage_promotion_schema_invalid");
-      }
-      if (stagePromotionPayload?.pass === true) {
-        // Preserve fail-closed schema verdict even if payload.pass is true.
-        stagePromotionEvidence.pass = stagePromotionEvidence.schemaValid;
-        const stagePromotionGoalPolicySignals = resolveStagePromotionGoalPolicySignals(
+      if (!isNonEmptyString(stagePromotionPath)) {
+        stagePromotionEvidence.checks.push("missing_stage_promotion_artifact");
+        failures.push("missing_stage_promotion_readiness_artifact");
+      } else {
+        stagePromotionEvidence.path = stagePromotionPath;
+        stagePromotionEvidence.present = true;
+        const stagePromotionPayload = await readJson(stagePromotionPath);
+        const stagePromotionSchema = validateManifestSchema(
+          "stage-promotion-readiness",
           stagePromotionPayload,
         );
-        if (!stagePromotionGoalPolicySignals.propagationReported) {
+        stagePromotionEvidence.schemaValid = stagePromotionSchema.valid;
+        stagePromotionEvidence.schemaErrors = stagePromotionSchema.valid
+          ? []
+          : [...stagePromotionSchema.errors];
+        if (!stagePromotionSchema.valid) {
           stagePromotionEvidence.pass = false;
-          stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_reported");
-          failures.push("stage_promotion_goal_policy_source_consistency_not_reported");
-        } else if (!stagePromotionGoalPolicySignals.propagationPassed) {
-          stagePromotionEvidence.pass = false;
-          stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_passed");
-          failures.push("stage_promotion_goal_policy_source_consistency_not_passed");
+          stagePromotionEvidence.checks.push(
+            ...stagePromotionSchema.errors.map((error) => `stage_promotion_schema_invalid:${error}`),
+          );
+          failures.push("stage_promotion_schema_invalid");
         }
-      } else {
-        stagePromotionEvidence.checks.push("stage_promotion_not_passed");
-        failures.push("stage_promotion_readiness_not_passed");
+        if (stagePromotionPayload?.pass === true) {
+          // Preserve fail-closed schema verdict even if payload.pass is true.
+          stagePromotionEvidence.pass = stagePromotionEvidence.schemaValid;
+          const stagePromotionGoalPolicySignals = resolveStagePromotionGoalPolicySignals(
+            stagePromotionPayload,
+          );
+          if (!stagePromotionGoalPolicySignals.propagationReported) {
+            stagePromotionEvidence.pass = false;
+            stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_reported");
+            failures.push("stage_promotion_goal_policy_source_consistency_not_reported");
+          } else if (!stagePromotionGoalPolicySignals.propagationPassed) {
+            stagePromotionEvidence.pass = false;
+            stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_passed");
+            failures.push("stage_promotion_goal_policy_source_consistency_not_passed");
+          }
+        } else {
+          stagePromotionEvidence.checks.push("stage_promotion_not_passed");
+          failures.push("stage_promotion_readiness_not_passed");
+        }
       }
+    } else {
+      stagePromotionEvidence.checks.push("skipped_terminal_horizon_closeout");
     }
 
     const targetActions = Array.isArray(horizonStatus.nextActions)

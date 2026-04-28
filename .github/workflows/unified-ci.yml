@@ -36,6 +36,9 @@ jobs:
       - name: H5 tenant isolation and region failover gates
         run: npm run validate:tenant-isolation && npm run rehearse:region-failover
 
+      - name: H5 closeout evidence bundle
+        run: npm run run:h5-closeout-evidence
+
       - name: Build
         run: npm run build
 

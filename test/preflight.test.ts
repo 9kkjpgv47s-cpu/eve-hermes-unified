@@ -58,16 +58,30 @@ describe("runRuntimePreflight", () => {
     });
   });
 
-  it("fails when memory file directory is not writable", async () => {
+  it("fails when memory dual-write path equals primary path", async () => {
+    await withTempDir(async (dir) => {
+      const mem = path.join(dir, "same.json");
+      const config = {
+        ...baseConfig(dir),
+        unifiedMemoryFilePath: mem,
+        unifiedMemoryDualWriteFilePath: mem,
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "dual-write path must differ",
+      );
+    });
+  });
+
+  it("fails when dispatch durable WAL parent is not writable", async () => {
     await withTempDir(async (dir) => {
       const blockedFile = path.join(dir, "blocked");
       await writeFile(blockedFile, "x", "utf8");
       const config = {
         ...baseConfig(dir),
-        unifiedMemoryFilePath: path.join(blockedFile, "dispatch.json"),
+        dispatchDurableWalPath: path.join(blockedFile, "wal.jsonl"),
       };
       await expect(runRuntimePreflight(config)).rejects.toThrow(
-        "Unified memory file path is not writable",
+        "Dispatch durable WAL path is not writable",
       );
     });
   });

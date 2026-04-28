@@ -94,4 +94,10 @@ Run one unified-dispatch request with explicit message envelope:
 npm run dispatch -- --text "check project status" --chat-id 123 --message-id 456
 ```
 
+Optional **durable dispatch WAL** (JSONL): set `UNIFIED_DISPATCH_DURABLE_WAL_PATH` in `.env`. Each run appends `dispatch_attempt` then `dispatch_complete`. Replay orphaned attempts:
+
+```bash
+npm run replay:dispatch-wal -- --dry-run --limit 10
+```
+
 Key environment controls are in `.env.example`.

@@ -11,6 +11,8 @@ export type RuntimePreflightConfig = {
   hermesLaunchCommand: string;
   unifiedMemoryStoreKind: "file" | "memory";
   unifiedMemoryFilePath: string;
+  unifiedMemoryDualWriteFilePath?: string;
+  dispatchDurableWalPath?: string;
   auditEnabled?: boolean;
   auditLogPath: string;
 };
@@ -75,6 +77,25 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     const memoryWritable = await checkWritableParent(config.unifiedMemoryFilePath);
     if (!memoryWritable) {
       issues.push(`Unified memory file path is not writable: ${config.unifiedMemoryFilePath}`);
+    }
+    const shadow = config.unifiedMemoryDualWriteFilePath?.trim();
+    if (shadow) {
+      if (path.resolve(shadow) === path.resolve(config.unifiedMemoryFilePath)) {
+        issues.push("Unified memory dual-write path must differ from primary memory file path.");
+      } else {
+        const shadowWritable = await checkWritableParent(shadow);
+        if (!shadowWritable) {
+          issues.push(`Unified memory dual-write file path is not writable: ${shadow}`);
+        }
+      }
+    }
+  }
+
+  const walPath = config.dispatchDurableWalPath?.trim();
+  if (walPath) {
+    const walWritable = await checkWritableParent(walPath);
+    if (!walWritable) {
+      issues.push(`Dispatch durable WAL path is not writable: ${walPath}`);
     }
   }
 

@@ -11,7 +11,11 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
+  /** Optional secondary file path for dual-write durability (file store only). */
+  unifiedMemoryDualWriteFilePath?: string;
   unifiedDispatchAuditLogPath: string;
+  /** Optional append-only WAL for dispatch attempt/complete (replay tooling). */
+  dispatchDurableWalPath?: string;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -126,9 +130,17 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
+  const unifiedMemoryDualWriteFilePath = firstDefined(reader, [
+    "UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH",
+    "MEMORY_DUAL_WRITE_FILE_PATH",
+  ]);
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const dispatchDurableWalPath = firstDefined(reader, [
+    "UNIFIED_DISPATCH_DURABLE_WAL_PATH",
+    "DISPATCH_DURABLE_WAL_PATH",
+  ]);
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -261,7 +273,9 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
+    unifiedMemoryDualWriteFilePath,
     unifiedDispatchAuditLogPath,
+    dispatchDurableWalPath,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,

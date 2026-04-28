@@ -16,6 +16,9 @@ Use this document when one cloud agent hands execution to another. The objective
    - `npm test`
 3. Confirm runtime command compiles and runs:
    - `npm run dispatch -- --text "startup verification" --chat-id 1 --message-id 1`
+4. Optional H3 durability hooks (when enabled in `.env`):
+   - `UNIFIED_DISPATCH_DURABLE_WAL_PATH`: append-only JSONL for dispatch attempt/complete; `npm run replay:dispatch-wal -- --dry-run` lists orphans without re-dispatching
+   - `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH`: secondary file mirroring the primary file-backed memory store (path must differ from `UNIFIED_MEMORY_FILE_PATH`)
 
 ## Baseline Status Fields to Record
 

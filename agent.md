@@ -14,6 +14,10 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
   - closeout taxonomy normalization toward horizon-neutral signals
   - compatibility aliases preserved for H2-prefixed checks/failures
   - full validation passing
+- **H3 durability slice (this branch):** `h3-action-1` and `h3-action-4` completed in `docs/HORIZON_STATUS.json`:
+  - optional `UNIFIED_DISPATCH_DURABLE_WAL_PATH` + `npm run replay:dispatch-wal`
+  - atomic file-backed memory writes + optional `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH`
+  - `buildUnifiedDispatchRuntime` in `src/runtime/build-unified-dispatch-runtime.ts`
 
 ## What Was Just Completed
 
@@ -26,6 +30,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 3. `run-h2-promotion` closeout-run failures now dual-report:
    - canonical: `horizon_closeout_run_*`
    - legacy/scoped aliases retained (including `h2_closeout_run_*` for H2)
+4. **H3 (latest):** dispatch durable WAL + replay CLI, atomic memory persistence, dual-write shadow option, preflight for WAL/shadow paths.
 
 ## Read Order (Zero-Context Startup)
 
@@ -42,6 +47,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 2. Extend canonical naming propagation into any remaining H2-specific orchestrator outputs that feed closeout/promotion gates.
 3. Add targeted tests for canonical-first assertions with legacy alias compatibility.
 4. Keep artifacts and gate outputs schema-valid under `scripts/validate-manifest-schema.mjs`.
+5. **H3:** `h3-action-2` (policy-router fallback contracts), `h3-action-3` (capability execution budgets / timeouts), `h3-action-5` (soak drift tooling), `h3-action-6` (rollback rehearsal bundles).
 
 ## Validation Pack
 

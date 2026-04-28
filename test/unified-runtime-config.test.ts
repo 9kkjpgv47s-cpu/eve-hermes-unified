@@ -85,6 +85,19 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.unifiedMemoryFilePath).toBe("/tmp/custom-memory.json");
   });
 
+  it("parses optional dual-write memory path and dispatch WAL path", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH: "/tmp/memory-shadow.json",
+          UNIFIED_DISPATCH_DURABLE_WAL_PATH: "/tmp/dispatch.wal.jsonl",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryDualWriteFilePath).toBe("/tmp/memory-shadow.json");
+    expect(config.dispatchDurableWalPath).toBe("/tmp/dispatch.wal.jsonl");
+  });
+
   it("parses capability policy controls", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

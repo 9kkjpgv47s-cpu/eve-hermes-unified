@@ -12,6 +12,15 @@ export type UnifiedControlPlaneEnv = {
   routerFailClosed: boolean;
   routerPolicyVersion: string;
   gatewayMode: "unified" | "legacy";
+  memoryBackend: "memory" | "file";
+  /** Relative to repo root when not absolute. */
+  memoryFilePath: string;
+  strictConfig: boolean;
+  telegramBotToken: string;
+  telegramWebhookSecret: string;
+  telegramWebhookPath: string;
+  telegramWebhookHost: string;
+  telegramWebhookPort: number;
 };
 
 function parseIntBounded(raw: string, fallback: number, min: number, max: number): number {
@@ -36,18 +45,35 @@ function parseFallbackLane(value: string): LaneId | "none" {
 /**
  * Legacy env names (Phase 5 shims): applied only when the canonical variable is unset.
  */
+export const LEGACY_ENV_ALIASES: ReadonlyArray<{ legacy: string; canonical: string }> = [
+  { legacy: "EVE_DISPATCH_SCRIPT", canonical: "EVE_TASK_DISPATCH_SCRIPT" },
+  { legacy: "EVE_RESULT_PATH", canonical: "EVE_DISPATCH_RESULT_PATH" },
+  { legacy: "HERMES_CMD", canonical: "HERMES_LAUNCH_COMMAND" },
+  { legacy: "ROUTER_PRIMARY", canonical: "UNIFIED_ROUTER_DEFAULT_PRIMARY" },
+  { legacy: "ROUTER_FALLBACK", canonical: "UNIFIED_ROUTER_DEFAULT_FALLBACK" },
+  { legacy: "ROUTER_FAIL_CLOSED", canonical: "UNIFIED_ROUTER_FAIL_CLOSED" },
+];
+
 export function applyLegacyUnifiedEnvShims(): void {
   const setIfUnset = (canonical: string, value: string | undefined) => {
     if (value && process.env[canonical] === undefined) {
       process.env[canonical] = value;
     }
   };
-  setIfUnset("EVE_TASK_DISPATCH_SCRIPT", process.env.EVE_DISPATCH_SCRIPT);
-  setIfUnset("EVE_DISPATCH_RESULT_PATH", process.env.EVE_RESULT_PATH);
-  setIfUnset("HERMES_LAUNCH_COMMAND", process.env.HERMES_CMD);
-  setIfUnset("UNIFIED_ROUTER_DEFAULT_PRIMARY", process.env.ROUTER_PRIMARY);
-  setIfUnset("UNIFIED_ROUTER_DEFAULT_FALLBACK", process.env.ROUTER_FALLBACK);
-  setIfUnset("UNIFIED_ROUTER_FAIL_CLOSED", process.env.ROUTER_FAIL_CLOSED);
+  for (const { legacy, canonical } of LEGACY_ENV_ALIASES) {
+    setIfUnset(canonical, process.env[legacy]);
+  }
+}
+
+export function emitLegacyEnvWarnings(writer: (line: string) => void = (m) => process.stderr.write(`${m}\n`)): void {
+  if (process.env.VITEST === "true" || process.env.UNIFIED_SUPPRESS_LEGACY_WARNINGS === "1") {
+    return;
+  }
+  for (const { legacy, canonical } of LEGACY_ENV_ALIASES) {
+    if (process.env[legacy]?.trim()) {
+      writer(`[unified-config] Deprecated env ${legacy} is set; prefer ${canonical}.`);
+    }
+  }
 }
 
 function env(name: string, fallback = ""): string {
@@ -55,7 +81,12 @@ function env(name: string, fallback = ""): string {
   return value && value.length > 0 ? value : fallback;
 }
 
+function parseMemoryBackend(raw: string): "memory" | "file" {
+  return raw.toLowerCase() === "file" ? "file" : "memory";
+}
+
 export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
+  emitLegacyEnvWarnings();
   applyLegacyUnifiedEnvShims();
 
   const launchArgs = env("HERMES_LAUNCH_ARGS", "-m hermes gateway")
@@ -64,6 +95,12 @@ export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
 
   const gatewayRaw = env("UNIFIED_TELEGRAM_GATEWAY_MODE", "unified").toLowerCase();
   const gatewayMode: "unified" | "legacy" = gatewayRaw === "legacy" ? "legacy" : "unified";
+
+  const memoryBackend = parseMemoryBackend(env("UNIFIED_MEMORY_BACKEND", "memory"));
+  const memoryFilePath = env("UNIFIED_MEMORY_FILE_PATH", "memory/unified-memory.json");
+  const strictConfig = env("UNIFIED_STRICT_CONFIG", "0") === "1";
+
+  const telegramWebhookPort = parseIntBounded(env("TELEGRAM_WEBHOOK_PORT", "8787"), 8787, 1, 65_535);
 
   return {
     eveTaskDispatchScript: env(
@@ -83,6 +120,14 @@ export function loadUnifiedControlPlaneEnv(): UnifiedControlPlaneEnv {
     routerFailClosed: env("UNIFIED_ROUTER_FAIL_CLOSED", "1") === "1",
     routerPolicyVersion: env("UNIFIED_ROUTER_POLICY_VERSION", "v1"),
     gatewayMode,
+    memoryBackend,
+    memoryFilePath,
+    strictConfig,
+    telegramBotToken: env("TELEGRAM_BOT_TOKEN", ""),
+    telegramWebhookSecret: env("TELEGRAM_WEBHOOK_SECRET", ""),
+    telegramWebhookPath: env("TELEGRAM_WEBHOOK_PATH", "/telegram/webhook"),
+    telegramWebhookHost: env("TELEGRAM_WEBHOOK_HOST", "127.0.0.1"),
+    telegramWebhookPort,
   };
 }
 
@@ -95,5 +140,21 @@ export function assertUnifiedPathsConfigured(c: UnifiedControlPlaneEnv): void {
   }
   if (!c.hermesLaunchCommand.trim()) {
     throw new Error("HERMES_LAUNCH_COMMAND is required.");
+  }
+}
+
+export function assertUnifiedControlPlaneEnv(c: UnifiedControlPlaneEnv): void {
+  assertUnifiedPathsConfigured(c);
+  if (c.memoryBackend === "file" && !c.memoryFilePath.trim()) {
+    throw new Error("UNIFIED_MEMORY_FILE_PATH is required when UNIFIED_MEMORY_BACKEND=file.");
+  }
+  if (c.strictConfig) {
+    if (c.routerDefaultPrimary !== "eve" && c.routerDefaultPrimary !== "hermes") {
+      throw new Error("UNIFIED_ROUTER_DEFAULT_PRIMARY must be eve or hermes.");
+    }
+    const fb = c.routerDefaultFallback;
+    if (fb !== "none" && fb !== "eve" && fb !== "hermes") {
+      throw new Error("UNIFIED_ROUTER_DEFAULT_FALLBACK must be eve, hermes, or none.");
+    }
   }
 }

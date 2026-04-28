@@ -39,6 +39,10 @@ export type DispatchState = {
   sourceChatId: string;
   sourceMessageId: string;
   traceId: string;
+  /** Truncated subprocess stdout (Hermes lane; Eve on non-timeout failure paths). */
+  laneStdout?: string;
+  /** Truncated subprocess stderr. */
+  laneStderr?: string;
 };
 
 export type UnifiedResponse = {

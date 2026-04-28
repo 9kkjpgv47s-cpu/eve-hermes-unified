@@ -29,14 +29,20 @@ report="$OUT_DIR/failure-injection-$timestamp.txt"
   node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "@hermes status" --chat-id "100" --message-id "2" || true
 
   echo
-  echo "Case 3: Hermes lane timeout (classification)"
-  HERMES_LAUNCH_COMMAND=bash \
-  HERMES_LAUNCH_ARGS=$ROOT_DIR/scripts/ci-sleep-hermes-stub.sh \
-  HERMES_LANE_TIMEOUT_MS=500 \
+  echo "Case 4: Eve lane non-zero exit with stderr capture"
+  EVE_TASK_DISPATCH_SCRIPT=$ROOT_DIR/scripts/ci-eve-exit7-stub.sh \
   UNIFIED_ROUTER_DEFAULT_PRIMARY=eve \
-  UNIFIED_ROUTER_DEFAULT_FALLBACK=hermes \
+  UNIFIED_ROUTER_DEFAULT_FALLBACK=none \
   UNIFIED_ROUTER_FAIL_CLOSED=1 \
-  node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "@hermes slow" --chat-id "100" --message-id "3" || true
+  node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "fail" --chat-id "100" --message-id "4" || true
+
+  echo
+  echo "Case 5: Eve state invalid JSON"
+  EVE_TASK_DISPATCH_SCRIPT=$ROOT_DIR/scripts/ci-eve-invalid-json-stub.sh \
+  UNIFIED_ROUTER_DEFAULT_PRIMARY=eve \
+  UNIFIED_ROUTER_DEFAULT_FALLBACK=none \
+  UNIFIED_ROUTER_FAIL_CLOSED=1 \
+  node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "badjson" --chat-id "100" --message-id "5" || true
 
   echo "Failure injection smoke ended: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } >"$report" 2>&1

@@ -10,6 +10,7 @@
     "test:watch": "vitest",
     "dispatch": "tsx src/bin/unified-dispatch.ts",
     "gateway:telegram": "tsx src/bin/telegram-gateway.ts",
+    "webhook:telegram": "tsx src/bin/telegram-webhook.ts",
     "sync:sources": "bash ./scripts/sync-sources.sh",
     "bootstrap:sources": "bash ./scripts/bootstrap-sources.sh",
     "validate:failure-injection": "bash ./scripts/failure-injection-smoke.sh",

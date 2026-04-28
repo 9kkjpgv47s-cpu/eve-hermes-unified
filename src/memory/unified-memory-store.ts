@@ -22,6 +22,8 @@ export type MemoryDispatchEvent = MemoryReadScope & {
 export interface UnifiedMemoryStore {
   readWorkingSet(scope: MemoryReadScope): Promise<Record<string, string>>;
   appendDispatchEvent(event: MemoryDispatchEvent): Promise<void>;
+  /** Merge string key/value pairs into the chat working set (optional; no-op default). */
+  mergeWorkingSet?(chatId: string, patch: Record<string, string>): Promise<void>;
 }
 
 export class InMemoryUnifiedMemoryStore implements UnifiedMemoryStore {
@@ -48,6 +50,17 @@ export class InMemoryUnifiedMemoryStore implements UnifiedMemoryStore {
 
   async appendDispatchEvent(event: MemoryDispatchEvent): Promise<void> {
     this.events.push(event);
+  }
+
+  async mergeWorkingSet(chatId: string, patch: Record<string, string>): Promise<void> {
+    let row = this.chatKv.get(chatId);
+    if (!row) {
+      row = new Map();
+      this.chatKv.set(chatId, row);
+    }
+    for (const [k, v] of Object.entries(patch)) {
+      row.set(k, v);
+    }
   }
 
   getEvents(): readonly MemoryDispatchEvent[] {

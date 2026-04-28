@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { runCommandWithTimeout } from "../process/exec.js";
 import type { DispatchState } from "../contracts/types.js";
-import { validateDispatchState } from "../contracts/validate.js";
+import { truncateLaneIo, validateDispatchState } from "../contracts/validate.js";
 import type { LaneAdapter, LaneDispatchInput } from "./lane-adapter.js";
 
 type EveDispatchStateFile = {
@@ -15,6 +15,25 @@ type EveDispatchStateFile = {
   source_chat_id?: string;
   source_message_id?: string;
 };
+
+function buildEveEnv(input: LaneDispatchInput, runId: string, dispatchStatePath: string): Record<string, string> {
+  const base: Record<string, string> = {
+    EVE_TASK_DISPATCH_RUN_ID: runId,
+    EVE_TASK_DISPATCH_RESULT_PATH: dispatchStatePath,
+    EVE_TASK_DISPATCH_TRACE_ID: input.envelope.traceId,
+    EVE_TASK_DISPATCH_SOURCE_CHANNEL: input.envelope.channel,
+    EVE_TASK_DISPATCH_CHAT_ID: input.envelope.chatId,
+    EVE_TASK_DISPATCH_MESSAGE_ID: input.envelope.messageId,
+    EVE_TASK_DISPATCH_INTENT_ROUTE: input.intentRoute,
+  };
+  if (input.memorySnapshot && Object.keys(input.memorySnapshot).length > 0) {
+    base.EVE_UNIFIED_MEMORY_JSON = JSON.stringify(input.memorySnapshot);
+  }
+  if (input.capabilityIds && input.capabilityIds.length > 0) {
+    base.EVE_UNIFIED_CAPABILITY_IDS = input.capabilityIds.join(",");
+  }
+  return base;
+}
 
 function classifyFailure(reason: string): DispatchState["failureClass"] {
   const lower = reason.toLowerCase();
@@ -48,13 +67,7 @@ export class EveAdapter implements LaneAdapter {
     const result = await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
       timeoutMs: this.dispatchTimeoutMs,
       env: {
-        EVE_TASK_DISPATCH_RUN_ID: runId,
-        EVE_TASK_DISPATCH_RESULT_PATH: this.dispatchStatePath,
-        EVE_TASK_DISPATCH_TRACE_ID: input.envelope.traceId,
-        EVE_TASK_DISPATCH_SOURCE_CHANNEL: input.envelope.channel,
-        EVE_TASK_DISPATCH_CHAT_ID: input.envelope.chatId,
-        EVE_TASK_DISPATCH_MESSAGE_ID: input.envelope.messageId,
-        EVE_TASK_DISPATCH_INTENT_ROUTE: input.intentRoute,
+        ...buildEveEnv(input, runId, this.dispatchStatePath),
       },
     });
 
@@ -70,6 +83,8 @@ export class EveAdapter implements LaneAdapter {
         sourceChatId: input.envelope.chatId,
         sourceMessageId: input.envelope.messageId,
         traceId: input.envelope.traceId,
+        laneStdout: truncateLaneIo(result.stdout),
+        laneStderr: truncateLaneIo(result.stderr),
       };
       return validateDispatchState(state);
     }
@@ -86,6 +101,8 @@ export class EveAdapter implements LaneAdapter {
         sourceChatId: input.envelope.chatId,
         sourceMessageId: input.envelope.messageId,
         traceId: input.envelope.traceId,
+        laneStdout: truncateLaneIo(result.stdout),
+        laneStderr: truncateLaneIo(result.stderr),
       };
       return validateDispatchState(state);
     }

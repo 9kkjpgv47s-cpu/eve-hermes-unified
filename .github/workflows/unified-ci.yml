@@ -30,6 +30,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Failure-injection matrix (post-build)
+        run: npm run validate:failure-injection
+
       - name: Gateway smoke and evidence transcript
         run: bash ./scripts/ci-record-dispatch-evidence.sh
 

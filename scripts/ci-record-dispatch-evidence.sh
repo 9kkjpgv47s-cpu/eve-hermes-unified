@@ -11,6 +11,8 @@ export UNIFIED_ROUTER_DEFAULT_PRIMARY=eve
 export UNIFIED_ROUTER_DEFAULT_FALLBACK=hermes
 export UNIFIED_ROUTER_FAIL_CLOSED=0
 export UNIFIED_TELEGRAM_GATEWAY_MODE=unified
+export UNIFIED_MEMORY_BACKEND=file
+export UNIFIED_MEMORY_FILE_PATH="$EVIDENCE/ci-unified-memory.json"
 
 mkdir -p "$EVIDENCE"
 node "$ROOT_DIR/dist/src/bin/telegram-gateway.js" --text "ci gateway smoke" --chat-id "ci" --message-id "1"

@@ -6,6 +6,7 @@ dist/
 !.env.example
 coverage/
 evidence/
+/memory/
 sources/eve/
 sources/hermes/
 *.log

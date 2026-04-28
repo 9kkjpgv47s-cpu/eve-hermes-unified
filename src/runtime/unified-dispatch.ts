@@ -19,6 +19,22 @@ export type UnifiedRuntime = {
   capabilityRegistry?: CapabilityRegistry;
 };
 
+async function persistLaneMemoryIfPassed(
+  memoryStore: UnifiedMemoryStore | undefined,
+  chatId: string,
+  lane: LaneId,
+  state: DispatchState,
+): Promise<void> {
+  if (!memoryStore || state.status !== "pass" || !memoryStore.mergeWorkingSet) {
+    return;
+  }
+  await memoryStore.mergeWorkingSet(chatId, {
+    last_lane: lane,
+    last_run_id: state.runId,
+    last_reason: state.reason,
+  });
+}
+
 function getLaneAdapter(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
   return lane === "eve" ? runtime.eveAdapter : runtime.hermesAdapter;
 }
@@ -79,6 +95,8 @@ export async function dispatchUnifiedMessage(
     });
   }
 
+  await persistLaneMemoryIfPassed(memoryStore, envelope.chatId, decision.primaryLane, primaryState);
+
   if (primaryState.status === "pass" || decision.fallbackLane === "none" || decision.failClosed) {
     const response = validateUnifiedResponse(responseFromState(primaryState, envelope.traceId));
     return { envelope, decision: decision.reason, response };
@@ -106,6 +124,8 @@ export async function dispatchUnifiedMessage(
       reason: fallbackState.reason,
     });
   }
+
+  await persistLaneMemoryIfPassed(memoryStore, envelope.chatId, decision.fallbackLane, fallbackState);
 
   const response = validateUnifiedResponse(responseFromState(fallbackState, envelope.traceId));
   return { envelope, decision: `${decision.reason}:fallback`, response };

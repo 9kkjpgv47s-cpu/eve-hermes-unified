@@ -42,6 +42,11 @@ export function validateDispatchState(value: DispatchState): DispatchState {
   return value;
 }
 
+/** Bound lane subprocess capture size for `DispatchState.laneStdout` / `laneStderr`. */
+export function truncateLaneIo(value: string, maxChars = 24_000): string {
+  return value.length <= maxChars ? value : `${value.slice(0, maxChars)}…`;
+}
+
 export function validateUnifiedResponse(value: UnifiedResponse): UnifiedResponse {
   ensure(value.responseText.length > 0 || value.consumed === false, "Response text required when consumed.");
   ensure(value.traceId.length > 0, "Unified response traceId is required.");

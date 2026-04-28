@@ -1,8 +1,24 @@
 import { randomUUID } from "node:crypto";
 import { runCommandWithTimeout } from "../process/exec.js";
 import type { DispatchState } from "../contracts/types.js";
-import { validateDispatchState } from "../contracts/validate.js";
+import { truncateLaneIo, validateDispatchState } from "../contracts/validate.js";
 import type { LaneAdapter, LaneDispatchInput } from "./lane-adapter.js";
+
+function buildHermesEnv(input: LaneDispatchInput): Record<string, string> {
+  const base: Record<string, string> = {
+    HERMES_UNIFIED_TRACE_ID: input.envelope.traceId,
+    HERMES_UNIFIED_CHAT_ID: input.envelope.chatId,
+    HERMES_UNIFIED_MESSAGE_ID: input.envelope.messageId,
+    HERMES_UNIFIED_INTENT_ROUTE: input.intentRoute,
+  };
+  if (input.memorySnapshot && Object.keys(input.memorySnapshot).length > 0) {
+    base.HERMES_UNIFIED_MEMORY_JSON = JSON.stringify(input.memorySnapshot);
+  }
+  if (input.capabilityIds && input.capabilityIds.length > 0) {
+    base.HERMES_UNIFIED_CAPABILITY_IDS = input.capabilityIds.join(",");
+  }
+  return base;
+}
 
 function classifyHermesFailure(reason: string): DispatchState["failureClass"] {
   const lower = reason.toLowerCase();
@@ -34,10 +50,7 @@ export class HermesAdapter implements LaneAdapter {
     const result = await runCommandWithTimeout([this.launchCommand, ...this.launchArgs, input.envelope.text], {
       timeoutMs: this.timeoutMs,
       env: {
-        HERMES_UNIFIED_TRACE_ID: input.envelope.traceId,
-        HERMES_UNIFIED_CHAT_ID: input.envelope.chatId,
-        HERMES_UNIFIED_MESSAGE_ID: input.envelope.messageId,
-        HERMES_UNIFIED_INTENT_ROUTE: input.intentRoute,
+        ...buildHermesEnv(input),
       },
     });
 
@@ -63,6 +76,8 @@ export class HermesAdapter implements LaneAdapter {
       sourceChatId: input.envelope.chatId,
       sourceMessageId: input.envelope.messageId,
       traceId: input.envelope.traceId,
+      laneStdout: truncateLaneIo(result.stdout),
+      laneStderr: truncateLaneIo(result.stderr),
     };
     return validateDispatchState(state);
   }

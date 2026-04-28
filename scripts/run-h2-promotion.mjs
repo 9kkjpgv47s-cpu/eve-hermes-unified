@@ -953,9 +953,9 @@ async function main() {
         addCloseoutRunFailure(failures, sourceHorizon, "transition_next_alignment_not_comparable");
       } else if (!closeoutTransitionAlignment.nextAligned) {
         addCloseoutRunFailure(failures, sourceHorizon, "transition_next_misaligned");
-      } else if (!closeoutRunSimulationSignals.h2CloseoutGateReported) {
+      } else if (!closeoutRunSimulationSignals.closeoutGateReported) {
         addCloseoutRunFailure(failures, sourceHorizon, "gate_not_reported");
-      } else if (!closeoutRunSimulationSignals.h2CloseoutGatePass) {
+      } else if (!closeoutRunSimulationSignals.closeoutGatePass) {
         addCloseoutRunFailure(failures, sourceHorizon, "gate_not_passed");
       } else if (!closeoutRunSimulationSignals.validationPropagationReported) {
         addCloseoutRunFailure(failures, sourceHorizon, "missing_supervised_stage_goal_policy");

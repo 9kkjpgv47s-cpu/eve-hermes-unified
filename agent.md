@@ -10,9 +10,10 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
 - Branch (at handoff time): `cursor/horizon-drill-closeout-taxonomy-7d5a`
-- Latest completed hardening slice:
-  - horizon-closeout drill-suite verification uses canonical `horizon_drill_*` failure codes with legacy `h2_drill_*` dual-reporting
-  - `run:h[1-5]-drill-suite` commands map to the same drill-suite evaluation path as `run:h2-drill-suite`
+- Latest slice (this session):
+  - `promote-horizon`: infer closeout-run source from `expectedSource` when either gate boolean is present; accept `horizon-closeout-run` or `h2-closeout-run` schema for pinned manifests; emit `closeout_run_<hn>_closeout_gate_*` for non-H2 sources alongside canonical horizon codes; skip `missing_evidence_dir` when `--closeout-run-file` pins the handoff
+  - `run-h2-promotion`: gate pre-checks use canonical `closeoutGate*` signals from the closeout-run payload
+  - Tests: H3 closeout gate scoped failure codes; `seedCloseoutReport` filenames follow horizon
 
 ## What Was Just Completed
 

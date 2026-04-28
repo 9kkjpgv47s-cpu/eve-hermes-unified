@@ -18,7 +18,8 @@ async function seedCloseoutReport(
   options?: { pass?: boolean; horizon?: string; nextHorizon?: string },
 ): Promise<string> {
   await mkdir(evidenceDir, { recursive: true });
-  const reportPath = path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json");
+  const reportHorizon = String(options?.horizon ?? "H2").trim() || "H2";
+  const reportPath = path.join(evidenceDir, `horizon-closeout-${reportHorizon}-20260426-000000.json`);
   await writeFile(
     reportPath,
     JSON.stringify(
@@ -173,6 +174,112 @@ async function seedHorizonStatus(statusPath: string): Promise<void> {
             note: "seed H2 active",
           },
         ],
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+}
+
+/** H3 active, for H3->H4 promotion / closeout-run replay tests. */
+async function seedHorizonStatusH3Active(statusPath: string): Promise<void> {
+  await writeFile(
+    statusPath,
+    JSON.stringify(
+      {
+        schemaVersion: "v1",
+        updatedAtIso: "2026-04-26T21:40:00Z",
+        owner: "cloud-agent",
+        activeHorizon: "H3",
+        activeStatus: "in_progress",
+        summary: "H3 active",
+        blockers: [],
+        requiredEvidence: [
+          {
+            id: "h1-release-readiness",
+            command: "npm run validate:release-readiness",
+            artifactPattern: "evidence/release-readiness-*.json",
+            required: true,
+          },
+          {
+            id: "h1-merge-bundle",
+            command: "npm run validate:merge-bundle",
+            artifactPattern: "evidence/merge-bundle-validation-*.json",
+            required: true,
+          },
+          {
+            id: "h1-bundle-verification",
+            command: "npm run verify:merge-bundle",
+            artifactPattern: "evidence/bundle-verification-*.json",
+            required: true,
+          },
+          {
+            id: "h1-cutover-readiness",
+            command: "npm run validate:cutover-readiness",
+            artifactPattern: "evidence/cutover-readiness-*.json",
+            required: true,
+          },
+          {
+            id: "h1-evidence-summary",
+            command: "npm run validate:evidence-summary",
+            artifactPattern: "evidence/validation-summary-*.json",
+            required: true,
+          },
+        ],
+        nextActions: [
+          {
+            id: "h3-action-1",
+            summary: "seed action",
+            targetHorizon: "H3",
+            status: "completed",
+            tags: ["durability"],
+          },
+          {
+            id: "h3-action-2",
+            summary: "second seed action",
+            targetHorizon: "H3",
+            status: "completed",
+            tags: ["policy-hardening"],
+          },
+          {
+            id: "h4-action-1",
+            summary: "h4 seed",
+            targetHorizon: "H4",
+            status: "planned",
+            tags: ["capability"],
+          },
+        ],
+        goalPolicies: {
+          transitions: {
+            "H3->H4": {
+              minimumGoalIncrease: 1,
+              minActionGrowthFactor: 1.15,
+              minPendingNextActions: 2,
+              requiredTaggedActionCounts: {
+                capability: { minCount: 1, minPendingCount: 1 },
+              },
+            },
+          },
+        },
+        promotionReadiness: {
+          targetStage: "full",
+          gates: {
+            releaseReadinessPass: true,
+            mergeBundlePass: true,
+            bundleVerificationPass: true,
+            cutoverReadinessPass: true,
+            evidenceSummaryPass: true,
+          },
+        },
+        horizonStates: {
+          H1: { status: "completed", summary: "H1 complete" },
+          H2: { status: "completed", summary: "H2 complete" },
+          H3: { status: "in_progress", summary: "H3 active" },
+          H4: { status: "planned", summary: "H4 planned" },
+          H5: { status: "planned", summary: "H5 planned" },
+        },
+        history: [],
       },
       null,
       2,
@@ -740,6 +847,78 @@ describe("promote-horizon.mjs", () => {
       expect(payload.checks.closeoutRunH2CloseoutGatePass).toBe(false);
       expect(payload.failures).toContain("closeout_run_horizon_closeout_gate_not_passed");
       expect(payload.failures).toContain("closeout_run_h2_closeout_gate_not_passed");
+    });
+  });
+
+  it("emits scoped closeout gate failure codes for non-H2 source horizons", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      const closeoutPath = await seedCloseoutReport(evidenceDir, {
+        pass: true,
+        horizon: "H3",
+        nextHorizon: "H4",
+      });
+      await seedHorizonStatusH3Active(statusPath);
+      const closeoutRunPath = path.join(evidenceDir, "horizon-closeout-run-h3-20260426-100000.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H3",
+              next: "H4",
+            },
+            files: {
+              closeoutOut: closeoutPath,
+            },
+            checks: {
+              horizonCloseoutGatePass: false,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon",
+          "H3",
+          "--next-horizon",
+          "H4",
+          "--horizon-status-file",
+          statusPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--closeout-run-file",
+          closeoutRunPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("closeout_run_horizon_closeout_gate_not_passed");
+      expect(payload.failures).toContain("closeout_run_h3_closeout_gate_not_passed");
+      expect(payload.failures).not.toContain("closeout_run_h2_closeout_gate_not_passed");
     });
   });
 

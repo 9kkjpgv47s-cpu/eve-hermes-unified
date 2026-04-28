@@ -334,9 +334,14 @@ function resolveCloseoutRunTransition(closeoutRunPayload, expectedSource, expect
     checks.nextHorizon,
   ]);
   const normalizedSource = sourceSignals.value;
-  const inferredH2Source =
-    !normalizedSource && typeof checks.h2CloseoutGatePass === "boolean" ? "H2" : "";
-  const effectiveSource = normalizedSource || inferredH2Source;
+  const gatePassReported =
+    typeof checks.h2CloseoutGatePass === "boolean"
+    || typeof checks.horizonCloseoutGatePass === "boolean";
+  const inferredSourceFromGate =
+    !normalizedSource && gatePassReported && isNonEmptyString(expectedSource)
+      ? expectedSource
+      : "";
+  const effectiveSource = normalizedSource || inferredSourceFromGate;
   const normalizedNext = nextSignals.value;
   const sourceReported = isNonEmptyString(effectiveSource);
   const nextReported = nextSignals.reported;
@@ -579,7 +584,7 @@ async function main() {
   if (isNonEmptyString(options.closeoutFile) && closeoutRunFile.length > 0) {
     failures.push("conflicting_closeout_sources:closeout_file_and_closeout_run_file");
   }
-  if (!options.closeoutFile && !(await exists(evidenceDir))) {
+  if (!options.closeoutFile && closeoutRunFile.length === 0 && !(await exists(evidenceDir))) {
     failures.push(`missing_evidence_dir:${evidenceDir}`);
   }
   if (
@@ -689,7 +694,11 @@ async function main() {
       failures.push(`missing_closeout_run_file:${closeoutRunFile}`);
     } else {
       closeoutRunPayload = await readJson(closeoutRunFile);
-      closeoutRunSchemaValidation = validateManifestSchema("h2-closeout-run", closeoutRunPayload);
+      const horizonCloseoutRunSchema = validateManifestSchema("horizon-closeout-run", closeoutRunPayload);
+      const h2CloseoutRunSchema = validateManifestSchema("h2-closeout-run", closeoutRunPayload);
+      closeoutRunSchemaValidation = horizonCloseoutRunSchema.valid
+        ? horizonCloseoutRunSchema
+        : h2CloseoutRunSchema;
       if (!closeoutRunSchemaValidation.valid) {
         failures.push(
           ...closeoutRunSchemaValidation.errors.map((error) => `closeout_run_schema_invalid:${error}`),
@@ -736,11 +745,19 @@ async function main() {
           failures.push("closeout_run_horizon_closeout_gate_not_reported");
           if (sourceHorizon === "H2") {
             failures.push("closeout_run_h2_closeout_gate_not_reported");
+          } else if (isNonEmptyString(sourceHorizon)) {
+            failures.push(
+              `closeout_run_${String(sourceHorizon).trim().toLowerCase()}_closeout_gate_not_reported`,
+            );
           }
         } else if (!closeoutRunCloseoutGate.pass) {
           failures.push("closeout_run_horizon_closeout_gate_not_passed");
           if (sourceHorizon === "H2") {
             failures.push("closeout_run_h2_closeout_gate_not_passed");
+          } else if (isNonEmptyString(sourceHorizon)) {
+            failures.push(
+              `closeout_run_${String(sourceHorizon).trim().toLowerCase()}_closeout_gate_not_passed`,
+            );
           }
         } else if (!closeoutRunStageGoalPolicySignals.validationReported) {
           failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported");

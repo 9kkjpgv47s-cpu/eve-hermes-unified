@@ -2,6 +2,7 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];
 
@@ -238,8 +239,23 @@ async function main() {
       readinessPayload = null;
     }
   }
+  const readinessSchema = validateManifestSchema("stage-promotion-readiness", readinessPayload);
+  if (!readinessSchema.valid) {
+    failures.push(...readinessSchema.errors.map((error) => `readiness_schema_invalid:${error}`));
+  }
 
-  const readinessPassed = readinessCommand.code === 0 && readinessPayload?.pass === true;
+  const readinessPassed =
+    readinessCommand.code === 0 &&
+    readinessSchema.valid &&
+    readinessPayload?.pass === true;
+  const forceMalformedReadinessSchema = String(
+    process.env.UNIFIED_FORCE_MALFORMED_STAGE_PROMOTION_READINESS_SCHEMA ?? "",
+  )
+    .trim()
+    .toLowerCase();
+  if (forceMalformedReadinessSchema === "1" || forceMalformedReadinessSchema === "true") {
+    failures.push("readiness_schema_invalid:forced_malformed_stage_promotion_readiness_schema");
+  }
   if (!readinessPassed) {
     failures.push("readiness_check_failed");
   }
@@ -303,6 +319,11 @@ async function main() {
     },
     checks: {
       readinessPassed,
+      readinessSchemaValid: readinessSchema.valid,
+      readinessSchemaErrors:
+        readinessSchema.valid || readinessSchema.errors.length === 0
+          ? null
+          : readinessSchema.errors,
       stageApplied,
       allowHorizonMismatch: options.allowHorizonMismatch,
       evidenceSelectionMode,

@@ -233,11 +233,20 @@ async function runDrillStep({
       ? { UNIFIED_RUNTIME_ENV_FILE: runtimeEnvFile }
       : undefined,
   });
-  const payload = await readJsonMaybe(outPath);
+  const forcedPayloadEnvKey = `UNIFIED_FORCE_${String(name).trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_DRILL_PAYLOAD_PATH`;
+  const forcedPayloadPathRaw = process.env[forcedPayloadEnvKey];
+  const forcedPayloadPath =
+    isNonEmptyString(forcedPayloadPathRaw)
+      ? (path.isAbsolute(forcedPayloadPathRaw)
+          ? path.resolve(forcedPayloadPathRaw)
+          : path.resolve(evidenceDir, forcedPayloadPathRaw))
+      : "";
+  const payload = await readJsonMaybe(isNonEmptyString(forcedPayloadPath) ? forcedPayloadPath : outPath);
   return {
     name,
     stage,
     outPath,
+    forcedPayloadPath: isNonEmptyString(forcedPayloadPath) ? forcedPayloadPath : null,
     command,
     payload,
   };
@@ -307,6 +316,20 @@ function resolveStepSourceConsistencySignals(stepPayload) {
     propagationReported,
     propagationPassed,
   };
+}
+
+function parseBooleanEnv(value, fallback = false) {
+  if (!isNonEmptyString(value)) {
+    return fallback;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  return fallback;
 }
 
 async function main() {
@@ -434,7 +457,13 @@ async function main() {
       ? null
       : isRollbackSimulationPassing(steps.rollbackSimulation, options.autoApplyRollback);
 
-  if (!canaryHoldPass) {
+  const forceMalformedCanaryStageDrill = parseBooleanEnv(
+    process.env.UNIFIED_FORCE_MALFORMED_CANARY_STAGE_DRILL,
+    false,
+  );
+  const effectiveCanaryHoldPass = forceMalformedCanaryStageDrill ? false : canaryHoldPass;
+
+  if (!effectiveCanaryHoldPass) {
     failures.push("canary_drill_failed");
   }
   if (majorityHoldPass === false) {
@@ -458,8 +487,11 @@ async function main() {
         : null,
       outPath,
       canaryOutPath: steps.canary?.outPath ?? null,
+      canaryForcedPayloadPath: steps.canary?.forcedPayloadPath ?? null,
       majorityOutPath: steps.majority?.outPath ?? null,
+      majorityForcedPayloadPath: steps.majority?.forcedPayloadPath ?? null,
       rollbackSimulationOutPath: steps.rollbackSimulation?.outPath ?? null,
+      rollbackSimulationForcedPayloadPath: steps.rollbackSimulation?.forcedPayloadPath ?? null,
     },
     suite: {
       dryRun: options.dryRun,
@@ -480,6 +512,8 @@ async function main() {
     },
     checks: {
       canaryHoldPass,
+      canaryHoldPassRaw: canaryHoldPass,
+      canaryHoldPassForced: effectiveCanaryHoldPass,
       majorityHoldPass,
       rollbackSimulationTriggered,
       rollbackSimulationPass,

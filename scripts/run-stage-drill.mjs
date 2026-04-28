@@ -2,6 +2,7 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];
 
@@ -245,6 +246,13 @@ function maybePushFileArg(argv, flag, filePath) {
   }
 }
 
+function resolveForcedManifestPath(value, baseDir) {
+  if (!isNonEmptyString(value)) {
+    return "";
+  }
+  return path.isAbsolute(value) ? path.resolve(value) : path.resolve(baseDir, value);
+}
+
 async function runCommand(argv, options) {
   const startedAtMs = Date.now();
   return await new Promise((resolve) => {
@@ -355,9 +363,30 @@ async function main() {
       UNIFIED_RUNTIME_ENV_FILE: envFile,
     },
   });
-  const promotePayload = await readJsonMaybe(promoteOut);
-  const readinessPayload = await readJsonMaybe(readinessOut);
+  const forcedPromotePayloadPath = resolveForcedManifestPath(
+    process.env.UNIFIED_FORCE_PROMOTE_PAYLOAD_PATH,
+    evidenceDir,
+  );
+  const forcedReadinessPayloadPath = resolveForcedManifestPath(
+    process.env.UNIFIED_FORCE_READINESS_PAYLOAD_PATH ||
+      process.env.UNIFIED_FORCE_STAGE_PROMOTION_PAYLOAD_PATH,
+    evidenceDir,
+  );
+  const promotePayload = await readJsonMaybe(
+    isNonEmptyString(forcedPromotePayloadPath) ? forcedPromotePayloadPath : promoteOut,
+  );
+  const readinessPayload = await readJsonMaybe(
+    isNonEmptyString(forcedReadinessPayloadPath) ? forcedReadinessPayloadPath : readinessOut,
+  );
+  const promoteSchemaValidation = validateManifestSchema("stage-promotion-execution", promotePayload);
+  const readinessSchemaValidation = validateManifestSchema("stage-promotion-readiness", readinessPayload);
   const promotePassed = promoteCommand.code === 0 && promotePayload?.pass === true;
+  if (!promoteSchemaValidation.valid) {
+    failures.push(...promoteSchemaValidation.errors.map((error) => `promote_schema_invalid:${error}`));
+  }
+  if (!readinessSchemaValidation.valid) {
+    failures.push(...readinessSchemaValidation.errors.map((error) => `readiness_schema_invalid:${error}`));
+  }
   if (!promotePassed) {
     failures.push("stage_promotion_step_failed");
   }
@@ -448,6 +477,10 @@ async function main() {
     },
   });
   const rollbackPolicyPayload = await readJsonMaybe(rollbackPolicyOut);
+  const rollbackPolicySchemaValidation = validateManifestSchema(
+    "auto-rollback-policy",
+    rollbackPolicyPayload,
+  );
   const rollbackStagePolicySignals = resolveRollbackStagePromotionGoalPolicySignals(
     rollbackPolicyPayload,
   );
@@ -463,6 +496,10 @@ async function main() {
   }
   if (!rollbackPolicyPayload) {
     failures.push("auto_rollback_policy_output_missing");
+  } else if (!rollbackPolicySchemaValidation.valid) {
+    failures.push(
+      ...rollbackPolicySchemaValidation.errors.map((error) => `rollback_policy_schema_invalid:${error}`),
+    );
   } else if (!rollbackStagePolicySignals.validationPropagationReported) {
     failures.push("rollback_stage_promotion_goal_policy_propagation_not_reported");
   } else if (!rollbackStagePolicySignals.sourceConsistencyPropagationReported) {
@@ -541,6 +578,27 @@ async function main() {
         rollbackStagePolicySignals.bundleVerificationInitialScopeReported,
       rollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed:
         rollbackStagePolicySignals.bundleVerificationInitialScopePassed,
+      promoteSchemaValid: promoteSchemaValidation.valid,
+      promoteSchemaErrors:
+        promoteSchemaValidation.valid || promoteSchemaValidation.errors.length === 0
+          ? null
+          : promoteSchemaValidation.errors,
+      forcedPromotePayloadPath: isNonEmptyString(forcedPromotePayloadPath)
+        ? forcedPromotePayloadPath
+        : null,
+      readinessSchemaValid: readinessSchemaValidation.valid,
+      readinessSchemaErrors:
+        readinessSchemaValidation.valid || readinessSchemaValidation.errors.length === 0
+          ? null
+          : readinessSchemaValidation.errors,
+      forcedReadinessPayloadPath: isNonEmptyString(forcedReadinessPayloadPath)
+        ? forcedReadinessPayloadPath
+        : null,
+      rollbackPolicySchemaValid: rollbackPolicySchemaValidation.valid,
+      rollbackPolicySchemaErrors:
+        rollbackPolicySchemaValidation.valid || rollbackPolicySchemaValidation.errors.length === 0
+          ? null
+          : rollbackPolicySchemaValidation.errors,
       autoApplyRollbackRequested: options.autoApplyRollback,
       dryRun: options.dryRun,
       allowHorizonMismatch: options.allowHorizonMismatch,

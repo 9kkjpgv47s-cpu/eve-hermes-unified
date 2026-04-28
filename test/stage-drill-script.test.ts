@@ -755,4 +755,71 @@ describe("run-stage-drill.mjs", () => {
       expect(payload.checks.rollbackStagePromotionGoalPolicyPropagationPassed).toBe(true);
     });
   });
+
+  it("fails when stage promotion execution manifest is malformed", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "stage-drill.json");
+      const promoteOutPath = path.join(evidenceDir, "stage-promotion-execution-malformed.json");
+
+      await seedEvidence(evidenceDir, { successRate: 1 });
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+      await writeFile(
+        path.join(evidenceDir, "stage-promotion-readiness-99999999999999.json"),
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            checks: {
+              readinessPassed: true,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-stage-drill.mjs",
+          "--target-stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--canary-chats",
+          "101,202",
+        ],
+        {
+          timeoutMs: 30_000,
+          env: {
+            ...process.env,
+            UNIFIED_FORCE_PROMOTE_PAYLOAD_PATH: promoteOutPath,
+          },
+        },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          promoteSchemaValid: boolean;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.promoteSchemaValid).toBe(false);
+      expect(payload.failures.some((value) => value.startsWith("promote_schema_invalid:"))).toBe(true);
+    });
+  });
 });

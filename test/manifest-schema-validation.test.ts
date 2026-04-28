@@ -321,4 +321,67 @@ describe("validate-manifest-schema.mjs", () => {
       expect(result.stderr).toContain("Manifest schema validation failed");
     });
   });
+
+  it("passes for valid stage-drill and auto-rollback-policy manifests", async () => {
+    await withTempDir(async (dir) => {
+      const stageDrillPath = path.join(dir, "stage-drill-canary-20260426-000000.json");
+      const rollbackPath = path.join(dir, "auto-rollback-policy-20260426-000000.json");
+      await writeFile(
+        stageDrillPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            stage: "canary",
+            decision: {
+              action: "hold",
+            },
+            checks: {},
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      await writeFile(
+        rollbackPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            stage: "canary",
+            decision: {
+              action: "hold",
+            },
+            checks: {},
+            reasons: [],
+            triggers: [],
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const stageResult = await runCommandWithTimeout(
+        ["node", "scripts/validate-manifest-schema.mjs", "--type", "stage-drill", "--file", stageDrillPath],
+        { timeoutMs: 10_000 },
+      );
+      const rollbackResult = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "auto-rollback-policy",
+          "--file",
+          rollbackPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(stageResult.code).toBe(0);
+      expect(rollbackResult.code).toBe(0);
+    });
+  });
 });

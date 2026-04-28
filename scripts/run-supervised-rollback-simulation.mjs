@@ -2,6 +2,7 @@
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
 function parseArgs(argv) {
   const options = {
@@ -215,6 +216,13 @@ function parseBooleanEnv(value, fallback = false) {
     return false;
   }
   return fallback;
+}
+
+function resolveForcedManifestPath(value, baseDir) {
+  if (!isNonEmptyString(value)) {
+    return "";
+  }
+  return path.isAbsolute(value) ? path.resolve(value) : path.resolve(baseDir, value);
 }
 
 function resolveStageDrillGoalPolicySignals(stageDrillPayload) {
@@ -468,6 +476,13 @@ async function main() {
   } else if (calibrationPayload.pass !== true) {
     failures.push("calibration_failed");
   }
+  const calibrationSchema = validateManifestSchema(
+    "rollback-threshold-calibration",
+    calibrationPayload,
+  );
+  if (!calibrationSchema.valid) {
+    failures.push(...calibrationSchema.errors.map((error) => `calibration_schema_invalid:${error}`));
+  }
 
   const thresholdSources = resolveRollbackForcingThresholds(calibrationPayload, options);
   const stageDrillArgv = [
@@ -521,9 +536,42 @@ async function main() {
     timeoutMs: options.timeoutMs,
     env: { UNIFIED_RUNTIME_ENV_FILE: envFile },
   });
-  let stageDrillPayload = await readJsonMaybe(stageDrillOut);
+  const forcedStageDrillPayloadPath = resolveForcedManifestPath(
+    process.env.UNIFIED_FORCE_STAGE_DRILL_PAYLOAD_PATH,
+    evidenceDir,
+  );
+  let stageDrillPayload = await readJsonMaybe(
+    isNonEmptyString(forcedStageDrillPayloadPath) ? forcedStageDrillPayloadPath : stageDrillOut,
+  );
   if (!stageDrillPayload) {
     stageDrillPayload = extractJsonObjectFromText(stageDrillCommand.stdout);
+  }
+  const stageDrillSchema = validateManifestSchema("stage-drill", stageDrillPayload);
+  if (!stageDrillSchema.valid) {
+    failures.push(...stageDrillSchema.errors.map((error) => `stage_drill_schema_invalid:${error}`));
+  }
+  const stageDrillPromoteSchemaReported =
+    typeof stageDrillPayload?.checks?.promoteSchemaValid === "boolean";
+  const stageDrillReadinessSchemaReported =
+    typeof stageDrillPayload?.checks?.readinessSchemaValid === "boolean";
+  const stageDrillRollbackPolicySchemaReported =
+    typeof stageDrillPayload?.checks?.rollbackPolicySchemaValid === "boolean";
+  const stageDrillPromoteSchemaValid = stageDrillPayload?.checks?.promoteSchemaValid === true;
+  const stageDrillReadinessSchemaValid = stageDrillPayload?.checks?.readinessSchemaValid === true;
+  const stageDrillRollbackPolicySchemaValid =
+    stageDrillPayload?.checks?.rollbackPolicySchemaValid === true;
+  const stageDrillChildSchemaSignalsReported =
+    stageDrillPromoteSchemaReported &&
+    stageDrillReadinessSchemaReported &&
+    stageDrillRollbackPolicySchemaReported;
+  const stageDrillChildSchemaSignalsPass =
+    stageDrillPromoteSchemaValid &&
+    stageDrillReadinessSchemaValid &&
+    stageDrillRollbackPolicySchemaValid;
+  if (!stageDrillChildSchemaSignalsReported) {
+    failures.push("stage_drill_child_schema_signals_not_reported");
+  } else if (!stageDrillChildSchemaSignalsPass) {
+    failures.push("stage_drill_child_schema_signals_not_passed");
   }
   const stageDrillGoalPolicySignals = resolveStageDrillGoalPolicySignals(stageDrillPayload);
   const forceMissingStageDrillSignals = parseBooleanEnv(
@@ -618,6 +666,9 @@ async function main() {
       outPath,
       calibrationPath,
       stageDrillOut,
+      forcedStageDrillPayloadPath: isNonEmptyString(forcedStageDrillPayloadPath)
+        ? forcedStageDrillPayloadPath
+        : null,
       cutoverReadinessOut,
     },
     calibration: {
@@ -628,6 +679,16 @@ async function main() {
     checks: {
       calibrationPass: calibrationPayload?.pass === true,
       stageDrillEvaluated: stageDrillCommand.code === 0 || stageDrillCommand.code === 2,
+      stageDrillSchemaValid: stageDrillSchema.valid,
+      stageDrillSchemaErrors:
+        stageDrillSchema.valid || stageDrillSchema.errors.length === 0
+          ? null
+          : stageDrillSchema.errors,
+      stageDrillChildSchemaSignalsReported,
+      stageDrillChildSchemaSignalsPass,
+      stageDrillPromoteSchemaValid,
+      stageDrillReadinessSchemaValid,
+      stageDrillRollbackPolicySchemaValid,
       stageDrillGoalPolicyPropagationReported: effectiveStageDrillGoalPolicySignals.propagationReported,
       stageDrillGoalPolicyPropagationPassed: effectiveStageDrillGoalPolicySignals.propagationPassed,
       stageDrillGoalPolicyValidationPropagationReported:
@@ -678,6 +739,11 @@ async function main() {
         : cutoverReadinessPayload?.pass === true,
       shadowRestored,
       evidenceSelectionMode,
+      calibrationSchemaValid: calibrationSchema.valid,
+      calibrationSchemaErrors:
+        calibrationSchema.valid || calibrationSchema.errors.length === 0
+          ? null
+          : calibrationSchema.errors,
     },
     env: {
       before: envBefore,

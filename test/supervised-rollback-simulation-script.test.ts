@@ -550,4 +550,87 @@ describe("run-supervised-rollback-simulation.mjs", () => {
       expect(payload.failures).toContain("stage_drill_goal_policy_propagation_not_reported");
     });
   });
+
+  it("fails when latest stage-promotion readiness artifact is malformed", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "supervised-rollback-simulation.json");
+
+      await seedValidationSummaries(evidenceDir);
+      await seedReadinessArtifacts(evidenceDir);
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      const malformedStagePromotionPath = path.join(
+        evidenceDir,
+        "stage-promotion-readiness-99999999999999.json",
+      );
+      await writeFile(
+        malformedStagePromotionPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            checks: {},
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-supervised-rollback-simulation.mjs",
+          "--stage",
+          "majority",
+          "--current-stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-cutover-readiness",
+          "--majority-percent",
+          "90",
+          "--force-rollback-min-success-rate",
+          "1.01",
+          "--timeout-ms",
+          "120000",
+          "--evidence-selection-mode",
+          "latest",
+        ],
+        {
+          timeoutMs: 130_000,
+          env: {
+            ...process.env,
+            UNIFIED_FORCE_STAGE_PROMOTION_PAYLOAD_PATH: malformedStagePromotionPath,
+          },
+        },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          stageDrillGoalPolicyPropagationReported: boolean;
+          stageDrillGoalPolicyPropagationPassed: boolean;
+        };
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.checks.stageDrillGoalPolicyPropagationReported).toBe(true);
+      expect(payload.checks.stageDrillGoalPolicyPropagationPassed).toBe(true);
+      expect(payload.failures).toContain("stage_drill_child_schema_signals_not_passed");
+    });
+  });
 });

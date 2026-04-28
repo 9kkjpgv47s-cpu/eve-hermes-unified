@@ -2,6 +2,7 @@
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];
 const VALID_EVIDENCE_SELECTION_MODES = ["latest", "latest-passing"];
@@ -411,6 +412,8 @@ async function main() {
   const stagePromotion = await exists(stagePromotionPath)
     ? await readJson(stagePromotionPath)
     : null;
+  const releaseReadinessSchema = validateManifestSchema("release-readiness", releaseReadiness);
+  const stagePromotionSchema = validateManifestSchema("stage-promotion-readiness", stagePromotion);
   const stagePromotionGoalPolicySignals = resolveStagePromotionGoalPolicySignals(
     stagePromotion,
   );
@@ -424,6 +427,9 @@ async function main() {
   if (releaseReadiness?.pass !== true) {
     failures.push("release_readiness_failed");
   }
+  if (!releaseReadinessSchema.valid) {
+    failures.push(...releaseReadinessSchema.errors.map((error) => `release_readiness_schema_invalid:${error}`));
+  }
   if (releaseReadiness?.checks?.goalPolicyFileValidationPassed !== true) {
     failures.push("release_goal_policy_file_validation_not_passed");
   }
@@ -432,6 +438,8 @@ async function main() {
   }
   if (stagePromotion?.pass !== true) {
     failures.push("stage_promotion_readiness_failed");
+  } else if (!stagePromotionSchema.valid) {
+    failures.push(...stagePromotionSchema.errors.map((error) => `stage_promotion_schema_invalid:${error}`));
   } else {
     if (!stagePromotionGoalPolicySignals.mergeBundleReleaseReported) {
       failures.push("stage_promotion_merge_bundle_release_goal_policy_validation_not_reported");
@@ -566,11 +574,21 @@ async function main() {
       validationSummaryPassed: validationSummary?.gates?.passed === true,
       cutoverReadinessPassed: cutoverReadiness?.pass === true,
       releaseReadinessPassed: releaseReadiness?.pass === true,
+      releaseReadinessSchemaValid: releaseReadinessSchema.valid,
+      releaseReadinessSchemaErrors:
+        releaseReadinessSchema.valid || releaseReadinessSchema.errors.length === 0
+          ? null
+          : releaseReadinessSchema.errors,
       releaseGoalPolicyFileValidationPassed:
         releaseReadiness?.checks?.goalPolicyFileValidationPassed === true,
       releaseGoalPolicySourceConsistencyPassed:
         releaseReadiness?.checks?.goalPolicySourceConsistencyPassed === true,
       stagePromotionReadinessPassed: stagePromotion?.pass === true,
+      stagePromotionSchemaValid: stagePromotionSchema.valid,
+      stagePromotionSchemaErrors:
+        stagePromotionSchema.valid || stagePromotionSchema.errors.length === 0
+          ? null
+          : stagePromotionSchema.errors,
       stagePromotionMergeBundleGoalPolicyValidationReported:
         stagePromotionGoalPolicySignals.mergeBundleReleaseReported,
       stagePromotionMergeBundleGoalPolicyValidationPassed:

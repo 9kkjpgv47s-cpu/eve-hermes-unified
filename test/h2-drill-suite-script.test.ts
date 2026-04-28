@@ -419,7 +419,13 @@ describe("run-h2-drill-suite.mjs", () => {
           "90",
           "--allow-horizon-mismatch",
         ],
-        { timeoutMs: 60_000 },
+        {
+          timeoutMs: 60_000,
+          env: {
+            ...process.env,
+            UNIFIED_FORCE_MALFORMED_STAGE_DRILL_PAYLOADS: "1",
+          },
+        },
       );
       expect(result.code).toBe(0);
 
@@ -575,6 +581,71 @@ describe("run-h2-drill-suite.mjs", () => {
       };
       expect(payload.pass).toBe(false);
       expect(payload.suite.evidenceSelectionMode).toBe("latest");
+      expect(payload.failures).toContain("canary_drill_failed");
+    });
+  });
+
+  it("fails when latest stage-promotion execution artifact schema is malformed", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "h2-drill-suite.json");
+
+      await seedEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath);
+      await seedEnvFile(envPath);
+
+      const malformedPromotePath = path.join(
+        evidenceDir,
+        "stage-promotion-execution-99999999999999.json",
+      );
+      await writeFile(
+        malformedPromotePath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            checks: {},
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-h2-drill-suite.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--runtime-env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--allow-horizon-mismatch",
+          "--skip-majority",
+          "--skip-rollback-simulation",
+        ],
+        {
+          timeoutMs: 60_000,
+          env: {
+            ...process.env,
+            UNIFIED_FORCE_MALFORMED_CANARY_STAGE_DRILL: "1",
+          },
+        },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
       expect(payload.failures).toContain("canary_drill_failed");
     });
   });

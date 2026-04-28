@@ -622,6 +622,93 @@ export function validateRollbackThresholdCalibrationManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
+export function validateStagePromotionExecutionManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(errors, payload.stage && typeof payload.stage === "object", "stage must be an object");
+  pushError(errors, payload.files && typeof payload.files === "object", "files must be an object");
+  pushError(errors, payload.checks && typeof payload.checks === "object", "checks must be an object");
+  pushError(
+    errors,
+    payload.failures === undefined || Array.isArray(payload.failures),
+    "failures must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateAutoRollbackPolicyManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(errors, payload.decision && typeof payload.decision === "object", "decision must be an object");
+  if (payload.decision && typeof payload.decision === "object") {
+    pushError(
+      errors,
+      payload.decision.action === "hold" || payload.decision.action === "rollback",
+      "decision.action must be hold or rollback",
+    );
+  }
+  pushError(
+    errors,
+    isStringOrNullOrUndefined(payload.stage),
+    "stage must be string, null, or undefined",
+  );
+  pushError(errors, payload.checks && typeof payload.checks === "object", "checks must be an object");
+  pushError(
+    errors,
+    payload.reasons === undefined || Array.isArray(payload.reasons),
+    "reasons must be an array or undefined",
+  );
+  pushError(
+    errors,
+    payload.triggers === undefined || Array.isArray(payload.triggers),
+    "triggers must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateStageDrillManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(
+    errors,
+    isStringOrNullOrUndefined(payload.stage),
+    "stage must be string, null, or undefined",
+  );
+  pushError(errors, payload.decision && typeof payload.decision === "object", "decision must be an object");
+  if (payload.decision && typeof payload.decision === "object") {
+    pushError(
+      errors,
+      payload.decision.action === "hold" || payload.decision.action === "rollback",
+      "decision.action must be hold or rollback",
+    );
+  }
+  pushError(errors, payload.checks && typeof payload.checks === "object", "checks must be an object");
+  pushError(
+    errors,
+    payload.failures === undefined || Array.isArray(payload.failures),
+    "failures must be an array or undefined",
+  );
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateManifestSchema(type, payload) {
   if (type === "release-readiness") {
     return validateReleaseReadinessManifest(payload);
@@ -655,6 +742,15 @@ export function validateManifestSchema(type, payload) {
   }
   if (type === "rollback-threshold-calibration") {
     return validateRollbackThresholdCalibrationManifest(payload);
+  }
+  if (type === "stage-promotion-execution") {
+    return validateStagePromotionExecutionManifest(payload);
+  }
+  if (type === "auto-rollback-policy") {
+    return validateAutoRollbackPolicyManifest(payload);
+  }
+  if (type === "stage-drill") {
+    return validateStageDrillManifest(payload);
   }
   return { valid: false, errors: [`Unsupported manifest type: ${type}`] };
 }
@@ -709,6 +805,9 @@ async function listAllManifestTargets(evidenceDir) {
   const h2DrillSuiteTargets = [];
   const supervisedRollbackSimulationTargets = [];
   const rollbackThresholdCalibrationTargets = [];
+  const stagePromotionExecutionTargets = [];
+  const autoRollbackPolicyTargets = [];
+  const stageDrillTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -763,6 +862,21 @@ async function listAllManifestTargets(evidenceDir) {
         type: "rollback-threshold-calibration",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("stage-promotion-execution-") && entry.name.endsWith(".json")) {
+      stagePromotionExecutionTargets.push({
+        type: "stage-promotion-execution",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("auto-rollback-policy-") && entry.name.endsWith(".json")) {
+      autoRollbackPolicyTargets.push({
+        type: "auto-rollback-policy",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("stage-drill-") && entry.name.endsWith(".json")) {
+      stageDrillTargets.push({
+        type: "stage-drill",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -775,6 +889,9 @@ async function listAllManifestTargets(evidenceDir) {
   h2DrillSuiteTargets.sort((a, b) => a.file.localeCompare(b.file));
   supervisedRollbackSimulationTargets.sort((a, b) => a.file.localeCompare(b.file));
   rollbackThresholdCalibrationTargets.sort((a, b) => a.file.localeCompare(b.file));
+  stagePromotionExecutionTargets.sort((a, b) => a.file.localeCompare(b.file));
+  autoRollbackPolicyTargets.sort((a, b) => a.file.localeCompare(b.file));
+  stageDrillTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -786,6 +903,9 @@ async function listAllManifestTargets(evidenceDir) {
     h2DrillSuiteTargets,
     supervisedRollbackSimulationTargets,
     rollbackThresholdCalibrationTargets,
+    stagePromotionExecutionTargets,
+    autoRollbackPolicyTargets,
+    stageDrillTargets,
   };
 }
 
@@ -803,7 +923,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-promotion|h2-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|all)",
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-promotion|h2-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|all)",
     );
   }
 
@@ -861,6 +981,19 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.stagePromotionExecutionTargets.length > 0
+            ? [
+                targetGroups.stagePromotionExecutionTargets[
+                  targetGroups.stagePromotionExecutionTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.autoRollbackPolicyTargets.length > 0
+            ? [targetGroups.autoRollbackPolicyTargets[targetGroups.autoRollbackPolicyTargets.length - 1]]
+            : []),
+          ...(targetGroups.stageDrillTargets.length > 0
+            ? [targetGroups.stageDrillTargets[targetGroups.stageDrillTargets.length - 1]]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -873,6 +1006,9 @@ async function main() {
           ...targetGroups.h2DrillSuiteTargets,
           ...targetGroups.supervisedRollbackSimulationTargets,
           ...targetGroups.rollbackThresholdCalibrationTargets,
+          ...targetGroups.stagePromotionExecutionTargets,
+          ...targetGroups.autoRollbackPolicyTargets,
+          ...targetGroups.stageDrillTargets,
         ];
     const results = [];
     for (const target of targets) {

@@ -34,3 +34,5 @@ Unit tests use **`FakeLaneAdapter`** or **`LaneAdapter`** mocks. They must **not
 `scripts/regression-eve-primary.sh` optionally validates each per-case dispatch JSON via the same CLI when **`UNIFIED_REGRESSION_VALIDATE_DISPATCH_CONTRACT`** is not `0` (default: on).
 
 `scripts/verify-cutover-readiness.sh` validates each dispatch probe and the rollback probe the same way when **`UNIFIED_CUTOVER_READINESS_VALIDATE_DISPATCH_CONTRACT`** is not `0` (default: on).
+
+`scripts/failure-injection-smoke.sh` captures each case’s stdout as JSON and validates it with **`validate-dispatch-contracts.ts --file`** when **`UNIFIED_FAILURE_INJECTION_VALIDATE_DISPATCH_CONTRACT`** is not `0` (default: on).

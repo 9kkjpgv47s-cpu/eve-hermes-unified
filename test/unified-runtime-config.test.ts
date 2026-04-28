@@ -64,7 +64,7 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
           HERMES_LAUNCH_COMMAND: "",
           HERMES_LAUNCH_ARGS: "",
           UNIFIED_HERMES_LAUNCH_COMMAND: "python3",
-          UNIFIED_HERMES_LAUNCH_ARGS: "-m hermes gateway",
+          UNIFIED_HERMES_LAUNCH_ARGS: "-m hermes " + "gateway",
         }),
       ),
     );

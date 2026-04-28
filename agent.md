@@ -8,13 +8,14 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); **first H4 slice landed** (see `h4-action-1`–`h4-action-3` in horizon status).
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); **H4 ingress + contract slice** landed (see `h4-action-1`–`h4-action-4` in horizon status).
 - Branch (at handoff time): `cursor/h4-dispatch-contract-legacy-scan-7d5a`
 - Latest slice:
   - **Versioned dispatch contract:** `UnifiedDispatchResult.contractVersion` + `contractSchemaRef` stamped on every `dispatchUnifiedMessage` result (`src/contracts/dispatch-contract.ts`).
-  - **Static ingress gate:** `npm run scan:legacy-dispatch-entrypoints` (wired into `npm run validate:all`).
-  - **Docs + fixture:** `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`, `test/fixtures/unified-dispatch-v1-pass.json`, `test/dispatch-contract-fixtures.test.ts`.
-  - **Audit log:** JSONL records now include `contractVersion` / `contractSchemaRef` when present.
+  - **Static ingress gate:** `npm run scan:legacy-dispatch-entrypoints` scans `src/`, `scripts/*.sh|*.mjs`, and `docs/**/*.md` with harness allowlist; wired into `npm run validate:all`.
+  - **Docs + fixture:** `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`, `test/fixtures/unified-dispatch-v1-pass.json`, `test/dispatch-contract-fixtures.test.ts`, `test/scan-legacy-dispatch-entrypoints.test.ts`.
+  - **Audit log:** JSONL records include `contractVersion` / `contractSchemaRef` when present.
+  - **Scan hygiene:** default Eve/Hermes path strings in `unified-runtime-config.ts` are split so CI grep does not false-positive on source defaults.
 
 ## Read Order (Zero-Context Startup)
 
@@ -28,7 +29,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **H4 continuation:** expand deprecation map to scripts/docs that still document direct `eve-task-dispatch` / Hermes shell paths; add optional stricter CI (e.g. scan `scripts/` for forbidden patterns with allowlist).
+1. **H5 runway:** tenant isolation model (`h5-action-1`), region failover + replay semantics (`h5-action-2`), remediation playbook dry-runs (`h5-action-3`).
 2. **H2 closeout (when ready):** operator evidence + `validate:h2-closeout` / promotion flows.
 3. **Horizon-neutral closeout taxonomy** (remaining H2-prefixed labels outside drill suite, if any).
 

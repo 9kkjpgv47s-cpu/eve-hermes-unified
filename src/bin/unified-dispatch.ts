@@ -111,7 +111,7 @@ async function main() {
     text,
   });
   await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
 main().catch((error) => {

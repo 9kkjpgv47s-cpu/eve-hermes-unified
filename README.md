@@ -95,4 +95,6 @@ Run one unified-dispatch request with explicit message envelope:
 npm run dispatch -- --text "check project status" --chat-id 123 --message-id 456
 ```
 
+Dispatch stdout is **single-line JSON** so soak JSONL logs parse correctly for evidence gates.
+
 Key environment controls are in `.env.example`.

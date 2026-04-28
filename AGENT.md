@@ -8,8 +8,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: `H2` (`docs/HORIZON_STATUS.json`); **H4 first slice** in-repo (`h4-action-1`–`h4-action-3`): unified dispatch contract stamping + legacy ingress scan in `validate:all` (see `docs/H4_UNIFIED_DISPATCH_CONTRACT.md`).
-- Primary focus: H2 operationalization; extend H4 legacy-path retirement beyond `src/` when ready.
+- Horizon: `H2` (`docs/HORIZON_STATUS.json`); **H4 slice complete** in-repo (`h4-action-1`–`h4-action-4`): contract stamping, extended legacy scan (scripts/docs + allowlist), fixtures + scan tests, `validate:all` gate.
+- Primary focus: H2 operationalization; next horizon runway is **H5** (see `docs/HORIZON_STATUS.json` `h5-action-*`).
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -84,7 +84,7 @@ npm run verify:merge-bundle -- --evidence-dir evidence --latest
 3. Evidence freshness rules so stage drill reliably selects latest passing artifacts for all dependent gates.
 4. Runbook tightening for operator replay of canary/majority incidents.
 5. Extend closeout/promotion orchestration to horizon-generic operation (H3/H4) while preserving H2 command compatibility.
-6. **H4 next:** broaden legacy-path scan (scripts/docs allowlist), remove obsolete shims once parity is proven.
+6. **H5 next:** tenant isolation, region-aware failover/replay, bounded remediation playbooks (`h5-action-1`..`h5-action-3` in `docs/HORIZON_STATUS.json`).
 
 ## Done Signal for Each Iteration
 

@@ -137,6 +137,36 @@ function isFailureClassKnown(value) {
   );
 }
 
+function collectSoakDispatchRecords(raw) {
+  const scannerRecords = extractDispatchJsonRecords(raw).filter(isDispatchRecord);
+  const lineRecords = [];
+  for (const line of raw.split(/\r?\n/)) {
+    const rec = parseDispatchJsonFromLine(line);
+    if (rec) {
+      lineRecords.push(rec);
+    }
+  }
+  return lineRecords.length >= scannerRecords.length ? lineRecords : scannerRecords;
+}
+
+async function newestSoakDispatchFile(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const matches = entries
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.startsWith("soak-") &&
+        entry.name.endsWith(".jsonl") &&
+        !entry.name.startsWith("soak-summary"),
+    )
+    .map((entry) => path.join(dir, entry.name));
+  if (matches.length === 0) {
+    return null;
+  }
+  matches.sort();
+  return matches[matches.length - 1];
+}
+
 async function newestFileInDir(dir, prefix) {
   const entries = await readdir(dir, { withFileTypes: true });
   const matches = entries
@@ -151,7 +181,7 @@ async function newestFileInDir(dir, prefix) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const soakFile = await newestFileInDir(options.evidenceDir, "soak-");
+  const soakFile = await newestSoakDispatchFile(options.evidenceDir);
   const failureFile = await newestFileInDir(options.evidenceDir, "failure-injection-");
   if (!soakFile) {
     throw new Error("No soak report found.");
@@ -161,7 +191,7 @@ async function main() {
   }
 
   const soakRaw = await readFile(soakFile, "utf8");
-  const records = extractDispatchJsonRecords(soakRaw).filter(isDispatchRecord);
+  const records = collectSoakDispatchRecords(soakRaw).filter(isDispatchRecord);
 
   const total = records.length;
   let success = 0;

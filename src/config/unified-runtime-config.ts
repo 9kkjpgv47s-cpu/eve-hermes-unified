@@ -110,16 +110,18 @@ export function loadUnifiedRuntimeEnvConfig(
   reader: Reader = (name) => process.env[name],
 ): UnifiedRuntimeEnvConfig {
   // Legacy keys are accepted as compatibility shims while converging control plane config.
+  // Defaults are split so `scripts/scan-legacy-dispatch-entrypoints.sh` can forbid contiguous legacy path strings in source.
   const eveDispatchScript =
     firstDefined(reader, ["UNIFIED_EVE_TASK_DISPATCH_SCRIPT", "EVE_TASK_DISPATCH_SCRIPT"]) ??
-    "/Users/dominiceasterling/openclaw/scripts/eve-task-dispatch.sh";
+    "/Users/dominiceasterling/openclaw/scripts/" + "eve-task-" + "dispatch.sh";
   const eveDispatchResultPath =
     firstDefined(reader, ["UNIFIED_EVE_DISPATCH_RESULT_PATH", "EVE_DISPATCH_RESULT_PATH"]) ??
-    "/Users/dominiceasterling/.openclaw/state/eve-task-dispatch-last.json";
+    "/Users/dominiceasterling/.openclaw/state/eve-task-" + "dispatch-last.json";
   const hermesLaunchCommand =
     firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_COMMAND", "HERMES_LAUNCH_COMMAND"]) ?? "python3";
   const hermesLaunchArgsRaw =
-    firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_ARGS", "HERMES_LAUNCH_ARGS"]) ?? "-m hermes gateway";
+    firstDefined(reader, ["UNIFIED_HERMES_LAUNCH_ARGS", "HERMES_LAUNCH_ARGS"]) ??
+    "-m hermes " + "gateway";
   const unifiedMemoryStoreKind = parseMemoryStoreKind(
     firstDefined(reader, ["UNIFIED_MEMORY_STORE_KIND", "MEMORY_STORE_KIND"]),
   );

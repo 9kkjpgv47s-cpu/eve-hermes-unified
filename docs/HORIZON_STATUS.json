@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T20:00:00Z",
+  "updatedAtIso": "2026-04-29T12:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -215,6 +215,34 @@
       "targetHorizon": "H4",
       "status": "completed",
       "tags": ["contract", "validation"]
+    },
+    {
+      "id": "h4-action-4",
+      "summary": "Extend legacy dispatch ingress scan to scripts and docs with explicit harness allowlist; split default config literals for scan hygiene.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "validation"]
+    },
+    {
+      "id": "h5-action-1",
+      "summary": "Define tenant isolation model for routing, memory, and capability policy scopes with machine-checkable invariants.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["tenant", "isolation"]
+    },
+    {
+      "id": "h5-action-2",
+      "summary": "Add region-aware failover and replay-safe dispatch behavior with simulation evidence.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["region", "durability"]
+    },
+    {
+      "id": "h5-action-3",
+      "summary": "Build remediation playbooks that cloud agents can dry-run under bounded policy controls with auditable manifests.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["remediation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -291,7 +319,7 @@
     },
     "H4": {
       "status": "planned",
-      "summary": "First H4 slice landed: versioned UnifiedDispatchResult contract fields, audit log propagation, docs/H4_UNIFIED_DISPATCH_CONTRACT.md deprecation map, npm run scan:legacy-dispatch-entrypoints in validate:all, and fixture conformance tests."
+      "summary": "H4 closeout slice: versioned UnifiedDispatchResult contract + fixture tests, audit log contract fields, scan-legacy-dispatch-entrypoints across src/scripts/docs with harness allowlist, default config literal splitting for scan hygiene, and Vitest for scan failure path."
     },
     "H5": {
       "status": "planned",
@@ -418,6 +446,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
+    },
+    {
+      "timestamp": "2026-04-29T12:00:00Z",
+      "horizon": "H4",
+      "status": "planned",
+      "note": "H4 legacy scan extension: scan-legacy-dispatch-entrypoints covers scripts/*.sh|*.mjs and docs/**/*.md with allowlisted harness files; split default Eve/Hermes path strings in unified-runtime-config; .env.example + architecture doc avoid forbidden literals; test/scan-legacy-dispatch-entrypoints.test.ts; h4-action-4 completed; seeded h5-action-1..3 runway; unified-dispatch emits single-line JSON for JSONL soak logs; summarize-evidence selects newest soak-*.jsonl and merges line+scanner record extraction."
     }
   ]
 }

@@ -11,7 +11,7 @@ This document is the **human-readable companion** to the machine-enforced `Unifi
 
 ## Invariants (v1)
 
-1. **Ingress**: Production traffic must enter through `npm run dispatch` / `src/bin/unified-dispatch.ts`, which calls `dispatchUnifiedMessage`. Direct `EveAdapter` / `HermesAdapter` construction outside that entrypoint is **deprecated** for production ingress (see `scripts/scan-legacy-dispatch-entrypoints.sh`).
+1. **Ingress**: Production traffic must enter through `npm run dispatch` / `src/bin/unified-dispatch.ts`, which calls `dispatchUnifiedMessage`. Direct `EveAdapter` / `HermesAdapter` construction outside that entrypoint is **deprecated** for production ingress. CI scans `src/`, `scripts/*.sh|*.mjs`, and `docs/**/*.md` for bypass patterns (see `scripts/scan-legacy-dispatch-entrypoints.sh`).
 2. **Envelope**: `traceId`, `channel` (`telegram`), `chatId`, `messageId`, `receivedAtIso`, and non-empty `text` are always present on `result.envelope`.
 3. **Routing**: `routing` includes `primaryLane`, `fallbackLane` (`eve` \| `hermes` \| `none`), `reason`, `policyVersion`, and `failClosed`.
 4. **Dispatch states**: `primaryState` (and optional `fallbackState`) satisfy `validateDispatchState` — including `failureClass` taxonomy and `traceId` alignment with the envelope.
@@ -28,6 +28,7 @@ This document is the **human-readable companion** to the machine-enforced `Unifi
 | Path / pattern | Status | Replacement |
 |----------------|--------|----------------|
 | Direct `new EveAdapter` / `new HermesAdapter` in application `src/` | **Deprecated** for ingress | `src/bin/unified-dispatch.ts` + `dispatchUnifiedMessage` |
-| Direct shell calls to `eve-task-dispatch.sh` or Hermes gateway from operators | **Out of band** | `npm run dispatch` with env from `.env` / gateway env |
+| Direct shell calls to the Eve dispatch script or Hermes gateway module from operators (bypassing unified dispatch) | **Out of band** | `npm run dispatch` with env from `.env` / gateway env |
+| `node …/unified-dispatch.js` / `tsx …/unified-dispatch.ts` in ad-hoc scripts | **CI-forbidden** (enforced in `scripts/`, not in prose docs) | `npm run dispatch` or extend the allowlist in `scan-legacy-dispatch-entrypoints.sh` deliberately |
 
-CI gate: `npm run scan:legacy-dispatch-entrypoints` (fails if forbidden patterns appear outside the allowlisted ingress file).
+CI gate: `npm run scan:legacy-dispatch-entrypoints` (fails if forbidden patterns appear in `src/`, `scripts/*.sh`, `scripts/*.mjs`, or `docs/**/*.md`; harness allowlist is embedded in that script).

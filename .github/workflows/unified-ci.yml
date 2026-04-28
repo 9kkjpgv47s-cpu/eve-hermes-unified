@@ -75,6 +75,9 @@ jobs:
       - name: Validate manifest schemas
         run: npm run validate:manifest-schemas
 
+      - name: H4 closeout evidence bundle
+        run: npm run bundle:h4-closeout-evidence
+
       - name: Verify merge bundle package
         run: npm run verify:merge-bundle
 

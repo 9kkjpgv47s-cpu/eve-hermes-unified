@@ -471,6 +471,52 @@ describe("dispatchUnifiedMessage", () => {
     expect(hermes.lastSignal).toBeUndefined();
   });
 
+  it("resolves tenant from metadata.tenantId when envelope.tenantId is absent", async () => {
+    const eve = new FakeLaneAdapter("eve", {
+      status: "pass",
+      reason: "ok",
+      runtimeUsed: "eve",
+      runId: "r1",
+      elapsedMs: 1,
+      failureClass: "none",
+      sourceLane: "eve",
+      sourceChatId: "1",
+      sourceMessageId: "2",
+      traceId: "t1",
+    });
+
+    const result = await dispatchUnifiedMessage(
+      {
+        eveAdapter: eve,
+        hermesAdapter: new FakeLaneAdapter("hermes", {
+          status: "pass",
+          reason: "ok",
+          runtimeUsed: "hermes",
+          runId: "r2",
+          elapsedMs: 1,
+          failureClass: "none",
+          sourceLane: "hermes",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t2",
+        }),
+        routerConfig: baseRouterConfig(),
+        tenantStrict: true,
+      },
+      {
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "hello",
+        metadata: { tenantId: "meta-tenant" },
+      },
+    );
+
+    expect(result.primaryState.reason).toBe("ok");
+    expect(eve.lastEnvelope?.tenantId).toBeUndefined();
+    expect(eve.lastEnvelope?.metadata?.tenantId).toBe("meta-tenant");
+  });
+
   it("fails closed when tenantStrict and tenant id missing", async () => {
     const runtime = {
       eveAdapter: new FakeLaneAdapter("eve", {

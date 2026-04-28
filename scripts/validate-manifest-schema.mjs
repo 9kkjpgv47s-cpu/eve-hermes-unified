@@ -258,6 +258,101 @@ export function validateEmergencyRollbackBundleManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
+export function validateH4CloseoutEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.schemaVersion === "v1", "schemaVersion must be exactly v1");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(errors, payload.horizon === "H4", "horizon must be exactly H4");
+  pushError(errors, isNonEmptyString(payload.summary), "summary must be non-empty string");
+  const commands = payload.commands;
+  pushError(errors, commands && typeof commands === "object", "commands must be an object");
+  if (commands && typeof commands === "object") {
+    for (const key of ["dispatchFixtureTests", "memoryAuditReport"]) {
+      const c = commands[key];
+      pushError(errors, c && typeof c === "object", `commands.${key} must be an object`);
+      if (c && typeof c === "object") {
+        pushError(errors, isNonEmptyString(c.command), `commands.${key}.command required`);
+        pushError(
+          errors,
+          typeof c.exitCode === "number" && Number.isFinite(c.exitCode),
+          `commands.${key}.exitCode must be a finite number`,
+        );
+        pushError(errors, typeof c.pass === "boolean", `commands.${key}.pass must be boolean`);
+      }
+    }
+  }
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(
+      errors,
+      typeof checks.dispatchFixtureConformancePass === "boolean",
+      "checks.dispatchFixtureConformancePass must be boolean",
+    );
+    pushError(
+      errors,
+      typeof checks.memoryAuditReportPass === "boolean",
+      "checks.memoryAuditReportPass must be boolean",
+    );
+    pushError(
+      errors,
+      checks.emergencyRollbackBundleSchemaPass === undefined
+        || checks.emergencyRollbackBundleSchemaPass === null
+        || typeof checks.emergencyRollbackBundleSchemaPass === "boolean",
+      "checks.emergencyRollbackBundleSchemaPass must be boolean, null, or undefined",
+    );
+  }
+  const artifacts = payload.artifacts;
+  pushError(errors, artifacts && typeof artifacts === "object", "artifacts must be an object");
+  if (artifacts && typeof artifacts === "object") {
+    const mem = artifacts.memoryAuditReport;
+    if (mem !== null && mem !== undefined) {
+      pushError(errors, mem && typeof mem === "object", "artifacts.memoryAuditReport must be object or null");
+      if (mem && typeof mem === "object") {
+        pushError(
+          errors,
+          typeof mem.schemaVersion === "number" && mem.schemaVersion === 1,
+          "artifacts.memoryAuditReport.schemaVersion must be 1",
+        );
+        pushError(errors, typeof mem.pass === "boolean", "artifacts.memoryAuditReport.pass must be boolean");
+        if (payload.pass === true) {
+          const mc = mem.checks;
+          pushError(errors, mc && typeof mc === "object", "artifacts.memoryAuditReport.checks must be object");
+          if (mc && typeof mc === "object") {
+            pushError(
+              errors,
+              mc.crossLaneInvariantPass === true,
+              "artifacts.memoryAuditReport.checks.crossLaneInvariantPass must be true",
+            );
+            pushError(
+              errors,
+              mc.walReplayInvariantPass === true,
+              "artifacts.memoryAuditReport.checks.walReplayInvariantPass must be true",
+            );
+          }
+        }
+      }
+    }
+  }
+  if (payload.pass === true) {
+    if (!checks || typeof checks !== "object") {
+      pushError(errors, false, "checks required when pass is true");
+    } else {
+      pushError(errors, checks.dispatchFixtureConformancePass === true, "dispatch fixture conformance must pass");
+      pushError(errors, checks.memoryAuditReportPass === true, "memory audit report must pass");
+      if (checks.emergencyRollbackBundleSchemaPass === false) {
+        pushError(errors, false, "emergency rollback bundle schema must pass when present");
+      }
+    }
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateMergeBundleManifest(payload) {
   const errors = [];
   pushError(errors, payload && typeof payload === "object", "payload must be an object");
@@ -1322,6 +1417,9 @@ export function validateManifestSchema(type, payload) {
   if (type === "emergency-rollback-bundle") {
     return validateEmergencyRollbackBundleManifest(payload);
   }
+  if (type === "h4-closeout-evidence") {
+    return validateH4CloseoutEvidenceManifest(payload);
+  }
   if (type === "merge-bundle") {
     return validateMergeBundleManifest(payload);
   }
@@ -1474,6 +1572,7 @@ async function listAllManifestTargets(evidenceDir) {
   const routerTelemetryJsonlTargets = [];
   const dispatchQueueJournalJsonlTargets = [];
   const emergencyRollbackBundleTargets = [];
+  const h4CloseoutEvidenceTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1564,6 +1663,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "emergency-rollback-bundle",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("h4-closeout-evidence-") && entry.name.endsWith(".json")) {
+      h4CloseoutEvidenceTargets.push({
+        type: "h4-closeout-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
     } else if (entry.name.startsWith("unified-dispatch-audit-") && entry.name.endsWith(".jsonl")) {
       dispatchAuditJsonlTargets.push({
         type: "unified-dispatch-audit-jsonl",
@@ -1606,6 +1710,7 @@ async function listAllManifestTargets(evidenceDir) {
   routerTelemetryJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   dispatchQueueJournalJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   emergencyRollbackBundleTargets.sort((a, b) => a.file.localeCompare(b.file));
+  h4CloseoutEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1627,6 +1732,7 @@ async function listAllManifestTargets(evidenceDir) {
     routerTelemetryJsonlTargets,
     dispatchQueueJournalJsonlTargets,
     emergencyRollbackBundleTargets,
+    h4CloseoutEvidenceTargets,
   };
 }
 
@@ -1644,7 +1750,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|emergency-rollback-bundle|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
+      "Missing --type (release-readiness|emergency-rollback-bundle|h4-closeout-evidence|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
     );
   }
 
@@ -1764,6 +1870,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.h4CloseoutEvidenceTargets.length > 0
+            ? [
+                targetGroups.h4CloseoutEvidenceTargets[
+                  targetGroups.h4CloseoutEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1786,6 +1899,7 @@ async function main() {
           ...targetGroups.routerTelemetryJsonlTargets,
           ...targetGroups.dispatchQueueJournalJsonlTargets,
           ...targetGroups.emergencyRollbackBundleTargets,
+          ...targetGroups.h4CloseoutEvidenceTargets,
         ];
     const results = [];
     for (const target of targets) {

@@ -848,6 +848,69 @@ describe("validate-manifest-schema.mjs", () => {
     });
   });
 
+  it("passes for valid h4-closeout-evidence manifest", async () => {
+    await withTempDir(async (dir) => {
+      const memPath = path.join(dir, "memory-audit-report.json");
+      await writeFile(
+        memPath,
+        JSON.stringify(
+          {
+            schemaVersion: 1,
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            checks: { crossLaneInvariantPass: true, walReplayInvariantPass: true },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      const manifestPath = path.join(dir, "h4-closeout-evidence-20260429-000000.json");
+      await writeFile(
+        manifestPath,
+        JSON.stringify(
+          {
+            schemaVersion: "v1",
+            generatedAtIso: new Date().toISOString(),
+            horizon: "H4",
+            summary: "fixture",
+            pass: true,
+            commands: {
+              dispatchFixtureTests: {
+                command: "npx vitest run test/dispatch-conformance-fixtures.test.ts",
+                exitCode: 0,
+                pass: true,
+              },
+              memoryAuditReport: {
+                command: "npx tsx src/bin/memory-audit-report.ts",
+                exitCode: 0,
+                pass: true,
+              },
+            },
+            artifacts: {
+              memoryAuditReportPath: memPath,
+              memoryAuditReport: JSON.parse(await readFile(memPath, "utf8")),
+              emergencyRollbackBundlePath: null,
+            },
+            checks: {
+              dispatchFixtureConformancePass: true,
+              memoryAuditReportPass: true,
+              emergencyRollbackBundleSchemaPass: null,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-manifest-schema.mjs", "--type", "h4-closeout-evidence", "--file", manifestPath],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
   it("passes for valid stage-drill and auto-rollback-policy manifests", async () => {
     await withTempDir(async (dir) => {
       const stageDrillPath = path.join(dir, "stage-drill-canary-20260426-000000.json");

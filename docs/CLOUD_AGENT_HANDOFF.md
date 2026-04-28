@@ -107,6 +107,8 @@ Optional crash recovery for file-backed unified memory:
 
 - **Inventory:** `docs/H4_DIRECT_LANE_INVOCATION_INVENTORY.md` — canonical production path is **`src/bin/unified-dispatch.ts`** constructing **`EveAdapter` / `HermesAdapter`** and calling **`dispatchUnifiedMessage`**; no other `src/` constructors for those adapters.
 - **Conformance:** `fixtures/dispatch/*.json` use **`dispatchFixtureSchemaVersion`** (align with **`DISPATCH_FIXTURE_SCHEMA_VERSION`** in `src/contracts/dispatch-fixture-version.ts`). **`test/dispatch-conformance-fixtures.test.ts`** runs **`dispatchUnifiedMessage`** against fixtures.
+- **Memory audit:** `docs/H4_UNIFIED_MEMORY_AUDIT.md`; probe **`npx tsx src/bin/memory-audit-report.ts`** (JSON with **`checks.crossLaneInvariantPass`** / **`checks.walReplayInvariantPass`**).
+- **Closeout evidence bundle:** **`npm run bundle:h4-closeout-evidence`** (alias **`npm run verify:h4-closeout-evidence`**) writes **`evidence/h4-closeout-evidence-*.json`** (dispatch fixture Vitest run + memory audit; if **`evidence/emergency-rollback-bundle-*.json`** exists, its schema must validate). Validate: **`node scripts/validate-manifest-schema.mjs --type h4-closeout-evidence --file <path>`**. **`validate-horizon-closeout.mjs`** recognizes **`npm run verify:h4-closeout-evidence`** for **`requiredEvidence`** row **`h4-closeout-evidence`** (see **`docs/HORIZON_STATUS.json`**, **`horizons: ["H4"]`**).
 
 ## Horizon-neutral failure id inventory (orchestration scripts)
 

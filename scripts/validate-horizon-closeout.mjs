@@ -291,6 +291,9 @@ function commandVerificationType(command) {
   if (command === "npm run validate:cutover-readiness") {
     return "pass-only";
   }
+  if (command === "npm run verify:h4-closeout-evidence") {
+    return "h4-closeout-evidence";
+  }
   if (command === "npm run run:h2-drill-suite") {
     return "h2-drill-suite";
   }
@@ -876,6 +879,26 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
       checks.push("supervised_rollback_stage_goal_policy_source_consistency_not_reported");
     } else if (!stageDrillSourceConsistencyPropagation.pass) {
       checks.push("supervised_rollback_stage_goal_policy_source_consistency_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h4-closeout-evidence") {
+    const schema = validateManifestSchema("h4-closeout-evidence", payload);
+    const checks = [];
+    if (!schema.valid) {
+      checks.push(...schema.errors.map((error) => `h4_closeout_evidence_schema_invalid:${error}`));
+    }
+    if (payload.pass !== true) {
+      checks.push("h4_closeout_evidence_not_passed");
+    }
+    if (payload?.checks?.dispatchFixtureConformancePass !== true) {
+      checks.push("h4_closeout_dispatch_fixture_conformance_not_passed");
+    }
+    if (payload?.checks?.memoryAuditReportPass !== true) {
+      checks.push("h4_closeout_memory_audit_not_passed");
+    }
+    if (payload?.checks?.emergencyRollbackBundleSchemaPass === false) {
+      checks.push("h4_closeout_emergency_rollback_bundle_schema_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }

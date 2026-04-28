@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T23:45:00Z",
+  "updatedAtIso": "2026-04-29T12:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -54,6 +54,13 @@
       "command": "npm run validate:evidence-summary",
       "artifactPattern": "evidence/validation-summary-*.json",
       "required": true
+    },
+    {
+      "id": "h4-closeout-evidence",
+      "command": "npm run verify:h4-closeout-evidence",
+      "artifactPattern": "evidence/h4-closeout-evidence-*.json",
+      "required": true,
+      "horizons": ["H4"]
     }
   ],
   "nextActions": [
@@ -213,28 +220,28 @@
       "id": "h4-action-3",
       "summary": "Add H5 runway actions for progressive H4->H5 promotion gates (autonomous ops + scale envelope).",
       "targetHorizon": "H4",
-      "status": "planned",
+      "status": "completed",
       "tags": ["planning", "horizon-runway", "rollback"]
     },
     {
       "id": "h4-action-4",
       "summary": "Define H4 closeout evidence requirements (legacy path audit + fixture conformance in CI) and wire validate:h4-closeout checks.",
       "targetHorizon": "H4",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "contract"]
     },
     {
       "id": "h4-action-5",
       "summary": "Extend H4 capability contract checks (tenant scope, policy denials) beyond fixture lane-only paths.",
       "targetHorizon": "H4",
-      "status": "planned",
+      "status": "completed",
       "tags": ["capability", "contract"]
     },
     {
       "id": "h4-action-6",
       "summary": "Audit unified memory surfaces for H4 legacy retirement (cross-lane keys, WAL replay invariants).",
       "targetHorizon": "H4",
-      "status": "planned",
+      "status": "completed",
       "tags": ["memory", "durability", "validation"]
     },
     {
@@ -271,6 +278,20 @@
       "targetHorizon": "H5",
       "status": "planned",
       "tags": ["validation", "rollback"]
+    },
+    {
+      "id": "h5-action-6",
+      "summary": "Define H6 runway: post-scale autonomous verification gates and deprecation of shadow-only paths.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "planning"]
+    },
+    {
+      "id": "h5-action-7",
+      "summary": "Add evidence automation for H5 SLO regression baselines against soak and failure-injection artifacts.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "durability"]
     }
   ],
   "goalPolicies": {
@@ -492,6 +513,12 @@
       "horizon": "H4",
       "status": "planned",
       "note": "Completed h4-action-1: docs/H4_DIRECT_LANE_INVOCATION_INVENTORY.md. Completed h4-action-2: fixtures/dispatch/*.json + DISPATCH_FIXTURE_SCHEMA_VERSION + dispatch-conformance-fixtures.test.ts."
+    },
+    {
+      "timestamp": "2026-04-29T12:00:00Z",
+      "horizon": "H4",
+      "status": "planned",
+      "note": "Completed h4-action-3..6: H5 runway rows (h5-action-6/7), h4-closeout-evidence bundle + validate:h4-closeout wiring, memory-audit-report.ts, tenant-metadata contract test, docs/H4_UNIFIED_MEMORY_AUDIT.md and docs/H5_AUTONOMOUS_OPS_ENVELOPE.md."
     }
   ]
 }

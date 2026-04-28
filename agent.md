@@ -17,7 +17,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 1. **Capability policy audit JSONL** — denials + optional startup fingerprint; **`validate-manifest-schema`** gate **`capability-policy-audit-jsonl`**.
 2. **Policy audit rotation** — **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_*`**; shared **`maybeRotateJsonlLogInPlace`** with dispatch audit.
-3. **Router fallback hardening** — **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** skips fallback lane on selected primary **`failureClass`** when **`failClosed=0`**.
+3. **Router fallback hardening** — **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** skips fallback lane on selected primary **`failureClass`** when **`failClosed=0`**; **`fallbackInfo`** carries **`primaryFailureClass`** + **`noFallbackOnPrimaryFailureClasses`** into dispatch audit JSONL.
+4. **Failure id inventory** — documented dual-report coverage in **`docs/CLOUD_AGENT_HANDOFF.md`** (`validate-horizon-closeout`, `promote-horizon`, `run-h2-closeout`, `run-h2-promotion`).
 
 ## Read Order (Zero-Context Startup)
 
@@ -30,8 +31,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Horizon-neutral failure taxonomy** — inventory remaining scripts that emit H2-only failure ids without H2+ dual-report aliases (orchestration naming `h2-*` is intentional for backward compat where dual-report already exists).
-2. **Router telemetry** — optional structured log / audit field when no-fallback-on-class triggers (for operator dashboards).
+1. **Horizon-neutral failure taxonomy** — sweep any new orchestration scripts for H2-only ids; current inventory is in **`docs/CLOUD_AGENT_HANDOFF.md`**.
+2. **Router telemetry** — extend with optional dedicated JSONL or metrics sink if operators need cardinality outside dispatch audit.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

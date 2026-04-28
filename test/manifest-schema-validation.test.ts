@@ -533,6 +533,131 @@ describe("validate-manifest-schema.mjs", () => {
     });
   });
 
+  it("passes for dispatch audit with no-fallback router telemetry on fallbackInfo", async () => {
+    await withTempDir(async (dir) => {
+      const auditPath = path.join(dir, "unified-dispatch-audit-router-tel.jsonl");
+      const line = {
+        auditSchemaVersion: 2,
+        recordedAtIso: new Date().toISOString(),
+        traceId: "t-router-tel",
+        chatId: "1",
+        messageId: "2",
+        tenantId: null,
+        routing: {
+          primaryLane: "eve",
+          fallbackLane: "hermes",
+          reason: "default_policy_lane",
+          policyVersion: "v1",
+          failClosed: false,
+        },
+        primaryState: {
+          status: "failed",
+          reason: "blocked",
+          runtimeUsed: "eve",
+          runId: "r1",
+          elapsedMs: 1,
+          failureClass: "policy_failure",
+          sourceLane: "eve",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t-router-tel",
+        },
+        fallbackInfo: {
+          attempted: false,
+          reason: "no_fallback_for_primary_failure_class",
+          fromLane: "eve",
+          toLane: "hermes",
+          primaryFailureClass: "policy_failure",
+          noFallbackOnPrimaryFailureClasses: ["policy_failure", "state_unavailable"],
+        },
+        response: {
+          consumed: true,
+          responseText: "fail",
+          failureClass: "policy_failure",
+          laneUsed: "eve",
+          traceId: "t-router-tel",
+        },
+      };
+      await writeFile(auditPath, `${JSON.stringify(line)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "unified-dispatch-audit-jsonl",
+          "--file",
+          auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
+  it("fails dispatch audit validation when fallbackInfo.primaryFailureClass is invalid", async () => {
+    await withTempDir(async (dir) => {
+      const auditPath = path.join(dir, "unified-dispatch-audit-bad-fallback.jsonl");
+      const line = {
+        auditSchemaVersion: 2,
+        recordedAtIso: new Date().toISOString(),
+        traceId: "t-bad-fb",
+        chatId: "1",
+        messageId: "2",
+        tenantId: null,
+        routing: {
+          primaryLane: "eve",
+          fallbackLane: "hermes",
+          reason: "default_policy_lane",
+          policyVersion: "v1",
+          failClosed: false,
+        },
+        primaryState: {
+          status: "failed",
+          reason: "blocked",
+          runtimeUsed: "eve",
+          runId: "r1",
+          elapsedMs: 1,
+          failureClass: "policy_failure",
+          sourceLane: "eve",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t-bad-fb",
+        },
+        fallbackInfo: {
+          attempted: false,
+          reason: "no_fallback_for_primary_failure_class",
+          fromLane: "eve",
+          toLane: "hermes",
+          primaryFailureClass: "not_a_class",
+          noFallbackOnPrimaryFailureClasses: ["policy_failure"],
+        },
+        response: {
+          consumed: true,
+          responseText: "fail",
+          failureClass: "policy_failure",
+          laneUsed: "eve",
+          traceId: "t-bad-fb",
+        },
+      };
+      await writeFile(auditPath, `${JSON.stringify(line)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "unified-dispatch-audit-jsonl",
+          "--file",
+          auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain("primaryFailureClass invalid");
+    });
+  });
+
   it("passes for valid capability-policy-audit jsonl", async () => {
     await withTempDir(async (dir) => {
       const fp = "a".repeat(64);

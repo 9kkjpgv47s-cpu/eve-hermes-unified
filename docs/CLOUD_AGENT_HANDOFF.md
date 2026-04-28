@@ -56,6 +56,7 @@ Optional crash recovery for file-backed unified memory:
 ## Dispatch audit JSONL (schema)
 
 - Each append includes **`auditSchemaVersion`** (see `src/contracts/dispatch-audit-version.ts`; current **v2** adds optional provenance field **`tenantId`** as `null` or a normalized tenant string, omitted in v1 lines). Bump the constant when changing the record shape.
+- **`fallbackInfo`** may include router telemetry when fallback is skipped by policy: **`primaryFailureClass`** and **`noFallbackOnPrimaryFailureClasses`** (same **`auditSchemaVersion`**; manifest validator accepts these optional fields).
 - Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>` (accepts **v1** and **v2** lines; v2 requires **`tenantId`** key present as `null` or string).
 - Capability policy audit: `node scripts/validate-manifest-schema.mjs --type capability-policy-audit-jsonl --file <path>` (expects `evidence/capability-policy-audit-*.jsonl` naming for `--type all` sweep).
 - `npm run validate:manifest-schemas` includes `evidence/unified-dispatch-audit-*.jsonl` and `evidence/capability-policy-audit-*.jsonl` when present.
@@ -75,7 +76,14 @@ Optional crash recovery for file-backed unified memory:
 
 ## Router fallback hardening (H3 policy maturity)
 
-- **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** — comma-separated **`FailureClass`** values (`policy_failure`, `state_unavailable`, `dispatch_failure`, `provider_limit`, `cooldown`, never `none`). When the primary lane returns **`failed`** with a class in this set, unified dispatch **does not invoke the fallback lane** even if **`UNIFIED_ROUTER_FAIL_CLOSED=0`**; **`fallbackInfo.attempted`** is **`false`** and **`fallbackInfo.reason`** is **`no_fallback_for_primary_failure_class`**.
+- **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** — comma-separated **`FailureClass`** values (`policy_failure`, `state_unavailable`, `dispatch_failure`, `provider_limit`, `cooldown`, never `none`). When the primary lane returns **`failed`** with a class in this set, unified dispatch **does not invoke the fallback lane** even if **`UNIFIED_ROUTER_FAIL_CLOSED=0`**; **`fallbackInfo.attempted`** is **`false`**, **`fallbackInfo.reason`** is **`no_fallback_for_primary_failure_class`**, and **`fallbackInfo`** includes **`primaryFailureClass`** plus a snapshot array **`noFallbackOnPrimaryFailureClasses`** for dashboards and dispatch-audit JSONL.
+
+## Horizon-neutral failure id inventory (orchestration scripts)
+
+- **`validate-horizon-closeout.mjs`** — dual-reports **`horizon_drill_*`** alongside legacy **`h2_drill_*`**; appends **`h2_closeout_run_*` / `h2_promotion_run_*`** aliases via **`appendH2CompatFailureAliases`** for closeout/promotion run checks.
+- **`promote-horizon.mjs`** — **`appendCloseoutRunFailureCompat`** adds **`closeout_run_h2_*`** when the canonical id starts with **`closeout_run_horizon_`** and source horizon is H2 or later.
+- **`run-h2-closeout.mjs`** — **`horizon_closeout_gate_failed`** plus **`h2_closeout_gate_failed`** when **`--horizon`** is H2 or later.
+- **`run-h2-promotion.mjs`** — **`closeoutRunFailureCodes`** emits **`horizon_closeout_run_<detail>`** plus **`h2_closeout_run_<detail>`** when the two differ (H2 source uses legacy id as scoped form).
 
 ## Tenant isolation (dispatch + capability memory)
 

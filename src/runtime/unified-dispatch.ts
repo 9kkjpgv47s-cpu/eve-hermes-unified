@@ -271,6 +271,8 @@ export async function dispatchUnifiedMessage(
           reason: "no_fallback_for_primary_failure_class",
           fromLane: primaryState.sourceLane,
           toLane,
+          primaryFailureClass: primaryState.failureClass,
+          noFallbackOnPrimaryFailureClasses: [...noFallbackClasses],
         },
       });
     }

@@ -194,6 +194,11 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.fallbackState).toBeUndefined();
     expect(result.fallbackInfo?.attempted).toBe(false);
     expect(result.fallbackInfo?.reason).toBe("no_fallback_for_primary_failure_class");
+    expect(result.fallbackInfo?.primaryFailureClass).toBe("policy_failure");
+    expect(result.fallbackInfo?.noFallbackOnPrimaryFailureClasses).toEqual([
+      "policy_failure",
+      "state_unavailable",
+    ]);
   });
 
   it("stops on primary failure when failClosed=true", async () => {

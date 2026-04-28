@@ -941,6 +941,25 @@ export function validateUnifiedDispatchAuditJsonlLine(record, lineIndex) {
       pushError(errors, isNonEmptyString(fi.reason), `${prefix}: fallbackInfo.reason required`);
       pushError(errors, isLaneId(fi.fromLane), `${prefix}: fallbackInfo.fromLane invalid`);
       pushError(errors, isLaneId(fi.toLane), `${prefix}: fallbackInfo.toLane invalid`);
+      if (fi.primaryFailureClass !== undefined) {
+        pushError(errors, isFailureClass(fi.primaryFailureClass), `${prefix}: fallbackInfo.primaryFailureClass invalid`);
+      }
+      if (fi.noFallbackOnPrimaryFailureClasses !== undefined) {
+        pushError(
+          errors,
+          Array.isArray(fi.noFallbackOnPrimaryFailureClasses),
+          `${prefix}: fallbackInfo.noFallbackOnPrimaryFailureClasses must be an array when present`,
+        );
+        if (Array.isArray(fi.noFallbackOnPrimaryFailureClasses)) {
+          for (let i = 0; i < fi.noFallbackOnPrimaryFailureClasses.length; i += 1) {
+            pushError(
+              errors,
+              isFailureClass(fi.noFallbackOnPrimaryFailureClasses[i]),
+              `${prefix}: fallbackInfo.noFallbackOnPrimaryFailureClasses[${String(i)}] invalid`,
+            );
+          }
+        }
+      }
     }
   }
   if (record.capabilityDecision !== undefined && record.capabilityDecision !== null) {

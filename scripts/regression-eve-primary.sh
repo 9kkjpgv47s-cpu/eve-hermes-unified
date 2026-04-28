@@ -89,7 +89,7 @@ run_dispatch() {
     UNIFIED_HERMES_LAUNCH_ARGS= \
     HERMES_LAUNCH_ARGS= \
     "$@" \
-    "${dispatch_cmd[@]}" --text "$text" --chat-id "$chat_id" --message-id "$message_id" >"$output_path"
+    "${dispatch_cmd[@]}" --compact-json --text "$text" --chat-id "$chat_id" --message-id "$message_id" >"$output_path"
 }
 
 assert_dispatch() {
@@ -140,6 +140,12 @@ run_case() {
   if ! assert_dispatch "$name" "$output_path" "$expected_lane" "$expected_reason" "$expected_failure"; then
     failures+=("${name}:assertion_failed")
     return
+  fi
+  if [[ "${UNIFIED_REGRESSION_VALIDATE_DISPATCH_CONTRACT:-1}" != "0" ]]; then
+    if ! npx --no-install tsx "$ROOT_DIR/src/bin/validate-dispatch-contracts.ts" --file "$output_path" >/dev/null; then
+      failures+=("${name}:dispatch_contract_validation_failed")
+      return
+    fi
   fi
   case_records+=("$name")
 }

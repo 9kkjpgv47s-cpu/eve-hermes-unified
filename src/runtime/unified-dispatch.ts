@@ -11,6 +11,7 @@ import type {
   UnifiedMessageEnvelope,
   UnifiedResponse,
 } from "../contracts/types.js";
+import { UNIFIED_DISPATCH_CONTRACT_VERSION } from "../contracts/schema-version.js";
 import {
   validateCapabilityDecision,
   validateCapabilityExecutionResult,
@@ -102,6 +103,7 @@ function buildResult(
   }
 
   return {
+    contractVersion: UNIFIED_DISPATCH_CONTRACT_VERSION,
     envelope,
     routing,
     primaryState,

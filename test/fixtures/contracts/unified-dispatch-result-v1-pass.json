@@ -1,4 +1,5 @@
 {
+  "contractVersion": "v1",
   "envelope": {
     "traceId": "fixture-trace-v1",
     "channel": "telegram",

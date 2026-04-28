@@ -23,4 +23,6 @@ Runtime config still accepts legacy env aliases (for example `EVE_TASK_DISPATCH_
 
 ## Contract versioning
 
-`UnifiedDispatchResult` and related types are versioned as **`UNIFIED_DISPATCH_CONTRACT_VERSION`** in `src/contracts/schema-version.ts` (currently **`v1`**). Fixture files under `test/fixtures/contracts/` must validate with `validateUnifiedDispatchResult` for each supported revision.
+`UnifiedDispatchResult` and related types are versioned as **`UNIFIED_DISPATCH_CONTRACT_VERSION`** in `src/contracts/schema-version.ts` (currently **`v1`**). Every CLI and runtime result includes a top-level **`contractVersion`** field. Fixture files under `test/fixtures/contracts/` must validate with `validateUnifiedDispatchResult` for each supported revision.
+
+Run **`npm run validate:dispatch-contract`** (or `npx tsx src/bin/validate-dispatch-contracts.ts`) to validate fixtures; use **`--file <path>`** for captured JSON.

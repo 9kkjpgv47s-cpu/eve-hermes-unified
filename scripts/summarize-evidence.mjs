@@ -11,6 +11,8 @@ function parseArgs(argv) {
     maxP95LatencyMs: Number.NaN,
     maxMissingTraceRate: Number.NaN,
     maxUnclassifiedFailures: Number.NaN,
+    maxDispatchFailureRate: Number.NaN,
+    maxPolicyFailureRate: Number.NaN,
     requireFailureScenarios: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -33,6 +35,12 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === "--max-p95-latency-ms") {
       options.maxP95LatencyMs = Number(value);
+      i += 1;
+    } else if (arg === "--max-dispatch-failure-rate") {
+      options.maxDispatchFailureRate = Number(value);
+      i += 1;
+    } else if (arg === "--max-policy-failure-rate") {
+      options.maxPolicyFailureRate = Number(value);
       i += 1;
     } else if (arg === "--require-failure-scenarios") {
       options.requireFailureScenarios = true;
@@ -137,10 +145,15 @@ function isFailureClassKnown(value) {
   );
 }
 
-async function newestFileInDir(dir, prefix) {
+async function newestFileInDir(dir, prefix, suffix = "") {
   const entries = await readdir(dir, { withFileTypes: true });
   const matches = entries
-    .filter((entry) => entry.isFile() && entry.name.startsWith(prefix))
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.startsWith(prefix) &&
+        (suffix ? entry.name.endsWith(suffix) : true),
+    )
     .map((entry) => path.join(dir, entry.name));
   if (matches.length === 0) {
     return null;
@@ -151,7 +164,7 @@ async function newestFileInDir(dir, prefix) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const soakFile = await newestFileInDir(options.evidenceDir, "soak-");
+  const soakFile = await newestFileInDir(options.evidenceDir, "soak-", ".jsonl");
   const failureFile = await newestFileInDir(options.evidenceDir, "failure-injection-");
   if (!soakFile) {
     throw new Error("No soak report found.");
@@ -167,6 +180,14 @@ async function main() {
   let success = 0;
   let missingTrace = 0;
   let unclassifiedFailures = 0;
+  const failureClassCounts = {
+    none: 0,
+    provider_limit: 0,
+    cooldown: 0,
+    dispatch_failure: 0,
+    state_unavailable: 0,
+    policy_failure: 0,
+  };
   const elapsedValues = [];
   for (const record of records) {
     if (record?.response?.failureClass === "none") {
@@ -180,18 +201,31 @@ async function main() {
     if (!isFailureClassKnown(failureClass)) {
       unclassifiedFailures += 1;
     }
-    const elapsedCandidates = [record?.primaryState?.elapsedMs, record?.capabilityExecution?.elapsedMs, 0];
-    for (const candidate of elapsedCandidates) {
-      const elapsedMs = Number(candidate);
-      if (Number.isFinite(elapsedMs) && elapsedMs >= 0) {
-        elapsedValues.push(elapsedMs);
-        break;
-      }
+    if (typeof failureClass === "string" && Object.prototype.hasOwnProperty.call(failureClassCounts, failureClass)) {
+      failureClassCounts[failureClass] += 1;
+    }
+    const ms = record?.primaryState?.elapsedMs;
+    const capMs = record?.capabilityExecution?.elapsedMs;
+    const elapsedMs =
+      typeof ms === "number" && Number.isFinite(ms) && ms >= 0
+        ? ms
+        : typeof capMs === "number" && Number.isFinite(capMs) && capMs >= 0
+          ? capMs
+          : null;
+    if (elapsedMs !== null) {
+      elapsedValues.push(elapsedMs);
     }
   }
 
   const successRate = total > 0 ? success / total : 0;
   const missingTraceRate = total > 0 ? missingTrace / total : 1;
+  const rate = (n) => (total > 0 ? n / total : 0);
+  const failureClassRates = {};
+  for (const [k, v] of Object.entries(failureClassCounts)) {
+    failureClassRates[k] = rate(v);
+  }
+  const dispatchFailureRate = rate(failureClassCounts.dispatch_failure);
+  const policyFailureRate = rate(failureClassCounts.policy_failure);
   const sortedElapsed = [...elapsedValues].sort((a, b) => a - b);
   const p95Index = sortedElapsed.length === 0
     ? -1
@@ -209,12 +243,16 @@ async function main() {
       unclassifiedFailures,
       p95LatencyMs,
       failureScenarioPassCount: scenarioCoverage.covered,
+      dispatchFailureRate,
+      policyFailureRate,
     },
     {
       minSuccessRate: options.minSuccessRate,
       maxMissingTraceRate: options.maxMissingTraceRate,
       maxUnclassifiedFailures: options.maxUnclassifiedFailures,
       maxP95LatencyMs: options.maxP95LatencyMs,
+      maxDispatchFailureRate: options.maxDispatchFailureRate,
+      maxPolicyFailureRate: options.maxPolicyFailureRate,
       requireFailureScenarios: options.requireFailureScenarios,
     },
   );
@@ -235,6 +273,13 @@ async function main() {
       p95LatencyMs,
       latencySampleCount: elapsedValues.length,
       failureScenarioPassCount: scenarioCoverage.covered,
+      failureClassCounts,
+      failureClassRates,
+      dispatchFailureRate,
+      policyFailureRate,
+      providerLimitRate: rate(failureClassCounts.provider_limit),
+      stateUnavailableRate: rate(failureClassCounts.state_unavailable),
+      cooldownRate: rate(failureClassCounts.cooldown),
     },
     failureScenarios: {
       coveredScenarios: scenarioCoverage.coveredScenarios,
@@ -249,6 +294,12 @@ async function main() {
         ? null
         : options.maxUnclassifiedFailures,
       maxP95LatencyMs: Number.isNaN(options.maxP95LatencyMs) ? null : options.maxP95LatencyMs,
+      maxDispatchFailureRate: Number.isNaN(options.maxDispatchFailureRate)
+        ? null
+        : options.maxDispatchFailureRate,
+      maxPolicyFailureRate: Number.isNaN(options.maxPolicyFailureRate)
+        ? null
+        : options.maxPolicyFailureRate,
       requireFailureScenarios: options.requireFailureScenarios,
       passed: gateEvaluation.passed,
       failures: gateEvaluation.failures,

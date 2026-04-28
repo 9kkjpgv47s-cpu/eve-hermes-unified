@@ -572,6 +572,74 @@ describe("validate-horizon-closeout.mjs", () => {
     });
   });
 
+  it("fails when stage-promotion artifact schema is invalid", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "horizon-closeout.json");
+      const seeded = await seedEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath, "h1-in-progress");
+
+      const invalidStagePromotionPayload = JSON.stringify(
+        {
+          generatedAtIso: new Date().toISOString(),
+          pass: true,
+          checks: {
+            releaseGoalPolicySourceConsistencyReported: true,
+            releaseGoalPolicySourceConsistencyPassed: true,
+            mergeBundleReleaseGoalPolicySourceConsistencyReported: true,
+            mergeBundleReleaseGoalPolicySourceConsistencyPassed: true,
+            bundleVerificationReleaseGoalPolicySourceConsistencyReported: true,
+            bundleVerificationReleaseGoalPolicySourceConsistencyPassed: true,
+          },
+          failures: [],
+        },
+        null,
+        2,
+      );
+      await writeFile(seeded.stagePromotionPath, `${invalidStagePromotionPayload}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H1",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          stagePromotionSchemaValid: boolean;
+          stagePromotionSchemaErrors: string[] | null;
+          stagePromotionPassed: boolean;
+          stagePromotionEvidence: {
+            checks: string[];
+          };
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("stage_promotion_schema_invalid");
+      expect(payload.checks.stagePromotionSchemaValid).toBe(false);
+      expect(payload.checks.stagePromotionSchemaErrors).toEqual(
+        expect.arrayContaining(["stage must be an object"]),
+      );
+      expect(payload.checks.stagePromotionPassed).toBe(false);
+      expect(payload.checks.stagePromotionEvidence.checks).toEqual(
+        expect.arrayContaining(["stage_promotion_schema_invalid:stage must be an object"]),
+      );
+    });
+  });
+
   it("fails when H1 is marked completed but active horizon is not H2", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");

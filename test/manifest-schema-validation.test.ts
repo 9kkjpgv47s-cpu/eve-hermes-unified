@@ -252,4 +252,73 @@ describe("validate-manifest-schema.mjs", () => {
       expect(result.stderr).toContain("Manifest schema validation failed");
     });
   });
+
+  it("passes for a valid stage-promotion-readiness manifest", async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, "stage-promotion-readiness-20260426-000000.json");
+      await writeFile(
+        manifestPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            stage: {
+              current: "canary",
+              target: "majority",
+              transitionAllowed: true,
+            },
+            checks: {
+              releaseReadinessPassed: true,
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "stage-promotion-readiness",
+          "--file",
+          manifestPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
+  it("fails for invalid h2-drill-suite manifest", async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, "h2-drill-suite-20260426-000000.json");
+      await writeFile(
+        manifestPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            checks: {
+              canaryHoldPass: "yes",
+            },
+            failures: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-manifest-schema.mjs", "--type", "h2-drill-suite", "--file", manifestPath],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain("Manifest schema validation failed");
+    });
+  });
 });

@@ -503,6 +503,60 @@ describe("validate-horizon-closeout.mjs (H2)", () => {
     });
   });
 
+  it("fails when H2 drill suite artifact is schema-invalid", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "h2-closeout.json");
+      await seedRequiredEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath);
+
+      const drillSuitePath = path.join(evidenceDir, "h2-drill-suite-20260426-000000.json");
+      const drillSuitePayload = JSON.parse(await readFile(drillSuitePath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      delete drillSuitePayload.checks;
+      await writeFile(drillSuitePath, `${JSON.stringify(drillSuitePayload, null, 2)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H2",
+          "--next-horizon",
+          "H3",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: { requiredEvidence: Array<{ id: string; pass: boolean; checks: string[] }> };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("required_evidence_failed:h2-drill-suite");
+      expect(payload.checks.requiredEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "h2-drill-suite",
+            pass: false,
+            checks: expect.arrayContaining([
+              expect.stringContaining("h2_drill_suite_schema_invalid:checks must be an object"),
+            ]),
+          }),
+        ]),
+      );
+    });
+  });
+
   it("fails when release readiness goal-policy validation is not passed", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");

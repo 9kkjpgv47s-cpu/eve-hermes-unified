@@ -475,7 +475,11 @@ function evaluateCommandPayload(command, payload) {
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "h2-drill-suite") {
+    const schema = validateManifestSchema("h2-drill-suite", payload);
     const checks = [];
+    if (!schema.valid) {
+      checks.push(...schema.errors.map((error) => `h2_drill_suite_schema_invalid:${error}`));
+    }
     if (payload.pass !== true) {
       checks.push("h2_drill_suite_not_passed");
     }
@@ -499,7 +503,13 @@ function evaluateCommandPayload(command, payload) {
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "rollback-threshold-calibration") {
+    const schema = validateManifestSchema("rollback-threshold-calibration", payload);
     const checks = [];
+    if (!schema.valid) {
+      checks.push(
+        ...schema.errors.map((error) => `rollback_threshold_calibration_schema_invalid:${error}`),
+      );
+    }
     if (payload.pass !== true) {
       checks.push("rollback_threshold_calibration_not_passed");
     }
@@ -519,7 +529,13 @@ function evaluateCommandPayload(command, payload) {
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "supervised-rollback-simulation") {
+    const schema = validateManifestSchema("supervised-rollback-simulation", payload);
     const checks = [];
+    if (!schema.valid) {
+      checks.push(
+        ...schema.errors.map((error) => `supervised_rollback_simulation_schema_invalid:${error}`),
+      );
+    }
     if (payload.pass !== true) {
       checks.push("supervised_rollback_simulation_not_passed");
     }
@@ -617,6 +633,8 @@ async function main() {
     path: null,
     present: false,
     pass: false,
+    schemaValid: false,
+    schemaErrors: [],
     checks: [],
   };
   let nextHorizonChecks = {
@@ -653,8 +671,24 @@ async function main() {
       stagePromotionEvidence.path = stagePromotionPath;
       stagePromotionEvidence.present = true;
       const stagePromotionPayload = await readJson(stagePromotionPath);
+      const stagePromotionSchema = validateManifestSchema(
+        "stage-promotion-readiness",
+        stagePromotionPayload,
+      );
+      stagePromotionEvidence.schemaValid = stagePromotionSchema.valid;
+      stagePromotionEvidence.schemaErrors = stagePromotionSchema.valid
+        ? []
+        : [...stagePromotionSchema.errors];
+      if (!stagePromotionSchema.valid) {
+        stagePromotionEvidence.pass = false;
+        stagePromotionEvidence.checks.push(
+          ...stagePromotionSchema.errors.map((error) => `stage_promotion_schema_invalid:${error}`),
+        );
+        failures.push("stage_promotion_schema_invalid");
+      }
       if (stagePromotionPayload?.pass === true) {
-        stagePromotionEvidence.pass = true;
+        // Preserve fail-closed schema verdict even if payload.pass is true.
+        stagePromotionEvidence.pass = stagePromotionEvidence.schemaValid;
         const stagePromotionGoalPolicySignals = resolveStagePromotionGoalPolicySignals(
           stagePromotionPayload,
         );
@@ -877,6 +911,11 @@ async function main() {
           && !item.checks.includes("bundle_verify_initial_scope_goal_policy_source_consistency_not_passed"),
       ),
       stagePromotionPassed: stagePromotionEvidence.pass,
+      stagePromotionSchemaValid: stagePromotionEvidence.schemaValid,
+      stagePromotionSchemaErrors:
+        stagePromotionEvidence.schemaValid || stagePromotionEvidence.schemaErrors.length === 0
+          ? null
+          : stagePromotionEvidence.schemaErrors,
       stagePromotionGoalPolicySourceConsistencyReported:
         !stagePromotionEvidence.checks.includes(
           "stage_promotion_goal_policy_source_consistency_not_reported",

@@ -13,7 +13,8 @@ import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
-import { appendCapabilityPolicyDenialAudit } from "../runtime/capability-policy-audit.js";
+import { appendCapabilityPolicyDenialAudit, appendCapabilityPolicySnapshotIfChanged } from "../runtime/capability-policy-audit.js";
+import { stableCapabilityPolicyJson } from "../config/capability-policy-fingerprint.js";
 
 function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
   let text = "";
@@ -51,6 +52,9 @@ async function main() {
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
     journalPath,
+    config.unifiedMemoryStoreKind === "file"
+      ? { verifyPersist: config.unifiedMemoryVerifyPersist }
+      : undefined,
   );
   const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
   const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);
@@ -82,6 +86,12 @@ async function main() {
   });
   const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
   const policyAuditPath = config.capabilityPolicyAuditPath.trim();
+  if (policyAuditPath.length > 0) {
+    await appendCapabilityPolicySnapshotIfChanged(
+      policyAuditPath,
+      stableCapabilityPolicyJson(config.capabilityPolicy),
+    );
+  }
   const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
     memoryStore: sharedMemoryStore,
     dispatchLane,

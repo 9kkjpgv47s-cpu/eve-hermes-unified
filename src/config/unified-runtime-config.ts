@@ -33,6 +33,8 @@ export type UnifiedRuntimeEnvConfig = {
   auditLogRotateRetainBackupCount: number;
   capabilityPolicyAuditPath: string;
   capabilityExecutionTimeoutMs: number;
+  /** When true with file store, verify on-disk snapshot matches memory after each persist. */
+  unifiedMemoryVerifyPersist: boolean;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -273,6 +275,13 @@ export function loadUnifiedRuntimeEnvConfig(
       0,
     ),
   );
+  const unifiedMemoryVerifyPersist = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_MEMORY_VERIFY_PERSIST",
+      "MEMORY_VERIFY_PERSIST",
+    ]),
+    false,
+  );
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -337,6 +346,7 @@ export function loadUnifiedRuntimeEnvConfig(
     auditLogRotateRetainBackupCount,
     capabilityPolicyAuditPath,
     capabilityExecutionTimeoutMs,
+    unifiedMemoryVerifyPersist,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

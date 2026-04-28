@@ -8,32 +8,41 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 workstreams advance in code ahead of horizon promotion.
-- Branch: `cursor/h3-wal-policy-audit-prune-cc15` (large H3 durability slice).
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3/H4 workstreams advance in code ahead of horizon promotion.
+- Branch: **`cursor/h3-wal-policy-audit-prune-cc15`** — extended with H3 dual-verify + policy snapshot audit + H4 static guard.
 
-## What Was Just Completed (H3 chunk)
+## What Was Just Completed (large chunk)
 
-1. **File memory WAL** — optional `UNIFIED_MEMORY_JOURNAL_PATH`: append-only journal, replayed after JSON snapshot on load, cleared after atomic persist (`FileUnifiedMemoryStore`).
-2. **Dispatch audit lifecycle** — rotation (`UNIFIED_AUDIT_LOG_ROTATION_*`), numbered backups `.1`…`.N`, prune when `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BACKUPS` > 0.
-3. **Capability policy denial audit** — optional `UNIFIED_CAPABILITY_POLICY_AUDIT_PATH` + `appendCapabilityPolicyDenialAudit`; wired via `onPolicyDenial` in CLI.
-4. **Capability execution timeout** — `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` (capped at 24h); `Promise.race` on executor completion.
-5. **Preflight** — writable checks for memory journal and policy audit paths.
-6. **Vitest `globalSetup`** — creates `./evidence` for script integration tests.
+### H3
+
+1. **File memory WAL** — `UNIFIED_MEMORY_JOURNAL_PATH` (append/replay/clear with persist).
+2. **Persist verify** — `UNIFIED_MEMORY_VERIFY_PERSIST=1` re-reads snapshot + hash/map compare after each persist.
+3. **Dispatch audit** — rotation + backup prune; each line includes **`auditSchemaVersion`** (`src/contracts/dispatch-audit-version.ts`).
+4. **Capability policy audit** — denials + **config snapshots** when stable policy fingerprint changes (`stableCapabilityPolicyJson` + SHA-256); startup append in CLI when audit path set.
+5. **Capability execution timeout** — env-driven `Promise.race` (documented subprocess limitation).
+6. **Preflight** — journal + policy audit path writable checks.
+7. **Vitest `globalSetup`** — `./evidence` for script tests.
+
+### H4
+
+1. **`docs/LEGACY_PATH_RETIREMENT_MAP.md`** — canonical entry vs discouraged paths.
+2. **`test/unified-dispatch-entrypoint-guard.test.ts`** — fails if `new EveAdapter` / `new HermesAdapter` appear outside `src/bin/unified-dispatch.ts`.
 
 ## Read Order (Zero-Context Startup)
 
 1. `README.md`
 2. `AGENTS.md`
 3. `AGENT.md`
-4. `docs/CLOUD_AGENT_HANDOFF.md` (includes **H3 durability controls** section)
-5. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
-6. `docs/HORIZON_STATUS.json`
+4. `docs/CLOUD_AGENT_HANDOFF.md` (H3 + **H4 legacy path** sections)
+5. `docs/LEGACY_PATH_RETIREMENT_MAP.md`
+6. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
+7. `docs/HORIZON_STATUS.json`
 
 ## Immediate Next High-Output Targets
 
-1. Optional **dual-write verify** mode for memory (compare journal vs snapshot in tests / ops).
-2. **Lane subprocess cancellation** on capability timeout (harder; document limits today).
-3. Continue **horizon-neutral** closeout taxonomy where H2-prefixed IDs remain.
+1. **Lane subprocess cancellation** or explicit lane-level timeouts aligned with capability budget.
+2. **Horizon-neutral** closeout taxonomy cleanup (remaining `h2_*` IDs where safe).
+3. **Schema gate** for new audit line fields in `validate-manifest-schema` if manifests consume dispatch audit JSONL.
 4. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack
@@ -46,9 +55,8 @@ npm run validate:all
 
 ## Guardrails
 
-- Never weaken rollback or fail-closed orchestration gates.
-- Policy audit failures must not block denial responses (best-effort append).
-- Memory journal replay must tolerate partial lines (skip invalid JSON lines).
+- Policy snapshot append is **best-effort** on startup; failures should not block dispatch (today: awaited; consider swallow if needed).
+- Persist verify throws on mismatch — intentional fail-fast for operators who enable it.
 
 ## Delivery Checklist Per Iteration
 

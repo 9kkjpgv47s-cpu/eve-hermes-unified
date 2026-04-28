@@ -50,8 +50,13 @@ Optional production-hardening via environment (see `.env.example`):
 
 - **Memory journal:** `UNIFIED_MEMORY_JOURNAL_PATH` — append-only WAL replayed on startup after the JSON snapshot; truncated after each successful persist.
 - **Dispatch audit rotation:** `UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES`, `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES`, `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BACKUPS` — size-triggered rotation to `<audit>.1`, `<audit>.2`, … with pruning of older backups.
-- **Capability policy audit:** `UNIFIED_CAPABILITY_POLICY_AUDIT_PATH` — append-only JSONL for **denials** only (failures of `authorize`); preflight checks parent dir writable when set.
+- **Capability policy audit:** `UNIFIED_CAPABILITY_POLICY_AUDIT_PATH` — append-only JSONL for **denials** and **config snapshots** (fingerprinted stable JSON) when policy changes between process starts.
 - **Capability execution timeout:** `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` — wall-clock budget for the capability **executor** return value (0 = off); does not cancel subprocesses already started inside a handler.
+- **Memory persist verify:** `UNIFIED_MEMORY_VERIFY_PERSIST=1` — after each successful file persist, re-read the snapshot from disk and verify it matches the in-memory map (and hash).
+
+## H4 legacy path expectations
+
+- Canonical lane construction for production-style runs is **`src/bin/unified-dispatch.ts`** only; see `docs/LEGACY_PATH_RETIREMENT_MAP.md` and `test/unified-dispatch-entrypoint-guard.test.ts`.
 
 ## Cutover and Rollback Commands
 

@@ -51,6 +51,8 @@ describe("appendDispatchAuditLog rotation", () => {
     await appendDispatchAuditLog(logPath, minimalResult("t1"), { maxBytesBeforeRotate: 0 });
     const text = await readFile(logPath, "utf8");
     expect(text.split("\n").filter(Boolean)).toHaveLength(1);
+    const parsed = JSON.parse(text.trim().split("\n")[0]!) as { auditSchemaVersion?: number };
+    expect(parsed.auditSchemaVersion).toBe(1);
     await rm(dir, { recursive: true, force: true });
   });
 

@@ -16,7 +16,7 @@ Converge Eve and Hermes into one operating runtime with one policy router, one c
 
 ## H3 runtime durability (optional, env-driven)
 
-File-backed unified memory can use `UNIFIED_MEMORY_JOURNAL_PATH` (WAL). Dispatch audit logs support size rotation and numbered backup retention (`UNIFIED_AUDIT_LOG_ROTATION_*`). Capability policy **denials** can append to `UNIFIED_CAPABILITY_POLICY_AUDIT_PATH`. Capability handlers can use `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`. Defaults keep prior behavior (paths empty or zero = disabled). See `.env.example` and `docs/CLOUD_AGENT_HANDOFF.md`.
+File-backed unified memory can use `UNIFIED_MEMORY_JOURNAL_PATH` (WAL) and optional `UNIFIED_MEMORY_VERIFY_PERSIST` (post-persist snapshot verify). Dispatch audit logs support rotation (`UNIFIED_AUDIT_LOG_ROTATION_*`) and include `auditSchemaVersion` on each line. Capability policy audit path records **denials** and **config snapshots** when the stable policy fingerprint changes. Capability handlers can use `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`. See `.env.example`, `docs/CLOUD_AGENT_HANDOFF.md`, and `docs/LEGACY_PATH_RETIREMENT_MAP.md` (H4 static guard expectations).
 
 ## Mandatory Read Order (Before Editing)
 
@@ -29,6 +29,7 @@ File-backed unified memory can use `UNIFIED_MEMORY_JOURNAL_PATH` (WAL). Dispatch
 7. `docs/VALIDATION_HARDENING_MATRIX.md`
 8. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
 9. `docs/CLOUD_AGENT_HANDOFF.md`
+10. `docs/LEGACY_PATH_RETIREMENT_MAP.md`
 
 ## Build and Validation Commands
 

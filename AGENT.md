@@ -16,7 +16,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
   - `git branch --show-current`
   - `git log --oneline -n 1`
   - `gh pr view --json number,title,headRefName,baseRefName,state`
-- **H3 runtime:** optional memory journal, dispatch audit rotation + backup retention, capability policy denial audit log, capability execution timeout — see `.env.example` and `docs/CLOUD_AGENT_HANDOFF.md` (“H3 durability controls”).
+- **H3 runtime:** memory journal, optional **persist verify** (`UNIFIED_MEMORY_VERIFY_PERSIST`), dispatch audit rotation + `auditSchemaVersion`, capability policy audit (denials + **config snapshots** on fingerprint change), capability execution timeout — see `.env.example` and `docs/CLOUD_AGENT_HANDOFF.md`.
+- **H4:** `docs/LEGACY_PATH_RETIREMENT_MAP.md` + `test/unified-dispatch-entrypoint-guard.test.ts` (lane adapters only in `unified-dispatch.ts`).
 - Vitest `globalSetup` creates `./evidence` (gitignored) before tests.
 
 ## Read Order (Do Not Skip)
@@ -24,9 +25,10 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 1. `README.md`
 2. `AGENTS.md`
 3. `docs/CLOUD_AGENT_HANDOFF.md`
-4. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
-5. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
-6. `docs/HORIZON_STATUS.json`
+4. `docs/LEGACY_PATH_RETIREMENT_MAP.md`
+5. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
+6. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
+7. `docs/HORIZON_STATUS.json`
 
 ## High-Output Execution Loop
 

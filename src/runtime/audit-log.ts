@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { UnifiedDispatchResult } from "../contracts/types.js";
+import { UNIFIED_DISPATCH_AUDIT_SCHEMA_VERSION } from "../contracts/dispatch-audit-version.js";
 
 export type DispatchAuditLogOptions = {
   /** When > 0, if the log file exceeds this size (bytes), rotate before appending. */
@@ -13,6 +14,7 @@ export type DispatchAuditLogOptions = {
 
 function buildRecord(result: UnifiedDispatchResult): string {
   return JSON.stringify({
+    auditSchemaVersion: UNIFIED_DISPATCH_AUDIT_SCHEMA_VERSION,
     recordedAtIso: new Date().toISOString(),
     traceId: result.envelope.traceId,
     chatId: result.envelope.chatId,

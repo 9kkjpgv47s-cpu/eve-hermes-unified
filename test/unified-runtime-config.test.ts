@@ -127,6 +127,7 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
       readFrom(
         baseEnv({
           UNIFIED_MEMORY_JOURNAL_PATH: "/tmp/mem.journal",
+          UNIFIED_MEMORY_VERIFY_PERSIST: "1",
           UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES: "5000",
           UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES: "1000",
           UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BACKUPS: "4",
@@ -136,6 +137,7 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
       ),
     );
     expect(config.unifiedMemoryJournalPath).toBe("/tmp/mem.journal");
+    expect(config.unifiedMemoryVerifyPersist).toBe(true);
     expect(config.auditLogRotationMaxBytes).toBe(5000);
     expect(config.auditLogRotationRetainBytes).toBe(1000);
     expect(config.auditLogRotateRetainBackupCount).toBe(4);

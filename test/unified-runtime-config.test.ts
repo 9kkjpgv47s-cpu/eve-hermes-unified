@@ -145,6 +145,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.capabilityExecutionTimeoutMs).toBe(30_000);
   });
 
+  it("parses unified memory journal replay verify flag", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY: "1",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryVerifyJournalReplay).toBe(true);
+  });
+
   it("parses capability lane abort-on-timeout flag", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

@@ -54,6 +54,7 @@ Optional production-hardening via environment (see `.env.example`):
 - **Capability execution timeout:** `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` — wall-clock budget for the capability **executor** return value (0 = off). With **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT=1`**, in-flight **lane** subprocesses started via `dispatchLane` receive **SIGTERM** when the budget elapses (still does not cancel work the handler started without going through `dispatchLane`).
 - **Dispatch audit JSONL gate:** `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>`; evidence sweep picks up `evidence/unified-dispatch-audit-*.jsonl` (see `docs/LEGACY_PATH_RETIREMENT_MAP.md`).
 - **Memory persist verify:** `UNIFIED_MEMORY_VERIFY_PERSIST=1` — after each successful file persist, re-read the snapshot from disk and verify it matches the in-memory map (and hash).
+- **Journal replay verify:** `UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY=1` — with a journal path, before each persist verify **(on-disk snapshot + WAL replay)** matches the in-memory map (catches external journal tampering or replay drift).
 
 ## H4 legacy path expectations
 

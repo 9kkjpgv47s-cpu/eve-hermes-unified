@@ -60,6 +60,26 @@ function appendHorizonDrillSuiteFailureAliases(checks) {
   }
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Dual-report legacy h2_* failure ids for tooling that still keys off H2-only names.
+ * Only adds an alias when the check string starts with the given horizon prefix.
+ */
+function appendH2CompatFailureAliases(checks, horizonPrefix, h2Prefix) {
+  const re = new RegExp(`^${escapeRegExp(horizonPrefix)}`);
+  for (const c of [...checks]) {
+    if (typeof c !== "string") {
+      continue;
+    }
+    if (c.startsWith(`${horizonPrefix}_`) || c === horizonPrefix) {
+      checks.push(c.replace(re, h2Prefix));
+    }
+  }
+}
+
 function normalizeCommand(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
@@ -707,6 +727,7 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     } else if (!sourceConsistencyPropagationPassed.pass) {
       checks.push("horizon_closeout_run_supervised_stage_goal_policy_source_consistency_not_passed");
     }
+    appendH2CompatFailureAliases(checks, "horizon_closeout_run", "h2_closeout_run");
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "horizon-promotion-run") {
@@ -805,6 +826,7 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
         "horizon_promotion_run_closeout_run_supervised_stage_goal_policy_source_consistency_not_passed",
       );
     }
+    appendH2CompatFailureAliases(checks, "horizon_promotion_run", "h2_promotion_run");
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "rollback-threshold-calibration") {

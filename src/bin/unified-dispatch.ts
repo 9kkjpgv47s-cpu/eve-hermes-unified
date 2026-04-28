@@ -62,7 +62,10 @@ async function main() {
     config.unifiedMemoryFilePath,
     journalPath,
     config.unifiedMemoryStoreKind === "file"
-      ? { verifyPersist: config.unifiedMemoryVerifyPersist }
+      ? {
+          verifyPersist: config.unifiedMemoryVerifyPersist,
+          verifyJournalReplay: config.unifiedMemoryVerifyJournalReplay,
+        }
       : undefined,
   );
   const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);

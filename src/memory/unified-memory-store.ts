@@ -39,6 +39,11 @@ export type UnifiedMemoryStoreKind = "memory" | "file";
 export type FileMemoryStoreOptions = {
   /** When true with a journal path, re-read disk after persist and verify SHA256 matches in-memory map. */
   verifyPersist?: boolean;
+  /**
+   * When true with a journal path, before writing a new snapshot verify that
+   * (on-disk snapshot JSON + WAL replay) matches the in-memory map (crash-recovery equivalence).
+   */
+  verifyJournalReplay?: boolean;
 };
 
 export function validateUnifiedMemoryKey(target: UnifiedMemoryKey): void {
@@ -109,6 +114,40 @@ function mapsEqual(
     }
   }
   return true;
+}
+
+/**
+ * Rebuild in-memory map from current on-disk snapshot file + journal (same as startup after snapshot load).
+ * Used to verify WAL and snapshot stay consistent with the live map before each persist.
+ */
+export async function buildMemoryMapFromSnapshotAndJournal(
+  filePath: string,
+  journalPath: string,
+): Promise<Map<string, UnifiedMemoryEntry>> {
+  const records = new Map<string, UnifiedMemoryEntry>();
+  try {
+    const raw = await readFile(filePath, "utf8");
+    for (const entry of parseRecordList(raw)) {
+      records.set(storageKey(entry), cloneEntry(entry));
+    }
+  } catch {
+    // missing / invalid snapshot → empty baseline
+  }
+  await replayMemoryWal(journalPath, records);
+  return records;
+}
+
+export async function verifyMemorySnapshotPlusJournalMatchesState(
+  filePath: string,
+  journalPath: string,
+  expected: Map<string, UnifiedMemoryEntry>,
+): Promise<void> {
+  const rebuilt = await buildMemoryMapFromSnapshotAndJournal(filePath, journalPath);
+  if (!mapsEqual(expected, rebuilt)) {
+    throw new Error(
+      "unified_memory_journal_replay_verify_failed: on-disk snapshot + WAL replay does not match in-memory state",
+    );
+  }
 }
 
 async function verifyPersistAgainstDisk(
@@ -321,12 +360,15 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 
   private async persist(): Promise<void> {
+    const j = this.journalFile();
+    if (j && this.options?.verifyJournalReplay) {
+      await verifyMemorySnapshotPlusJournalMatchesState(this.filePath, j, this.records);
+    }
     await mkdir(path.dirname(this.filePath), { recursive: true });
     const data = serializeRecordMap(this.records);
     const tmpPath = `${this.filePath}.${process.pid}.${Date.now()}.tmp`;
     await writeFile(tmpPath, data, "utf8");
     await rename(tmpPath, this.filePath);
-    const j = this.journalFile();
     if (j) {
       await clearMemoryWal(j);
     }

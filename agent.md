@@ -22,6 +22,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 5. **Capability execution timeout** — env-driven `Promise.race`; optional **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT`** sends SIGTERM to in-flight **lane** subprocess started via `dispatchLane` when budget elapses.
 6. **Preflight** — journal + policy audit path writable checks.
 7. **Vitest `globalSetup`** — `./evidence` for script tests.
+8. **Journal replay verify** — `UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY=1` with journal: before each persist, verify on-disk snapshot + WAL replay matches in-memory map.
 
 ### H4
 
@@ -37,7 +38,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ### Tooling
 
-1. **`validate-horizon-closeout.mjs`** — for `h2-drill-suite` verification failures, appends **`horizon_drill_*`** aliases alongside legacy **`h2_drill_*`** ids.
+1. **`validate-horizon-closeout.mjs`** — for `h2-drill-suite` verification failures, appends **`horizon_drill_*`** aliases alongside legacy **`h2_drill_*`** ids; for **horizon-closeout-run** and **horizon-promotion-run**, appends legacy **`h2_closeout_run_*`** / **`h2_promotion_run_*`** aliases from **`horizon_*`** failure ids.
 2. **`validate-manifest-schema.mjs`** — **`unified-dispatch-audit-jsonl`** type + `evidence/unified-dispatch-audit-*.jsonl` inclusion in **`--type all`** sweep (shape gate for `auditSchemaVersion` and nested routing/state/response).
 
 ## Read Order (Zero-Context Startup)
@@ -52,8 +53,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Horizon-neutral** taxonomy: extend `horizon_*` aliases beyond h2-drill-suite where scripts filter failure ids.
-2. **Dual-write verify** mode for file memory (WAL vs snapshot dedicated check) if operators need migration confidence.
+1. **Horizon-neutral** taxonomy: extend dual-report aliases to other scripts that still filter **`h2_*`** only (e.g. promotion/closeout runners if needed).
+2. **Tenant-scoped** non-capability memory (optional) if product requires full store isolation per tenant.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack
@@ -68,6 +69,7 @@ npm run validate:all
 
 - Policy snapshot append is **best-effort** on startup; failures should not block dispatch (today: awaited; consider swallow if needed).
 - Persist verify throws on mismatch — intentional fail-fast for operators who enable it.
+- Journal replay verify throws on mismatch — intentional fail-fast when snapshot+WAL diverges from memory (detects WAL corruption or external journal edits).
 
 ## Delivery Checklist Per Iteration
 

@@ -37,6 +37,8 @@ export type UnifiedRuntimeEnvConfig = {
   capabilityAbortLaneOnTimeout: boolean;
   /** When true with file store, verify on-disk snapshot matches memory after each persist. */
   unifiedMemoryVerifyPersist: boolean;
+  /** When true with file store + journal, before each persist verify snapshot+WAL replay matches in-memory map. */
+  unifiedMemoryVerifyJournalReplay: boolean;
   /** When true, reject requests without tenant when allowlist is set, or without tenant when allowlist empty. */
   tenantStrict: boolean;
   /** Non-empty list restricts which tenant IDs may run (CSV from env). */
@@ -295,6 +297,13 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     false,
   );
+  const unifiedMemoryVerifyJournalReplay = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY",
+      "MEMORY_VERIFY_JOURNAL_REPLAY",
+    ]),
+    false,
+  );
   const tenantAllowlist = parseCsvList(
     firstDefined(reader, ["UNIFIED_TENANT_ALLOWLIST", "TENANT_ALLOWLIST"]),
   );
@@ -368,6 +377,7 @@ export function loadUnifiedRuntimeEnvConfig(
     capabilityExecutionTimeoutMs,
     capabilityAbortLaneOnTimeout,
     unifiedMemoryVerifyPersist,
+    unifiedMemoryVerifyJournalReplay,
     tenantStrict,
     tenantAllowlist,
     routerConfig: {

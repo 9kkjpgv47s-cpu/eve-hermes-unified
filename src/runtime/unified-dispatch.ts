@@ -82,6 +82,7 @@ function buildResult(
     fallbackInfo?: DispatchFallbackInfo;
     capabilityDecision?: UnifiedCapabilityDecision;
     capabilityExecution?: CapabilityExecutionResult;
+    primaryFallbackLimited?: boolean;
   },
 ): UnifiedDispatchResult {
   const response = validateUnifiedResponse(responseFromState(responseState, envelope.traceId));
@@ -105,6 +106,7 @@ function buildResult(
     capabilityDecision,
     capabilityExecution,
     response,
+    ...(options?.primaryFallbackLimited ? { primaryFallbackLimited: true } : {}),
   };
 }
 
@@ -151,6 +153,17 @@ export async function dispatchUnifiedMessage(
   );
   if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed) {
     return buildResult(envelope, routing, primaryState, primaryState);
+  }
+
+  const allowedClasses = runtime.routerConfig.dispatchFailureClassesAllowingFallback;
+  const failureClassAllowsFallback =
+    !allowedClasses || allowedClasses.length === 0
+      ? true
+      : allowedClasses.includes(primaryState.failureClass);
+  if (!failureClassAllowsFallback) {
+    return buildResult(envelope, routing, primaryState, primaryState, {
+      primaryFallbackLimited: true,
+    });
   }
 
   const fallback = getLaneAdapter(runtime, routing.fallbackLane);

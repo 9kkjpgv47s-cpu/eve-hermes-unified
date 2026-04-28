@@ -80,6 +80,7 @@ async function main() {
     memoryStore: sharedMemoryStore,
     dispatchLane,
     policy: capabilityPolicy,
+    capabilityExecutionTimeoutMs: config.unifiedCapabilityExecutionTimeoutMs,
   });
 
   const preflightIssues = await runRuntimePreflight({

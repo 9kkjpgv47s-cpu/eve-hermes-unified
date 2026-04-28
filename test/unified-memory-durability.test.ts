@@ -66,8 +66,12 @@ describe("DualWriteUnifiedMemoryStore", () => {
       await store.set(key, "dual");
       const primaryRaw = await readFile(primaryPath, "utf8");
       const shadowRaw = await readFile(shadowPath, "utf8");
-      expect(primaryRaw).toBe(shadowRaw);
-      expect(primaryRaw).toContain("dual");
+      const primaryEntries = JSON.parse(primaryRaw) as Array<{ value?: string }>;
+      const shadowEntries = JSON.parse(shadowRaw) as Array<{ value?: string }>;
+      expect(primaryEntries).toHaveLength(1);
+      expect(shadowEntries).toHaveLength(1);
+      expect(primaryEntries[0]?.value).toBe("dual");
+      expect(shadowEntries[0]?.value).toBe("dual");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

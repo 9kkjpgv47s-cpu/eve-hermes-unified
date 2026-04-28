@@ -7,7 +7,7 @@ import type { CapabilityExecutionResult } from "../src/skills/capability-registr
 import { dispatchUnifiedMessage } from "../src/runtime/unified-dispatch.js";
 import { CapabilityRegistry } from "../src/skills/capability-registry.js";
 import { UnifiedCapabilityEngine } from "../src/runtime/capability-engine.js";
-import { FileUnifiedMemoryStore } from "../src/memory/unified-memory-store.js";
+import { FileUnifiedMemoryStore, InMemoryUnifiedMemoryStore } from "../src/memory/unified-memory-store.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
 import { registerDefaultCapabilityExecutors } from "../src/runtime/default-capability-handlers.js";
 import {
@@ -121,6 +121,41 @@ describe("UnifiedCapabilityEngine", () => {
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
+  });
+
+  it("fails with timeout when executor exceeds capabilityExecutionTimeoutMs", async () => {
+    const registry = new CapabilityRegistry();
+    registry.register(
+      {
+        id: "slow",
+        description: "slow capability",
+        owner: "eve",
+      },
+      async () => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        return buildCapabilityResult("should not reach");
+      },
+    );
+    const engine = new UnifiedCapabilityEngine(registry, {
+      memoryStore: new InMemoryUnifiedMemoryStore(),
+      dispatchLane: async () => fakeLaneState("eve"),
+      capabilityExecutionTimeoutMs: 50,
+    });
+    const result = await engine.execute(
+      { id: "slow", lane: "eve", routeReason: "explicit_capability_command" },
+      {
+        traceId: "t-timeout",
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        receivedAtIso: new Date().toISOString(),
+        text: "@cap slow",
+      },
+    );
+    expect(result.status).toBe("failed");
+    expect(result.reason).toBe("capability_execution_timeout");
+    expect(result.failureClass).toBe("dispatch_failure");
+    expect(result.metadata?.policy).toBe("capability-execution-timeout");
   });
 
   it("falls back to lane dispatch when capability command is unknown", async () => {

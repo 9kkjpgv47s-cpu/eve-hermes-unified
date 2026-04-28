@@ -101,6 +101,22 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.unifiedMemoryDualWriteFilePath).toBe("/tmp/shadow-memory.json");
   });
 
+  it("parses dispatch fallback failure-class allowlist and capability execution timeout", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES: "dispatch_failure,state_unavailable,bogus",
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "15000",
+        }),
+      ),
+    );
+    expect(config.routerConfig.dispatchFailureClassesAllowingFallback).toEqual([
+      "dispatch_failure",
+      "state_unavailable",
+    ]);
+    expect(config.unifiedCapabilityExecutionTimeoutMs).toBe(15_000);
+  });
+
   it("parses capability policy controls", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T17:10:00Z",
+  "updatedAtIso": "2026-04-28T18:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -164,14 +164,14 @@
       "id": "h3-action-2",
       "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["policy-hardening", "runtime"]
     },
     {
       "id": "h3-action-3",
       "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["capability", "policy-hardening"]
     },
     {
@@ -397,6 +397,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "H3 memory durability slice: atomic file persistence for unified memory JSON, optional dual-write shadow path (UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH), preflight checks, and Vitest suite for concurrent writes, restart replay, and dual-write mirroring."
+    },
+    {
+      "timestamp": "2026-04-28T18:00:00Z",
+      "horizon": "H2",
+      "status": "in_progress",
+      "note": "H3 policy slice: optional UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES gates lane fallback by primary failure class; optional UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS bounds @cap executor wall time with auditable timeout result; UnifiedDispatchResult.primaryFallbackLimited when fallback skipped by policy."
     }
   ]
 }

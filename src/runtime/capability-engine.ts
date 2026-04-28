@@ -13,6 +13,7 @@ import {
 } from "../contracts/validate.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 import type {
+  CapabilityExecutionResult as RegistryCapabilityExecutionResult,
   CapabilityLaneDispatcher,
   CapabilityRegistry,
 } from "../skills/capability-registry.js";
@@ -38,6 +39,8 @@ export type CapabilityExecutionDependencies = {
   memoryStore: UnifiedMemoryStore;
   dispatchLane: CapabilityLaneDispatcher;
   policy?: CapabilityPolicy;
+  /** When > 0, executor Promise is raced with this timeout (ms). */
+  capabilityExecutionTimeoutMs?: number;
 };
 
 function parseExplicitCapabilityText(text: string): { capabilityId: string; argsText: string } | undefined {
@@ -64,6 +67,31 @@ function laneFromOwner(owner: "eve" | "hermes" | "shared", fallback: "eve" | "he
     return fallback;
   }
   return owner;
+}
+
+function raceExecutorWithTimeout<T>(
+  executorPromise: Promise<T>,
+  timeoutMs: number,
+  onTimeout: () => T,
+): Promise<T> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return executorPromise;
+  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      resolve(onTimeout());
+    }, timeoutMs);
+    executorPromise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 function resultReason(capabilityId: string, status: "pass" | "failed"): string {
@@ -158,21 +186,38 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
 
     const parsed = parseExplicitCapabilityText(envelope.text);
     const argsText = parsed?.argsText ?? "";
-    const execution = await executor({
-      text: envelope.text,
-      argsText,
-      chatId: envelope.chatId,
-      messageId: envelope.messageId,
-      traceId: envelope.traceId,
-      memoryStore: this.dependencies.memoryStore,
-      dispatchLane: async (input) =>
-        this.dependencies.dispatchLane({
-          ...input,
+    const timeoutMs = this.dependencies.capabilityExecutionTimeoutMs ?? 0;
+    const timeoutResult = (): RegistryCapabilityExecutionResult => ({
+      consumed: false,
+      responseText: `Capability '${selection.id}' exceeded execution time limit (${String(timeoutMs)} ms).`,
+      reason: "capability_execution_timeout",
+      failureClass: "dispatch_failure",
+      metadata: {
+        policy: "capability-execution-timeout",
+        timeoutMs: String(timeoutMs),
+      },
+    });
+    const execution = await raceExecutorWithTimeout<RegistryCapabilityExecutionResult>(
+      Promise.resolve(
+        executor({
+          text: envelope.text,
+          argsText,
           chatId: envelope.chatId,
           messageId: envelope.messageId,
           traceId: envelope.traceId,
+          memoryStore: this.dependencies.memoryStore,
+          dispatchLane: async (input) =>
+            this.dependencies.dispatchLane({
+              ...input,
+              chatId: envelope.chatId,
+              messageId: envelope.messageId,
+              traceId: envelope.traceId,
+            }),
         }),
-    });
+      ),
+      timeoutMs,
+      timeoutResult,
+    );
     const status: "pass" | "failed" = execution.consumed ? "pass" : "failed";
     const reason = execution.reason?.trim() || resultReason(selection.id, status);
     const failureClass =

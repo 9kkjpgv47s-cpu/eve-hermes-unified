@@ -9,15 +9,21 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Branch (at handoff time): `cursor/h3-unified-memory-durability-7d5a`
+- Branch (at handoff time): `cursor/h3-dispatch-fallback-capability-timeout-7d5a`
 - Latest slice (this session):
-  - **H3 `h3-action-4` (memory durability):** `FileUnifiedMemoryStore` persists with atomic temp+rename JSON writes; optional `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH` dual-writes to a second file-backed store; preflight validates shadow path; Vitest suite `test/unified-memory-durability.test.ts` covers concurrent writes, restart replay, dual-write, and preflight rules
-  - Prior closeout/promotion horizon-neutral work remains on branch history from parent workstreams
+  - **H3 `h3-action-2`:** Optional `UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES` — lane fallback only when primary `failureClass` is in the allowlist; otherwise `primaryFallbackLimited` on dispatch result
+  - **H3 `h3-action-3`:** Optional `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` — `@cap` executor wall-clock bound with `capability_execution_timeout` + metadata
+  - **H3 `h3-action-4` (prior on parent branch):** atomic unified memory file writes + optional dual-write shadow
 
 ## What Was Just Completed
 
-1. **Unified memory file durability (H3 `h3-action-4`):** Atomic write path for JSON persistence; optional dual-write shadow file; runtime config + preflight wiring; Vitest coverage in `test/unified-memory-durability.test.ts`.
-2. **Horizon tracking:** `docs/HORIZON_STATUS.json` marks `h3-action-4` completed and records history entry.
+1. **Dispatch fallback policy gate** and **`UnifiedDispatchResult.primaryFallbackLimited`** signal.
+2. **Capability execution timeout** envelope in `UnifiedCapabilityEngine` + `unified-dispatch` wiring.
+3. **Horizon tracking:** `h3-action-2`, `h3-action-3` completed in `docs/HORIZON_STATUS.json`; history + `.env.example` updated.
+
+## Earlier session (memory durability branch `cursor/h3-unified-memory-durability-7d5a`)
+
+- Atomic `FileUnifiedMemoryStore` persistence; dual-write shadow; `test/unified-memory-durability.test.ts`.
 
 ## Earlier session (closeout / promotion taxonomy, parent branch)
 
@@ -35,7 +41,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Immediate Next High-Output Targets
 
 1. **H3 `h3-action-1`:** persistent queue / replay semantics for cross-lane dispatch recovery (design + incremental implementation + tests).
-2. **H3 `h3-action-2`:** stricter policy-router failure-class mappings and deterministic fallback contracts.
+2. **H3 `h3-action-5`+:** soak validation, emergency rollback rehearsal bundles.
 3. Complete horizon-neutral taxonomy for remaining H2-only orchestrator strings (keep compatibility aliases).
 4. Keep manifest schema gates aligned when adding new evidence types.
 

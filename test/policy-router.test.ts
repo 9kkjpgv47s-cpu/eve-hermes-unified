@@ -207,4 +207,23 @@ describe("routeMessage", () => {
     expect(decision.primaryLane).toBe("hermes");
     expect(decision.reason).toBe("stage_full_force_hermes");
   });
+
+  it("accepts optional dispatchFailureClassesAllowingFallback on config without changing routing", () => {
+    const decision = routeMessage(
+      {
+        traceId: "t11",
+        channel: "telegram",
+        chatId: "1",
+        messageId: "1",
+        receivedAtIso: new Date().toISOString(),
+        text: "hello",
+      },
+      {
+        ...baseConfig,
+        dispatchFailureClassesAllowingFallback: ["dispatch_failure", "state_unavailable"],
+      },
+    );
+    expect(decision.primaryLane).toBe("eve");
+    expect(decision.reason).toBe("stage_shadow_default_primary");
+  });
 });

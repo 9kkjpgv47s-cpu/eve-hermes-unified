@@ -83,4 +83,6 @@ export type UnifiedDispatchResult = {
   capabilityDecision?: UnifiedCapabilityDecision;
   capabilityExecution?: CapabilityExecutionResult;
   response: UnifiedResponse;
+  /** True when primary failed but automatic fallback was skipped due to failure-class policy. */
+  primaryFallbackLimited?: boolean;
 };

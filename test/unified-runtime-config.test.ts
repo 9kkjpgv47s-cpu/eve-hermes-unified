@@ -83,6 +83,22 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     );
     expect(config.unifiedMemoryStoreKind).toBe("memory");
     expect(config.unifiedMemoryFilePath).toBe("/tmp/custom-memory.json");
+    expect(config.unifiedMemoryDualWriteFilePath).toBe("");
+  });
+
+  it("parses optional unified memory dual-write file path", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_STORE_KIND: "file",
+          UNIFIED_MEMORY_FILE_PATH: "/tmp/primary-memory.json",
+          UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH: "/tmp/shadow-memory.json",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryStoreKind).toBe("file");
+    expect(config.unifiedMemoryFilePath).toBe("/tmp/primary-memory.json");
+    expect(config.unifiedMemoryDualWriteFilePath).toBe("/tmp/shadow-memory.json");
   });
 
   it("parses capability policy controls", () => {

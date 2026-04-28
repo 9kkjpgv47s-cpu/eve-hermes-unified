@@ -9,23 +9,19 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Branch (at handoff time): `cursor/horizon-drill-closeout-taxonomy-7d5a`
+- Branch (at handoff time): `cursor/h3-unified-memory-durability-7d5a`
 - Latest slice (this session):
-  - `promote-horizon`: infer closeout-run source from `expectedSource` when either gate boolean is present; accept `horizon-closeout-run` or `h2-closeout-run` schema for pinned manifests; emit `closeout_run_<hn>_closeout_gate_*` for non-H2 sources alongside canonical horizon codes; skip `missing_evidence_dir` when `--closeout-run-file` pins the handoff
-  - `run-h2-promotion`: gate pre-checks use canonical `closeoutGate*` signals from the closeout-run payload
-  - Tests: H3 closeout gate scoped failure codes; `seedCloseoutReport` filenames follow horizon
+  - **H3 `h3-action-4` (memory durability):** `FileUnifiedMemoryStore` persists with atomic temp+rename JSON writes; optional `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH` dual-writes to a second file-backed store; preflight validates shadow path; Vitest suite `test/unified-memory-durability.test.ts` covers concurrent writes, restart replay, dual-write, and preflight rules
+  - Prior closeout/promotion horizon-neutral work remains on branch history from parent workstreams
 
 ## What Was Just Completed
 
-1. Canonical closeout gate signal added and propagated:
-   - `horizon_closeout_gate_failed`
-   - `horizonCloseoutGatePass`
-2. Promotion/closeout gating now accepts canonical + legacy aliases:
-   - canonical: `horizonCloseoutGatePass`, `closeoutRunCloseoutGate*`
-   - legacy: `h2CloseoutGatePass`, `closeoutRunH2CloseoutGate*`
-3. `run-h2-promotion` closeout-run failures now dual-report:
-   - canonical: `horizon_closeout_run_*`
-   - legacy/scoped aliases retained (including `h2_closeout_run_*` for H2)
+1. **Unified memory file durability (H3 `h3-action-4`):** Atomic write path for JSON persistence; optional dual-write shadow file; runtime config + preflight wiring; Vitest coverage in `test/unified-memory-durability.test.ts`.
+2. **Horizon tracking:** `docs/HORIZON_STATUS.json` marks `h3-action-4` completed and records history entry.
+
+## Earlier session (closeout / promotion taxonomy, parent branch)
+
+- Horizon-neutral drill closeout checks, `promote-horizon` / `run-h2-promotion` gate signal alignment, scoped non-H2 closeout gate failure codes, `missing_evidence_dir` fix when `--closeout-run-file` is used.
 
 ## Read Order (Zero-Context Startup)
 
@@ -38,10 +34,10 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. Complete horizon-neutral taxonomy migration for any remaining H2-only strings outside drill-suite closeout evaluation (keep compatibility aliases).
-2. Extend canonical naming propagation into any remaining H2-specific orchestrator outputs that feed closeout/promotion gates.
-3. Add targeted tests for canonical-first assertions with legacy alias compatibility.
-4. Keep artifacts and gate outputs schema-valid under `scripts/validate-manifest-schema.mjs`.
+1. **H3 `h3-action-1`:** persistent queue / replay semantics for cross-lane dispatch recovery (design + incremental implementation + tests).
+2. **H3 `h3-action-2`:** stricter policy-router failure-class mappings and deterministic fallback contracts.
+3. Complete horizon-neutral taxonomy for remaining H2-only orchestrator strings (keep compatibility aliases).
+4. Keep manifest schema gates aligned when adding new evidence types.
 
 ## Validation Pack
 
@@ -55,6 +51,12 @@ Targeted suites when touching promotion/closeout paths:
 
 ```bash
 npm test -- test/h2-closeout-runner-script.test.ts test/promote-horizon-script.test.ts test/h2-promotion-runner-script.test.ts test/horizon-closeout-validation.test.ts
+```
+
+Targeted suite for unified memory / durability:
+
+```bash
+npm test -- test/unified-memory-durability.test.ts test/memory-and-skills-contracts.test.ts
 ```
 
 ## Execution Guardrails

@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { LaneId } from "../contracts/types.js";
 
@@ -34,6 +35,20 @@ export interface UnifiedMemoryStore {
 }
 
 export type UnifiedMemoryStoreKind = "memory" | "file";
+
+export type UnifiedMemoryStoreFactoryOptions = {
+  /** When set with `kind=file`, every mutating write updates this second file-backed store after the primary. */
+  dualWriteShadowFilePath?: string;
+};
+
+async function writeJsonFileAtomically(filePath: string, body: string): Promise<void> {
+  const dir = path.dirname(filePath);
+  await mkdir(dir, { recursive: true });
+  const base = path.basename(filePath);
+  const tmp = path.join(dir, `.${base}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`);
+  await writeFile(tmp, body, "utf8");
+  await rename(tmp, filePath);
+}
 
 export function validateUnifiedMemoryKey(target: UnifiedMemoryKey): void {
   if (target.lane !== "eve" && target.lane !== "hermes" && target.lane !== "shared") {
@@ -172,8 +187,7 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 
   private async persist(): Promise<void> {
-    await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(this.filePath, serializeRecordMap(this.records), "utf8");
+    await writeJsonFileAtomically(this.filePath, serializeRecordMap(this.records));
   }
 
   private async queueWrite(operation: () => Promise<void>): Promise<void> {
@@ -245,12 +259,57 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 }
 
+/**
+ * Writes through `primary` for reads/lists; on `set`/`delete`, updates `primary` then `shadow`
+ * so operators can keep a second on-disk copy (different volume) for crash-recovery experiments.
+ */
+export class DualWriteUnifiedMemoryStore implements UnifiedMemoryStore {
+  constructor(
+    private readonly primary: UnifiedMemoryStore,
+    private readonly shadow: UnifiedMemoryStore,
+  ) {}
+
+  async get(target: UnifiedMemoryKey): Promise<UnifiedMemoryEntry | undefined> {
+    return this.primary.get(target);
+  }
+
+  async set(
+    target: UnifiedMemoryKey,
+    value: string,
+    metadata?: Record<string, string>,
+  ): Promise<UnifiedMemoryEntry> {
+    const entry = await this.primary.set(target, value, metadata);
+    await this.shadow.set(target, value, metadata);
+    return entry;
+  }
+
+  async delete(target: UnifiedMemoryKey): Promise<boolean> {
+    const deleted = await this.primary.delete(target);
+    await this.shadow.delete(target);
+    return deleted;
+  }
+
+  async list(query?: UnifiedMemoryListQuery): Promise<UnifiedMemoryEntry[]> {
+    return this.primary.list(query);
+  }
+}
+
 export function createUnifiedMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
+  options: UnifiedMemoryStoreFactoryOptions = {},
 ): UnifiedMemoryStore {
   if (kind === "file") {
-    return new FileUnifiedMemoryStore(filePath);
+    const primary = new FileUnifiedMemoryStore(filePath);
+    const shadowPath = String(options.dualWriteShadowFilePath ?? "").trim();
+    if (shadowPath.length > 0) {
+      const resolvedPrimary = path.resolve(filePath);
+      const resolvedShadow = path.resolve(shadowPath);
+      if (resolvedShadow !== resolvedPrimary) {
+        return new DualWriteUnifiedMemoryStore(primary, new FileUnifiedMemoryStore(shadowPath));
+      }
+    }
+    return primary;
   }
   return new InMemoryUnifiedMemoryStore();
 }

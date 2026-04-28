@@ -45,6 +45,7 @@ async function main() {
   const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
+    { dualWriteShadowFilePath: config.unifiedMemoryDualWriteFilePath },
   );
   const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
   const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);
@@ -89,6 +90,7 @@ async function main() {
     hermesLaunchCommand: config.hermesLaunchCommand,
     unifiedMemoryStoreKind: config.unifiedMemoryStoreKind,
     unifiedMemoryFilePath: config.unifiedMemoryFilePath,
+    unifiedMemoryDualWriteFilePath: config.unifiedMemoryDualWriteFilePath,
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
   });

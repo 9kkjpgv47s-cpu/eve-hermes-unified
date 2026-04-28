@@ -8,8 +8,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Primary focus: staged promotion drills + rollback-policy enforcement with auditable artifacts
+- Horizon: `H2` (`docs/HORIZON_STATUS.json`); **H3 `h3-action-4` completed in-repo** (unified memory file atomic persistence + optional `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH` dual-write; see `test/unified-memory-durability.test.ts`).
+- Primary focus: staged promotion drills + rollback-policy enforcement with auditable artifacts; continue **H3 durability/policy** workstreams (`h3-action-1` … `h3-action-3`, `h3-action-5`+).
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -42,6 +42,12 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 ```bash
 npm run check
 npm test
+```
+
+### H3 unified memory (durability)
+
+```bash
+npm test -- test/unified-memory-durability.test.ts test/memory-and-skills-contracts.test.ts
 ```
 
 ### H2 Promotion/Policy Flow
@@ -77,6 +83,7 @@ npm run verify:merge-bundle -- --evidence-dir evidence --latest
 3. Evidence freshness rules so stage drill reliably selects latest passing artifacts for all dependent gates.
 4. Runbook tightening for operator replay of canary/majority incidents.
 5. Extend closeout/promotion orchestration to horizon-generic operation (H3/H4) while preserving H2 command compatibility.
+6. **H3 next:** `h3-action-1` queue/replay for dispatch recovery; `h3-action-2` policy-router hardening; `h3-action-3` capability safety envelopes.
 
 ## Done Signal for Each Iteration
 

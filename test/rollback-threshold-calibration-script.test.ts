@@ -22,6 +22,8 @@ async function writeValidationSummary(
     unclassifiedFailures: number;
     p95LatencyMs: number;
     failureScenarioPassCount: number;
+    dispatchFailureRate?: number;
+    policyFailureRate?: number;
   },
   passed: boolean,
 ): Promise<string> {
@@ -32,7 +34,11 @@ async function writeValidationSummary(
     JSON.stringify(
       {
         generatedAtIso: new Date().toISOString(),
-        metrics,
+        metrics: {
+          ...metrics,
+          dispatchFailureRate: metrics.dispatchFailureRate ?? 0,
+          policyFailureRate: metrics.policyFailureRate ?? 0,
+        },
         gates: {
           passed,
           failures: passed ? [] : ["synthetic-failure"],
@@ -117,6 +123,8 @@ describe("calibrate-rollback-thresholds.mjs", () => {
             maxMissingTraceRate: number;
             maxUnclassifiedFailures: number;
             minFailureScenarioPassCount: number;
+            maxDispatchFailureRate: number;
+            maxPolicyFailureRate: number;
           };
           recommendedPolicyArgs: string[];
         };
@@ -130,6 +138,8 @@ describe("calibrate-rollback-thresholds.mjs", () => {
       expect(payload.calibration.recommendedThresholds.maxMissingTraceRate).toBe(0);
       expect(payload.calibration.recommendedThresholds.maxUnclassifiedFailures).toBe(0);
       expect(payload.calibration.recommendedThresholds.minFailureScenarioPassCount).toBe(5);
+      expect(payload.calibration.recommendedThresholds.maxDispatchFailureRate).toBe(0.002);
+      expect(payload.calibration.recommendedThresholds.maxPolicyFailureRate).toBe(0.002);
       expect(payload.calibration.recommendedPolicyArgs).toEqual([
         "--min-success-rate",
         "0.9975",
@@ -141,6 +151,10 @@ describe("calibrate-rollback-thresholds.mjs", () => {
         "5",
         "--max-p95-latency-ms",
         "1150",
+        "--max-dispatch-failure-rate",
+        "0.002",
+        "--max-policy-failure-rate",
+        "0.002",
       ]);
     });
   });

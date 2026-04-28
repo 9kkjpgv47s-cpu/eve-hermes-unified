@@ -20,6 +20,8 @@ async function seedEvidence(
     p95LatencyMs?: number;
     missingTraceRate?: number;
     unclassifiedFailures?: number;
+    dispatchFailureRate?: number;
+    policyFailureRate?: number;
     releasePass?: boolean;
     cutoverPass?: boolean;
     stagePromotionPass?: boolean;
@@ -86,13 +88,17 @@ async function seedEvidence(
           missingTraceRate: options?.missingTraceRate ?? 0,
           unclassifiedFailures: options?.unclassifiedFailures ?? 0,
           failureScenarioPassCount: 5,
+          dispatchFailureRate: options?.dispatchFailureRate ?? 0,
+          policyFailureRate: options?.policyFailureRate ?? 0,
         },
         gates: {
           passed:
             (options?.successRate ?? 1) >= 0.99 &&
             (options?.missingTraceRate ?? 0) <= 0 &&
             (options?.unclassifiedFailures ?? 0) <= 0 &&
-            (options?.p95LatencyMs ?? 300) <= 2500,
+            (options?.p95LatencyMs ?? 300) <= 2500 &&
+            (options?.dispatchFailureRate ?? 0) <= 0.05 &&
+            (options?.policyFailureRate ?? 0) <= 0.05,
           failures: [],
         },
         failureInjectionPreview,
@@ -525,6 +531,54 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
       expect(payload.decision.action).toBe("rollback");
       expect(payload.reasons.some((reason) => reason.startsWith("success_rate_below_threshold"))).toBe(true);
       expect(payload.reasons.some((reason) => reason.startsWith("p95_latency_above_threshold"))).toBe(true);
+    });
+  });
+
+  it("triggers rollback when soak-derived dispatch failure rate is high", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.999,
+        p95LatencyMs: 200,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        dispatchFailureRate: 0.2,
+        policyFailureRate: 0,
+        includeCooldownSignals: false,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "majority",
+          "--max-dispatch-failure-rate",
+          "0.05",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        decision: { action: string };
+        reasons: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.decision.action).toBe("rollback");
+      expect(
+        payload.reasons.some((reason) => reason.startsWith("dispatch_failure_rate_above_threshold")),
+      ).toBe(true);
     });
   });
 

@@ -3,6 +3,7 @@ import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { evaluateEvidenceGates, evaluateFailureScenarioCoverage } from "./evidence-gates.mjs";
 import { extractDispatchJsonRecords } from "./dispatch-json-extract.mjs";
+import { analyzeSoakDispatchRecords } from "./ci-soak-metrics-from-jsonl.mjs";
 
 function parseArgs(argv) {
   const options = {
@@ -12,6 +13,8 @@ function parseArgs(argv) {
     maxP95LatencyMs: Number.NaN,
     maxMissingTraceRate: Number.NaN,
     maxUnclassifiedFailures: Number.NaN,
+    maxDispatchFailureRate: Number.NaN,
+    maxPolicyFailureRate: Number.NaN,
     requireFailureScenarios: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -35,6 +38,12 @@ function parseArgs(argv) {
     } else if (arg === "--max-p95-latency-ms") {
       options.maxP95LatencyMs = Number(value);
       i += 1;
+    } else if (arg === "--max-dispatch-failure-rate") {
+      options.maxDispatchFailureRate = Number(value);
+      i += 1;
+    } else if (arg === "--max-policy-failure-rate") {
+      options.maxPolicyFailureRate = Number(value);
+      i += 1;
     } else if (arg === "--require-failure-scenarios") {
       options.requireFailureScenarios = true;
     }
@@ -46,17 +55,6 @@ function parseArgs(argv) {
     throw new Error("Missing --out");
   }
   return options;
-}
-
-function isFailureClassKnown(value) {
-  return (
-    value === "none" ||
-    value === "provider_limit" ||
-    value === "cooldown" ||
-    value === "dispatch_failure" ||
-    value === "state_unavailable" ||
-    value === "policy_failure"
-  );
 }
 
 async function newestFileInDir(dir, prefix, { suffix } = {}) {
@@ -92,42 +90,19 @@ async function main() {
 
   const soakRaw = await readFile(soakFile, "utf8");
   const records = extractDispatchJsonRecords(soakRaw);
+  const soakDerived = analyzeSoakDispatchRecords(records);
 
-  const total = records.length;
-  let success = 0;
-  let missingTrace = 0;
-  let unclassifiedFailures = 0;
-  const elapsedValues = [];
-  for (const record of records) {
-    if (record?.response?.failureClass === "none") {
-      success += 1;
-    }
-    const traceId = record?.response?.traceId ?? record?.envelope?.traceId;
-    if (!traceId || String(traceId).trim().length === 0) {
-      missingTrace += 1;
-    }
-    const failureClass = record?.response?.failureClass;
-    if (!isFailureClassKnown(failureClass)) {
-      unclassifiedFailures += 1;
-    }
-    const elapsedCandidates = [record?.primaryState?.elapsedMs, record?.capabilityExecution?.elapsedMs];
-    for (const candidate of elapsedCandidates) {
-      const elapsedMs = Number(candidate);
-      if (Number.isFinite(elapsedMs) && elapsedMs >= 0) {
-        elapsedValues.push(elapsedMs);
-        break;
-      }
-    }
-  }
-
-  const successRate = total > 0 ? success / total : 0;
-  const missingTraceRate = total > 0 ? missingTrace / total : 1;
-  const sortedElapsed = [...elapsedValues].sort((a, b) => a - b);
-  const p95Index =
-    sortedElapsed.length === 0
-      ? -1
-      : Math.min(sortedElapsed.length - 1, Math.ceil(sortedElapsed.length * 0.95) - 1);
-  const p95LatencyMs = p95Index >= 0 ? sortedElapsed[p95Index] : null;
+  const total = soakDerived.iterations;
+  const successRate = soakDerived.successRate;
+  const missingTrace = soakDerived.missingTraceCount;
+  const missingTraceRate = soakDerived.missingTraceRate;
+  const unclassifiedFailures = soakDerived.unclassifiedFailures;
+  const p95LatencyMs =
+    soakDerived.p95PrimaryElapsedMs === null || soakDerived.p95PrimaryElapsedMs === undefined
+      ? null
+      : Number(soakDerived.p95PrimaryElapsedMs);
+  const dispatchFailureRate = Number(soakDerived.dispatchFailureRate ?? 0);
+  const policyFailureRate = Number(soakDerived.policyFailureRate ?? 0);
 
   const failureRaw = await readFile(failureFile, "utf8");
   const failureLines = failureRaw.split(/\r?\n/);
@@ -138,14 +113,18 @@ async function main() {
       successRate,
       missingTraceRate,
       unclassifiedFailures,
-      p95LatencyMs,
+      p95LatencyMs: p95LatencyMs === null ? 0 : p95LatencyMs,
       failureScenarioPassCount: scenarioCoverage.covered,
+      dispatchFailureRate,
+      policyFailureRate,
     },
     {
       minSuccessRate: options.minSuccessRate,
       maxMissingTraceRate: options.maxMissingTraceRate,
       maxUnclassifiedFailures: options.maxUnclassifiedFailures,
       maxP95LatencyMs: options.maxP95LatencyMs,
+      maxDispatchFailureRate: options.maxDispatchFailureRate,
+      maxPolicyFailureRate: options.maxPolicyFailureRate,
       requireFailureScenarios: options.requireFailureScenarios,
     },
   );
@@ -158,14 +137,21 @@ async function main() {
     },
     metrics: {
       totalRecords: total,
-      successRecords: success,
+      successRecords: soakDerived.successCount,
       successRate,
       missingTraceCount: missingTrace,
       missingTraceRate,
       unclassifiedFailures,
       p95LatencyMs,
-      latencySampleCount: elapsedValues.length,
+      latencySampleCount: soakDerived.latencySampleCount,
       failureScenarioPassCount: scenarioCoverage.covered,
+      failureClassCounts: soakDerived.failureClassCounts,
+      failureClassRates: soakDerived.failureClassRates,
+      dispatchFailureRate,
+      policyFailureRate,
+      providerLimitRate: soakDerived.providerLimitRate,
+      stateUnavailableRate: soakDerived.stateUnavailableRate,
+      cooldownRate: soakDerived.cooldownRate,
     },
     failureScenarios: {
       coveredScenarios: scenarioCoverage.coveredScenarios,
@@ -180,6 +166,10 @@ async function main() {
         ? null
         : options.maxUnclassifiedFailures,
       maxP95LatencyMs: Number.isNaN(options.maxP95LatencyMs) ? null : options.maxP95LatencyMs,
+      maxDispatchFailureRate: Number.isNaN(options.maxDispatchFailureRate)
+        ? null
+        : options.maxDispatchFailureRate,
+      maxPolicyFailureRate: Number.isNaN(options.maxPolicyFailureRate) ? null : options.maxPolicyFailureRate,
       requireFailureScenarios: options.requireFailureScenarios,
       passed: gateEvaluation.passed,
       failures: gateEvaluation.failures,

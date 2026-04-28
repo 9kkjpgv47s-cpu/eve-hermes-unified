@@ -92,6 +92,7 @@ export function analyzeSoakDispatchRecords(records) {
     policyFailureRate: rate(failureClassCounts.policy_failure ?? 0),
     providerLimitRate: rate(failureClassCounts.provider_limit ?? 0),
     stateUnavailableRate: rate(failureClassCounts.state_unavailable ?? 0),
+    cooldownRate: rate(failureClassCounts.cooldown ?? 0),
   };
 }
 

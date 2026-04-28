@@ -22,6 +22,8 @@ function parseArgs(argv) {
     maxUnclassifiedFailures: Number.NaN,
     minFailureScenarioPassCount: Number.NaN,
     maxP95LatencyMs: Number.NaN,
+    maxDispatchFailureRate: Number.NaN,
+    maxPolicyFailureRate: Number.NaN,
     validationSummaryFile: "",
     cutoverReadinessFile: "",
     releaseReadinessFile: "",
@@ -62,6 +64,12 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === "--max-p95-latency-ms") {
       options.maxP95LatencyMs = Number(value ?? "");
+      index += 1;
+    } else if (arg === "--max-dispatch-failure-rate") {
+      options.maxDispatchFailureRate = Number(value ?? "");
+      index += 1;
+    } else if (arg === "--max-policy-failure-rate") {
+      options.maxPolicyFailureRate = Number(value ?? "");
       index += 1;
     } else if (arg === "--validation-summary-file") {
       options.validationSummaryFile = value ?? "";
@@ -175,6 +183,8 @@ function evaluateThresholds(stage, metrics, thresholds) {
   const maxUnclassifiedFailures = thresholds.maxUnclassifiedFailures;
   const minFailureScenarioPassCount = thresholds.minFailureScenarioPassCount;
   const maxP95LatencyMs = thresholds.maxP95LatencyMs;
+  const maxDispatchFailureRate = thresholds.maxDispatchFailureRate;
+  const maxPolicyFailureRate = thresholds.maxPolicyFailureRate;
 
   if (metrics.successRate < minSuccessRate) {
     reasons.push(`success_rate_below_threshold:${metrics.successRate}<${minSuccessRate}`);
@@ -196,6 +206,16 @@ function evaluateThresholds(stage, metrics, thresholds) {
   }
   if (metrics.p95LatencyMs > maxP95LatencyMs) {
     reasons.push(`p95_latency_above_threshold:${metrics.p95LatencyMs}>${maxP95LatencyMs}`);
+  }
+  const dispatchRate = Number(metrics.dispatchFailureRate ?? 0);
+  if (Number.isFinite(maxDispatchFailureRate) && dispatchRate > maxDispatchFailureRate) {
+    reasons.push(
+      `dispatch_failure_rate_above_threshold:${dispatchRate}>${maxDispatchFailureRate}`,
+    );
+  }
+  const policyRate = Number(metrics.policyFailureRate ?? 0);
+  if (Number.isFinite(maxPolicyFailureRate) && policyRate > maxPolicyFailureRate) {
+    reasons.push(`policy_failure_rate_above_threshold:${policyRate}>${maxPolicyFailureRate}`);
   }
 
   return reasons;
@@ -502,6 +522,8 @@ async function main() {
     unclassifiedFailures: toFiniteNumber(validationSummary?.metrics?.unclassifiedFailures, Number.POSITIVE_INFINITY),
     failureScenarioPassCount: toFiniteNumber(validationSummary?.metrics?.failureScenarioPassCount, 0),
     p95LatencyMs: toFiniteNumber(validationSummary?.metrics?.p95LatencyMs, Number.POSITIVE_INFINITY),
+    dispatchFailureRate: toFiniteNumber(validationSummary?.metrics?.dispatchFailureRate, 0),
+    policyFailureRate: toFiniteNumber(validationSummary?.metrics?.policyFailureRate, 0),
   };
 
   const thresholds = {
@@ -510,11 +532,25 @@ async function main() {
     maxUnclassifiedFailures: toFiniteNumber(options.maxUnclassifiedFailures, 0),
     minFailureScenarioPassCount: toFiniteNumber(options.minFailureScenarioPassCount, stage === "canary" ? 5 : 5),
     maxP95LatencyMs: toFiniteNumber(options.maxP95LatencyMs, stage === "canary" ? 2500 : 2000),
+    maxDispatchFailureRate: toFiniteNumber(
+      options.maxDispatchFailureRate,
+      stage === "canary" || stage === "shadow" ? 0.12 : 0.05,
+    ),
+    maxPolicyFailureRate: toFiniteNumber(
+      options.maxPolicyFailureRate,
+      stage === "canary" || stage === "shadow" ? 0.12 : 0.05,
+    ),
   };
   const thresholdReasons = evaluateThresholds(stage, metrics, thresholds);
-  const stageRequiresRollback = stage !== "shadow" && stage !== "canary"
-    ? thresholdReasons.length > 0
-    : thresholdReasons.length > 0 && metrics.successRate < 0.98;
+  const dispatchOrPolicyBreached = thresholdReasons.some(
+    (reason) =>
+      reason.startsWith("dispatch_failure_rate_above_threshold")
+      || reason.startsWith("policy_failure_rate_above_threshold"),
+  );
+  const stageRequiresRollback = dispatchOrPolicyBreached
+    || (stage !== "shadow" && stage !== "canary"
+      ? thresholdReasons.length > 0
+      : thresholdReasons.length > 0 && metrics.successRate < 0.98);
 
   const decisionReasons = [...failures];
   if (thresholdReasons.length > 0) {

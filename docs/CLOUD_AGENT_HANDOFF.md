@@ -340,7 +340,10 @@ After `npm run build`, CI runs `npm run validate:ci-dispatch-transcript`, which 
 
 - `scripts/soak-simulate.sh` runs dispatch in a loop, then writes `evidence/soak-latest-metrics.json` (override `UNIFIED_SOAK_METRICS_OUT`) via `ci-soak-metrics-from-jsonl.mjs`, and runs `ci-soak-slo-gate.mjs` unless `UNIFIED_SOAK_RUN_SLO_GATE=0`. Cutover stage defaults to `shadow`; set `UNIFIED_SOAK_CUTOVER_STAGE` for staged traffic simulation.
 - `npm run validate:soak-matrix` runs `scripts/soak-matrix.sh` (default stages `shadow,canary,majority`; override `UNIFIED_SOAK_MATRIX_STAGES`). Each stage writes `evidence/soak-latest-metrics-<stage>.json`.
-- Soak metrics include `failureClassCounts` / `failureClassRates` plus `dispatchFailureRate` and `policyFailureRate` for optional SLO gates: `UNIFIED_SOAK_MAX_DISPATCH_FAILURE_RATE`, `UNIFIED_SOAK_MAX_POLICY_FAILURE_RATE`.
+- Soak metrics include `failureClassCounts` / `failureClassRates` plus `dispatchFailureRate`, `policyFailureRate`, `cooldownRate`, and related rates for optional SLO gates: `UNIFIED_SOAK_MAX_DISPATCH_FAILURE_RATE`, `UNIFIED_SOAK_MAX_POLICY_FAILURE_RATE`.
+- `summarize-evidence.mjs` copies those soak-derived rates into **`validation-summary-*.json`** under `metrics` (same source as `ci-soak-metrics-from-jsonl`). Optional evidence-summary gates: pass `--max-dispatch-failure-rate` / `--max-policy-failure-rate`, or set `UNIFIED_EVIDENCE_MAX_DISPATCH_FAILURE_RATE` / `UNIFIED_EVIDENCE_MAX_POLICY_FAILURE_RATE` in `validate-evidence-summary.sh`.
+- `evaluate-auto-rollback-policy.mjs` reads `metrics.dispatchFailureRate` and `metrics.policyFailureRate` from the validation summary and compares to **`--max-dispatch-failure-rate`** / **`--max-policy-failure-rate`** when set; otherwise it uses stage defaults (shadow/canary: 12% each; majority/full: 5% each). Dispatch or policy rate breaches trigger rollback even when success rate is high.
+- `calibrate-rollback-thresholds.mjs` now includes those two caps in `recommendedPolicyArgs` when calibrating from recent validation summaries.
 - `summarize-evidence.mjs` and `release-readiness.mjs` select the newest **`soak-*.jsonl`** file so `soak-latest-metrics.json` does not replace the dispatch transcript when sorting by name.
 - CI runs a **Soak matrix + SLO gate** step after build (stub lanes) with relaxed thresholds suitable for GitHub-hosted runners.
 

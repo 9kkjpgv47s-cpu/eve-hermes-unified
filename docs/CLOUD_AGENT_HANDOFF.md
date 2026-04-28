@@ -10,6 +10,7 @@ Use this document when one cloud agent hands execution to another. The objective
    - `docs/PROJECT_VISION.md`
    - `docs/MASTER_EXECUTION_CHECKLIST.md`
    - `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
+   - `docs/DISPATCH_CONTRACT_V1.md` (unified dispatch JSON contract version `v1`)
 2. Install and verify:
    - `npm install`
    - `npm run check`

@@ -74,7 +74,12 @@ export type DispatchFallbackInfo = {
   toLane: LaneId;
 };
 
+/** Frozen dispatch envelope + outcome shape for external consumers; bump when breaking. */
+export const UNIFIED_DISPATCH_CONTRACT_VERSION = "v1" as const;
+export type UnifiedDispatchContractVersion = typeof UNIFIED_DISPATCH_CONTRACT_VERSION;
+
 export type UnifiedDispatchResult = {
+  contractVersion: UnifiedDispatchContractVersion;
   envelope: UnifiedMessageEnvelope;
   routing: RoutingDecision;
   primaryState: DispatchState;

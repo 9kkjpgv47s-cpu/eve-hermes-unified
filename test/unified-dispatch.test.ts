@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CapabilityExecutionResult, DispatchState, UnifiedCapabilityDecision } from "../src/contracts/types.js";
+import { UNIFIED_DISPATCH_CONTRACT_VERSION } from "../src/contracts/types.js";
 import { dispatchUnifiedMessage } from "../src/runtime/unified-dispatch.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
 import type { CapabilityEngine } from "../src/runtime/capability-engine.js";
@@ -86,6 +87,7 @@ describe("dispatchUnifiedMessage", () => {
 
     expect(result.response.laneUsed).toBe("eve");
     expect(result.response.failureClass).toBe("none");
+    expect(result.contractVersion).toBe(UNIFIED_DISPATCH_CONTRACT_VERSION);
     expect(result.routing.reason).toBe("default_policy_lane");
     expect(result.primaryState.traceId).toBe(result.envelope.traceId);
     expect(result.response.traceId).toBe(result.envelope.traceId);

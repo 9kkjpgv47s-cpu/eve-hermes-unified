@@ -1,4 +1,5 @@
 import {
+  UNIFIED_DISPATCH_CONTRACT_VERSION,
   type CapabilityExecutionResult,
   type DispatchState,
   type FailureClass,
@@ -100,6 +101,10 @@ export function validateCapabilityExecutionResult(
 }
 
 export function validateUnifiedDispatchResult(value: UnifiedDispatchResult): UnifiedDispatchResult {
+  ensure(
+    value.contractVersion === UNIFIED_DISPATCH_CONTRACT_VERSION,
+    `Unified dispatch contractVersion must be exactly ${UNIFIED_DISPATCH_CONTRACT_VERSION}.`,
+  );
   validateEnvelope(value.envelope);
   validateRoutingDecision(value.routing);
   validateDispatchState(value.primaryState);

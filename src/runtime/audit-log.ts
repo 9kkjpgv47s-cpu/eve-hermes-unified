@@ -2,6 +2,7 @@ import { appendFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:f
 import path from "node:path";
 import type { UnifiedDispatchResult } from "../contracts/types.js";
 import { UNIFIED_DISPATCH_AUDIT_SCHEMA_VERSION } from "../contracts/dispatch-audit-version.js";
+import { normalizeValidatedTenantId, resolveEnvelopeTenantId } from "./tenant-scope.js";
 
 export type DispatchAuditLogOptions = {
   /** When > 0, if the log file exceeds this size (bytes), rotate before appending. */
@@ -11,12 +12,15 @@ export type DispatchAuditLogOptions = {
 };
 
 function buildRecord(result: UnifiedDispatchResult): string {
+  const resolvedTenant = resolveEnvelopeTenantId(result.envelope);
+  const tenantId = normalizeValidatedTenantId(resolvedTenant) ?? null;
   return JSON.stringify({
     auditSchemaVersion: UNIFIED_DISPATCH_AUDIT_SCHEMA_VERSION,
     recordedAtIso: new Date().toISOString(),
     traceId: result.envelope.traceId,
     chatId: result.envelope.chatId,
     messageId: result.envelope.messageId,
+    tenantId,
     routing: result.routing,
     primaryState: result.primaryState,
     fallbackState: result.fallbackState,

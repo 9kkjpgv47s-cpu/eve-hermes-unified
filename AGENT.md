@@ -18,7 +18,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
   - `gh pr view --json number,title,headRefName,baseRefName,state`
 - Vitest creates `./evidence` at test start (`test/global-setup.ts`) because it is gitignored but required by several script integration tests.
 - **H3 file memory:** optional **`UNIFIED_MEMORY_JOURNAL_PATH`** WAL; optional **`UNIFIED_MEMORY_VERIFY_PERSIST`** / **`UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY`** — see `docs/CLOUD_AGENT_HANDOFF.md`.
-- **Dispatch audit:** JSONL lines include **`auditSchemaVersion`**; validate with `validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl`.
+- **Dispatch audit:** JSONL lines include **`auditSchemaVersion`** (**v2** includes **`tenantId`** `null` or string); validate with `validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl` (v1 and v2 accepted).
 - **Closeout validator:** `validate-horizon-closeout.mjs` dual-reports **`horizon_drill_*` / `h2_drill_*`** and appends **`h2_closeout_run_*` / `h2_promotion_run_*`** aliases for horizon closeout/promotion run failure ids.
 - **Horizon promotion:** `promote-horizon.mjs` emits **`closeout_run_horizon_closeout_gate_*`** and appends legacy **`closeout_run_h2_closeout_gate_*`** when the promotion source horizon is H2 or later (so H3→H4 promotions keep H2-keyed monitors working).
 - **H2 closeout runner:** `run-h2-closeout.mjs` appends **`h2_closeout_gate_failed`** alongside **`horizon_closeout_gate_failed`** when the closeout `--horizon` is H2 or later.

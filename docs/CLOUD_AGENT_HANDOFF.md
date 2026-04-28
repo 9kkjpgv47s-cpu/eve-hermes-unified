@@ -55,8 +55,8 @@ Optional crash recovery for file-backed unified memory:
 
 ## Dispatch audit JSONL (schema)
 
-- Each append includes **`auditSchemaVersion`** (see `src/contracts/dispatch-audit-version.ts`). Bump the constant when changing the record shape.
-- Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>`.
+- Each append includes **`auditSchemaVersion`** (see `src/contracts/dispatch-audit-version.ts`; current **v2** adds optional provenance field **`tenantId`** as `null` or a normalized tenant string, omitted in v1 lines). Bump the constant when changing the record shape.
+- Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>` (accepts **v1** and **v2** lines; v2 requires **`tenantId`** key present as `null` or string).
 - `npm run validate:manifest-schemas` includes `evidence/unified-dispatch-audit-*.jsonl` when present.
 
 ## Capability execution budget and lane abort

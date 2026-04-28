@@ -18,7 +18,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 1. **File memory WAL** — `UNIFIED_MEMORY_JOURNAL_PATH` (append/replay/truncate on persist).
 2. **Persist verify** — `UNIFIED_MEMORY_VERIFY_PERSIST=1` re-reads snapshot + hash/map compare after each persist.
 3. **Journal replay verify** — `UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY=1` verifies snapshot+WAL vs memory before each persist.
-4. **Dispatch audit schema** — `auditSchemaVersion` on each JSONL line (`src/contracts/dispatch-audit-version.ts`).
+4. **Dispatch audit schema** — `auditSchemaVersion` **v2** on each JSONL line (`tenantId` null or normalized string; `src/contracts/dispatch-audit-version.ts`).
 
 ### Tooling
 
@@ -36,8 +36,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Horizon-neutral failure taxonomy** — `run-h2-closeout.mjs` appends **`h2_closeout_gate_failed`** for any closeout source horizon **H2+** (aligned with `promote-horizon.mjs` closeout-run gate aliases).
-2. **Tenant isolation** — `UNIFIED_TENANT_STRICT`, **`UNIFIED_TENANT_ALLOWLIST`**, **`UNIFIED_TENANT_MEMORY_ISOLATION`**, envelope `tenantId` / `metadata.tenantId`, scoped capability memory; lane subprocess env includes **`EVE_TASK_DISPATCH_TENANT_ID`** / **`HERMES_UNIFIED_TENANT_ID`** when tenant is set.
+1. **Horizon-neutral failure taxonomy** — extend dual-report aliases in any remaining scripts that still emit H2-only ids only for `sourceHorizon === "H2"` (inventory + align with `promote-horizon` / `run-h2-closeout` patterns).
+2. **Policy / capability audit trail** — immutable append-only log for capability policy denials and config fingerprint changes (H3 action runway).
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

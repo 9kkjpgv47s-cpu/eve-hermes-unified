@@ -425,6 +425,114 @@ describe("validate-manifest-schema.mjs", () => {
     });
   });
 
+  it("passes for unified-dispatch-audit jsonl schema version 2 with tenantId", async () => {
+    await withTempDir(async (dir) => {
+      const auditPath = path.join(dir, "unified-dispatch-audit-20260428-v2.jsonl");
+      const line = {
+        auditSchemaVersion: 2,
+        recordedAtIso: new Date().toISOString(),
+        traceId: "t-audit-2",
+        chatId: "1",
+        messageId: "2",
+        tenantId: "acme",
+        routing: {
+          primaryLane: "eve",
+          fallbackLane: "none",
+          reason: "default_policy_lane",
+          policyVersion: "v1",
+          failClosed: true,
+        },
+        primaryState: {
+          status: "pass",
+          reason: "ok",
+          runtimeUsed: "eve",
+          runId: "r1",
+          elapsedMs: 1,
+          failureClass: "none",
+          sourceLane: "eve",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t-audit-2",
+        },
+        response: {
+          consumed: true,
+          responseText: "ok",
+          failureClass: "none",
+          laneUsed: "eve",
+          traceId: "t-audit-2",
+        },
+      };
+      await writeFile(auditPath, `${JSON.stringify(line)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "unified-dispatch-audit-jsonl",
+          "--file",
+          auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
+  it("fails when auditSchemaVersion 2 omits tenantId field", async () => {
+    await withTempDir(async (dir) => {
+      const auditPath = path.join(dir, "unified-dispatch-audit-bad-v2.jsonl");
+      const line = {
+        auditSchemaVersion: 2,
+        recordedAtIso: new Date().toISOString(),
+        traceId: "t-bad",
+        chatId: "1",
+        messageId: "2",
+        routing: {
+          primaryLane: "eve",
+          fallbackLane: "none",
+          reason: "default_policy_lane",
+          policyVersion: "v1",
+          failClosed: true,
+        },
+        primaryState: {
+          status: "pass",
+          reason: "ok",
+          runtimeUsed: "eve",
+          runId: "r1",
+          elapsedMs: 1,
+          failureClass: "none",
+          sourceLane: "eve",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t-bad",
+        },
+        response: {
+          consumed: true,
+          responseText: "ok",
+          failureClass: "none",
+          laneUsed: "eve",
+          traceId: "t-bad",
+        },
+      };
+      await writeFile(auditPath, `${JSON.stringify(line)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "unified-dispatch-audit-jsonl",
+          "--file",
+          auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain("tenantId must be present");
+    });
+  });
+
   it("passes for valid stage-drill and auto-rollback-policy manifests", async () => {
     await withTempDir(async (dir) => {
       const stageDrillPath = path.join(dir, "stage-drill-canary-20260426-000000.json");

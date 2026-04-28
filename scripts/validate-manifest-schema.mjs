@@ -815,7 +815,23 @@ export function validateStageDrillManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
-const UNIFIED_DISPATCH_AUDIT_LINE_SCHEMA_VERSION = 1;
+
+function isValidDispatchAuditTenantId(value) {
+  if (value === null) {
+    return true;
+  }
+  if (typeof value !== "string") {
+    return false;
+  }
+  const t = value.trim();
+  if (t.length === 0 || t.length > 128) {
+    return false;
+  }
+  if (t.includes("/") || t.includes("\\")) {
+    return false;
+  }
+  return true;
+}
 
 function isFiniteNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
@@ -845,9 +861,24 @@ export function validateUnifiedDispatchAuditJsonlLine(record, lineIndex) {
   }
   pushError(
     errors,
-    record.auditSchemaVersion === UNIFIED_DISPATCH_AUDIT_LINE_SCHEMA_VERSION,
-    `${prefix}: auditSchemaVersion must be exactly ${String(UNIFIED_DISPATCH_AUDIT_LINE_SCHEMA_VERSION)}`,
+    record.auditSchemaVersion === 1 || record.auditSchemaVersion === 2,
+    `${prefix}: auditSchemaVersion must be 1 or 2`,
   );
+  const auditVer = record.auditSchemaVersion;
+  if (record.tenantId !== undefined && record.tenantId !== null) {
+    pushError(
+      errors,
+      isValidDispatchAuditTenantId(record.tenantId),
+      `${prefix}: tenantId must be null or a non-empty tenant string (<=128 chars, no path separators)`,
+    );
+  }
+  if (auditVer === 2) {
+    pushError(
+      errors,
+      record.tenantId === null || typeof record.tenantId === "string",
+      `${prefix}: tenantId must be present as null or string for auditSchemaVersion 2`,
+    );
+  }
   pushError(errors, isNonEmptyString(record.recordedAtIso), `${prefix}: recordedAtIso must be non-empty string`);
   pushError(errors, isNonEmptyString(record.traceId), `${prefix}: traceId must be non-empty string`);
   pushError(errors, isNonEmptyString(record.chatId), `${prefix}: chatId must be non-empty string`);

@@ -63,7 +63,7 @@ async function main() {
       defaultPrimary: parseLane(env("UNIFIED_ROUTER_DEFAULT_PRIMARY", "eve"), "eve"),
       defaultFallback: parseFallbackLane(env("UNIFIED_ROUTER_DEFAULT_FALLBACK", "hermes")),
       failClosed: env("UNIFIED_ROUTER_FAIL_CLOSED", "1") === "1",
-      policyVersion: "v1",
+      policyVersion: env("UNIFIED_ROUTER_POLICY_VERSION", "v1"),
     },
   };
 

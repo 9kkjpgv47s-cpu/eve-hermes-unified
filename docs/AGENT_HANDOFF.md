@@ -22,11 +22,11 @@ This file is the canonical handoff for cloud agents and humans picking up work i
 These map to the convergence plan and close gaps versus the validation matrix.
 
 1. **Policy and dispatch edge cases**  
-   - Tests: fail-closed (no fallback when `failClosed: true`), `fallbackLane: "none"`, explicit `@cursor` / `@hermes` through full `dispatchUnifiedMessage`.  
-   - Optional: propagate `UNIFIED_ROUTER_POLICY_VERSION` from env into `routerConfig` in the CLI for trace parity with decisions.
+   - Tests: fail-closed, `fallbackLane: "none"`, explicit `@cursor` / `@hermes` through full `dispatchUnifiedMessage` (done).  
+   - `UNIFIED_ROUTER_POLICY_VERSION` env → CLI `routerConfig.policyVersion` (done).
 
 2. **Trace and failure classification**  
-   - Ensure every response path preserves envelope `traceId` (or a documented merge rule) and that adapters never emit empty `traceId`.  
+   - Unified response `traceId`: if lane `DispatchState.traceId` is blank after trim, use envelope `traceId` (done in `responseFromState`). Adapters should still populate lane trace ids when upstream provides them.  
    - Extend failure-injection scripts or tests for timeout / non-zero exit scenarios in `scripts/failure-injection-smoke.sh`.
 
 3. **Phase 1 gateway (ingress)**  
@@ -46,3 +46,4 @@ These map to the convergence plan and close gaps versus the validation matrix.
 | Date (UTC) | Branch / PR | Notes |
 |------------|-------------|--------|
 | 2026-04-28 | `cursor/agent-handoff-scope-5a8b` | Added this handoff doc; expanded `dispatchUnifiedMessage` tests for fail-closed and no-fallback config. |
+| 2026-04-28 | `cursor/agent-handoff-scope-5a8b` | Policy version env; explicit lane dispatch tests; envelope trace fallback on unified response. |

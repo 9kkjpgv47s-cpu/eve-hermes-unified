@@ -193,4 +193,138 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.response.laneUsed).toBe("eve");
     expect(result.response.failureClass).toBe("dispatch_failure");
   });
+
+  it("routes @cursor through eve as primary", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t-eve",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "should_not_run",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t-hermes",
+      }),
+      routerConfig: {
+        defaultPrimary: "hermes" as const,
+        defaultFallback: "eve" as const,
+        failClosed: false,
+        policyVersion: "v1",
+      },
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@cursor do work",
+    });
+
+    expect(result.decision).toBe("explicit_cursor_passthrough");
+    expect(result.response.laneUsed).toBe("eve");
+  });
+
+  it("routes @hermes through hermes as primary", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "should_not_run",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t-eve",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t-hermes",
+      }),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "hermes" as const,
+        failClosed: false,
+        policyVersion: "v1",
+      },
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "@hermes summarize",
+    });
+
+    expect(result.decision).toBe("explicit_hermes_passthrough");
+    expect(result.response.laneUsed).toBe("hermes");
+  });
+
+  it("uses envelope traceId on unified response when lane state traceId is blank", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "   ",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "unused",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "hermes" as const,
+        failClosed: false,
+        policyVersion: "v1",
+      },
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+
+    expect(result.response.traceId).toBe(result.envelope.traceId);
+  });
 });

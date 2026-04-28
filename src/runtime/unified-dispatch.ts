@@ -19,7 +19,8 @@ function getLaneAdapter(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
   return lane === "eve" ? runtime.eveAdapter : runtime.hermesAdapter;
 }
 
-function responseFromState(state: DispatchState): UnifiedResponse {
+function responseFromState(state: DispatchState, envelopeTraceId: string): UnifiedResponse {
+  const traceId = state.traceId.trim().length > 0 ? state.traceId : envelopeTraceId;
   return {
     consumed: true,
     responseText:
@@ -28,7 +29,7 @@ function responseFromState(state: DispatchState): UnifiedResponse {
         : `Unified dispatch failed via ${state.sourceLane}.\nrun_id: ${state.runId}\nreason: ${state.reason}`,
     failureClass: state.failureClass,
     laneUsed: state.sourceLane,
-    traceId: state.traceId,
+    traceId,
   };
 }
 
@@ -49,7 +50,7 @@ export async function dispatchUnifiedMessage(
     intentRoute: `unified:${decision.reason}`,
   });
   if (primaryState.status === "pass" || decision.fallbackLane === "none" || decision.failClosed) {
-    const response = validateUnifiedResponse(responseFromState(primaryState));
+    const response = validateUnifiedResponse(responseFromState(primaryState, envelope.traceId));
     return { envelope, decision: decision.reason, response };
   }
 
@@ -58,6 +59,6 @@ export async function dispatchUnifiedMessage(
     envelope,
     intentRoute: `unified:fallback_after_${decision.reason}`,
   });
-  const response = validateUnifiedResponse(responseFromState(fallbackState));
+  const response = validateUnifiedResponse(responseFromState(fallbackState, envelope.traceId));
   return { envelope, decision: `${decision.reason}:fallback`, response };
 }

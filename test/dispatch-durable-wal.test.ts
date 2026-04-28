@@ -81,4 +81,40 @@ describe("findOrphanDispatchAttempts", () => {
       expect(orphans[0]?.regionId).toBe("us-west");
     });
   });
+
+  it("dispatch_complete may carry region correlation fields", async () => {
+    await withTempWal(async (walPath) => {
+      await appendDispatchWalLine(walPath, {
+        walVersion: "v1",
+        event: "dispatch_attempt",
+        attemptId: "att-1",
+        recordedAtIso: "2026-01-01T00:00:00Z",
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "hi",
+        tenantId: "t1",
+        regionId: "eu-west-1",
+      });
+      await appendDispatchWalLine(walPath, {
+        walVersion: "v1",
+        event: "dispatch_complete",
+        attemptId: "att-1",
+        recordedAtIso: "2026-01-01T00:00:01Z",
+        traceId: "tr-1",
+        primaryStatus: "pass",
+        responseFailureClass: "none",
+        laneUsed: "hermes",
+        tenantId: "t1",
+        regionId: "eu-west-1",
+        envelopeRegionId: "eu-west-1",
+        routerRegionId: "us-east-1",
+        regionAligned: false,
+      });
+      const raw = await readFile(walPath, "utf8");
+      expect(raw).toContain('"event":"dispatch_complete"');
+      expect(raw).toContain('"envelopeRegionId":"eu-west-1"');
+      expect(raw).toContain('"regionAligned":false');
+    });
+  });
 });

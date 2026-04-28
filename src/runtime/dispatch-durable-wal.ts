@@ -23,6 +23,12 @@ export type DispatchWalCompleteRecord = {
   primaryStatus: "pass" | "failed";
   responseFailureClass: string;
   laneUsed: string;
+  /** H5: correlation with dispatch_attempt / envelope (optional). */
+  tenantId?: string;
+  regionId?: string;
+  envelopeRegionId?: string;
+  routerRegionId?: string;
+  regionAligned?: boolean;
 };
 
 export type DispatchWalReplayCompleteRecord = {

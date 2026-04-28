@@ -117,6 +117,11 @@ async function main() {
         primaryStatus: result?.primaryState?.status === "pass" ? "pass" : "failed",
         responseFailureClass: result?.response?.failureClass ?? "dispatch_failure",
         laneUsed: result?.response?.laneUsed ?? "eve",
+        ...(result?.envelope.tenantId?.trim() ? { tenantId: result.envelope.tenantId.trim() } : {}),
+        ...(result?.envelope.regionId?.trim() ? { regionId: result.envelope.regionId.trim() } : {}),
+        ...(result?.routing.dispatchRegionId ? { envelopeRegionId: result.routing.dispatchRegionId } : {}),
+        ...(result?.routing.routerRegionId ? { routerRegionId: result.routing.routerRegionId } : {}),
+        ...(result?.routing.regionAligned !== undefined ? { regionAligned: result.routing.regionAligned } : {}),
       };
       await appendDispatchWalLine(walPath, complete);
     }

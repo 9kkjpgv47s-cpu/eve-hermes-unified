@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T22:30:00Z",
+  "updatedAtIso": "2026-04-28T22:45:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H5",
   "activeStatus": "in_progress",
@@ -276,8 +276,15 @@
       "id": "h5-action-8",
       "summary": "Optional: extend region drill to explicit @cursor/@hermes passthrough swap cases and WAL correlation checks.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h5-action-9",
+      "summary": "H5 closeout: machine gate for H5 evidence bundle (region drill v2, tenant isolation, soak dimensions) and optional horizon promotion to completed.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -504,7 +511,13 @@
       "timestamp": "2026-04-28T22:30:00Z",
       "horizon": "H5",
       "status": "in_progress",
-      "note": "Completed h5-action-6 and h5-action-7: added scripts/h5-region-misalignment-drill.mjs (node+tsx dispatch runner, evidence manifest, wired into validate:all) and vitest harness test/h5-cross-tenant-memory-isolation.test.ts for concurrent tenant-scoped memory list isolation; seeded h5-action-8 for extended region/WAL drill coverage."
+      "note": "Completed h5-action-6 and h5-action-7: region misalignment drill script wired into validate:all; cross-tenant memory list isolation vitest harness; seeded h5-action-8 for extended region/WAL drill coverage."
+    },
+    {
+      "timestamp": "2026-04-28T22:45:00Z",
+      "horizon": "H5",
+      "status": "in_progress",
+      "note": "Completed h5-action-8: region drill v2 runs default + @cursor + @hermes misalignment cases with temp WAL correlation validation; dispatch_complete WAL records include envelopeRegionId, routerRegionId, regionAligned, tenantId, regionId; seeded h5-action-9 for H5 closeout gate."
     }
   ]
 }

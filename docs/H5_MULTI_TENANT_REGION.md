@@ -19,7 +19,7 @@ Defaults from environment apply when the CLI omits flags:
 - `--tenant-id <id>`
 - `--region-id <id>`
 
-The durable WAL `dispatch_attempt` record includes `tenantId` and `regionId` when present. `npm run replay:dispatch-wal` replays orphans with the same fields so replay stays consistent with the original attempt.
+The durable WAL `dispatch_attempt` record includes `tenantId` and `regionId` when present. `dispatch_complete` lines include the same tenant/region when present, plus **`envelopeRegionId`**, **`routerRegionId`**, and **`regionAligned`** for correlation with routing decisions. `npm run replay:dispatch-wal` replays orphans with the same fields so replay stays consistent with the original attempt.
 
 ## Capability policy
 
@@ -45,7 +45,7 @@ Both run as part of `npm run validate:all`.
 
 ## Region misalignment operator drill (h5-action-6)
 
-`npm run run:h5-region-misalignment-drill` runs a single dispatch with `UNIFIED_ROUTER_REGION_ID` set to a home region and `--region-id` on the envelope set to a different region. It asserts `routing.regionAligned === false`, primary/fallback lanes are swapped (`hermes`/`eve` with default router), and `routing.reason` includes `region_failover_swap`. Writes `evidence/h5-region-misalignment-drill-*.json`. Requires `npm run build` (uses `dist/src/bin/unified-dispatch.js`). This command is part of `npm run validate:all`.
+The third scenario (`@hermes`) temporarily sets **`UNIFIED_ROUTER_DEFAULT_FALLBACK=eve`** so primary and fallback differ (swap is otherwise a no-op when both lanes would be `hermes`).
 
 ## Soak drill dimensions
 

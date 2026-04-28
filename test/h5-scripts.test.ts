@@ -21,9 +21,14 @@ describe("H5 operator scripts", () => {
         { timeoutMs: 60_000, env: { ...process.env } as Record<string, string> },
       );
       expect(result.code).toBe(0);
-      const parsed = JSON.parse(result.stdout.trim()) as { pass?: boolean; manifestPath?: string };
+      const parsed = JSON.parse(result.stdout.trim()) as {
+        pass?: boolean;
+        manifestPath?: string;
+        schemaVersion?: string;
+      };
       expect(parsed.pass).toBe(true);
       expect(parsed.manifestPath).toContain("h5-region-misalignment-drill-");
+      expect(parsed.schemaVersion).toBe("h5-region-misalignment-drill-v2");
     });
   });
 

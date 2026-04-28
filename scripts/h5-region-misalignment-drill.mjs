@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * H5 (h5-action-6): operator drill — dispatch with envelope region != router home region
- * must produce deterministic primary/fallback swap and regionAligned=false.
- * Writes evidence/h5-region-misalignment-drill-*.json; exits non-zero on invariant failure.
+ * H5: region misalignment drill — default route, @cursor, and @hermes passthrough
+ * with WAL attempt/complete correlation (h5-action-6 + h5-action-8).
  */
 import { execFile } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,16 +49,11 @@ function parseArgs(argv) {
   return opts;
 }
 
-async function main() {
-  const { evidenceDir } = parseArgs(process.argv.slice(2));
-  const outDir = evidenceDir || path.join(ROOT, "evidence");
-  await mkdir(outDir, { recursive: true });
-
-  const { cmd, args: dispatchArgs } = await resolveDispatchCommand();
-
-  const env = {
+function baseEnv(outDir, walPath) {
+  return {
     ...process.env,
     UNIFIED_PREFLIGHT_ENABLED: "0",
+    UNIFIED_DISPATCH_DURABLE_WAL_PATH: walPath,
     UNIFIED_EVE_TASK_DISPATCH_SCRIPT: process.env.UNIFIED_SOAK_EVE_DISPATCH_SCRIPT || "/bin/true",
     EVE_TASK_DISPATCH_SCRIPT: process.env.UNIFIED_SOAK_EVE_DISPATCH_SCRIPT || "/bin/true",
     UNIFIED_EVE_DISPATCH_RESULT_PATH:
@@ -78,76 +72,234 @@ async function main() {
     ROUTER_CUTOVER_STAGE: "",
     UNIFIED_ROUTER_STAGE: "",
   };
+}
 
-  const { stdout, stderr } = await execFileP(
-    cmd,
-    [
-      ...dispatchArgs,
-      "--text",
-      "h5 region misalignment drill",
-      "--chat-id",
-      "42",
-      "--message-id",
-      "1",
-      "--region-id",
-      "eu-west-1",
-    ],
-    { env, cwd: ROOT, maxBuffer: 4 * 1024 * 1024 },
-  );
-  const trimmed = stdout.trim();
-  let result;
-  try {
-    result = JSON.parse(trimmed);
-  } catch {
-    throw new Error(`dispatch stdout was not JSON: ${stderr.slice(0, 500)} ${trimmed.slice(0, 200)}`);
+async function runDispatch(cmd, dispatchArgs, env, chatId, messageId, text, regionId, tenantId) {
+  const args = [...dispatchArgs, "--text", text, "--chat-id", chatId, "--message-id", messageId, "--region-id", regionId];
+  if (tenantId) {
+    args.push("--tenant-id", tenantId);
   }
+  const { stdout, stderr } = await execFileP(cmd, args, { env, cwd: ROOT, maxBuffer: 4 * 1024 * 1024 });
+  const trimmed = stdout.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    throw new Error(`dispatch stdout was not JSON: ${stderr.slice(0, 400)} ${trimmed.slice(0, 200)}`);
+  }
+}
 
-  const routing = result.routing ?? {};
+function assertRegionSwap(routing, label, expectedPrimary, expectedFallback) {
   const failures = [];
   if (routing.regionAligned !== false) {
-    failures.push(`expected routing.regionAligned === false, got ${String(routing.regionAligned)}`);
+    failures.push(`${label}: expected routing.regionAligned === false, got ${String(routing.regionAligned)}`);
   }
-  if (routing.primaryLane !== "hermes") {
-    failures.push(`expected primaryLane hermes after region swap, got ${String(routing.primaryLane)}`);
+  if (routing.primaryLane !== expectedPrimary) {
+    failures.push(
+      `${label}: expected primaryLane ${expectedPrimary}, got ${String(routing.primaryLane)}`,
+    );
   }
-  if (routing.fallbackLane !== "eve") {
-    failures.push(`expected fallbackLane eve after region swap, got ${String(routing.fallbackLane)}`);
+  if (routing.fallbackLane !== expectedFallback) {
+    failures.push(
+      `${label}: expected fallbackLane ${expectedFallback}, got ${String(routing.fallbackLane)}`,
+    );
   }
   if (!String(routing.reason ?? "").includes("region_failover_swap")) {
-    failures.push(`expected routing.reason to include region_failover_swap, got ${String(routing.reason)}`);
+    failures.push(
+      `${label}: expected routing.reason to include region_failover_swap, got ${String(routing.reason)}`,
+    );
   }
   if (routing.dispatchRegionId !== "eu-west-1") {
-    failures.push(`expected dispatchRegionId eu-west-1, got ${String(routing.dispatchRegionId)}`);
+    failures.push(`${label}: expected dispatchRegionId eu-west-1, got ${String(routing.dispatchRegionId)}`);
   }
   if (routing.routerRegionId !== "us-east-1") {
-    failures.push(`expected routerRegionId us-east-1, got ${String(routing.routerRegionId)}`);
+    failures.push(`${label}: expected routerRegionId us-east-1, got ${String(routing.routerRegionId)}`);
   }
+  return failures;
+}
 
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const manifestPath = path.join(outDir, `h5-region-misalignment-drill-${stamp}.json`);
-  const manifest = {
-    schemaVersion: "h5-region-misalignment-drill-v1",
-    generatedAtIso: new Date().toISOString(),
-    pass: failures.length === 0,
-    failures,
-    drill: {
-      envelopeRegionId: "eu-west-1",
-      routerRegionId: "us-east-1",
-      expectedPrimaryLane: "hermes",
-      expectedFallbackLane: "eve",
-    },
-    dispatchSample: {
-      traceId: result.envelope?.traceId,
-      routing,
-    },
-  };
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+/**
+ * Parse WAL: map attemptId -> attempt; complete lines add correlation checks.
+ */
+async function validateWalCorrelation(walPath) {
+  const failures = [];
+  let raw = "";
+  try {
+    raw = await readFile(walPath, "utf8");
+  } catch (e) {
+    return [`WAL read failed: ${String(e?.message ?? e)}`];
+  }
+  const attempts = new Map();
+  const completes = [];
+  for (const line of raw.split("\n")) {
+    const t = line.trim();
+    if (!t.startsWith("{")) {
+      continue;
+    }
+    let rec;
+    try {
+      rec = JSON.parse(t);
+    } catch {
+      continue;
+    }
+    if (rec.event === "dispatch_attempt" && rec.attemptId) {
+      attempts.set(rec.attemptId, rec);
+    }
+    if (rec.event === "dispatch_complete" && rec.attemptId) {
+      completes.push(rec);
+    }
+  }
+  if (completes.length < 3) {
+    failures.push(`expected at least 3 dispatch_complete lines in WAL, found ${completes.length}`);
+  }
+  for (const c of completes) {
+    const att = attempts.get(c.attemptId);
+    if (!att) {
+      failures.push(`dispatch_complete attemptId ${c.attemptId} has no matching dispatch_attempt`);
+      continue;
+    }
+    if (!c.traceId || String(c.traceId).trim() === "") {
+      failures.push(`dispatch_complete ${c.attemptId} missing traceId`);
+    }
+    if (c.tenantId !== undefined && att.tenantId !== undefined && c.tenantId !== att.tenantId) {
+      failures.push(
+        `attempt/complete tenantId mismatch for ${c.attemptId}: ${att.tenantId} vs ${c.tenantId}`,
+      );
+    }
+    if (c.regionId !== undefined && att.regionId !== undefined && c.regionId !== att.regionId) {
+      failures.push(
+        `attempt/complete regionId mismatch for ${c.attemptId}: ${att.regionId} vs ${c.regionId}`,
+      );
+    }
+    if (c.envelopeRegionId !== "eu-west-1") {
+      failures.push(
+        `dispatch_complete ${c.attemptId} expected envelopeRegionId eu-west-1, got ${String(c.envelopeRegionId)}`,
+      );
+    }
+    if (c.routerRegionId !== "us-east-1") {
+      failures.push(
+        `dispatch_complete ${c.attemptId} expected routerRegionId us-east-1, got ${String(c.routerRegionId)}`,
+      );
+    }
+    if (c.regionAligned !== false) {
+      failures.push(
+        `dispatch_complete ${c.attemptId} expected regionAligned false, got ${String(c.regionAligned)}`,
+      );
+    }
+  }
+  return failures;
+}
 
-  process.stdout.write(`${JSON.stringify({ ...manifest, manifestPath })}\n`);
+async function main() {
+  const { evidenceDir } = parseArgs(process.argv.slice(2));
+  const outDir = evidenceDir || path.join(ROOT, "evidence");
+  await mkdir(outDir, { recursive: true });
 
-  if (failures.length > 0) {
-    process.stderr.write(`h5-region-misalignment-drill failed:\n- ${failures.join("\n- ")}\n`);
-    process.exitCode = 2;
+  const walPath = path.join(outDir, `h5-region-drill-${Date.now()}.wal.jsonl`);
+  try {
+    const { cmd, args: dispatchArgs } = await resolveDispatchCommand();
+    const env = baseEnv(outDir, walPath);
+
+    const scenarios = [
+      {
+        id: "default_route",
+        text: "h5 region misalignment default route",
+        chatId: "42",
+        messageId: "1",
+        expectedPrimary: "hermes",
+        expectedFallback: "eve",
+        tenantId: "",
+        envOverride: {},
+      },
+      {
+        id: "cursor_passthrough",
+        text: "@cursor h5 region drill",
+        chatId: "43",
+        messageId: "2",
+        expectedPrimary: "hermes",
+        expectedFallback: "eve",
+        tenantId: "drill-tenant-a",
+        envOverride: {},
+      },
+      {
+        id: "hermes_passthrough",
+        text: "@hermes h5 region drill",
+        chatId: "44",
+        messageId: "3",
+        expectedPrimary: "eve",
+        expectedFallback: "hermes",
+        tenantId: "drill-tenant-b",
+        /** Need distinct primary/fallback for swap; default hermes+hermes would be no-op. */
+        envOverride: {
+          UNIFIED_ROUTER_DEFAULT_FALLBACK: "eve",
+          ROUTER_DEFAULT_FALLBACK: "eve",
+        },
+      },
+    ];
+
+    const scenarioResults = [];
+    const allFailures = [];
+
+    for (const s of scenarios) {
+      const scenarioEnv = { ...env, ...s.envOverride };
+      const result = await runDispatch(
+        cmd,
+        dispatchArgs,
+        scenarioEnv,
+        s.chatId,
+        s.messageId,
+        s.text,
+        "eu-west-1",
+        s.tenantId || undefined,
+      );
+      const routing = result.routing ?? {};
+      const f = assertRegionSwap(routing, s.id, s.expectedPrimary, s.expectedFallback);
+      allFailures.push(...f);
+      scenarioResults.push({
+        id: s.id,
+        text: s.text,
+        traceId: result.envelope?.traceId,
+        routing,
+        tenantId: result.envelope?.tenantId,
+        regionId: result.envelope?.regionId,
+      });
+    }
+
+    const walFailures = await validateWalCorrelation(walPath);
+    allFailures.push(...walFailures);
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const manifestPath = path.join(outDir, `h5-region-misalignment-drill-${stamp}.json`);
+    const manifest = {
+      schemaVersion: "h5-region-misalignment-drill-v2",
+      generatedAtIso: new Date().toISOString(),
+      pass: allFailures.length === 0,
+      failures: allFailures,
+      walPath,
+      drill: {
+        envelopeRegionId: "eu-west-1",
+        routerRegionId: "us-east-1",
+        scenarios: scenarios.map((s) => ({
+          id: s.id,
+          expectedPrimaryLane: s.expectedPrimary,
+          expectedFallbackLane: s.expectedFallback,
+        })),
+      },
+      scenarioResults,
+    };
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+    process.stdout.write(`${JSON.stringify({ ...manifest, manifestPath })}\n`);
+
+    if (allFailures.length > 0) {
+      process.stderr.write(`h5-region-misalignment-drill failed:\n- ${allFailures.join("\n- ")}\n`);
+      process.exitCode = 2;
+    }
+  } finally {
+    try {
+      await rm(walPath, { force: true });
+    } catch {
+      // ignore
+    }
   }
 }
 

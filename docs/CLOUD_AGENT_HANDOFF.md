@@ -343,4 +343,4 @@ Additional operator commands:
 
 ## Future task scope (post H5 core)
 
-- Optional follow-on: `h5-action-8` in `docs/HORIZON_STATUS.json` (extended `@cursor`/`@hermes` region swap cases and WAL correlation).
+- Optional follow-on: `h5-action-9` in `docs/HORIZON_STATUS.json` (H5 closeout evidence gate when ready).

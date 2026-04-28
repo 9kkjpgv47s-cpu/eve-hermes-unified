@@ -10,7 +10,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 - Horizon: `H5` (`docs/HORIZON_STATUS.json`, in progress)
 - Completed in-repo slices: H3 durability, H4 contract + legacy scan, H5 (tenant/region, soak drill dimensions, audit partition/rotation, region misalignment drill in `validate:all`, cross-tenant memory isolation tests).
-- Primary focus: optional h5-action-8 (extended region/WAL drills) or H5 closeout when ready
+- Primary focus: optional h5-action-9 (H5 closeout gate) when ready
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:

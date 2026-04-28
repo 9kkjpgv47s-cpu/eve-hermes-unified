@@ -43,6 +43,10 @@ When `UNIFIED_TENANT_ISOLATION_STRICT=1`, runtime preflight requires a non-empty
 
 Both run as part of `npm run validate:all`.
 
+## Region misalignment operator drill (h5-action-6)
+
+`npm run run:h5-region-misalignment-drill` runs a single dispatch with `UNIFIED_ROUTER_REGION_ID` set to a home region and `--region-id` on the envelope set to a different region. It asserts `routing.regionAligned === false`, primary/fallback lanes are swapped (`hermes`/`eve` with default router), and `routing.reason` includes `region_failover_swap`. Writes `evidence/h5-region-misalignment-drill-*.json`. Requires `npm run build` (uses `dist/src/bin/unified-dispatch.js`). This command is part of `npm run validate:all`.
+
 ## Soak drill dimensions
 
 `scripts/soak-simulate.sh` cycles `--tenant-id` / `--region-id` across iterations so `npm run summarize:soak` can emit `drillDimensions` (tenant counts, region counts, `routing.regionAligned` histogram) and optional drift alarms for low tenant/region diversity.

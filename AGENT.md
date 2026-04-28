@@ -9,8 +9,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 ## Current Program State
 
 - Horizon: `H5` (`docs/HORIZON_STATUS.json`, in progress)
-- Completed in-repo slices: H3 durability (WAL, atomic memory, fallback gate, cap timeout, soak summary, rollback rehearsal), H4 contract + legacy scan, H5 core (tenant/region envelope, memory scoping, region failover routing, WAL replay parity, remediation dry-run, strict-tenant preflight).
-- Primary focus: extend H5 evidence dimensions (soak/audit partitioning) and operator drill coverage
+- Completed in-repo slices: H3 durability, H4 contract + legacy scan, H5 (tenant/region, soak drill dimensions, audit partition/rotation, region misalignment drill in `validate:all`, cross-tenant memory isolation tests).
+- Primary focus: optional h5-action-8 (extended region/WAL drills) or H5 closeout when ready
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -59,6 +59,7 @@ npm run run:stage-drill -- --target-stage canary --dry-run --evidence-dir eviden
 ```bash
 npm run validate:h5-tenant-isolation
 npm run run:remediation-playbook-dry-run
+npm run run:h5-region-misalignment-drill
 ```
 
 ### Readiness / Evidence Gates

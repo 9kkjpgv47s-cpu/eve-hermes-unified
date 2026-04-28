@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T22:15:00Z",
+  "updatedAtIso": "2026-04-28T22:30:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H5",
   "activeStatus": "in_progress",
@@ -262,15 +262,22 @@
       "id": "h5-action-6",
       "summary": "Add operator drill for region-misaligned routing with explicit evidence artifact and gate in validate:all or evidence-summary.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "runtime"]
     },
     {
       "id": "h5-action-7",
       "summary": "Cross-tenant leak regression harness for memory list and capability summarize_state under concurrent tenants.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["automation", "memory"]
+    },
+    {
+      "id": "h5-action-8",
+      "summary": "Optional: extend region drill to explicit @cursor/@hermes passthrough swap cases and WAL correlation checks.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "durability"]
     }
   ],
   "goalPolicies": {
@@ -351,7 +358,7 @@
     },
     "H5": {
       "status": "in_progress",
-      "summary": "Tenant-scoped memory and capability policy, region-aware routing swap, WAL/audit tenant and region fields, soak and evidence-summary drill dimensions, optional tenant-partitioned audit with byte-threshold rotation, remediation dry-run manifests, and further H5 runway actions are tracked here."
+      "summary": "H5 slice includes region misalignment operator drill in validate:all, cross-tenant memory list isolation tests, tenant-scoped capability memory, optional audit partition/rotation, and optional follow-on for extended region/WAL drills."
     }
   },
   "history": [
@@ -491,7 +498,13 @@
       "timestamp": "2026-04-28T22:15:00Z",
       "horizon": "H5",
       "status": "in_progress",
-      "note": "Completed h5-action-4 and h5-action-5: soak-simulate cycles tenant/region CLI args; summarize-soak-jsonl emits drillDimensions and diversity drift alarms; summarize-evidence includes soakDrillDimensions; appendDispatchAuditLog supports tenant-partitioned paths and max-bytes rotation with env UNIFIED_DISPATCH_AUDIT_TENANT_PARTITION and UNIFIED_DISPATCH_AUDIT_MAX_BYTES_BEFORE_ROTATE; seeded h5-action-6 and h5-action-7 for region drill evidence and cross-tenant memory harness."
+      "note": "Completed h5-action-4 and h5-action-5: soak-simulate cycles tenant/region CLI args; summarize-soak-jsonl emits drillDimensions and diversity drift alarms; summarize-evidence includes soakDrillDimensions; appendDispatchAuditLog supports tenant-partitioned paths and max-bytes rotation with env UNIFIED_DISPATCH_AUDIT_TENANT_PARTITION and UNIFIED_DISPATCH_AUDIT_MAX_BYTES_BEFORE_ROTATE."
+    },
+    {
+      "timestamp": "2026-04-28T22:30:00Z",
+      "horizon": "H5",
+      "status": "in_progress",
+      "note": "Completed h5-action-6 and h5-action-7: added scripts/h5-region-misalignment-drill.mjs (node+tsx dispatch runner, evidence manifest, wired into validate:all) and vitest harness test/h5-cross-tenant-memory-isolation.test.ts for concurrent tenant-scoped memory list isolation; seeded h5-action-8 for extended region/WAL drill coverage."
     }
   ]
 }

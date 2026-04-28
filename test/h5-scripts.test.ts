@@ -14,6 +14,19 @@ async function withTempEvidenceDir(run: (dir: string) => Promise<void>): Promise
 }
 
 describe("H5 operator scripts", () => {
+  it("h5-region-misalignment-drill passes and writes manifest", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/h5-region-misalignment-drill.mjs", "--evidence-dir", evidenceDir],
+        { timeoutMs: 60_000, env: { ...process.env } as Record<string, string> },
+      );
+      expect(result.code).toBe(0);
+      const parsed = JSON.parse(result.stdout.trim()) as { pass?: boolean; manifestPath?: string };
+      expect(parsed.pass).toBe(true);
+      expect(parsed.manifestPath).toContain("h5-region-misalignment-drill-");
+    });
+  });
+
   it("validate-h5-tenant-isolation emits valid JSON", async () => {
     const result = await runCommandWithTimeout(["node", "scripts/validate-h5-tenant-isolation.mjs"], {
       timeoutMs: 10_000,

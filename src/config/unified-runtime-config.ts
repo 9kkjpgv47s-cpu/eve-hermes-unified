@@ -30,6 +30,8 @@ export type UnifiedRuntimeEnvConfig = {
   auditLogPath: string;
   /** 0 = unlimited; caps capability executor wall time in unified dispatch. */
   capabilityExecutionTimeoutMs: number;
+  /** Path for persistent dispatch durability queue (JSON file). */
+  dispatchDurabilityQueuePath: string;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -307,6 +309,9 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     180_000,
   );
+  const dispatchDurabilityQueuePath =
+    firstDefined(reader, ["UNIFIED_DISPATCH_QUEUE_PATH", "DISPATCH_QUEUE_PATH"]) ??
+    "/tmp/eve-hermes-unified-dispatch-queue.json";
 
   return {
     eveDispatchScript,
@@ -332,6 +337,7 @@ export function loadUnifiedRuntimeEnvConfig(
     },
     auditLogPath,
     capabilityExecutionTimeoutMs,
+    dispatchDurabilityQueuePath,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

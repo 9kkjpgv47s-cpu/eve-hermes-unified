@@ -125,23 +125,29 @@ function buildResult(
   };
 }
 
-export async function dispatchUnifiedMessage(
-  runtime: UnifiedRuntime,
+export function createUnifiedEnvelopeForDispatch(
   input: Omit<UnifiedMessageEnvelope, "traceId" | "receivedAtIso">,
-): Promise<UnifiedDispatchResult> {
-  const envelope = validateEnvelope({
+): UnifiedMessageEnvelope {
+  return validateEnvelope({
     ...input,
     traceId: `unified-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`,
     receivedAtIso: new Date().toISOString(),
   });
+}
+
+export async function dispatchUnifiedEnvelope(
+  runtime: UnifiedRuntime,
+  envelope: UnifiedMessageEnvelope,
+): Promise<UnifiedDispatchResult> {
+  const validated = validateEnvelope(envelope);
 
   if (runtime.capabilityEngine) {
-    const capabilityDecision = runtime.capabilityEngine.select(envelope, runtime.routerConfig);
+    const capabilityDecision = runtime.capabilityEngine.select(validated, runtime.routerConfig);
     if (capabilityDecision) {
       const validatedDecision = validateCapabilityDecision(capabilityDecision);
-      const executed = await runtime.capabilityEngine.execute(validatedDecision, envelope);
+      const executed = await runtime.capabilityEngine.execute(validatedDecision, validated);
       const validatedExecution = validateCapabilityExecutionResult(executed);
-      const capabilityState = toDispatchStateFromCapability(validatedDecision, validatedExecution, envelope);
+      const capabilityState = toDispatchStateFromCapability(validatedDecision, validatedExecution, validated);
       const routing: RoutingDecision = {
         primaryLane: validatedDecision.lane,
         fallbackLane: "none",
@@ -149,7 +155,7 @@ export async function dispatchUnifiedMessage(
         policyVersion: runtime.routerConfig.policyVersion,
         failClosed: true,
       };
-      const result = buildResult(envelope, routing, capabilityState, capabilityState, {
+      const result = buildResult(validated, routing, capabilityState, capabilityState, {
         capabilityDecision: validatedDecision,
         capabilityExecution: validatedExecution,
       });
@@ -157,32 +163,32 @@ export async function dispatchUnifiedMessage(
     }
   }
 
-  const routing = routeMessage(envelope, runtime.routerConfig);
+  const routing = routeMessage(validated, runtime.routerConfig);
   const primary = getLaneAdapter(runtime, routing.primaryLane);
   const primaryState = withCanonicalTraceId(
     await primary.dispatch({
-      envelope,
+      envelope: validated,
       intentRoute: `unified:${routing.reason}`,
     }),
-    envelope.traceId,
+    validated.traceId,
   );
   if (shouldSkipFallback(routing, runtime.routerConfig, primaryState)) {
-    return buildResult(envelope, routing, primaryState, primaryState);
+    return buildResult(validated, routing, primaryState, primaryState);
   }
 
   if (routing.fallbackLane === "none") {
-    return buildResult(envelope, routing, primaryState, primaryState);
+    return buildResult(validated, routing, primaryState, primaryState);
   }
 
   const fallback = getLaneAdapter(runtime, routing.fallbackLane);
   const fallbackState = withCanonicalTraceId(
     await fallback.dispatch({
-      envelope,
+      envelope: validated,
       intentRoute: `unified:fallback_after_${routing.reason}`,
     }),
-    envelope.traceId,
+    validated.traceId,
   );
-  const result = buildResult(envelope, routing, primaryState, fallbackState, {
+  const result = buildResult(validated, routing, primaryState, fallbackState, {
     fallbackState,
     fallbackInfo: {
       attempted: true,
@@ -192,4 +198,11 @@ export async function dispatchUnifiedMessage(
     },
   });
   return result;
+}
+
+export async function dispatchUnifiedMessage(
+  runtime: UnifiedRuntime,
+  input: Omit<UnifiedMessageEnvelope, "traceId" | "receivedAtIso">,
+): Promise<UnifiedDispatchResult> {
+  return dispatchUnifiedEnvelope(runtime, createUnifiedEnvelopeForDispatch(input));
 }

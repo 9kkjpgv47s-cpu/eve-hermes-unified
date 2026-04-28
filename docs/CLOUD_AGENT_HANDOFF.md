@@ -49,6 +49,9 @@ Every PR should include:
 - **`UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES`**: comma-separated `FailureClass` values; when the primary lane fails with one of these classes, dispatch does not run the fallback lane (unless `failClosed` or `fallbackLane=none` already stop fallback).
 - **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`**: wall-clock cap for capability executor body in `UnifiedCapabilityEngine` (0 = unlimited; default 180000).
 - **`UNIFIED_MEMORY_SERIALIZE_WRITES=1`**: wrap the in-memory `UnifiedMemoryStore` with a serialized front so concurrent `get`/`set`/`list` operations are totally ordered (file backend is unchanged).
+- **`UNIFIED_DISPATCH_QUEUE_PATH`**: JSON file backing `FileDispatchDurabilityQueue`. Unified dispatch appends failed envelopes for cross-process replay (`npm run dispatch -- --replay-queue`).
+- **Soak drift summary**: `npm run summarize:soak-report -- --input evidence/soak-*.jsonl` produces metrics + optional drift alarms (`UNIFIED_SOAK_FAIL_ON_DRIFT=1`).
+- **Emergency rollback rehearsal**: `npm run rehearse:emergency-rollback` writes `evidence/emergency-rollback-rehearsal-*.json`; `--execute` applies Eve-safe policy via `scripts/prod-rollback-eve-safe-lane.sh`.
 
 ## Cutover and Rollback Commands
 

@@ -9,15 +9,29 @@ import { createUnifiedMemoryStoreFromEnv } from "../memory/unified-memory-store.
 import { createDefaultUnifiedCapabilityRegistry } from "../skills/capability-registry.js";
 import { UnifiedCapabilityEngine } from "../runtime/capability-engine.js";
 import { registerDefaultCapabilityExecutors } from "../runtime/default-capability-handlers.js";
-import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
+import {
+  createUnifiedEnvelopeForDispatch,
+  dispatchUnifiedEnvelope,
+} from "../runtime/unified-dispatch.js";
+import { FileDispatchDurabilityQueue, replayPendingDispatches } from "../runtime/dispatch-durability-queue.js";
 import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
 
-function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
+type CliArgs = {
+  text: string;
+  chatId: string;
+  messageId: string;
+  enqueueOnly: boolean;
+  replayQueue: boolean;
+};
+
+function parseArgs(argv: string[]): CliArgs {
   let text = "";
   let chatId = "0";
   let messageId = "0";
+  let enqueueOnly = false;
+  let replayQueue = false;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--text") {
@@ -29,18 +43,19 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
     } else if (arg === "--message-id") {
       messageId = argv[i + 1] ?? "0";
       i += 1;
+    } else if (arg === "--enqueue-only") {
+      enqueueOnly = true;
+    } else if (arg === "--replay-queue") {
+      replayQueue = true;
     }
   }
-  if (!text.trim()) {
-    throw new Error("Missing required --text argument.");
-  }
-  return { text, chatId, messageId };
+  return { text, chatId, messageId, enqueueOnly, replayQueue };
 }
 
 async function main() {
   const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
   await loadDotEnvFile(rootDir);
-  const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
+  const args = parseArgs(process.argv.slice(2));
   const config = loadUnifiedRuntimeEnvConfig();
   const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
@@ -106,17 +121,44 @@ async function main() {
     capabilityEngine,
   };
 
-  const result = await dispatchUnifiedMessage(runtime, {
+  const queue = new FileDispatchDurabilityQueue(config.dispatchDurabilityQueuePath);
+
+  if (args.replayQueue) {
+    const replay = await replayPendingDispatches(queue, runtime);
+    process.stdout.write(`${JSON.stringify({ mode: "replay_queue", ...replay }, null, 2)}\n`);
+    return;
+  }
+
+  if (!args.text.trim()) {
+    throw new Error("Missing required --text argument.");
+  }
+
+  const envelope = createUnifiedEnvelopeForDispatch({
     channel: "telegram",
-    chatId,
-    messageId,
-    text,
+    chatId: args.chatId,
+    messageId: args.messageId,
+    text: args.text,
   });
+
+  if (args.enqueueOnly) {
+    const entry = await queue.appendEnvelope(envelope);
+    process.stdout.write(`${JSON.stringify({ mode: "enqueue_only", queueEntry: entry }, null, 2)}\n`);
+    return;
+  }
+
+  const result = await dispatchUnifiedEnvelope(runtime, envelope);
+  if (result.response.failureClass !== "none" && result.primaryState.status === "failed") {
+    await queue.appendEnvelope(envelope);
+  }
   await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-main().catch((error) => {
-  process.stderr.write(`${String(error)}\n`);
-  process.exitCode = 1;
-});
+const entryPath = process.argv[1] ? path.resolve(process.argv[1]) : "";
+const thisFile = fileURLToPath(import.meta.url);
+if (entryPath && entryPath === thisFile) {
+  main().catch((error) => {
+    process.stderr.write(`${String(error)}\n`);
+    process.exitCode = 1;
+  });
+}

@@ -50,3 +50,7 @@ for i in $(seq 1 "$iterations"); do
 done
 
 echo "Wrote $report"
+
+if [[ "${UNIFIED_SOAK_SUMMARIZE:-0}" == "1" ]]; then
+  node "$ROOT_DIR/scripts/summarize-soak-report.mjs" --input "$report" || true
+fi

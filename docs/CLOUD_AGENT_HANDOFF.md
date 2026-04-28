@@ -127,6 +127,12 @@ Schema validation expectations:
 - dedicated H2 closeout gate:
   - `npm run validate:h2-closeout`
   - enforces H2-scoped required evidence (`h2-drill-suite`, rollback threshold calibration, supervised rollback simulation) when listed in `requiredEvidence`
+- generalized closeout evidence command mapping for later horizons:
+  - `validate:horizon-closeout` now accepts horizon-scoped drill suite aliases in `requiredEvidence`:
+    - `npm run run:h2-drill-suite`
+    - `npm run run:h3-drill-suite`
+    - `npm run run:h4-drill-suite`
+  - these aliases are verified using the same strict `h2-drill-suite` schema and fail-closed drill checks (`canaryHoldPass`, `majorityHoldPass`, rollback trigger/pass, and rollback source-consistency signals)
 - single H2 closeout orchestrator:
   - `npm run run:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file <gateway.env> --allow-horizon-mismatch`
   - executes calibration + supervised rollback simulation + H2 closeout gate in one run

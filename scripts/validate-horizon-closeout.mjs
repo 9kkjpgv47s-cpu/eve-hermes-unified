@@ -22,6 +22,34 @@ function normalizeHorizon(value) {
   return HORIZON_SEQUENCE.includes(normalized) ? normalized : "";
 }
 
+function deriveNextHorizon(sourceHorizon) {
+  const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
+  if (sourceIndex < 0 || sourceIndex >= HORIZON_SEQUENCE.length - 1) {
+    return "";
+  }
+  return HORIZON_SEQUENCE[sourceIndex + 1];
+}
+
+function normalizeCommand(value) {
+  return String(value ?? "").trim().replace(/\s+/g, " ");
+}
+
+function parseHorizonRunnerCommand(command) {
+  const normalized = normalizeCommand(command);
+  const match = normalized.match(/^npm run run:h([1-5])-(closeout|promotion)(?:\s+.*)?$/);
+  if (!match) {
+    return null;
+  }
+  const source = normalizeHorizon(`H${String(match[1])}`);
+  const kind = String(match[2]);
+  const next = deriveNextHorizon(source);
+  return {
+    source,
+    kind,
+    next,
+  };
+}
+
 function evidenceEntryAppliesToHorizon(entry, targetHorizon) {
   if (!entry || typeof entry !== "object") {
     return false;
@@ -171,6 +199,13 @@ function sortByGeneratedAtDesc(entries) {
 }
 
 function commandVerificationType(command) {
+  const runnerCommand = parseHorizonRunnerCommand(command);
+  if (runnerCommand?.kind === "closeout") {
+    return "horizon-closeout-run";
+  }
+  if (runnerCommand?.kind === "promotion") {
+    return "horizon-promotion-run";
+  }
   if (command === "npm run validate:evidence-summary" || command === "npm run validate:all") {
     return "validation-summary";
   }
@@ -336,8 +371,9 @@ function resolveBundleVerificationSelectionSignals(payload) {
   };
 }
 
-function evaluateCommandPayload(command, payload) {
+function evaluateCommandPayload(command, payload, targetHorizon = "") {
   const verificationType = commandVerificationType(command);
+  const runnerCommand = parseHorizonRunnerCommand(command);
   if (verificationType === "existence-only") {
     return { pass: true, checks: [] };
   }
@@ -499,6 +535,92 @@ function evaluateCommandPayload(command, payload) {
       checks.push("h2_drill_rollback_source_consistency_signals_not_reported");
     } else if (payload?.checks?.rollbackPolicySourceConsistencySignalsPass !== true) {
       checks.push("h2_drill_rollback_source_consistency_signals_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "horizon-closeout-run") {
+    const checks = [];
+    const horizonSchema = validateManifestSchema("horizon-closeout-run", payload);
+    const h2Schema = validateManifestSchema("h2-closeout-run", payload);
+    if (!horizonSchema.valid && !h2Schema.valid) {
+      checks.push(
+        ...horizonSchema.errors.map((error) => `horizon_closeout_run_schema_invalid:${error}`),
+      );
+    }
+    if (payload.pass !== true) {
+      checks.push("horizon_closeout_run_not_passed");
+    }
+    const expectedSource = runnerCommand?.source || normalizeHorizon(targetHorizon);
+    const expectedNext = runnerCommand?.next || deriveNextHorizon(expectedSource);
+    const source = normalizeHorizon(payload?.horizon?.source ?? payload?.sourceHorizon ?? "");
+    const next = normalizeHorizon(
+      payload?.horizon?.next ??
+        payload?.nextHorizon ??
+        payload?.checks?.nextHorizon ??
+        payload?.checks?.nextHorizon?.selectedNextHorizon ??
+        "",
+    );
+    if (!source) {
+      checks.push("horizon_closeout_run_source_horizon_not_reported");
+    } else if (expectedSource && source !== expectedSource) {
+      checks.push(`horizon_closeout_run_source_horizon_mismatch:${source}!=${expectedSource}`);
+    }
+    if (!next) {
+      checks.push("horizon_closeout_run_next_horizon_not_reported");
+    } else if (expectedNext && next !== expectedNext) {
+      checks.push(`horizon_closeout_run_next_horizon_mismatch:${next}!=${expectedNext}`);
+    }
+    const closeoutGateReported =
+      typeof payload?.checks?.horizonCloseoutGatePass === "boolean"
+      || typeof payload?.checks?.h2CloseoutGatePass === "boolean";
+    const closeoutGatePass =
+      payload?.checks?.horizonCloseoutGatePass === true
+      || payload?.checks?.h2CloseoutGatePass === true;
+    if (!closeoutGateReported) {
+      checks.push("horizon_closeout_run_gate_not_reported");
+    } else if (!closeoutGatePass) {
+      checks.push("horizon_closeout_run_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "horizon-promotion-run") {
+    const checks = [];
+    const horizonSchema = validateManifestSchema("horizon-promotion-run", payload);
+    const h2Schema = validateManifestSchema("h2-promotion-run", payload);
+    if (!horizonSchema.valid && !h2Schema.valid) {
+      checks.push(
+        ...horizonSchema.errors.map((error) => `horizon_promotion_run_schema_invalid:${error}`),
+      );
+    }
+    if (payload.pass !== true) {
+      checks.push("horizon_promotion_run_not_passed");
+    }
+    const expectedSource = runnerCommand?.source || normalizeHorizon(targetHorizon);
+    const expectedNext = runnerCommand?.next || deriveNextHorizon(expectedSource);
+    const source = normalizeHorizon(
+      payload?.horizon?.source ?? payload?.sourceHorizon ?? payload?.checks?.sourceHorizon ?? "",
+    );
+    const next = normalizeHorizon(
+      payload?.horizon?.next ??
+        payload?.nextHorizon ??
+        payload?.checks?.nextHorizon ??
+        payload?.checks?.nextHorizon?.selectedNextHorizon ??
+        "",
+    );
+    if (!source) {
+      checks.push("horizon_promotion_run_source_horizon_not_reported");
+    } else if (expectedSource && source !== expectedSource) {
+      checks.push(`horizon_promotion_run_source_horizon_mismatch:${source}!=${expectedSource}`);
+    }
+    if (!next) {
+      checks.push("horizon_promotion_run_next_horizon_not_reported");
+    } else if (expectedNext && next !== expectedNext) {
+      checks.push(`horizon_promotion_run_next_horizon_mismatch:${next}!=${expectedNext}`);
+    }
+    if (typeof payload?.checks?.horizonPromotionPass !== "boolean") {
+      checks.push("horizon_promotion_run_gate_not_reported");
+    } else if (payload?.checks?.horizonPromotionPass !== true) {
+      checks.push("horizon_promotion_run_gate_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -762,7 +884,7 @@ async function main() {
         const inspectedMatches = [];
         for (const matchPath of matches) {
           const payload = await readJson(matchPath);
-          const evaluation = evaluateCommandPayload(command, payload);
+          const evaluation = evaluateCommandPayload(command, payload, targetHorizon);
           inspectedMatches.push({
             path: matchPath,
             payload,

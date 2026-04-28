@@ -264,6 +264,62 @@ describe("dispatchUnifiedMessage", () => {
     }
   });
 
+  it("writes dispatch queue journal accepted+finished for lane path", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "dispatch-queue-journal-"));
+    const qPath = path.join(dir, "queue.jsonl");
+    try {
+      const runtime = {
+        eveAdapter: new FakeLaneAdapter("eve", {
+          status: "pass",
+          reason: "ok",
+          runtimeUsed: "eve",
+          runId: "r1",
+          elapsedMs: 1,
+          failureClass: "none",
+          sourceLane: "eve",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t1",
+        }),
+        hermesAdapter: new FakeLaneAdapter("hermes", {
+          status: "pass",
+          reason: "ok",
+          runtimeUsed: "hermes",
+          runId: "r2",
+          elapsedMs: 1,
+          failureClass: "none",
+          sourceLane: "hermes",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t2",
+        }),
+        routerConfig: baseRouterConfig(),
+        dispatchQueueJournalPath: qPath,
+      };
+
+      const result = await dispatchUnifiedMessage(runtime, {
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "hello",
+      });
+
+      const raw = await readFile(qPath, "utf8");
+      const lines = raw.trim().split("\n").filter(Boolean);
+      expect(lines).toHaveLength(2);
+      const a = JSON.parse(lines[0]!) as { eventType?: string; dispatchPath?: string; traceId?: string };
+      const b = JSON.parse(lines[1]!) as { eventType?: string; responseLaneUsed?: string; traceId?: string };
+      expect(a.eventType).toBe("dispatch_queue_accepted");
+      expect(a.dispatchPath).toBe("lane");
+      expect(b.eventType).toBe("dispatch_queue_finished");
+      expect(b.responseLaneUsed).toBe("eve");
+      expect(a.traceId).toBe(result.envelope.traceId);
+      expect(b.traceId).toBe(result.envelope.traceId);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("stops on primary failure when failClosed=true", async () => {
     const runtime = {
       eveAdapter: new FakeLaneAdapter("eve", {

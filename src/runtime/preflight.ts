@@ -18,6 +18,8 @@ export type RuntimePreflightConfig = {
   capabilityPolicyAuditLogPath?: string;
   /** When set and non-empty, parent directory must be writable (router telemetry JSONL). */
   routerTelemetryLogPath?: string;
+  /** When set and non-empty, parent directory must be writable (dispatch queue journal). */
+  dispatchQueueJournalPath?: string;
 };
 
 function shellEscape(value: string): string {
@@ -109,6 +111,14 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     const routerTelemetryWritable = await checkWritableParent(routerTelemetry);
     if (!routerTelemetryWritable) {
       issues.push(`Router telemetry log path is not writable: ${routerTelemetry}`);
+    }
+  }
+
+  const dispatchQueue = config.dispatchQueueJournalPath?.trim();
+  if (dispatchQueue && dispatchQueue.length > 0) {
+    const dispatchQueueWritable = await checkWritableParent(dispatchQueue);
+    if (!dispatchQueueWritable) {
+      issues.push(`Dispatch queue journal path is not writable: ${dispatchQueue}`);
     }
   }
 

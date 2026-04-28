@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-28T22:05:00Z",
+  "updatedAtIso": "2026-04-28T22:20:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -157,7 +157,7 @@
       "id": "h3-action-1",
       "summary": "Harden runtime durability boundaries with persistent queue/replay semantics for cross-lane dispatch recovery.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "runtime"]
     },
     {
@@ -178,7 +178,7 @@
       "id": "h3-action-4",
       "summary": "Add memory durability verification suite for crash/restart recovery and cross-lane consistency checks.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "memory"]
     },
     {
@@ -397,6 +397,12 @@
       "horizon": "H3",
       "status": "planned",
       "note": "Completed h3-action-2: no-fallback-on-primary-failure-class policy, dispatch audit fallbackInfo telemetry, optional router-telemetry JSONL + schema gate; fixed progressive-horizon-goals to ignore completed source rows and skip growth-vs-source when source has zero pending (works with external GOAL_POLICIES.json)."
+    },
+    {
+      "timestamp": "2026-04-28T22:20:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "Completed h3-action-1: optional UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH JSONL (accepted/finished), reconcile-dispatch-queue.mjs, validate-manifest-schema dispatch-queue-journal-jsonl. Completed h3-action-4: validate:memory-durability (tsx verify-memory-durability.ts) for WAL + cross-lane replay after simulated restart."
     }
   ]
 }

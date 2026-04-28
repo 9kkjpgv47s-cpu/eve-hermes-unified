@@ -261,6 +261,21 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerTelemetryRotationRetainBytes).toBe(4096);
   });
 
+  it("parses dispatch queue journal path and rotation bytes", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH: "/tmp/dispatch-queue.jsonl",
+          UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES: "16384",
+          UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES: "8192",
+        }),
+      ),
+    );
+    expect(config.dispatchQueueJournalPath).toBe("/tmp/dispatch-queue.jsonl");
+    expect(config.dispatchQueueJournalRotationMaxBytes).toBe(16384);
+    expect(config.dispatchQueueJournalRotationRetainBytes).toBe(8192);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

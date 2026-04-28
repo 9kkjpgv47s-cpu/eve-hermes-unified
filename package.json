@@ -44,6 +44,8 @@
     "check:stage-promotion": "npm run check:stage-promotion-readiness",
     "promote:stage": "node ./scripts/promote-cutover-stage.mjs",
     "validate:manifest-schemas": "node ./scripts/validate-manifest-schema.mjs --type all --evidence-dir ./evidence --latest-only",
+    "reconcile:dispatch-queue": "node ./scripts/reconcile-dispatch-queue.mjs",
+    "validate:memory-durability": "tsx src/bin/verify-memory-durability.ts",
     "validate:regression-eve": "bash ./scripts/regression-eve-primary.sh",
     "validate:regression-eve-primary": "npm run validate:regression-eve",
     "validate:cutover-readiness": "bash ./scripts/verify-cutover-readiness.sh",

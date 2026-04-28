@@ -739,6 +739,64 @@ describe("validate-manifest-schema.mjs", () => {
     });
   });
 
+  it("passes for valid dispatch-queue-journal jsonl", async () => {
+    await withTempDir(async (dir) => {
+      const auditPath = path.join(dir, "dispatch-queue-journal-20260428-000000.jsonl");
+      const routing = {
+        primaryLane: "eve",
+        fallbackLane: "hermes",
+        reason: "default_policy_lane",
+        policyVersion: "v1",
+        failClosed: false,
+      };
+      const lines = [
+        {
+          auditSchemaVersion: 1,
+          eventType: "dispatch_queue_accepted",
+          recordedAtIso: new Date().toISOString(),
+          traceId: "t-q",
+          chatId: "1",
+          messageId: "2",
+          tenantId: null,
+          dispatchPath: "lane",
+          routing,
+        },
+        {
+          auditSchemaVersion: 1,
+          eventType: "dispatch_queue_finished",
+          recordedAtIso: new Date().toISOString(),
+          traceId: "t-q",
+          chatId: "1",
+          messageId: "2",
+          tenantId: null,
+          responseLaneUsed: "eve",
+          responseFailureClass: "none",
+          primaryLane: "eve",
+          primaryStatus: "pass",
+          fallbackAttempted: false,
+          capabilityConsumed: false,
+        },
+      ];
+      await writeFile(
+        auditPath,
+        lines.map((l) => JSON.stringify(l)).join("\n") + "\n",
+        "utf8",
+      );
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "dispatch-queue-journal-jsonl",
+          "--file",
+          auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
   it("passes for valid stage-drill and auto-rollback-policy manifests", async () => {
     await withTempDir(async (dir) => {
       const stageDrillPath = path.join(dir, "stage-drill-canary-20260426-000000.json");

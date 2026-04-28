@@ -46,6 +46,10 @@ export type UnifiedRuntimeEnvConfig = {
   routerTelemetryRotationMaxBytes: number;
   /** Bytes of tail to keep in the primary router telemetry log after rotation (line-aligned). */
   routerTelemetryRotationRetainBytes: number;
+  /** Optional append-only JSONL: dispatch accepted/finished pairs for crash recovery / reconcile. */
+  dispatchQueueJournalPath: string;
+  dispatchQueueJournalRotationMaxBytes: number;
+  dispatchQueueJournalRotationRetainBytes: number;
   /** When > 0, fail capability execution if the handler does not settle within this many ms. */
   capabilityExecutionTimeoutMs: number;
   /** When true with a positive execution timeout, SIGTERM lane subprocess on budget expiry. */
@@ -363,6 +367,25 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     0,
   );
+  const dispatchQueueJournalPath =
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH",
+      "DISPATCH_QUEUE_JOURNAL_PATH",
+    ]) ?? "";
+  const dispatchQueueJournalRotationMaxBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES",
+      "DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES",
+    ]),
+    0,
+  );
+  const dispatchQueueJournalRotationRetainBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES",
+      "DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES",
+    ]),
+    0,
+  );
   const capabilityExecutionTimeoutMs = Math.min(
     86_400_000,
     parseNonNegativeInt(
@@ -481,6 +504,9 @@ export function loadUnifiedRuntimeEnvConfig(
     routerTelemetryLogPath,
     routerTelemetryRotationMaxBytes,
     routerTelemetryRotationRetainBytes,
+    dispatchQueueJournalPath,
+    dispatchQueueJournalRotationMaxBytes,
+    dispatchQueueJournalRotationRetainBytes,
     capabilityExecutionTimeoutMs,
     capabilityAbortLaneOnTimeout,
     tenantStrict,

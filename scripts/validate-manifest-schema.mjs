@@ -1103,6 +1103,95 @@ export function validateRouterTelemetryJsonlText(raw) {
   return { valid: errors.length === 0, errors };
 }
 
+const DISPATCH_QUEUE_JOURNAL_LINE_SCHEMA_VERSION = 1;
+
+export function validateDispatchQueueJournalJsonlLine(record, lineIndex) {
+  const prefix = `line ${String(lineIndex + 1)}`;
+  const errors = [];
+  pushError(errors, record && typeof record === "object", `${prefix}: must be a JSON object`);
+  if (!record || typeof record !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    record.auditSchemaVersion === DISPATCH_QUEUE_JOURNAL_LINE_SCHEMA_VERSION,
+    `${prefix}: auditSchemaVersion must be ${String(DISPATCH_QUEUE_JOURNAL_LINE_SCHEMA_VERSION)}`,
+  );
+  pushError(errors, isNonEmptyString(record.recordedAtIso), `${prefix}: recordedAtIso required`);
+  pushError(errors, isNonEmptyString(record.traceId), `${prefix}: traceId required`);
+  pushError(errors, isNonEmptyString(record.chatId), `${prefix}: chatId required`);
+  pushError(errors, isNonEmptyString(record.messageId), `${prefix}: messageId required`);
+  pushError(
+    errors,
+    record.tenantId === null || typeof record.tenantId === "string",
+    `${prefix}: tenantId must be null or string`,
+  );
+  if (record.tenantId !== null && record.tenantId !== undefined) {
+    pushError(errors, isValidDispatchAuditTenantId(record.tenantId), `${prefix}: tenantId invalid`);
+  }
+  const et = record.eventType;
+  if (et === "dispatch_queue_accepted") {
+    pushError(
+      errors,
+      record.dispatchPath === "lane" || record.dispatchPath === "capability",
+      `${prefix}: dispatchPath must be lane or capability`,
+    );
+    const routing = record.routing;
+    pushError(errors, routing && typeof routing === "object", `${prefix}: routing must be object`);
+    if (routing && typeof routing === "object") {
+      pushError(errors, isLaneId(routing.primaryLane), `${prefix}: routing.primaryLane invalid`);
+      pushError(
+        errors,
+        isLaneId(routing.fallbackLane) || routing.fallbackLane === "none",
+        `${prefix}: routing.fallbackLane invalid`,
+      );
+      pushError(errors, isNonEmptyString(routing.reason), `${prefix}: routing.reason required`);
+      pushError(errors, isNonEmptyString(routing.policyVersion), `${prefix}: routing.policyVersion required`);
+      pushError(errors, typeof routing.failClosed === "boolean", `${prefix}: routing.failClosed must be boolean`);
+    }
+    return { valid: errors.length === 0, errors };
+  }
+  if (et === "dispatch_queue_finished") {
+    pushError(errors, isLaneId(record.responseLaneUsed), `${prefix}: responseLaneUsed invalid`);
+    pushError(errors, isFailureClass(record.responseFailureClass), `${prefix}: responseFailureClass invalid`);
+    pushError(errors, isLaneId(record.primaryLane), `${prefix}: primaryLane invalid`);
+    pushError(
+      errors,
+      record.primaryStatus === "pass" || record.primaryStatus === "failed",
+      `${prefix}: primaryStatus invalid`,
+    );
+    pushError(errors, typeof record.fallbackAttempted === "boolean", `${prefix}: fallbackAttempted must be boolean`);
+    if (record.fallbackReason !== undefined && record.fallbackReason !== null) {
+      pushError(errors, typeof record.fallbackReason === "string", `${prefix}: fallbackReason must be string`);
+    }
+    pushError(errors, typeof record.capabilityConsumed === "boolean", `${prefix}: capabilityConsumed must be boolean`);
+    return { valid: errors.length === 0, errors };
+  }
+  pushError(errors, false, `${prefix}: eventType must be dispatch_queue_accepted or dispatch_queue_finished`);
+  return { valid: false, errors };
+}
+
+export function validateDispatchQueueJournalJsonlText(raw) {
+  const errors = [];
+  const lines = String(raw ?? "").split(/\r?\n/);
+  const nonEmpty = lines.map((l) => l.trim()).filter((l) => l.length > 0);
+  pushError(errors, nonEmpty.length > 0, "file must contain at least one non-empty JSON line");
+  if (nonEmpty.length === 0) {
+    return { valid: false, errors };
+  }
+  for (let i = 0; i < nonEmpty.length; i += 1) {
+    let parsed;
+    try {
+      parsed = JSON.parse(nonEmpty[i]);
+    } catch {
+      errors.push(`line ${String(i + 1)}: invalid JSON`);
+      continue;
+    }
+    errors.push(...validateDispatchQueueJournalJsonlLine(parsed, i).errors);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 const CAPABILITY_POLICY_AUDIT_LINE_SCHEMA_VERSION = 1;
 
 function isSha256Hex(value) {
@@ -1254,6 +1343,16 @@ async function validateTypedArtifact(type, filePath) {
       errors: validation.errors,
     };
   }
+  if (type === "dispatch-queue-journal-jsonl") {
+    const raw = await readFile(resolved, "utf8");
+    const validation = validateDispatchQueueJournalJsonlText(raw);
+    return {
+      type,
+      file: resolved,
+      valid: validation.valid,
+      errors: validation.errors,
+    };
+  }
   const payload = JSON.parse(await readFile(resolved, "utf8"));
   const validation = validateManifestSchema(type, payload);
   return {
@@ -1314,6 +1413,7 @@ async function listAllManifestTargets(evidenceDir) {
   const dispatchAuditJsonlTargets = [];
   const capabilityPolicyAuditJsonlTargets = [];
   const routerTelemetryJsonlTargets = [];
+  const dispatchQueueJournalJsonlTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1414,6 +1514,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "router-telemetry-jsonl",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("dispatch-queue-journal-") && entry.name.endsWith(".jsonl")) {
+      dispatchQueueJournalJsonlTargets.push({
+        type: "dispatch-queue-journal-jsonl",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -1434,6 +1539,7 @@ async function listAllManifestTargets(evidenceDir) {
   dispatchAuditJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   capabilityPolicyAuditJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   routerTelemetryJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
+  dispatchQueueJournalJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1453,6 +1559,7 @@ async function listAllManifestTargets(evidenceDir) {
     dispatchAuditJsonlTargets,
     capabilityPolicyAuditJsonlTargets,
     routerTelemetryJsonlTargets,
+    dispatchQueueJournalJsonlTargets,
   };
 }
 
@@ -1470,7 +1577,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|all)",
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
     );
   }
 
@@ -1576,6 +1683,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.dispatchQueueJournalJsonlTargets.length > 0
+            ? [
+                targetGroups.dispatchQueueJournalJsonlTargets[
+                  targetGroups.dispatchQueueJournalJsonlTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1596,6 +1710,7 @@ async function main() {
           ...targetGroups.dispatchAuditJsonlTargets,
           ...targetGroups.capabilityPolicyAuditJsonlTargets,
           ...targetGroups.routerTelemetryJsonlTargets,
+          ...targetGroups.dispatchQueueJournalJsonlTargets,
         ];
     const results = [];
     for (const target of targets) {

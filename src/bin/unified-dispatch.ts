@@ -149,6 +149,10 @@ async function main() {
     capabilityPolicyAuditLogPath: policyAuditPath.length > 0 ? policyAuditPath : undefined,
     routerTelemetryLogPath:
       config.routerTelemetryLogPath.trim().length > 0 ? config.routerTelemetryLogPath.trim() : undefined,
+    dispatchQueueJournalPath:
+      config.dispatchQueueJournalPath.trim().length > 0
+        ? config.dispatchQueueJournalPath.trim()
+        : undefined,
   });
   if (preflightIssues.length > 0) {
     const reasons = preflightIssues.join("; ");
@@ -176,6 +180,13 @@ async function main() {
           routerTelemetryLogPath: config.routerTelemetryLogPath.trim(),
           routerTelemetryRotationMaxBytes: config.routerTelemetryRotationMaxBytes,
           routerTelemetryRotationRetainBytes: config.routerTelemetryRotationRetainBytes,
+        }
+      : {}),
+    ...(config.dispatchQueueJournalPath.trim().length > 0
+      ? {
+          dispatchQueueJournalPath: config.dispatchQueueJournalPath.trim(),
+          dispatchQueueJournalRotationMaxBytes: config.dispatchQueueJournalRotationMaxBytes,
+          dispatchQueueJournalRotationRetainBytes: config.dispatchQueueJournalRotationRetainBytes,
         }
       : {}),
   };

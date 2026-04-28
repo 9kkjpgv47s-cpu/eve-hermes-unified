@@ -113,4 +113,18 @@ describe("runRuntimePreflight", () => {
       );
     });
   });
+
+  it("fails when dispatch queue journal directory is not writable", async () => {
+    await withTempDir(async (dir) => {
+      const blockedFile = path.join(dir, "blocked");
+      await writeFile(blockedFile, "x", "utf8");
+      const config = {
+        ...baseConfig(dir),
+        dispatchQueueJournalPath: path.join(blockedFile, "queue.jsonl"),
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "Dispatch queue journal path is not writable",
+      );
+    });
+  });
 });

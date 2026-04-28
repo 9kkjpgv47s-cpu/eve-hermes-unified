@@ -52,6 +52,7 @@ Optional crash recovery for file-backed unified memory:
 - **`UNIFIED_MEMORY_VERIFY_PERSIST=1`** — after each successful persist, re-read the snapshot and verify it matches the in-memory map (and SHA-256 of canonical JSON).
 - **`UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY=1`** — before each persist, verify **(on-disk snapshot + WAL replay)** matches the in-memory map (detects journal tampering or drift).
 - Preflight checks the journal path parent is writable when set and `UNIFIED_MEMORY_STORE_KIND=file`.
+- **CI / operator durability check:** `npm run validate:memory-durability` — runs `src/bin/verify-memory-durability.ts` (simulated process restart, eve + hermes keys, optional `--memory-file` / `--journal-path` / `--cycles`).
 
 ## Dispatch audit JSONL (schema)
 
@@ -59,7 +60,7 @@ Optional crash recovery for file-backed unified memory:
 - **`fallbackInfo`** may include router telemetry when fallback is skipped by policy: **`primaryFailureClass`** and **`noFallbackOnPrimaryFailureClasses`** (same **`auditSchemaVersion`**; manifest validator accepts these optional fields).
 - Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>` (accepts **v1** and **v2** lines; v2 requires **`tenantId`** key present as `null` or string).
 - Capability policy audit: `node scripts/validate-manifest-schema.mjs --type capability-policy-audit-jsonl --file <path>` (expects `evidence/capability-policy-audit-*.jsonl` naming for `--type all` sweep).
-- **`npm run validate:manifest-schemas`** includes `evidence/unified-dispatch-audit-*.jsonl`, `evidence/capability-policy-audit-*.jsonl`, and `evidence/router-telemetry-*.jsonl` when present.
+- **`npm run validate:manifest-schemas`** includes `evidence/unified-dispatch-audit-*.jsonl`, `evidence/capability-policy-audit-*.jsonl`, `evidence/router-telemetry-*.jsonl`, and `evidence/dispatch-queue-journal-*.jsonl` when present.
 
 ## Capability execution budget and lane abort
 
@@ -82,6 +83,12 @@ Optional crash recovery for file-backed unified memory:
 ## Progressive horizon goal runway (`check:progressive-horizon-goals`)
 
 - Growth checks use **`sourceBaselineCount`**: pending **`nextActions`** rows for the **source** horizon when any exist (completed source rows do not inflate the bar). When the source horizon has **zero pending** rows, growth-vs-source checks are **skipped** so external **`docs/GOAL_POLICIES.json`** (large historical source counts) does not require an impossible next-horizon row count; **`minPendingNextActions`** and **`requiredTaggedActionCounts`** still apply. Check output includes **`sourcePendingActionCount`** and **`sourceBaselineCount`**.
+
+## Dispatch queue journal (H3 crash recovery)
+
+- **`UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH`** (alias **`DISPATCH_QUEUE_JOURNAL_PATH`**) — optional append-only JSONL. Each dispatch writes **`dispatch_queue_accepted`** (routing snapshot + `dispatchPath`: `lane` \| `capability`) then **`dispatch_queue_finished`** (outcome summary). **`UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES`** / **`UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES`** — same semantics as other JSONL logs (`0` = disabled).
+- **Reconcile** (find accepted rows missing a matching finished by `traceId`): `node scripts/reconcile-dispatch-queue.mjs --file <path>` (exit `2` if orphans or parse errors).
+- Validate: `node scripts/validate-manifest-schema.mjs --type dispatch-queue-journal-jsonl --file <path>`. Evidence sweep **`--type all`** includes `evidence/dispatch-queue-journal-*.jsonl` when present.
 
 ## Horizon-neutral failure id inventory (orchestration scripts)
 

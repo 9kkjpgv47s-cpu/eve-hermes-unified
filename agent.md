@@ -8,20 +8,19 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 durability advances in code ahead of promotion.
-- Branch: **`cursor/h3-router-telemetry-jsonl-cc15`** — optional **router telemetry JSONL** for no-fallback policy events + manifest validation.
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 durability items **h3-action-1** and **h3-action-4** are **completed** in status.
+- Branch: **`cursor/h3-dispatch-queue-memory-durability-cc15`** — dispatch **queue journal** + **memory durability** verify + manifest / reconcile tooling.
 
 ## What Was Just Completed (large chunk)
 
-### H3 / H4
+### H3
 
-1. **Capability policy audit JSONL** — denials + optional startup fingerprint; **`validate-manifest-schema`** gate **`capability-policy-audit-jsonl`**.
-2. **Policy audit rotation** — **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_*`**; shared **`maybeRotateJsonlLogInPlace`** with dispatch audit.
-3. **Router fallback hardening** — **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** skips fallback lane on selected primary **`failureClass`** when **`failClosed=0`**; **`fallbackInfo`** carries **`primaryFailureClass`** + **`noFallbackOnPrimaryFailureClasses`** into dispatch audit JSONL.
-4. **Failure id inventory** — documented dual-report coverage in **`docs/CLOUD_AGENT_HANDOFF.md`** (`validate-horizon-closeout`, `promote-horizon`, `run-h2-closeout`, `run-h2-promotion`).
-5. **Router telemetry JSONL** — optional **`UNIFIED_ROUTER_TELEMETRY_LOG_PATH`** appends **`router_no_fallback_skipped`** events; **`validate-manifest-schema --type router-telemetry-jsonl`**; optional rotation env vars; dispatch calls **`appendRouterTelemetryNoFallbackSkipped`** when path set.
-6. **Progressive horizon goals** — **`check-progressive-horizon-goals`** uses pending source rows only; skips growth-vs-source when source has zero pending (compatible with **`docs/GOAL_POLICIES.json`**).
-7. **Horizon status** — **`h3-action-2`** marked **`completed`** in **`docs/HORIZON_STATUS.json`**.
+1. **Dispatch queue journal** — optional **`UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH`**; append **`dispatch_queue_accepted`** / **`dispatch_queue_finished`** per dispatch (shared `traceId`); rotation env vars; **`reconcile:dispatch-queue`** script; **`validate-manifest-schema --type dispatch-queue-journal-jsonl`**; evidence glob **`dispatch-queue-journal-*.jsonl`**.
+2. **Memory durability verify** — **`npm run validate:memory-durability`** (`src/bin/verify-memory-durability.ts`): WAL + snapshot, eve/hermes keys, simulated restart, **`verifyPersist`** + **`verifyJournalReplay`** on each cycle.
+
+### Prior (carry-forward on branch)
+
+- Router telemetry JSONL, progressive goals script semantics, router no-fallback policy, etc. (see `docs/CLOUD_AGENT_HANDOFF.md`).
 
 ## Read Order (Zero-Context Startup)
 
@@ -34,8 +33,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **H3 durability queue** — `docs/HORIZON_STATUS.json` **`h3-action-1`** (persistent cross-lane dispatch recovery semantics).
-2. **Memory durability verification suite** — **`h3-action-4`** (crash/restart + cross-lane consistency).
+1. **`h3-action-3`** — capability execution safety / resource budgets beyond current timeout (see `docs/HORIZON_STATUS.json`).
+2. **`h3-action-5`** / **`h3-action-6`** — long-window soak SLO drift + emergency rollback rehearsal bundles.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

@@ -544,6 +544,8 @@ describe("promote-horizon.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
           },
           null,
@@ -628,6 +630,8 @@ describe("promote-horizon.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: false,
               supervisedSimulationStageGoalPolicyPropagationPassed: false,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: false,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: false,
             },
           },
           null,
@@ -663,7 +667,7 @@ describe("promote-horizon.mjs", () => {
         false,
       );
       expect(payload.failures).toContain(
-        "closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported",
+        "closeout_run_supervised_simulation_stage_goal_policy_source_consistency_not_reported",
       );
     });
   });
@@ -698,6 +702,8 @@ describe("promote-horizon.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
           },
           null,
@@ -761,6 +767,8 @@ describe("promote-horizon.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: closeoutPath,
@@ -829,6 +837,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: closeoutPath,
@@ -904,6 +914,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: closeoutPath,
@@ -996,6 +1008,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: invalidCloseoutPath,
@@ -1069,6 +1083,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: closeoutPath,
@@ -1167,6 +1183,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
           },
           null,
@@ -1248,6 +1266,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: conflictingCloseoutPath,
@@ -1334,6 +1354,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: invalidCloseoutPath,
@@ -1431,6 +1453,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
           },
           null,
@@ -1520,6 +1544,8 @@ it("fails when closeout run reports conflicting source horizon aliases via check
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             failures: [],
           },

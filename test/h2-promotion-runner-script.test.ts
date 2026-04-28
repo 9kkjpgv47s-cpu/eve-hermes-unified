@@ -944,6 +944,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: false,
               supervisedSimulationStageGoalPolicyPropagationPassed: false,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: false,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: false,
             },
             failures: [],
           },
@@ -994,7 +996,9 @@ describe("run-h2-promotion.mjs", () => {
       expect(payload.checks.closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed).toBe(
         false,
       );
-      expect(payload.failures).toContain("h2_closeout_run_missing_supervised_stage_goal_policy");
+      expect(payload.failures).toContain(
+        "h2_closeout_run_missing_supervised_stage_goal_policy_source_consistency",
+      );
       expect(payload.failures).not.toContain("horizon_promotion_failed");
     });
   });
@@ -1045,6 +1049,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             failures: [],
           },
@@ -1138,6 +1144,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             failures: [],
           },
@@ -1228,6 +1236,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -1321,6 +1331,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -1412,6 +1424,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -1507,6 +1521,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -1600,6 +1616,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -1697,6 +1715,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -1794,6 +1814,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -1891,6 +1913,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -1996,6 +2020,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: mismatchedCloseoutPath,
@@ -2111,6 +2137,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             failures: [],
           },
@@ -2201,6 +2229,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             failures: [],
           },
@@ -2287,6 +2317,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-20260426-000000.json"),
@@ -2363,6 +2395,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: path.join(evidenceDir, "horizon-closeout-H2-missing.json"),
@@ -2461,6 +2495,8 @@ describe("run-h2-promotion.mjs", () => {
               supervisedSimulationPass: true,
               supervisedSimulationStageGoalPolicyPropagationReported: true,
               supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
             },
             files: {
               closeoutOut: mismatchedCloseoutPath,

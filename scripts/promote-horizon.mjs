@@ -214,19 +214,33 @@ function resolveCloseoutRunStageGoalPolicySignals(closeoutRunPayload) {
     "supervisedSimulationPass",
     "h2CloseoutGatePass",
   ]);
-  const propagationPass = resolveBooleanCandidate(checks, [
+  const validationPropagationPass = resolveBooleanCandidate(checks, [
     "supervisedSimulationStageGoalPolicyPropagationPassed",
+    "supervisedSimulationStageGoalPolicyValidationPropagationPassed",
     "supervisedSimulationStageGoalPolicyPropagationPass",
     "supervisedSimulationStagePolicySignalsPass",
   ]);
-  const propagationReported = resolveBooleanCandidate(checks, [
+  const validationPropagationReported = resolveBooleanCandidate(checks, [
     "supervisedSimulationStageGoalPolicyPropagationReported",
+    "supervisedSimulationStageGoalPolicyValidationPropagationReported",
     "supervisedSimulationStagePolicySignalsReported",
+  ]);
+  const sourceConsistencyPropagationReported = resolveBooleanCandidate(checks, [
+    "supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported",
+    "supervisedSimulationStageSourceConsistencySignalsReported",
+  ]);
+  const sourceConsistencyPropagationPass = resolveBooleanCandidate(checks, [
+    "supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed",
+    "supervisedSimulationStageSourceConsistencySignalsPass",
   ]);
   return {
     supervisedSimulationPass,
-    reported: propagationReported,
-    pass: propagationPass,
+    validationReported: validationPropagationReported,
+    validationPass: validationPropagationPass,
+    sourceConsistencyReported: sourceConsistencyPropagationReported,
+    sourceConsistencyPass: sourceConsistencyPropagationPass,
+    reported: validationPropagationReported && sourceConsistencyPropagationReported,
+    pass: validationPropagationPass && sourceConsistencyPropagationPass,
   };
 }
 
@@ -687,10 +701,18 @@ async function main() {
           failures.push("closeout_run_h2_closeout_gate_not_reported");
         } else if (!closeoutRunH2CloseoutGate.pass) {
           failures.push("closeout_run_h2_closeout_gate_not_passed");
-        } else if (!closeoutRunStageGoalPolicySignals.reported) {
+        } else if (!closeoutRunStageGoalPolicySignals.validationReported) {
           failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported");
-        } else if (!closeoutRunStageGoalPolicySignals.pass) {
+        } else if (!closeoutRunStageGoalPolicySignals.sourceConsistencyReported) {
+          failures.push(
+            "closeout_run_supervised_simulation_stage_goal_policy_source_consistency_not_reported",
+          );
+        } else if (!closeoutRunStageGoalPolicySignals.validationPass) {
           failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_passed");
+        } else if (!closeoutRunStageGoalPolicySignals.sourceConsistencyPass) {
+          failures.push(
+            "closeout_run_supervised_simulation_stage_goal_policy_source_consistency_not_passed",
+          );
         }
       }
       if (!closeoutRunPathSignals.hasAny) {
@@ -1112,6 +1134,14 @@ async function main() {
         closeoutRunStageGoalPolicySignals.pass,
       closeoutRunSupervisedSimulationStageGoalPolicyPropagationPass:
         closeoutRunStageGoalPolicySignals.pass,
+      closeoutRunSupervisedSimulationStageGoalPolicyValidationPropagationReported:
+        closeoutRunStageGoalPolicySignals.validationReported,
+      closeoutRunSupervisedSimulationStageGoalPolicyValidationPropagationPassed:
+        closeoutRunStageGoalPolicySignals.validationPass,
+      closeoutRunSupervisedSimulationStageGoalPolicySourceConsistencyPropagationReported:
+        closeoutRunStageGoalPolicySignals.sourceConsistencyReported,
+      closeoutRunSupervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed:
+        closeoutRunStageGoalPolicySignals.sourceConsistencyPass,
       requireProgressiveGoals: options.requireProgressiveGoals,
       strictGoalPolicyGates: options.strictGoalPolicyGates,
       requireGoalPolicySourceConsistency: options.requireGoalPolicySourceConsistency,

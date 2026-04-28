@@ -244,17 +244,21 @@ async function runDrillStep({
 }
 
 function isHoldStepPassing(step) {
+  const sourceConsistencySignals = resolveStepSourceConsistencySignals(step.payload);
   return (
     step.command.code === 0 &&
     step.payload?.pass === true &&
     step.payload?.decision?.action === "hold" &&
     step.payload?.checks?.promotionPassed === true &&
     step.payload?.checks?.rollbackPolicyPassed === true &&
-    step.payload?.checks?.rollbackPolicyStageSignalsPass === true
+    step.payload?.checks?.rollbackPolicyStageSignalsPass === true &&
+    sourceConsistencySignals.propagationReported === true &&
+    sourceConsistencySignals.propagationPassed === true
   );
 }
 
 function isRollbackSimulationPassing(step, autoApplyRollback) {
+  const sourceConsistencySignals = resolveStepSourceConsistencySignals(step.payload);
   if (!step.payload || step.payload.decision?.action !== "rollback") {
     return false;
   }
@@ -267,10 +271,42 @@ function isRollbackSimulationPassing(step, autoApplyRollback) {
   if (step.payload?.checks?.rollbackPolicyStageSignalsPass !== true) {
     return false;
   }
+  if (!sourceConsistencySignals.propagationReported || !sourceConsistencySignals.propagationPassed) {
+    return false;
+  }
   if (autoApplyRollback && step.payload?.decision?.rollbackApplied !== true) {
     return false;
   }
   return true;
+}
+
+function resolveStepSourceConsistencySignals(stepPayload) {
+  const checks =
+    stepPayload?.checks && typeof stepPayload.checks === "object"
+      ? stepPayload.checks
+      : {};
+  const mergeBundleReported =
+    checks.rollbackStagePromotionMergeBundleGoalPolicySourceConsistencyReported === true;
+  const mergeBundlePassed =
+    checks.rollbackStagePromotionMergeBundleGoalPolicySourceConsistencyPassed === true;
+  const bundleVerificationReported =
+    checks.rollbackStagePromotionBundleVerificationGoalPolicySourceConsistencyReported === true;
+  const bundleVerificationPassed =
+    checks.rollbackStagePromotionBundleVerificationGoalPolicySourceConsistencyPassed === true;
+  const propagationReported =
+    checks.rollbackStagePromotionGoalPolicySourceConsistencyPropagationReported === true
+    || (mergeBundleReported && bundleVerificationReported);
+  const propagationPassed =
+    checks.rollbackStagePromotionGoalPolicySourceConsistencyPropagationPassed === true
+    || (mergeBundlePassed && bundleVerificationPassed);
+  return {
+    mergeBundleReported,
+    mergeBundlePassed,
+    bundleVerificationReported,
+    bundleVerificationPassed,
+    propagationReported,
+    propagationPassed,
+  };
 }
 
 async function main() {
@@ -458,6 +494,18 @@ async function main() {
         (options.skipMajority || steps.majority?.payload?.checks?.rollbackPolicyStageSignalsPass === true) &&
         (options.skipRollbackSimulation ||
           steps.rollbackSimulation?.payload?.checks?.rollbackPolicyStageSignalsPass === true),
+      rollbackPolicySourceConsistencySignalsReported:
+        resolveStepSourceConsistencySignals(steps.canary?.payload).propagationReported &&
+        (options.skipMajority ||
+          resolveStepSourceConsistencySignals(steps.majority?.payload).propagationReported) &&
+        (options.skipRollbackSimulation ||
+          resolveStepSourceConsistencySignals(steps.rollbackSimulation?.payload).propagationReported),
+      rollbackPolicySourceConsistencySignalsPass:
+        resolveStepSourceConsistencySignals(steps.canary?.payload).propagationPassed &&
+        (options.skipMajority ||
+          resolveStepSourceConsistencySignals(steps.majority?.payload).propagationPassed) &&
+        (options.skipRollbackSimulation ||
+          resolveStepSourceConsistencySignals(steps.rollbackSimulation?.payload).propagationPassed),
     },
     steps: {
       canary: steps.canary,

@@ -247,6 +247,20 @@ function resolveGoalPolicyValidationState(payload, checkKeys) {
   return { reported: false, pass: false };
 }
 
+function resolveGoalPolicySourceConsistencyState(payload, checkKeys) {
+  if (!payload || typeof payload !== "object") {
+    return { reported: false, pass: false };
+  }
+  const checks = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+  for (const key of checkKeys) {
+    const candidate = checks[key];
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
 function resolveBundleVerificationSelectionSignals(payload) {
   const checks = payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
   const files = payload?.files && typeof payload.files === "object" ? payload.files : {};
@@ -311,6 +325,15 @@ function evaluateCommandPayload(command, payload) {
     } else if (!releaseGoalPolicyValidation.pass) {
       checks.push("release_goal_policy_validation_not_passed");
     }
+    const releaseGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(payload, [
+      "goalPolicySourceConsistencyPassed",
+      "goalPolicySourceConsistencyPass",
+    ]);
+    if (!releaseGoalPolicySourceConsistency.reported) {
+      checks.push("release_goal_policy_source_consistency_not_reported");
+    } else if (!releaseGoalPolicySourceConsistency.pass) {
+      checks.push("release_goal_policy_source_consistency_not_passed");
+    }
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "merge-bundle-validation") {
@@ -338,6 +361,24 @@ function evaluateCommandPayload(command, payload) {
     } else if (!initialScopeGoalPolicyValidation.pass) {
       checks.push("merge_bundle_initial_scope_goal_policy_validation_not_passed");
     }
+    const releaseGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(payload, [
+      "releaseGoalPolicySourceConsistencyPassed",
+      "releaseGoalPolicySourceConsistencyPass",
+    ]);
+    if (!releaseGoalPolicySourceConsistency.reported) {
+      checks.push("merge_bundle_release_goal_policy_source_consistency_not_reported");
+    } else if (!releaseGoalPolicySourceConsistency.pass) {
+      checks.push("merge_bundle_release_goal_policy_source_consistency_not_passed");
+    }
+    const initialScopeGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(payload, [
+      "initialScopeGoalPolicySourceConsistencyPassed",
+      "initialScopeGoalPolicySourceConsistencyPass",
+    ]);
+    if (!initialScopeGoalPolicySourceConsistency.reported) {
+      checks.push("merge_bundle_initial_scope_goal_policy_source_consistency_not_reported");
+    } else if (!initialScopeGoalPolicySourceConsistency.pass) {
+      checks.push("merge_bundle_initial_scope_goal_policy_source_consistency_not_passed");
+    }
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "bundle-verification") {
@@ -360,6 +401,24 @@ function evaluateCommandPayload(command, payload) {
       checks.push("bundle_verify_initial_scope_goal_policy_validation_not_reported");
     } else if (!initialScopeGoalPolicyValidation.pass) {
       checks.push("bundle_verify_initial_scope_goal_policy_validation_not_passed");
+    }
+    const releaseGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(payload, [
+      "releaseGoalPolicySourceConsistencyPassed",
+      "releaseGoalPolicySourceConsistencyPass",
+    ]);
+    if (!releaseGoalPolicySourceConsistency.reported) {
+      checks.push("bundle_verify_release_goal_policy_source_consistency_not_reported");
+    } else if (!releaseGoalPolicySourceConsistency.pass) {
+      checks.push("bundle_verify_release_goal_policy_source_consistency_not_passed");
+    }
+    const initialScopeGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(payload, [
+      "initialScopeGoalPolicySourceConsistencyPassed",
+      "initialScopeGoalPolicySourceConsistencyPass",
+    ]);
+    if (!initialScopeGoalPolicySourceConsistency.reported) {
+      checks.push("bundle_verify_initial_scope_goal_policy_source_consistency_not_reported");
+    } else if (!initialScopeGoalPolicySourceConsistency.pass) {
+      checks.push("bundle_verify_initial_scope_goal_policy_source_consistency_not_passed");
     }
     const selectionSignals = resolveBundleVerificationSelectionSignals(payload);
     if (!selectionSignals.selectionSignalReported) {
@@ -443,6 +502,15 @@ function evaluateCommandPayload(command, payload) {
       checks.push("initial_scope_goal_policy_validation_not_reported");
     } else if (!initialScopeGoalPolicyValidation.pass) {
       checks.push("initial_scope_goal_policy_validation_not_passed");
+    }
+    const initialScopeGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(payload, [
+      "releaseReadinessGoalPolicySourceConsistencyPassed",
+      "releaseReadinessGoalPolicySourceConsistencyPass",
+    ]);
+    if (!initialScopeGoalPolicySourceConsistency.reported) {
+      checks.push("initial_scope_goal_policy_source_consistency_not_reported");
+    } else if (!initialScopeGoalPolicySourceConsistency.pass) {
+      checks.push("initial_scope_goal_policy_source_consistency_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -677,6 +745,18 @@ async function main() {
           && item.pass === true
           && !item.checks.includes("release_goal_policy_validation_not_passed"),
       ),
+      releaseReadinessGoalPolicySourceConsistencyReported: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run validate:release-readiness"
+          && item.pass === true
+          && !item.checks.includes("release_goal_policy_source_consistency_not_reported"),
+      ),
+      releaseReadinessGoalPolicySourceConsistencyPassed: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run validate:release-readiness"
+          && item.pass === true
+          && !item.checks.includes("release_goal_policy_source_consistency_not_passed"),
+      ),
       bundleVerificationSelectionProvenanceReported: requiredEvidenceResults.some(
         (item) =>
           item.command === "npm run verify:merge-bundle"
@@ -690,6 +770,34 @@ async function main() {
           && item.pass === true
           && !item.checks.includes("bundle_verify_selection_proof_not_passed")
           && !item.checks.includes("bundle_verify_selection_gate_not_passed"),
+      ),
+      mergeBundleGoalPolicySourceConsistencyReported: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run validate:merge-bundle"
+          && item.pass === true
+          && !item.checks.includes("merge_bundle_release_goal_policy_source_consistency_not_reported")
+          && !item.checks.includes("merge_bundle_initial_scope_goal_policy_source_consistency_not_reported"),
+      ),
+      mergeBundleGoalPolicySourceConsistencyPassed: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run validate:merge-bundle"
+          && item.pass === true
+          && !item.checks.includes("merge_bundle_release_goal_policy_source_consistency_not_passed")
+          && !item.checks.includes("merge_bundle_initial_scope_goal_policy_source_consistency_not_passed"),
+      ),
+      bundleVerificationGoalPolicySourceConsistencyReported: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run verify:merge-bundle"
+          && item.pass === true
+          && !item.checks.includes("bundle_verify_release_goal_policy_source_consistency_not_reported")
+          && !item.checks.includes("bundle_verify_initial_scope_goal_policy_source_consistency_not_reported"),
+      ),
+      bundleVerificationGoalPolicySourceConsistencyPassed: requiredEvidenceResults.some(
+        (item) =>
+          item.command === "npm run verify:merge-bundle"
+          && item.pass === true
+          && !item.checks.includes("bundle_verify_release_goal_policy_source_consistency_not_passed")
+          && !item.checks.includes("bundle_verify_initial_scope_goal_policy_source_consistency_not_passed"),
       ),
       stagePromotionPassed: stagePromotionEvidence.pass,
       stagePromotionEvidence,

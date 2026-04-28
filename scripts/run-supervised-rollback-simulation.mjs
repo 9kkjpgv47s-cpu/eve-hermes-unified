@@ -246,7 +246,19 @@ function resolveStageDrillGoalPolicySignals(stageDrillPayload) {
   const bundleVerificationInitialScopePassed = resolveBooleanCandidate(checks, [
     "rollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed",
   ]);
-  const propagationReported = resolveBooleanCandidate(checks, [
+  const mergeBundleReleaseSourceConsistencyReported = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionMergeBundleGoalPolicySourceConsistencyReported",
+  ]);
+  const mergeBundleReleaseSourceConsistencyPassed = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionMergeBundleGoalPolicySourceConsistencyPassed",
+  ]);
+  const bundleVerificationReleaseSourceConsistencyReported = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionBundleVerificationGoalPolicySourceConsistencyReported",
+  ]);
+  const bundleVerificationReleaseSourceConsistencyPassed = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionBundleVerificationGoalPolicySourceConsistencyPassed",
+  ]);
+  const validationPropagationReported = resolveBooleanCandidate(checks, [
     "rollbackStagePromotionGoalPolicyPropagationReported",
     "rollbackPolicyStageSignalsReported",
   ]) || (
@@ -255,7 +267,7 @@ function resolveStageDrillGoalPolicySignals(stageDrillPayload) {
     bundleVerificationReleaseReported &&
     bundleVerificationInitialScopeReported
   );
-  const propagationPassed = resolveBooleanCandidate(checks, [
+  const validationPropagationPassed = resolveBooleanCandidate(checks, [
     "rollbackStagePromotionGoalPolicyPropagationPassed",
     "rollbackPolicyStageSignalsPass",
   ]) || (
@@ -264,15 +276,41 @@ function resolveStageDrillGoalPolicySignals(stageDrillPayload) {
     bundleVerificationReleasePassed &&
     bundleVerificationInitialScopePassed
   );
+  const sourceConsistencyPropagationReported = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionGoalPolicySourceConsistencyPropagationReported",
+  ]) || (
+    mergeBundleReleaseSourceConsistencyReported &&
+    bundleVerificationReleaseSourceConsistencyReported
+  );
+  const sourceConsistencyPropagationPassed = resolveBooleanCandidate(checks, [
+    "rollbackStagePromotionGoalPolicySourceConsistencyPropagationPassed",
+  ]) || (
+    mergeBundleReleaseSourceConsistencyPassed &&
+    bundleVerificationReleaseSourceConsistencyPassed
+  );
+  const propagationReported =
+    validationPropagationReported &&
+    sourceConsistencyPropagationReported;
+  const propagationPassed =
+    validationPropagationPassed &&
+    sourceConsistencyPropagationPassed;
   return {
     mergeBundleReleaseReported,
     mergeBundleReleasePassed,
+    mergeBundleReleaseSourceConsistencyReported,
+    mergeBundleReleaseSourceConsistencyPassed,
     mergeBundleInitialScopeReported,
     mergeBundleInitialScopePassed,
     bundleVerificationReleaseReported,
     bundleVerificationReleasePassed,
+    bundleVerificationReleaseSourceConsistencyReported,
+    bundleVerificationReleaseSourceConsistencyPassed,
     bundleVerificationInitialScopeReported,
     bundleVerificationInitialScopePassed,
+    validationPropagationReported,
+    validationPropagationPassed,
+    sourceConsistencyPropagationReported,
+    sourceConsistencyPropagationPassed,
     propagationReported,
     propagationPassed,
   };
@@ -497,24 +535,36 @@ async function main() {
         ...stageDrillGoalPolicySignals,
         mergeBundleReleaseReported: false,
         mergeBundleReleasePassed: false,
+        mergeBundleReleaseSourceConsistencyReported: false,
+        mergeBundleReleaseSourceConsistencyPassed: false,
         mergeBundleInitialScopeReported: false,
         mergeBundleInitialScopePassed: false,
         bundleVerificationReleaseReported: false,
         bundleVerificationReleasePassed: false,
+        bundleVerificationReleaseSourceConsistencyReported: false,
+        bundleVerificationReleaseSourceConsistencyPassed: false,
         bundleVerificationInitialScopeReported: false,
         bundleVerificationInitialScopePassed: false,
+        validationPropagationReported: false,
+        validationPropagationPassed: false,
+        sourceConsistencyPropagationReported: false,
+        sourceConsistencyPropagationPassed: false,
         propagationReported: false,
         propagationPassed: false,
       }
     : stageDrillGoalPolicySignals;
   if (!stageDrillPayload) {
     failures.push("stage_drill_payload_missing");
-  } else if (!effectiveStageDrillGoalPolicySignals.propagationReported) {
+  } else if (!effectiveStageDrillGoalPolicySignals.validationPropagationReported) {
     failures.push("stage_drill_goal_policy_propagation_not_reported");
     failures.push("stage_drill_goal_policy_signals_not_reported");
-  } else if (!effectiveStageDrillGoalPolicySignals.propagationPassed) {
+  } else if (!effectiveStageDrillGoalPolicySignals.sourceConsistencyPropagationReported) {
+    failures.push("stage_drill_goal_policy_source_consistency_not_reported");
+  } else if (!effectiveStageDrillGoalPolicySignals.validationPropagationPassed) {
     failures.push("stage_drill_goal_policy_propagation_not_passed");
     failures.push("stage_drill_goal_policy_signals_not_passed");
+  } else if (!effectiveStageDrillGoalPolicySignals.sourceConsistencyPropagationPassed) {
+    failures.push("stage_drill_goal_policy_source_consistency_not_passed");
   }
 
   const rollbackTriggered = stageDrillPayload?.decision?.action === "rollback";
@@ -580,14 +630,30 @@ async function main() {
       stageDrillEvaluated: stageDrillCommand.code === 0 || stageDrillCommand.code === 2,
       stageDrillGoalPolicyPropagationReported: effectiveStageDrillGoalPolicySignals.propagationReported,
       stageDrillGoalPolicyPropagationPassed: effectiveStageDrillGoalPolicySignals.propagationPassed,
+      stageDrillGoalPolicyValidationPropagationReported:
+        effectiveStageDrillGoalPolicySignals.validationPropagationReported,
+      stageDrillGoalPolicyValidationPropagationPassed:
+        effectiveStageDrillGoalPolicySignals.validationPropagationPassed,
+      stageDrillGoalPolicySourceConsistencyPropagationReported:
+        effectiveStageDrillGoalPolicySignals.sourceConsistencyPropagationReported,
+      stageDrillGoalPolicySourceConsistencyPropagationPassed:
+        effectiveStageDrillGoalPolicySignals.sourceConsistencyPropagationPassed,
       stageDrillStageSignalsReported: effectiveStageDrillGoalPolicySignals.propagationReported,
       stageDrillStageSignalsPassed: effectiveStageDrillGoalPolicySignals.propagationPassed,
       stageDrillStagePolicySignalsReported: effectiveStageDrillGoalPolicySignals.propagationReported,
       stageDrillStagePolicySignalsPass: effectiveStageDrillGoalPolicySignals.propagationPassed,
+      stageDrillStageSourceConsistencySignalsReported:
+        effectiveStageDrillGoalPolicySignals.sourceConsistencyPropagationReported,
+      stageDrillStageSourceConsistencySignalsPass:
+        effectiveStageDrillGoalPolicySignals.sourceConsistencyPropagationPassed,
       stageDrillMergeBundleGoalPolicyValidationReported:
         effectiveStageDrillGoalPolicySignals.mergeBundleReleaseReported,
       stageDrillMergeBundleGoalPolicyValidationPassed:
         effectiveStageDrillGoalPolicySignals.mergeBundleReleasePassed,
+      stageDrillMergeBundleGoalPolicySourceConsistencyReported:
+        effectiveStageDrillGoalPolicySignals.mergeBundleReleaseSourceConsistencyReported,
+      stageDrillMergeBundleGoalPolicySourceConsistencyPassed:
+        effectiveStageDrillGoalPolicySignals.mergeBundleReleaseSourceConsistencyPassed,
       stageDrillMergeBundleInitialScopeGoalPolicyValidationReported:
         effectiveStageDrillGoalPolicySignals.mergeBundleInitialScopeReported,
       stageDrillMergeBundleInitialScopeGoalPolicyValidationPassed:
@@ -596,6 +662,10 @@ async function main() {
         effectiveStageDrillGoalPolicySignals.bundleVerificationReleaseReported,
       stageDrillBundleVerificationGoalPolicyValidationPassed:
         effectiveStageDrillGoalPolicySignals.bundleVerificationReleasePassed,
+      stageDrillBundleVerificationGoalPolicySourceConsistencyReported:
+        effectiveStageDrillGoalPolicySignals.bundleVerificationReleaseSourceConsistencyReported,
+      stageDrillBundleVerificationGoalPolicySourceConsistencyPassed:
+        effectiveStageDrillGoalPolicySignals.bundleVerificationReleaseSourceConsistencyPassed,
       stageDrillBundleVerificationInitialScopeGoalPolicyValidationReported:
         effectiveStageDrillGoalPolicySignals.bundleVerificationInitialScopeReported,
       stageDrillBundleVerificationInitialScopeGoalPolicyValidationPassed:

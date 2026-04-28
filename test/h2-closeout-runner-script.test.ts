@@ -460,6 +460,8 @@ describe("run-h2-closeout.mjs", () => {
               shadowRestored: true,
               stageDrillGoalPolicyPropagationReported: false,
               stageDrillGoalPolicyPropagationPassed: false,
+          stageDrillGoalPolicySourceConsistencyPropagationReported: true,
+          stageDrillGoalPolicySourceConsistencyPropagationPassed: true,
             },
             failures: [],
           },

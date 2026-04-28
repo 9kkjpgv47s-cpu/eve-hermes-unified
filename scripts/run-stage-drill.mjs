@@ -173,31 +173,67 @@ function resolveRollbackStagePromotionGoalPolicySignals(rollbackPolicyPayload) {
     "stagePromotionBundleVerificationGoalPolicyValidationPassed",
     "stagePromotionBundleVerificationReleaseGoalPolicyValidationPassed",
   ]);
+  const mergeBundleReleaseSourceConsistencyReported = resolveBooleanCandidate(checks, [
+    "stagePromotionMergeBundleGoalPolicySourceConsistencyReported",
+    "stagePromotionMergeBundleReleaseGoalPolicySourceConsistencyReported",
+  ]);
+  const mergeBundleReleaseSourceConsistencyPassed = resolveBooleanCandidate(checks, [
+    "stagePromotionMergeBundleGoalPolicySourceConsistencyPassed",
+    "stagePromotionMergeBundleReleaseGoalPolicySourceConsistencyPassed",
+  ]);
+  const bundleVerificationReleaseSourceConsistencyReported = resolveBooleanCandidate(checks, [
+    "stagePromotionBundleVerificationGoalPolicySourceConsistencyReported",
+    "stagePromotionBundleVerificationReleaseGoalPolicySourceConsistencyReported",
+  ]);
+  const bundleVerificationReleaseSourceConsistencyPassed = resolveBooleanCandidate(checks, [
+    "stagePromotionBundleVerificationGoalPolicySourceConsistencyPassed",
+    "stagePromotionBundleVerificationReleaseGoalPolicySourceConsistencyPassed",
+  ]);
   const bundleVerificationInitialScopeReported = resolveBooleanCandidate(checks, [
     "stagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported",
   ]);
   const bundleVerificationInitialScopePassed = resolveBooleanCandidate(checks, [
     "stagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed",
   ]);
-  const propagationReported =
+  const validationPropagationReported =
     mergeBundleReleaseReported
     && mergeBundleInitialScopeReported
     && bundleVerificationReleaseReported
     && bundleVerificationInitialScopeReported;
-  const propagationPassed =
+  const validationPropagationPassed =
     mergeBundleReleasePassed
     && mergeBundleInitialScopePassed
     && bundleVerificationReleasePassed
     && bundleVerificationInitialScopePassed;
+  const sourceConsistencyPropagationReported =
+    mergeBundleReleaseSourceConsistencyReported &&
+    bundleVerificationReleaseSourceConsistencyReported;
+  const sourceConsistencyPropagationPassed =
+    mergeBundleReleaseSourceConsistencyPassed &&
+    bundleVerificationReleaseSourceConsistencyPassed;
+  const propagationReported =
+    validationPropagationReported &&
+    sourceConsistencyPropagationReported;
+  const propagationPassed =
+    validationPropagationPassed &&
+    sourceConsistencyPropagationPassed;
   return {
     mergeBundleReleaseReported,
     mergeBundleReleasePassed,
+    mergeBundleReleaseSourceConsistencyReported,
+    mergeBundleReleaseSourceConsistencyPassed,
     mergeBundleInitialScopeReported,
     mergeBundleInitialScopePassed,
     bundleVerificationReleaseReported,
     bundleVerificationReleasePassed,
+    bundleVerificationReleaseSourceConsistencyReported,
+    bundleVerificationReleaseSourceConsistencyPassed,
     bundleVerificationInitialScopeReported,
     bundleVerificationInitialScopePassed,
+    validationPropagationReported,
+    validationPropagationPassed,
+    sourceConsistencyPropagationReported,
+    sourceConsistencyPropagationPassed,
     propagationReported,
     propagationPassed,
   };
@@ -427,10 +463,14 @@ async function main() {
   }
   if (!rollbackPolicyPayload) {
     failures.push("auto_rollback_policy_output_missing");
-  } else if (!rollbackStagePolicySignals.propagationReported) {
+  } else if (!rollbackStagePolicySignals.validationPropagationReported) {
     failures.push("rollback_stage_promotion_goal_policy_propagation_not_reported");
-  } else if (!rollbackStagePolicySignals.propagationPassed) {
+  } else if (!rollbackStagePolicySignals.sourceConsistencyPropagationReported) {
+    failures.push("rollback_stage_promotion_goal_policy_source_consistency_not_reported");
+  } else if (!rollbackStagePolicySignals.validationPropagationPassed) {
     failures.push("rollback_stage_promotion_goal_policy_propagation_not_passed");
+  } else if (!rollbackStagePolicySignals.sourceConsistencyPropagationPassed) {
+    failures.push("rollback_stage_promotion_goal_policy_source_consistency_not_passed");
   } else if (rollbackAction === "rollback") {
     failures.push("rollback_policy_triggered");
   }
@@ -469,10 +509,22 @@ async function main() {
         rollbackStagePolicySignals.propagationReported,
       rollbackStagePromotionGoalPolicyPropagationPassed:
         rollbackStagePolicySignals.propagationPassed,
+      rollbackStagePromotionGoalPolicyValidationPropagationReported:
+        rollbackStagePolicySignals.validationPropagationReported,
+      rollbackStagePromotionGoalPolicyValidationPropagationPassed:
+        rollbackStagePolicySignals.validationPropagationPassed,
+      rollbackStagePromotionGoalPolicySourceConsistencyPropagationReported:
+        rollbackStagePolicySignals.sourceConsistencyPropagationReported,
+      rollbackStagePromotionGoalPolicySourceConsistencyPropagationPassed:
+        rollbackStagePolicySignals.sourceConsistencyPropagationPassed,
       rollbackStagePromotionMergeBundleGoalPolicyValidationReported:
         rollbackStagePolicySignals.mergeBundleReleaseReported,
       rollbackStagePromotionMergeBundleGoalPolicyValidationPassed:
         rollbackStagePolicySignals.mergeBundleReleasePassed,
+      rollbackStagePromotionMergeBundleGoalPolicySourceConsistencyReported:
+        rollbackStagePolicySignals.mergeBundleReleaseSourceConsistencyReported,
+      rollbackStagePromotionMergeBundleGoalPolicySourceConsistencyPassed:
+        rollbackStagePolicySignals.mergeBundleReleaseSourceConsistencyPassed,
       rollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationReported:
         rollbackStagePolicySignals.mergeBundleInitialScopeReported,
       rollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed:
@@ -481,6 +533,10 @@ async function main() {
         rollbackStagePolicySignals.bundleVerificationReleaseReported,
       rollbackStagePromotionBundleVerificationGoalPolicyValidationPassed:
         rollbackStagePolicySignals.bundleVerificationReleasePassed,
+      rollbackStagePromotionBundleVerificationGoalPolicySourceConsistencyReported:
+        rollbackStagePolicySignals.bundleVerificationReleaseSourceConsistencyReported,
+      rollbackStagePromotionBundleVerificationGoalPolicySourceConsistencyPassed:
+        rollbackStagePolicySignals.bundleVerificationReleaseSourceConsistencyPassed,
       rollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationReported:
         rollbackStagePolicySignals.bundleVerificationInitialScopeReported,
       rollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed:

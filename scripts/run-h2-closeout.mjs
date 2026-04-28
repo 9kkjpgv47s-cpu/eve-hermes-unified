@@ -133,15 +133,25 @@ function resolveSimulationStageGoalPolicySignals(simulationPayload) {
     simulationPayload?.checks && typeof simulationPayload.checks === "object"
       ? simulationPayload.checks
       : {};
-  const directPropagationReported = resolveBooleanCandidate(checks, [
+  const directValidationPropagationReported = resolveBooleanCandidate(checks, [
     "stageDrillGoalPolicyPropagationReported",
+    "stageDrillGoalPolicyValidationPropagationReported",
     "stageDrillStageSignalsReported",
     "stageDrillStagePolicySignalsReported",
   ]);
-  const directPropagationPassed = resolveBooleanCandidate(checks, [
+  const directValidationPropagationPassed = resolveBooleanCandidate(checks, [
     "stageDrillGoalPolicyPropagationPassed",
+    "stageDrillGoalPolicyValidationPropagationPassed",
     "stageDrillStageSignalsPass",
     "stageDrillStagePolicySignalsPass",
+  ]);
+  const directSourceConsistencyPropagationReported = resolveBooleanCandidate(checks, [
+    "stageDrillGoalPolicySourceConsistencyPropagationReported",
+    "stageDrillStageSourceConsistencySignalsReported",
+  ]);
+  const directSourceConsistencyPropagationPassed = resolveBooleanCandidate(checks, [
+    "stageDrillGoalPolicySourceConsistencyPropagationPassed",
+    "stageDrillStageSourceConsistencySignalsPass",
   ]);
   const mergeBundleReleaseReported = resolveBooleanCandidate(checks, [
     "stageDrillRollbackStagePromotionMergeBundleGoalPolicyValidationReported",
@@ -161,6 +171,16 @@ function resolveSimulationStageGoalPolicySignals(simulationPayload) {
   const mergeBundleInitialScopePassed = resolveBooleanCandidate(checks, [
     "stageDrillRollbackStagePromotionMergeBundleInitialScopeGoalPolicyValidationPassed",
   ]);
+  const mergeBundleReleaseSourceConsistencyReported = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionMergeBundleGoalPolicySourceConsistencyReported",
+    "stageDrillRollbackStagePromotionMergeBundleReleaseGoalPolicySourceConsistencyReported",
+    "stageDrillMergeBundleGoalPolicySourceConsistencyReported",
+  ]);
+  const mergeBundleReleaseSourceConsistencyPassed = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionMergeBundleGoalPolicySourceConsistencyPassed",
+    "stageDrillRollbackStagePromotionMergeBundleReleaseGoalPolicySourceConsistencyPassed",
+    "stageDrillMergeBundleGoalPolicySourceConsistencyPassed",
+  ]);
   const bundleVerificationReleaseReported = resolveBooleanCandidate(checks, [
     "stageDrillRollbackStagePromotionBundleVerificationGoalPolicyValidationReported",
     "stageDrillRollbackStagePromotionBundleVerificationReleaseGoalPolicyValidationReported",
@@ -175,27 +195,59 @@ function resolveSimulationStageGoalPolicySignals(simulationPayload) {
   const bundleVerificationInitialScopePassed = resolveBooleanCandidate(checks, [
     "stageDrillRollbackStagePromotionBundleVerificationInitialScopeGoalPolicyValidationPassed",
   ]);
-  const propagationReported = directPropagationReported || (
+  const bundleVerificationReleaseSourceConsistencyReported = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionBundleVerificationGoalPolicySourceConsistencyReported",
+    "stageDrillRollbackStagePromotionBundleVerificationReleaseGoalPolicySourceConsistencyReported",
+    "stageDrillBundleVerificationGoalPolicySourceConsistencyReported",
+  ]);
+  const bundleVerificationReleaseSourceConsistencyPassed = resolveBooleanCandidate(checks, [
+    "stageDrillRollbackStagePromotionBundleVerificationGoalPolicySourceConsistencyPassed",
+    "stageDrillRollbackStagePromotionBundleVerificationReleaseGoalPolicySourceConsistencyPassed",
+    "stageDrillBundleVerificationGoalPolicySourceConsistencyPassed",
+  ]);
+  const validationPropagationReported = directValidationPropagationReported || (
     mergeBundleReleaseReported
     && mergeBundleInitialScopeReported
     && bundleVerificationReleaseReported
     && bundleVerificationInitialScopeReported
   );
-  const propagationPassed = directPropagationPassed || (
+  const validationPropagationPassed = directValidationPropagationPassed || (
     mergeBundleReleasePassed
     && mergeBundleInitialScopePassed
     && bundleVerificationReleasePassed
     && bundleVerificationInitialScopePassed
   );
+  const sourceConsistencyPropagationReported = directSourceConsistencyPropagationReported || (
+    mergeBundleReleaseSourceConsistencyReported
+    && bundleVerificationReleaseSourceConsistencyReported
+  );
+  const sourceConsistencyPropagationPassed = directSourceConsistencyPropagationPassed || (
+    mergeBundleReleaseSourceConsistencyPassed
+    && bundleVerificationReleaseSourceConsistencyPassed
+  );
+  const propagationReported =
+    validationPropagationReported &&
+    sourceConsistencyPropagationReported;
+  const propagationPassed =
+    validationPropagationPassed &&
+    sourceConsistencyPropagationPassed;
   return {
     mergeBundleReleaseReported,
     mergeBundleReleasePassed,
     mergeBundleInitialScopeReported,
     mergeBundleInitialScopePassed,
+    mergeBundleReleaseSourceConsistencyReported,
+    mergeBundleReleaseSourceConsistencyPassed,
     bundleVerificationReleaseReported,
     bundleVerificationReleasePassed,
     bundleVerificationInitialScopeReported,
     bundleVerificationInitialScopePassed,
+    bundleVerificationReleaseSourceConsistencyReported,
+    bundleVerificationReleaseSourceConsistencyPassed,
+    validationPropagationReported,
+    validationPropagationPassed,
+    sourceConsistencyPropagationReported,
+    sourceConsistencyPropagationPassed,
     propagationReported,
     propagationPassed,
   };
@@ -413,10 +465,14 @@ async function main() {
     if (simulationCommand.code !== 0 || simulationPayload?.pass !== true) {
       failures.push("supervised_simulation_step_failed");
     }
-    if (!simulationStageSignals.propagationReported) {
+    if (!simulationStageSignals.validationPropagationReported) {
       failures.push("supervised_simulation_stage_goal_policy_propagation_not_reported");
-    } else if (!simulationStageSignals.propagationPassed) {
+    } else if (!simulationStageSignals.sourceConsistencyPropagationReported) {
+      failures.push("supervised_simulation_stage_goal_policy_source_consistency_not_reported");
+    } else if (!simulationStageSignals.validationPropagationPassed) {
       failures.push("supervised_simulation_stage_goal_policy_propagation_not_passed");
+    } else if (!simulationStageSignals.sourceConsistencyPropagationPassed) {
+      failures.push("supervised_simulation_stage_goal_policy_source_consistency_not_passed");
     }
 
     const closeoutArgv = [
@@ -471,8 +527,30 @@ async function main() {
         resolveSimulationStageGoalPolicySignals(simulationPayload).propagationReported,
       supervisedSimulationStageGoalPolicyPropagationPassed:
         resolveSimulationStageGoalPolicySignals(simulationPayload).propagationPassed,
+      supervisedSimulationStageGoalPolicyValidationPropagationReported:
+        resolveSimulationStageGoalPolicySignals(simulationPayload).validationPropagationReported,
+      supervisedSimulationStageGoalPolicyValidationPropagationPassed:
+        resolveSimulationStageGoalPolicySignals(simulationPayload).validationPropagationPassed,
+      supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported:
+        resolveSimulationStageGoalPolicySignals(simulationPayload).sourceConsistencyPropagationReported,
+      supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed:
+        resolveSimulationStageGoalPolicySignals(simulationPayload).sourceConsistencyPropagationPassed,
       supervisedSimulationStagePolicySignalsPass:
         resolveSimulationStageGoalPolicySignals(simulationPayload).propagationPassed,
+      supervisedSimulationStageSourceConsistencySignalsPass:
+        resolveSimulationStageGoalPolicySignals(simulationPayload).sourceConsistencyPropagationPassed,
+      supervisedSimulationStageMergeBundleGoalPolicySourceConsistencyReported:
+        resolveSimulationStageGoalPolicySignals(simulationPayload)
+          .mergeBundleReleaseSourceConsistencyReported,
+      supervisedSimulationStageMergeBundleGoalPolicySourceConsistencyPassed:
+        resolveSimulationStageGoalPolicySignals(simulationPayload)
+          .mergeBundleReleaseSourceConsistencyPassed,
+      supervisedSimulationStageBundleVerificationGoalPolicySourceConsistencyReported:
+        resolveSimulationStageGoalPolicySignals(simulationPayload)
+          .bundleVerificationReleaseSourceConsistencyReported,
+      supervisedSimulationStageBundleVerificationGoalPolicySourceConsistencyPassed:
+        resolveSimulationStageGoalPolicySignals(simulationPayload)
+          .bundleVerificationReleaseSourceConsistencyPassed,
       h2CloseoutGatePass: closeoutPayload?.pass === true,
       rollbackTriggered: simulationPayload?.checks?.rollbackTriggered === true,
       rollbackApplied: simulationPayload?.checks?.rollbackApplied === true,

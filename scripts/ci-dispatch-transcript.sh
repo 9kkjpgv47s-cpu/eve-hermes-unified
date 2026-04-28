@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # CI/local: one unified dispatch with stub Eve/Hermes, writes JSON transcript under evidence/.
+# Runs unified-dispatch via node/tsx (not `npm run`) so stdout is pure JSON for contract validation.
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EVIDENCE="${UNIFIED_EVIDENCE_DIR:-$ROOT_DIR/evidence}"

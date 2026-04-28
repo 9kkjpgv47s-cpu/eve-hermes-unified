@@ -170,6 +170,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.capabilityExecutionTimeoutMs).toBe(120_000);
   });
 
+  it("parses capability abort lane on timeout flag", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT: "1",
+        }),
+      ),
+    );
+    expect(config.capabilityAbortLaneOnTimeout).toBe(true);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

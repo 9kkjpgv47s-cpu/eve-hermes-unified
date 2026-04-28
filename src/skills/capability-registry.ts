@@ -16,6 +16,8 @@ export type CapabilityExecutionContext = {
   chatId: string;
   messageId: string;
   traceId: string;
+  /** Passed to lane dispatch when capability budget aborts in-flight subprocess. */
+  signal?: AbortSignal;
   dispatchLane: (input: CapabilityLaneDispatchInput) => Promise<DispatchState>;
   memoryStore: UnifiedMemoryStore;
 };
@@ -42,6 +44,7 @@ export type CapabilityLaneDispatchInput = {
   lane: LaneId;
   text: string;
   intentRoute: string;
+  signal?: AbortSignal;
 };
 
 export type CapabilityLaneDispatcher = (
@@ -161,6 +164,7 @@ export function registerEveCommandWrappers(
             lane: "eve",
             text: probeText,
             intentRoute: "capability:check_status",
+            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",
@@ -197,6 +201,7 @@ export function registerEveCommandWrappers(
             lane: "eve",
             text: taskText,
             intentRoute: "capability:eve_dispatch_task",
+            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",
@@ -236,6 +241,7 @@ export function registerHermesTools(
             lane: "hermes",
             text: summarizeText,
             intentRoute: "capability:summarize_state",
+            signal: context.signal,
           });
           const recentExecutions = await context.memoryStore.list({
             lane: "hermes",
@@ -278,6 +284,7 @@ export function registerHermesTools(
             lane: "hermes",
             text: taskText,
             intentRoute: "capability:hermes_dispatch_task",
+            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",

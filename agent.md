@@ -36,8 +36,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Lane subprocess cancellation** aligned with capability execution budget (if not merged elsewhere).
-2. **Tenant isolation** / policy maturity per H4–H5 plan when ready.
+1. **Horizon-neutral failure taxonomy** — extend dual-report aliases wherever orchestration still emits H2-only ids (`promote-horizon.mjs` now aliases `closeout_run_horizon_*` → `closeout_run_h2_*` for H2+ source horizons).
+2. **Tenant-scoped** non-capability memory (optional) if product requires full store isolation per tenant.
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

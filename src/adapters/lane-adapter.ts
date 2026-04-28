@@ -3,6 +3,8 @@ import type { DispatchState, UnifiedMessageEnvelope } from "../contracts/types.j
 export type LaneDispatchInput = {
   envelope: UnifiedMessageEnvelope;
   intentRoute: string;
+  /** When aborted, lane subprocess receives SIGTERM (cooperative cancel). */
+  signal?: AbortSignal;
 };
 
 export type LaneAdapter = {

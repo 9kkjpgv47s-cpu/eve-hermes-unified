@@ -6,12 +6,15 @@ import type { CapabilityEngine } from "../src/runtime/capability-engine.js";
 import type { RouterPolicyConfig } from "../src/router/policy-router.js";
 
 class FakeLaneAdapter implements LaneAdapter {
+  lastSignal: AbortSignal | undefined;
+
   constructor(
     public laneId: "eve" | "hermes",
     private readonly response: DispatchState,
   ) {}
 
-  async dispatch(_input: LaneDispatchInput): Promise<DispatchState> {
+  async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
+    this.lastSignal = input.signal;
     return this.response;
   }
 }
@@ -241,5 +244,49 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.routing.reason).toBe("explicit_capability_command");
     expect(result.response.laneUsed).toBe("hermes");
     expect(result.response.failureClass).toBe("none");
+  });
+
+  it("passes abortSignal to lane adapters for cooperative cancel", async () => {
+    const ac = new AbortController();
+    const eve = new FakeLaneAdapter("eve", {
+      status: "pass",
+      reason: "ok",
+      runtimeUsed: "eve",
+      runId: "r1",
+      elapsedMs: 1,
+      failureClass: "none",
+      sourceLane: "eve",
+      sourceChatId: "1",
+      sourceMessageId: "2",
+      traceId: "t1",
+    });
+    const hermes = new FakeLaneAdapter("hermes", {
+      status: "pass",
+      reason: "ok",
+      runtimeUsed: "hermes",
+      runId: "r2",
+      elapsedMs: 1,
+      failureClass: "none",
+      sourceLane: "hermes",
+      sourceChatId: "1",
+      sourceMessageId: "2",
+      traceId: "t2",
+    });
+    const runtime = {
+      eveAdapter: eve,
+      hermesAdapter: hermes,
+      routerConfig: baseRouterConfig(),
+      abortSignal: ac.signal,
+    };
+
+    await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+
+    expect(eve.lastSignal).toBe(ac.signal);
+    expect(hermes.lastSignal).toBeUndefined();
   });
 });

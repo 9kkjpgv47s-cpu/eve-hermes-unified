@@ -181,6 +181,23 @@ async function seedHorizonStatus(statusPath: string): Promise<void> {
   );
 }
 
+async function seedHorizonStatusH3(statusPath: string): Promise<void> {
+  await seedHorizonStatus(statusPath);
+  const payload = JSON.parse(await readFile(statusPath, "utf8")) as {
+    activeHorizon?: string;
+    activeStatus?: string;
+    summary?: string;
+    horizonStates?: Record<string, { status: string; summary: string }>;
+  };
+  payload.activeHorizon = "H3";
+  payload.activeStatus = "in_progress";
+  payload.summary = "H3 active";
+  payload.horizonStates = payload.horizonStates ?? {};
+  payload.horizonStates.H2 = { status: "completed", summary: "H2 complete" };
+  payload.horizonStates.H3 = { status: "in_progress", summary: "H3 active" };
+  await writeFile(statusPath, JSON.stringify(payload, null, 2), "utf8");
+}
+
 async function seedHorizonStatusWithoutFuturePolicies(statusPath: string): Promise<void> {
   const payload = JSON.parse(await readFile(statusPath, "utf8")) as {
     goalPolicies?: { transitions?: Record<string, unknown> };
@@ -738,6 +755,75 @@ describe("promote-horizon.mjs", () => {
       expect(payload.pass).toBe(false);
       expect(payload.checks.closeoutRunCloseoutGatePass).toBe(false);
       expect(payload.checks.closeoutRunH2CloseoutGatePass).toBe(false);
+      expect(payload.failures).toContain("closeout_run_horizon_closeout_gate_not_passed");
+      expect(payload.failures).toContain("closeout_run_h2_closeout_gate_not_passed");
+    });
+  });
+
+  it("dual-reports h2 closeout gate failure aliases when promoting from H3", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "horizon-promotion.json");
+      const closeoutPath = await seedCloseoutReport(evidenceDir, {
+        pass: true,
+        horizon: "H3",
+        nextHorizon: "H4",
+      });
+      await seedHorizonStatusH3(statusPath);
+      const closeoutRunPath = path.join(evidenceDir, "h3-closeout-run-20260426-150000.json");
+      await writeFile(
+        closeoutRunPath,
+        JSON.stringify(
+          {
+            generatedAtIso: new Date().toISOString(),
+            pass: true,
+            horizon: {
+              source: "H3",
+              next: "H4",
+            },
+            files: {
+              closeoutOut: closeoutPath,
+            },
+            checks: {
+              horizonCloseoutGatePass: false,
+              supervisedSimulationPass: true,
+              supervisedSimulationStageGoalPolicyPropagationReported: true,
+              supervisedSimulationStageGoalPolicyPropagationPassed: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported: true,
+              supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed: true,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/promote-horizon.mjs",
+          "--horizon",
+          "H3",
+          "--next-horizon",
+          "H4",
+          "--horizon-status-file",
+          statusPath,
+          "--closeout-run-file",
+          closeoutRunPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 40_000 },
+      );
+      expect(result.code).toBe(2);
+
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+      };
+      expect(payload.pass).toBe(false);
       expect(payload.failures).toContain("closeout_run_horizon_closeout_gate_not_passed");
       expect(payload.failures).toContain("closeout_run_h2_closeout_gate_not_passed");
     });

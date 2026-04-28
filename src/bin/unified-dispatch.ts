@@ -67,6 +67,7 @@ async function main() {
     chatId: string;
     messageId: string;
     traceId: string;
+    signal?: AbortSignal;
   }) => {
     const adapter = input.lane === "eve" ? eveAdapter : hermesAdapter;
     return adapter.dispatch({
@@ -79,6 +80,7 @@ async function main() {
         receivedAtIso: new Date().toISOString(),
       },
       intentRoute: input.intentRoute,
+      signal: input.signal,
     });
   };
   registerDefaultCapabilityExecutors(capabilityRegistry, {
@@ -91,6 +93,7 @@ async function main() {
     dispatchLane,
     policy: capabilityPolicy,
     executionTimeoutMs: config.capabilityExecutionTimeoutMs,
+    abortLaneOnCapabilityTimeout: config.capabilityAbortLaneOnTimeout,
   });
 
   const preflightIssues = await runRuntimePreflight({

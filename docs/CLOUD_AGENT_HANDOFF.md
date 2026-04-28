@@ -59,6 +59,11 @@ Optional crash recovery for file-backed unified memory:
 - Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>`.
 - `npm run validate:manifest-schemas` includes `evidence/unified-dispatch-audit-*.jsonl` when present.
 
+## Capability execution budget and lane abort
+
+- **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`** (alias `CAPABILITY_EXECUTION_TIMEOUT_MS`) — wall-clock limit for `@cap` handlers; `0` disables.
+- **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT=1`** (alias `CAPABILITY_ABORT_LANE_ON_TIMEOUT`) — when enabled with a positive timeout, abort the in-flight lane subprocess (`SIGTERM`) if the handler exceeds the budget.
+
 ## Cutover and Rollback Commands
 
 Stage:

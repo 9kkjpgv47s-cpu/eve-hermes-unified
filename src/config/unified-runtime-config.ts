@@ -34,6 +34,8 @@ export type UnifiedRuntimeEnvConfig = {
   auditLogRotationRetainBytes: number;
   /** When > 0, fail capability execution if the handler does not settle within this many ms. */
   capabilityExecutionTimeoutMs: number;
+  /** When true with a positive execution timeout, SIGTERM lane subprocess on budget expiry. */
+  capabilityAbortLaneOnTimeout: boolean;
   /** When true with file store + journal, re-read disk after each persist and verify snapshot matches memory. */
   unifiedMemoryVerifyPersist: boolean;
   /** When true with file store + journal, before each persist verify snapshot+WAL replay matches in-memory map. */
@@ -266,6 +268,13 @@ export function loadUnifiedRuntimeEnvConfig(
       0,
     ),
   );
+  const capabilityAbortLaneOnTimeout = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT",
+      "CAPABILITY_ABORT_LANE_ON_TIMEOUT",
+    ]),
+    false,
+  );
   const unifiedMemoryVerifyPersist = parseBooleanFlag(
     firstDefined(reader, [
       "UNIFIED_MEMORY_VERIFY_PERSIST",
@@ -342,6 +351,7 @@ export function loadUnifiedRuntimeEnvConfig(
     auditLogRotationMaxBytes,
     auditLogRotationRetainBytes,
     capabilityExecutionTimeoutMs,
+    capabilityAbortLaneOnTimeout,
     unifiedMemoryVerifyPersist,
     unifiedMemoryVerifyJournalReplay,
     routerConfig: {

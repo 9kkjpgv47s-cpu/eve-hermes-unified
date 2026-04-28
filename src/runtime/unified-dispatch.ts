@@ -26,6 +26,8 @@ export type UnifiedRuntime = {
   hermesAdapter: LaneAdapter;
   routerConfig: RouterPolicyConfig;
   capabilityEngine?: CapabilityEngine;
+  /** When set, primary/fallback lane dispatch receives this signal for cooperative subprocess cancel. */
+  abortSignal?: AbortSignal;
 };
 
 export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -146,6 +148,7 @@ export async function dispatchUnifiedMessage(
     await primary.dispatch({
       envelope,
       intentRoute: `unified:${routing.reason}`,
+      signal: runtime.abortSignal,
     }),
     envelope.traceId,
   );
@@ -158,6 +161,7 @@ export async function dispatchUnifiedMessage(
     await fallback.dispatch({
       envelope,
       intentRoute: `unified:fallback_after_${routing.reason}`,
+      signal: runtime.abortSignal,
     }),
     envelope.traceId,
   );

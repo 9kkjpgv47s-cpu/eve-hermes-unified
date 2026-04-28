@@ -27,7 +27,7 @@ Runtime code validates every outbound result via **`validateUnifiedDispatchResul
 
 ## Fixtures
 
-Canonical examples live under **`test/fixtures/`** (primary pass, Hermes fallback after primary failure, fail-closed primary failure without fallback, explicit `@cap` pass). CI runs **`npm run validate:dispatch-contract`**, which executes `src/bin/validate-dispatch-contracts.ts` against every matching fixture. The same CLI accepts **`--file <path>`** (repeatable); `scripts/ci-dispatch-transcript.sh` validates the freshly written transcript with `--file` so CI artifacts stay contract-conformant.
+Canonical examples live under **`test/fixtures/`** (primary pass, Hermes fallback after primary failure, fail-closed primary failure without fallback, explicit `@cap` pass, capability policy denial). CI runs **`npm run validate:dispatch-contract`**, which executes `src/bin/validate-dispatch-contracts.ts` against every matching fixture. The same CLI accepts **`--file <path>`** (repeatable); `scripts/ci-dispatch-transcript.sh` validates the freshly written transcript with `--file` so CI artifacts stay contract-conformant.
 
 ## Upgrade path
 

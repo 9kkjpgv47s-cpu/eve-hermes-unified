@@ -66,6 +66,18 @@ extract_json_field() {
   node -e 'const d=JSON.parse(process.argv[1]); const e=process.argv[2].split("."); let v=d; for (const k of e) v=v?.[k]; process.stdout.write(String(v));' "$json" "$expr"
 }
 
+validate_dispatch_json() {
+  local json="$1"
+  if [[ "${UNIFIED_CUTOVER_READINESS_VALIDATE_DISPATCH_CONTRACT:-1}" == "0" ]]; then
+    return 0
+  fi
+  local vf
+  vf="$(mktemp "$tmp_dir/dispatch-XXXXXX.json")"
+  printf '%s' "$json" >"$vf"
+  npx --no-install tsx "$ROOT_DIR/src/bin/validate-dispatch-contracts.ts" --file "$vf" >/dev/null
+  rm -f "$vf"
+}
+
 run_stage() {
   local stage="$1"
   shift
@@ -99,6 +111,7 @@ build_stage_record() {
 
   local json
   json="$(run_dispatch_json "$text" "$chat_id" "$message_id")"
+  validate_dispatch_json "$json"
   local lane reason fallback fail_closed
   lane="$(extract_json_field "$json" "routing.primaryLane")"
   reason="$(extract_json_field "$json" "routing.reason")"
@@ -156,6 +169,7 @@ while IFS= read -r line; do
 done <"$env_file"
 
 rollback_json="$(run_dispatch_json "rollback verification probe" "rollback-chat" "7")"
+validate_dispatch_json "$rollback_json"
 rollback_lane="$(extract_json_field "$rollback_json" "routing.primaryLane")"
 rollback_reason="$(extract_json_field "$rollback_json" "routing.reason")"
 

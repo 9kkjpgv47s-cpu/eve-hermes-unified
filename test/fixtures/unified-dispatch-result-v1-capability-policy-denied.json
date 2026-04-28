@@ -1,0 +1,60 @@
+{
+  "contractVersion": "v1",
+  "envelope": {
+    "traceId": "fixture-trace-cap-deny",
+    "channel": "telegram",
+    "chatId": "42",
+    "messageId": "9",
+    "receivedAtIso": "2026-04-28T12:00:00.000Z",
+    "text": "@cap check_status"
+  },
+  "routing": {
+    "primaryLane": "eve",
+    "fallbackLane": "none",
+    "reason": "explicit_capability_command",
+    "policyVersion": "v1",
+    "failClosed": true
+  },
+  "primaryState": {
+    "status": "failed",
+    "reason": "capability_policy_denied",
+    "runtimeUsed": "capability-engine",
+    "runId": "cap-deny-1",
+    "elapsedMs": 2,
+    "failureClass": "policy_failure",
+    "sourceLane": "eve",
+    "sourceChatId": "42",
+    "sourceMessageId": "9",
+    "traceId": "fixture-trace-cap-deny"
+  },
+  "capabilityDecision": {
+    "id": "check_status",
+    "lane": "eve",
+    "routeReason": "explicit_capability_command"
+  },
+  "capabilityExecution": {
+    "capability": {
+      "id": "check_status",
+      "lane": "eve",
+      "routeReason": "explicit_capability_command"
+    },
+    "status": "failed",
+    "consumed": false,
+    "reason": "capability_policy_denied",
+    "outputText": "Capability 'check_status' is not allowed for chat 42.",
+    "failureClass": "policy_failure",
+    "runId": "cap-deny-1",
+    "elapsedMs": 2,
+    "metadata": {
+      "policy": "capability-access-control",
+      "deniedChatId": "42"
+    }
+  },
+  "response": {
+    "consumed": true,
+    "responseText": "Unified dispatch failed via eve.\nrun_id: cap-deny-1\nreason: capability_policy_denied",
+    "failureClass": "policy_failure",
+    "laneUsed": "eve",
+    "traceId": "fixture-trace-cap-deny"
+  }
+}

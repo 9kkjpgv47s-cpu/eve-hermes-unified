@@ -62,12 +62,18 @@ Every PR should include:
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
 - **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H6**.
 
-## Sustainment assurance (H6)
+## Sustainment assurance (H6 → H7 terminal)
 
-- **Bundle**: `npm run run:h6-assurance-bundle` writes `evidence/h6-assurance-bundle-*.json` (horizon status validation + tenant isolation + region failover rehearsal + unified entrypoints).
-- **Closeout gate**: `npm run validate:h6-closeout` (terminal horizon skips downstream stage-promotion artifact in `validate-horizon-closeout`).
-- **Horizon index**: orchestration scripts include **H6** as the terminal sustainment horizon.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + assurance bundle + `validate:h6-closeout` and writes `evidence/post-h6-sustainment-loop-*.json`. See `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8. **`npm run validate:post-h6-sustainment-manifest`** optionally checks the latest loop manifest without re-running steps.
+- **H6 bundle** (historical): `npm run run:h6-assurance-bundle` writes `evidence/h6-assurance-bundle-*.json`.
+- **H7 bundle** (current): `npm run run:h7-assurance-bundle` adds audit-log rotation proof (`test/audit-log-rotation.test.ts`) to the H6 gate set.
+- **Closeout gate**: `npm run validate:h7-closeout` (terminal horizon skips downstream stage-promotion artifact in `validate-horizon-closeout`; `validate:h6-closeout` remains for replay against older evidence).
+- **Horizon index**: orchestration scripts include **H7** as the terminal horizon sequence entry.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H7** assurance bundle + `validate:h7-closeout` and writes `evidence/post-h7-sustainment-loop-*.json`. See `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8. **`npm run validate:post-h7-sustainment-manifest`** optionally checks the latest loop manifest without re-running steps. Legacy: **`npm run verify:sustainment-loop:h6-legacy`** / **`validate:post-h6-sustainment-manifest`** for the prior H6-only chain.
+
+## Dispatch audit rotation (H7)
+
+- **Env**: `UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES` (0 = off), `UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT` (default 8; minimum enforced as 1 generation).
+- **Behavior**: before each append in `src/bin/unified-dispatch.ts`, when max-bytes is set, the active JSONL may rotate to `${path}.${timestamp}.jsonl`; oldest archives are pruned to satisfy retention.
 
 ## Cutover and Rollback Commands
 

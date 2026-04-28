@@ -74,6 +74,7 @@ describe("validate-horizon-status.mjs", () => {
               H4: { status: "planned", summary: "Legacy retirement pending" },
               H5: { status: "planned", summary: "Autonomous scale envelope pending" },
               H6: { status: "planned", summary: "Sustainment pending" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -132,6 +133,7 @@ describe("validate-horizon-status.mjs", () => {
               H4: { status: "planned", summary: "H4 pending" },
               H5: { status: "planned", summary: "H5 pending" },
               H6: { status: "planned", summary: "H6 pending" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [],
             promotionReadiness: {
@@ -199,6 +201,7 @@ describe("validate-horizon-status.mjs", () => {
               H4: { status: "planned", summary: "H4 pending" },
               H5: { status: "planned", summary: "H5 pending" },
               H6: { status: "planned", summary: "H6 pending" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -271,6 +274,7 @@ describe("validate-horizon-status.mjs", () => {
               H4: { status: "planned", summary: "H4 pending" },
               H5: { status: "planned", summary: "H5 pending" },
               H6: { status: "planned", summary: "H6 pending" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -392,6 +396,7 @@ describe("validate-horizon-status.mjs", () => {
               H4: { status: "planned", summary: "H4 pending" },
               H5: { status: "planned", summary: "H5 pending" },
               H6: { status: "planned", summary: "H6 pending" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -501,6 +506,7 @@ describe("validate-horizon-status.mjs", () => {
               H4: { status: "planned", summary: "H4 pending" },
               H5: { status: "planned", summary: "H5 pending" },
               H6: { status: "planned", summary: "H6 pending" },
+              H7: { status: "planned", summary: "H7 planned" },
             },
             history: [
               {
@@ -584,7 +590,9 @@ describe("validate-horizon-status.mjs", () => {
     "H3": { "status": "planned", "summary": "H3 planned" },
     "H4": { "status": "planned", "summary": "H4 planned" },
     "H5": { "status": "planned", "summary": "H5 planned" },
-    "H6": { "status": "planned", "summary": "H6 planned" }
+    "H6": { "status": "planned", "summary": "H6 planned" },
+
+    "H7": { "status": "planned", "summary": "H7 planned" }
   },
   "history": [
     {

@@ -292,6 +292,7 @@ async function seedHorizonStatus(
           H4: { status: "planned", summary: "H4 state" },
           H5: { status: "planned", summary: "H5 state" },
           H6: { status: "planned", summary: "H6 planned" },
+          H7: { status: "planned", summary: "H7 planned" },
         },
         promotionReadiness: {
           targetStage,

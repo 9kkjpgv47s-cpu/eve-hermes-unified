@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T02:00:00Z",
+  "updatedAtIso": "2026-04-29T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H6",
+  "activeHorizon": "H7",
   "activeStatus": "completed",
-  "summary": "Horizons H1–H6 complete; post-H6 sustainment via verify:sustainment-loop (manifest validates end-to-end including validate:h6-closeout); MASTER_EXECUTION_CHECKLIST Phase 8.",
+  "summary": "Horizon H7 (audit lifecycle): configurable dispatch audit rotation + retention before append; run-h7-assurance-bundle includes audit-log rotation vitest; terminal sustainment via verify:sustainment-loop (post-H7 manifest + validate:h7-closeout). Historical H1–H6 outcomes retained.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -76,6 +76,13 @@
       "artifactPattern": "evidence/h6-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H6"]
+    },
+    {
+      "id": "h7-assurance-bundle",
+      "command": "node ./scripts/run-h7-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h7-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H7"]
     }
   ],
   "nextActions": [
@@ -279,6 +286,27 @@
       "targetHorizon": "H6",
       "status": "completed",
       "tags": ["documentation", "operations"]
+    },
+    {
+      "id": "h7-action-1",
+      "summary": "Dispatch audit log size-based rotation with generation retention (UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES / RETAIN_COUNT) applied before append in unified-dispatch.",
+      "targetHorizon": "H7",
+      "status": "completed",
+      "tags": ["audit", "observability", "runtime"]
+    },
+    {
+      "id": "h7-action-2",
+      "summary": "H7 assurance bundle extends H6 gates with audit-log rotation unit proof; horizon orchestration extended through H7 with validate:h7-closeout and post-H7 sustainment loop manifest.",
+      "targetHorizon": "H7",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h7-action-3",
+      "summary": "Goal policy and documentation parity for H6→H7 transition and terminal sustainment commands (verify:sustainment-loop).",
+      "targetHorizon": "H7",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -342,6 +370,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H6->H7": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.02,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "audit": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "observability": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -379,6 +422,10 @@
     "H6": {
       "status": "completed",
       "summary": "Continuous assurance bundle (run-h6-assurance-bundle): horizon metadata + tenant isolation + region rehearsal + unified entrypoints; documented in NEXT_LONG_HORIZON_ACTION_PLAN and CLOUD_AGENT_HANDOFF; H5->H6 goal policy in GOAL_POLICIES.json."
+    },
+    "H7": {
+      "status": "completed",
+      "summary": "Audit lifecycle: dispatch audit JSONL rotation/retention in unified-dispatch; H7 assurance bundle adds audit-log rotation tests; terminal sustainment loop chains validate:h7-closeout; horizon tooling VALID_HORIZONS includes H7."
     }
   },
   "history": [
@@ -531,6 +578,12 @@
       "horizon": "H6",
       "status": "completed",
       "note": "Post-H6 sustainment: run-post-h6-sustainment-loop emits checks.horizonStatusPass/h6AssuranceBundlePass/h6CloseoutGatePass; validate-horizon-closeout can evaluate post-h6 manifests when present (not requiredEvidence—avoid circular dependency with validate:h6-closeout inside the loop)."
+    },
+    {
+      "timestamp": "2026-04-29T12:00:00Z",
+      "horizon": "H7",
+      "status": "completed",
+      "note": "H7 audit lifecycle: audit-log rotation module + env-driven policy before append; run-h7-assurance-bundle and verify:sustainment-loop post-H7; tooling sequences extended through H7; terminal closeout skips stage-promotion at H7."
     }
   ]
 }

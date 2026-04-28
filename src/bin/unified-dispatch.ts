@@ -14,6 +14,7 @@ import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
+import { maybeRotateDispatchAuditLog } from "../runtime/audit-log-rotation.js";
 import {
   FileDispatchDurabilityQueue,
   replayPendingDispatches,
@@ -203,6 +204,12 @@ async function main() {
 
   const output = durability !== undefined ? { ...result, durability } : result;
 
+  if (config.auditRotationMaxBytes > 0) {
+    await maybeRotateDispatchAuditLog(config.unifiedDispatchAuditLogPath, {
+      maxBytes: config.auditRotationMaxBytes,
+      retainCount: config.auditRotationRetainCount,
+    });
+  }
   await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, output);
   const payload = compactJson ? JSON.stringify(output) : JSON.stringify(output, null, 2);
   process.stdout.write(`${payload}\n`);

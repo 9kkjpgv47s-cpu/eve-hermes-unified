@@ -39,11 +39,14 @@ jobs:
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: Post-H6 sustainment loop (horizon + closeout gate)
+      - name: H7 sustainment assurance bundle (audit rotation proof)
+        run: npm run run:h7-assurance-bundle
+
+      - name: Post-H7 sustainment loop (horizon + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H6 sustainment manifest
-        run: npm run validate:post-h6-sustainment-manifest
+      - name: Validate post-H7 sustainment manifest
+        run: npm run validate:post-h7-sustainment-manifest
 
       - name: Build
         run: npm run build

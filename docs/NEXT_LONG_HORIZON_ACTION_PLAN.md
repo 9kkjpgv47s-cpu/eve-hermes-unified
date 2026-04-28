@@ -180,11 +180,34 @@ Primary risks:
 - Drift between documented horizons and `VALID_HORIZONS` in tooling.
 
 Mitigations:
-- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status`.
+- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H7**).
 
-### Post-H6 operations
+### Post-H7 operations
 
-After **H6** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for a single chained verification that refreshes assurance evidence and runs **`validate:h6-closeout`**. Optionally **`npm run validate:post-h6-sustainment-manifest`** checks the latest **`evidence/post-h6-sustainment-loop-*.json`** without re-running the loop.
+After **H7** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for a single chained verification that refreshes assurance evidence and runs **`validate:h7-closeout`**. Optionally **`npm run validate:post-h7-sustainment-manifest`** checks the latest **`evidence/post-h7-sustainment-loop-*.json`** without re-running the loop. To replay the legacy H6-only sustainment chain (older evidence pins), use **`npm run verify:sustainment-loop:h6-legacy`** and **`npm run validate:post-h6-sustainment-manifest`**.
+
+### Horizon H7 - Dispatch audit lifecycle (rotation and retention)
+
+Goal: close the H3 roadmap gap on dispatch audit **lifecycle** by enforcing bounded on-disk generations for JSONL audit logs without breaking append semantics.
+
+Workstreams:
+
+- Size-triggered rotation of the active dispatch audit log before append (timestamped sibling archives).
+- Configurable retention cap on rotated generations with safe defaults (rotation disabled when max-bytes is unset or zero).
+- Executable proof via **`npm run run:h7-assurance-bundle`** (extends H6 gates with audit rotation unit tests) and **`validate:h7-closeout`**.
+
+Exit evidence:
+
+- **`npm run run:h7-assurance-bundle`** passes and artifact matches **`evidence/h7-assurance-bundle-*.json`**.
+- **`npm run validate:h7-closeout`** passes when evidence is present (H7 is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- Operators surprised by silent rotation when thresholds are set too aggressively.
+
+Mitigations:
+
+- Document defaults (rotation off until **`UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES`** is set); tune retention with **`UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT`**.
 
 ## Cross-Horizon Execution Rules
 

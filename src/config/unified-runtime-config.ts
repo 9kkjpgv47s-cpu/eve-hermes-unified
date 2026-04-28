@@ -34,6 +34,10 @@ export type UnifiedRuntimeEnvConfig = {
     strict: boolean;
   };
   auditLogPath: string;
+  /** Rotate active dispatch audit log when file exceeds this size (bytes); 0 = disabled. */
+  auditRotationMaxBytes: number;
+  /** Keep at most this many generations (active log + timestamped rotated siblings). */
+  auditRotationRetainCount: number;
   /** When non-empty, dispatch rejects envelopes whose tenantId is missing or not in this list. */
   tenantAllowlist: string[];
   /** Dispatch rejects envelopes whose tenantId is in this list. */
@@ -131,6 +135,15 @@ function parsePositiveIntMs(raw: string | undefined, fallback: number): number {
   const n = Number.parseInt(String(raw), 10);
   if (Number.isFinite(n) && n > 0) {
     return n;
+  }
+  return fallback;
+}
+
+/** Parses non-negative integers; empty/missing uses fallback. */
+function parseNonNegativeInt(raw: string | undefined, fallback: number): number {
+  const n = Number.parseInt(String(raw ?? ""), 10);
+  if (Number.isFinite(n) && n >= 0) {
+    return Math.floor(n);
   }
   return fallback;
 }
@@ -293,6 +306,15 @@ export function loadUnifiedRuntimeEnvConfig(
   const auditLogPath =
     firstDefined(reader, ["UNIFIED_AUDIT_LOG_PATH", "AUDIT_LOG_PATH", "UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const auditRotationMaxBytes = parseNonNegativeInt(
+    firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES", "UNIFIED_AUDIT_ROTATION_MAX_BYTES"]),
+    0,
+  );
+  const auditRotationRetainCountRaw = parseNonNegativeInt(
+    firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT", "UNIFIED_AUDIT_ROTATION_RETAIN_COUNT"]),
+    8,
+  );
+  const auditRotationRetainCount = auditRotationRetainCountRaw <= 0 ? 1 : auditRotationRetainCountRaw;
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -369,6 +391,8 @@ export function loadUnifiedRuntimeEnvConfig(
       strict: preflightStrict,
     },
     auditLogPath,
+    auditRotationMaxBytes,
+    auditRotationRetainCount,
     tenantAllowlist: dispatchAllowedTenantIds,
     tenantDenylist: dispatchDeniedTenantIds,
     routerConfig: {

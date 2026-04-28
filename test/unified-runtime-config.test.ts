@@ -122,6 +122,33 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.preflight.enabled).toBe(true);
     expect(config.preflight.strict).toBe(false);
     expect(config.auditLogPath).toBe("/tmp/unified-audit.jsonl");
+    expect(config.auditRotationMaxBytes).toBe(0);
+    expect(config.auditRotationRetainCount).toBe(8);
+  });
+
+  it("parses audit rotation max bytes and retain count", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES: "1048576",
+          UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT: "4",
+        }),
+      ),
+    );
+    expect(config.auditRotationMaxBytes).toBe(1048576);
+    expect(config.auditRotationRetainCount).toBe(4);
+  });
+
+  it("coerces retain count below 1 to 1", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES: "100",
+          UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT: "0",
+        }),
+      ),
+    );
+    expect(config.auditRotationRetainCount).toBe(1);
   });
 
   it("parses cutover stage controls and aliases", () => {

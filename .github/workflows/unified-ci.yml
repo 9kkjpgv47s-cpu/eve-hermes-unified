@@ -30,6 +30,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Dispatch JSON transcript (CI stub)
+        run: npm run validate:ci-dispatch-transcript
+
       - name: Full validation chain
         env:
           UNIFIED_ROUTER_DEFAULT_PRIMARY: hermes

@@ -331,3 +331,11 @@ The merge-bundle validation wrapper also enforces initial-scope goal-policy prop
 - missing/failed release signal surfaces as:
   - `missing_release_goal_policy_validation_check`
   - `release_goal_policy_validation_not_passed`
+
+## Dispatch transcript in CI
+
+After `npm run build`, CI runs `npm run validate:ci-dispatch-transcript`, which executes `scripts/ci-dispatch-transcript.sh`: one `npm run dispatch` with stub Eve/Hermes (inline fake Eve script, Hermes `/bin/true`) and writes `evidence/unified-dispatch-transcript-*.json`. That file is included in the `unified-evidence` artifact with the rest of the validation outputs.
+
+## Legacy long-horizon branch (pre-capability-engine)
+
+Remote branch `cursor/long-horizon-convergence-5a8b` carried an alternate stack (separate `build-unified-runtime`, Telegram webhook CLIs, Zod control plane, soak matrix). It does not merge cleanly onto current `main` because `main` added `UnifiedCapabilityEngine`, the new `UnifiedMemoryStore` API (`get`/`set`/`list`), and `unified-runtime-config`. Porting those features needs a deliberate redesign on top of the current runtime wiring — avoid blind merges.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolvePackageRoot } from "../config/package-root.js";
 import { EveAdapter } from "../adapters/eve-adapter.js";
 import { HermesAdapter } from "../adapters/hermes-adapter.js";
 import { loadDotEnvFile } from "../config/env.js";
@@ -38,7 +38,7 @@ function parseArgs(argv: string[]): { text: string; chatId: string; messageId: s
 }
 
 async function main() {
-  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const rootDir = resolvePackageRoot(import.meta.url);
   await loadDotEnvFile(rootDir);
   const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
   const config = loadUnifiedRuntimeEnvConfig();

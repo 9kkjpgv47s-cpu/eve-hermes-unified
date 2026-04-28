@@ -58,6 +58,22 @@ Rollback:
 npm run cutover:rollback
 ```
 
+## Release command log rotation (H3)
+
+For long-running hosts that reuse the same **`UNIFIED_RELEASE_READINESS_COMMAND_LOG_DIR`**, per-step `*.log` files can grow without bound. When **`UNIFIED_RELEASE_COMMAND_LOG_MAX_BYTES`** is set to a positive integer, `scripts/validate-release-readiness.sh` calls **`scripts/log-rotate.mjs`** before each step so any existing log for that step name is rotated (`file` → `file.1` → …) once it reaches the byte threshold.
+
+- **`UNIFIED_RELEASE_COMMAND_LOG_MAX_BYTES`**: threshold in bytes (omit or **0** to disable).
+- **`UNIFIED_RELEASE_COMMAND_LOG_MAX_FILES`**: retention depth for numbered backups (default **8**, same semantics as `UNIFIED_LOG_ROTATE_MAX_FILES` in `log-rotate.mjs`).
+
+Standalone rotation (any path or directory of `*.log`):
+
+```bash
+UNIFIED_LOG_ROTATE_MAX_BYTES=10485760 UNIFIED_LOG_ROTATE_MAX_FILES=8 \
+  node scripts/log-rotate.mjs --file /path/to.log
+# or
+UNIFIED_LOG_ROTATE_MAX_BYTES=10485760 node scripts/log-rotate.mjs --dir /path/to/logs --glob '*.log'
+```
+
 ## Evidence Expectations
 
 Before marking a phase complete, include artifacts from:

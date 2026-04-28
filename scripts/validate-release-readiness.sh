@@ -72,6 +72,11 @@ run_step() {
   local safe_name
   safe_name="$(sanitize_step_name "$name")"
   local log_file="$COMMAND_LOG_DIR/${safe_name}.log"
+  if [[ -n "${UNIFIED_RELEASE_COMMAND_LOG_MAX_BYTES:-}" ]] && [[ "${UNIFIED_RELEASE_COMMAND_LOG_MAX_BYTES}" != "0" ]]; then
+    UNIFIED_LOG_ROTATE_MAX_BYTES="${UNIFIED_RELEASE_COMMAND_LOG_MAX_BYTES}" \
+      UNIFIED_LOG_ROTATE_MAX_FILES="${UNIFIED_RELEASE_COMMAND_LOG_MAX_FILES:-8}" \
+      node "$ROOT_DIR/scripts/log-rotate.mjs" --file "$log_file" || true
+  fi
   local started_at
   local finished_at
   local status

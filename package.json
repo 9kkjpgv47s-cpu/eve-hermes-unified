@@ -47,6 +47,7 @@
     "validate:regression-eve": "bash ./scripts/regression-eve-primary.sh",
     "validate:regression-eve-primary": "npm run validate:regression-eve",
     "validate:cutover-readiness": "bash ./scripts/verify-cutover-readiness.sh",
+    "rotate:logs": "node ./scripts/log-rotate.mjs",
     "validate:release-readiness": "bash ./scripts/validate-release-readiness.sh",
     "validate:initial-scope": "bash ./scripts/validate-initial-scope.sh",
     "validate:ci-dispatch-transcript": "bash ./scripts/ci-dispatch-transcript.sh",

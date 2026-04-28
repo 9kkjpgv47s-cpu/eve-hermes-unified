@@ -71,4 +71,18 @@ describe("runRuntimePreflight", () => {
       );
     });
   });
+
+  it("fails when memory journal directory is not writable", async () => {
+    await withTempDir(async (dir) => {
+      const blockedFile = path.join(dir, "blocked");
+      await writeFile(blockedFile, "x", "utf8");
+      const config = {
+        ...baseConfig(dir),
+        unifiedMemoryJournalPath: path.join(blockedFile, "journal.jsonl"),
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "Unified memory journal path is not writable",
+      );
+    });
+  });
 });

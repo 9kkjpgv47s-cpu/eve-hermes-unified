@@ -11,6 +11,8 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
+  /** Optional append-only journal for file-backed memory (crash recovery between snapshot persists). */
+  unifiedMemoryJournalPath: string;
   unifiedDispatchAuditLogPath: string;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
@@ -140,6 +142,8 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
+  const unifiedMemoryJournalPath =
+    firstDefined(reader, ["UNIFIED_MEMORY_JOURNAL_PATH", "MEMORY_JOURNAL_PATH"]) ?? "";
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
@@ -301,6 +305,7 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
+    unifiedMemoryJournalPath,
     unifiedDispatchAuditLogPath,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,

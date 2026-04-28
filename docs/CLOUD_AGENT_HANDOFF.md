@@ -44,6 +44,13 @@ Every PR should include:
 - Preserve canonical `traceId` continuity from envelope to response.
 - Keep explicit lane directives (`@cursor`, `@hermes`) deterministic.
 
+## H3 durability (unified memory file backend)
+
+Optional crash recovery for file-backed unified memory:
+
+- **`UNIFIED_MEMORY_JOURNAL_PATH`** — append-only JSONL WAL (`v:1`, `op: set|delete`). Each `set`/`delete` appends before the in-memory map is updated; on startup the store loads the JSON snapshot then **replays** the journal. After each successful atomic snapshot persist, the journal is **truncated** (operations are durable in the snapshot file).
+- Preflight checks the journal path parent is writable when set and `UNIFIED_MEMORY_STORE_KIND=file`.
+
 ## Cutover and Rollback Commands
 
 Stage:

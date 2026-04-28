@@ -17,6 +17,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
   - `git log --oneline -n 1`
   - `gh pr view --json number,title,headRefName,baseRefName,state`
 - Vitest creates `./evidence` at test start (`test/global-setup.ts`) because it is gitignored but required by several script integration tests.
+- **H3 file memory:** optional **`UNIFIED_MEMORY_JOURNAL_PATH`** WAL (append/replay/truncate on persist); see `docs/CLOUD_AGENT_HANDOFF.md`.
+- **Closeout validator:** `validate-horizon-closeout.mjs` dual-reports **`horizon_drill_*` / `h2_drill_*`** and appends **`h2_closeout_run_*` / `h2_promotion_run_*`** aliases for horizon closeout/promotion run failure ids.
 
 ## Read Order (Do Not Skip)
 

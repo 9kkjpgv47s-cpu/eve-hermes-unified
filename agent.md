@@ -8,36 +8,36 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 actions remain `planned` until promotion closes H2.
-- Work branch: `cursor/h3-memory-atomic-closeout-taxonomy-cc15` (or latest `cursor/*` per PR).
-- Recent increment:
-  - `FileUnifiedMemoryStore` persists via write-to-temp + `rename` (atomic replace on POSIX).
-  - `validate-horizon-closeout.mjs` emits **both** `horizon_drill_*` and legacy `h2_drill_*` failure IDs for drill-suite evidence.
-  - Vitest `globalSetup` creates `./evidence` so script integration tests do not depend on a pre-existing gitignored folder.
-  - Optional **dispatch audit log rotation** (`UNIFIED_AUDIT_LOG_ROTATION_*`).
-  - Optional **capability execution timeout** (`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`; 0 = unlimited).
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 durability advances in code ahead of promotion.
+- Branch: **`cursor/h3-memory-atomic-closeout-taxonomy-cc15`** — atomic file memory + optional **WAL journal** + closeout validator **h2_* compat aliases** for horizon closeout/promotion run checks.
 
-## What Was Just Completed
+## What Was Just Completed (large chunk)
 
-1. Atomic file persistence for unified memory (`src/memory/unified-memory-store.ts`).
-2. Horizon-neutral drill-suite closeout checks with legacy `h2_*` aliases preserved.
-3. Concurrent file-backed memory regression test; Vitest global setup for `evidence/`.
+### H3
+
+1. **File memory WAL** — `UNIFIED_MEMORY_JOURNAL_PATH`: append-only journal, replay after snapshot load, truncate after successful persist (`src/memory/unified-memory-store.ts`).
+2. **Atomic snapshot persist** — write temp + `rename` (existing).
+3. **Preflight** — journal path writable when file store + journal set (`src/runtime/preflight.ts`).
+4. **Capability execution timeout** — `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` (existing on branch).
+
+### Tooling
+
+1. **`validate-horizon-closeout.mjs`** — drill suite already dual-reports `horizon_drill_*` / `h2_drill_*`; **horizon-closeout-run** and **horizon-promotion-run** now append **`h2_closeout_run_*`** / **`h2_promotion_run_*`** aliases for each `horizon_*` failure id (pass logic unchanged).
 
 ## Read Order (Zero-Context Startup)
 
 1. `README.md`
 2. `AGENTS.md`
 3. `AGENT.md`
-4. `docs/CLOUD_AGENT_HANDOFF.md`
+4. `docs/CLOUD_AGENT_HANDOFF.md` (H3 memory journal section)
 5. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 6. `docs/HORIZON_STATUS.json`
 
 ## Immediate Next High-Output Targets
 
-1. Run real H2 closeout + promotion dry-runs with repo `evidence/` populated from `validate:all`, then `validate:h2-closeout` / `promote:horizon` as documented in `README.md` (advances `HORIZON_STATUS.json` only when intentional).
-2. H3 runtime: extend memory layer (optional WAL / journal) and wire capability execution budgets into `capability-engine.ts` per `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md` H3 workstreams.
-3. Continue de-H2-prefixing orchestrator **outputs** where gates already accept aliases; keep dual IDs until all consumers migrate.
-4. Keep full gate chain green: `npm run check && npm test && npm run validate:all`.
+1. **Persist verify** / **journal replay verify** (post-snapshot hash or snapshot+WAL equivalence) if operators need stronger fail-fast gates.
+2. **Dispatch audit** schema versioning + manifest validation if consumers need strict JSONL contracts.
+3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack
 
@@ -47,23 +47,11 @@ npm test
 npm run validate:all
 ```
 
-Targeted suites when touching promotion/closeout paths:
+## Guardrails
 
-```bash
-npm test -- test/h2-closeout-runner-script.test.ts test/promote-horizon-script.test.ts test/h2-promotion-runner-script.test.ts test/horizon-closeout-validation.test.ts
-```
-
-## Execution Guardrails
-
-- Never weaken rollback or fail-closed logic.
-- Keep deterministic artifact/evidence selection.
-- Keep outputs machine-readable JSON with explicit pass/fail signals.
-- Any policy/routing behavior change must include tests + evidence updates.
+- WAL is truncated only after a successful snapshot persist; crash between append and persist can leave redundant journal lines — replay is idempotent for `set`/`delete`.
 
 ## Delivery Checklist Per Iteration
 
-- Implement meaningful increment (not docs-only unless requested).
-- Add/adjust tests.
-- Run validation commands.
-- Update handoff docs (`agent.md` / `AGENT.md` / `docs/CLOUD_AGENT_HANDOFF.md`) as needed.
-- Commit, push, and update PR.
+- Implement + tests + docs for operator-visible behavior.
+- Commit, push, open/update PR.

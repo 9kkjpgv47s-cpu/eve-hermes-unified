@@ -42,9 +42,14 @@ async function main() {
   await loadDotEnvFile(rootDir);
   const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
   const config = loadUnifiedRuntimeEnvConfig();
+  const journalPath =
+    config.unifiedMemoryStoreKind === "file" && config.unifiedMemoryJournalPath.trim().length > 0
+      ? config.unifiedMemoryJournalPath
+      : undefined;
   const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
+    journalPath,
   );
   const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
   const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);
@@ -90,6 +95,7 @@ async function main() {
     hermesLaunchCommand: config.hermesLaunchCommand,
     unifiedMemoryStoreKind: config.unifiedMemoryStoreKind,
     unifiedMemoryFilePath: config.unifiedMemoryFilePath,
+    unifiedMemoryJournalPath: journalPath,
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
   });

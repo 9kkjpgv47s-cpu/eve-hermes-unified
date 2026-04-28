@@ -11,6 +11,7 @@ export type RuntimePreflightConfig = {
   hermesLaunchCommand: string;
   unifiedMemoryStoreKind: "file" | "memory";
   unifiedMemoryFilePath: string;
+  unifiedMemoryJournalPath?: string;
   auditEnabled?: boolean;
   auditLogPath: string;
 };
@@ -75,6 +76,12 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     const memoryWritable = await checkWritableParent(config.unifiedMemoryFilePath);
     if (!memoryWritable) {
       issues.push(`Unified memory file path is not writable: ${config.unifiedMemoryFilePath}`);
+    }
+    if (config.unifiedMemoryJournalPath && config.unifiedMemoryJournalPath.trim().length > 0) {
+      const journalWritable = await checkWritableParent(config.unifiedMemoryJournalPath);
+      if (!journalWritable) {
+        issues.push(`Unified memory journal path is not writable: ${config.unifiedMemoryJournalPath}`);
+      }
     }
   }
 

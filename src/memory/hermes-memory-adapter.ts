@@ -36,13 +36,14 @@ export function createInMemoryHermesStore(): UnifiedMemoryStore {
   return new InMemoryUnifiedMemoryStore();
 }
 
-export function createFileBackedHermesStore(filePath: string): UnifiedMemoryStore {
-  return createUnifiedMemoryStoreFromEnv("file", filePath);
+export function createFileBackedHermesStore(filePath: string, journalPath?: string): UnifiedMemoryStore {
+  return createUnifiedMemoryStoreFromEnv("file", filePath, journalPath);
 }
 
 export function createHermesMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
+  journalPath?: string,
 ): UnifiedMemoryStore {
-  return createUnifiedMemoryStoreFromEnv(kind, filePath);
+  return createUnifiedMemoryStoreFromEnv(kind, filePath, journalPath);
 }

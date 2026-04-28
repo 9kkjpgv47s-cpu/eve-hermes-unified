@@ -85,6 +85,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.unifiedMemoryFilePath).toBe("/tmp/custom-memory.json");
   });
 
+  it("parses unified memory journal path", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_JOURNAL_PATH: "/tmp/mem.journal",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryJournalPath).toBe("/tmp/mem.journal");
+  });
+
   it("parses capability policy controls", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

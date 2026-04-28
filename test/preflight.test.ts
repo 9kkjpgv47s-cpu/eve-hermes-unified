@@ -58,16 +58,30 @@ describe("runRuntimePreflight", () => {
     });
   });
 
-  it("fails when memory file directory is not writable", async () => {
+  it("fails when memory journal parent is not writable", async () => {
     await withTempDir(async (dir) => {
       const blockedFile = path.join(dir, "blocked");
       await writeFile(blockedFile, "x", "utf8");
       const config = {
         ...baseConfig(dir),
-        unifiedMemoryFilePath: path.join(blockedFile, "dispatch.json"),
+        unifiedMemoryJournalPath: path.join(blockedFile, "journal.jsonl"),
       };
       await expect(runRuntimePreflight(config)).rejects.toThrow(
-        "Unified memory file path is not writable",
+        "Unified memory journal path is not writable",
+      );
+    });
+  });
+
+  it("fails when capability policy audit path is not writable", async () => {
+    await withTempDir(async (dir) => {
+      const blockedFile = path.join(dir, "blocked");
+      await writeFile(blockedFile, "x", "utf8");
+      const config = {
+        ...baseConfig(dir),
+        capabilityPolicyAuditPath: path.join(blockedFile, "policy.jsonl"),
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "Capability policy audit path is not writable",
       );
     });
   });

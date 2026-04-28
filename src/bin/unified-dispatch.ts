@@ -13,6 +13,7 @@ import { dispatchUnifiedMessage } from "../runtime/unified-dispatch.js";
 import { createCapabilityPolicy } from "../runtime/capability-policy.js";
 import { runRuntimePreflight } from "../runtime/preflight.js";
 import { appendDispatchAuditLog } from "../runtime/audit-log.js";
+import { appendCapabilityPolicyDenialAudit } from "../runtime/capability-policy-audit.js";
 
 function parseArgs(argv: string[]): { text: string; chatId: string; messageId: string } {
   let text = "";
@@ -42,9 +43,14 @@ async function main() {
   await loadDotEnvFile(rootDir);
   const { text, chatId, messageId } = parseArgs(process.argv.slice(2));
   const config = loadUnifiedRuntimeEnvConfig();
+  const journalPath =
+    config.unifiedMemoryStoreKind === "file" && config.unifiedMemoryJournalPath.trim().length > 0
+      ? config.unifiedMemoryJournalPath
+      : undefined;
   const sharedMemoryStore = createUnifiedMemoryStoreFromEnv(
     config.unifiedMemoryStoreKind,
     config.unifiedMemoryFilePath,
+    journalPath,
   );
   const eveAdapter = new EveAdapter(config.eveDispatchScript, config.eveDispatchResultPath);
   const hermesAdapter = new HermesAdapter(config.hermesLaunchCommand, config.hermesLaunchArgs);
@@ -75,10 +81,18 @@ async function main() {
     memoryStore: sharedMemoryStore,
   });
   const capabilityPolicy = createCapabilityPolicy(config.capabilityPolicy);
+  const policyAuditPath = config.capabilityPolicyAuditPath.trim();
   const capabilityEngine = new UnifiedCapabilityEngine(capabilityRegistry, {
     memoryStore: sharedMemoryStore,
     dispatchLane,
     policy: capabilityPolicy,
+    executionTimeoutMs: config.capabilityExecutionTimeoutMs,
+    onPolicyDenial:
+      policyAuditPath.length > 0
+        ? async (payload) => {
+            await appendCapabilityPolicyDenialAudit(policyAuditPath, payload);
+          }
+        : undefined,
   });
 
   const preflightIssues = await runRuntimePreflight({
@@ -89,6 +103,8 @@ async function main() {
     hermesLaunchCommand: config.hermesLaunchCommand,
     unifiedMemoryStoreKind: config.unifiedMemoryStoreKind,
     unifiedMemoryFilePath: config.unifiedMemoryFilePath,
+    unifiedMemoryJournalPath: journalPath,
+    capabilityPolicyAuditPath: policyAuditPath.length > 0 ? policyAuditPath : undefined,
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
   });
@@ -110,7 +126,11 @@ async function main() {
     messageId,
     text,
   });
-  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result);
+  await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result, {
+    maxBytesBeforeRotate: config.auditLogRotationMaxBytes,
+    retainBytesAfterRotate: config.auditLogRotationRetainBytes,
+    rotateRetainBackupCount: config.auditLogRotateRetainBackupCount,
+  });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 

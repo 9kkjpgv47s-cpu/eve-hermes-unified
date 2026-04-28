@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, truncate, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { LaneId } from "../contracts/types.js";
 
@@ -69,6 +69,84 @@ function cloneEntry(entry: UnifiedMemoryEntry): UnifiedMemoryEntry {
 
 function serializeRecordMap(records: Map<string, UnifiedMemoryEntry>): string {
   return JSON.stringify([...records.values()], null, 2);
+}
+
+type MemoryWalRecord =
+  | {
+      v: 1;
+      op: "set";
+      lane: MemoryLane;
+      namespace: string;
+      key: string;
+      value: string;
+      updatedAtIso: string;
+      metadata?: Record<string, string>;
+    }
+  | { v: 1; op: "delete"; lane: MemoryLane; namespace: string; key: string };
+
+function parseWalLine(line: string): MemoryWalRecord | undefined {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as MemoryWalRecord;
+    if (parsed?.v !== 1 || (parsed.op !== "set" && parsed.op !== "delete")) {
+      return undefined;
+    }
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+async function appendMemoryWal(journalPath: string, record: MemoryWalRecord): Promise<void> {
+  await mkdir(path.dirname(journalPath), { recursive: true });
+  await appendFile(journalPath, `${JSON.stringify(record)}\n`, "utf8");
+}
+
+function applyWalRecord(records: Map<string, UnifiedMemoryEntry>, record: MemoryWalRecord): void {
+  if (record.op === "delete") {
+    const key = storageKey(
+      normalizeMemoryKey({ lane: record.lane, namespace: record.namespace, key: record.key }),
+    );
+    records.delete(key);
+    return;
+  }
+  const normalized = normalizeMemoryKey({
+    lane: record.lane,
+    namespace: record.namespace,
+    key: record.key,
+  });
+  records.set(storageKey(normalized), {
+    ...normalized,
+    value: record.value,
+    updatedAtIso: record.updatedAtIso,
+    metadata: record.metadata ? { ...record.metadata } : undefined,
+  });
+}
+
+async function replayMemoryWal(journalPath: string, records: Map<string, UnifiedMemoryEntry>): Promise<void> {
+  let raw = "";
+  try {
+    raw = await readFile(journalPath, "utf8");
+  } catch {
+    return;
+  }
+  for (const line of raw.split(/\r?\n/)) {
+    const rec = parseWalLine(line);
+    if (rec) {
+      applyWalRecord(records, rec);
+    }
+  }
+}
+
+async function clearMemoryWal(journalPath: string): Promise<void> {
+  try {
+    await truncate(journalPath, 0);
+  } catch {
+    // optional file
+  }
 }
 
 function parseRecordList(raw: string): UnifiedMemoryEntry[] {
@@ -154,7 +232,14 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   private loaded = false;
   private writeChain = Promise.resolve();
 
-  constructor(private readonly filePath: string) {}
+  constructor(
+    private readonly filePath: string,
+    private readonly journalPath?: string,
+  ) {}
+
+  private journalFile(): string | undefined {
+    return this.journalPath && this.journalPath.length > 0 ? this.journalPath : undefined;
+  }
 
   private async ensureLoaded(): Promise<void> {
     if (this.loaded) {
@@ -168,12 +253,23 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
     } catch {
       // Missing/invalid file initializes empty store.
     }
+    const j = this.journalFile();
+    if (j) {
+      await replayMemoryWal(j, this.records);
+    }
     this.loaded = true;
   }
 
   private async persist(): Promise<void> {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(this.filePath, serializeRecordMap(this.records), "utf8");
+    const data = serializeRecordMap(this.records);
+    const tmpPath = `${this.filePath}.${process.pid}.${Date.now()}.tmp`;
+    await writeFile(tmpPath, data, "utf8");
+    await rename(tmpPath, this.filePath);
+    const j = this.journalFile();
+    if (j) {
+      await clearMemoryWal(j);
+    }
   }
 
   private async queueWrite(operation: () => Promise<void>): Promise<void> {
@@ -201,7 +297,20 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
       updatedAtIso: new Date().toISOString(),
       metadata: metadata ? { ...metadata } : undefined,
     };
+    const j = this.journalFile();
     await this.queueWrite(async () => {
+      if (j) {
+        await appendMemoryWal(j, {
+          v: 1,
+          op: "set",
+          lane: entry.lane,
+          namespace: entry.namespace,
+          key: entry.key,
+          value: entry.value,
+          updatedAtIso: entry.updatedAtIso,
+          metadata: entry.metadata,
+        });
+      }
       this.records.set(storageKey(normalized), entry);
       await this.persist();
     });
@@ -212,8 +321,18 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
     const normalized = normalizeMemoryKey(target);
     await this.ensureLoaded();
     let deleted = false;
+    const j = this.journalFile();
     await this.queueWrite(async () => {
       deleted = this.records.delete(storageKey(normalized));
+      if (deleted && j) {
+        await appendMemoryWal(j, {
+          v: 1,
+          op: "delete",
+          lane: normalized.lane,
+          namespace: normalized.namespace,
+          key: normalized.key,
+        });
+      }
       if (deleted) {
         await this.persist();
       }
@@ -248,9 +367,10 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
 export function createUnifiedMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
+  journalPath?: string,
 ): UnifiedMemoryStore {
   if (kind === "file") {
-    return new FileUnifiedMemoryStore(filePath);
+    return new FileUnifiedMemoryStore(filePath, journalPath);
   }
   return new InMemoryUnifiedMemoryStore();
 }

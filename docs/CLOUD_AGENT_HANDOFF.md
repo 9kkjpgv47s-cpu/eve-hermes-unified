@@ -13,7 +13,7 @@ Use this document when one cloud agent hands execution to another. The objective
 2. Install and verify:
    - `npm install`
    - `npm run check`
-   - `npm test`
+   - `npm test` (Vitest `globalSetup` creates `./evidence` because it is gitignored but required by some script integration tests.)
 3. Confirm runtime command compiles and runs:
    - `npm run dispatch -- --text "startup verification" --chat-id 1 --message-id 1`
 
@@ -43,6 +43,15 @@ Every PR should include:
 - Keep fail-closed mode supported.
 - Preserve canonical `traceId` continuity from envelope to response.
 - Keep explicit lane directives (`@cursor`, `@hermes`) deterministic.
+
+## H3 durability controls (unified dispatch runtime)
+
+Optional production-hardening via environment (see `.env.example`):
+
+- **Memory journal:** `UNIFIED_MEMORY_JOURNAL_PATH` — append-only WAL replayed on startup after the JSON snapshot; truncated after each successful persist.
+- **Dispatch audit rotation:** `UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES`, `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES`, `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BACKUPS` — size-triggered rotation to `<audit>.1`, `<audit>.2`, … with pruning of older backups.
+- **Capability policy audit:** `UNIFIED_CAPABILITY_POLICY_AUDIT_PATH` — append-only JSONL for **denials** only (failures of `authorize`); preflight checks parent dir writable when set.
+- **Capability execution timeout:** `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` — wall-clock budget for the capability **executor** return value (0 = off); does not cancel subprocesses already started inside a handler.
 
 ## Cutover and Rollback Commands
 

@@ -8,40 +8,33 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`)
-- Branch (at handoff time): `cursor/h2-stage-drill-orchestrator-0f91`
-- Latest completed hardening slice:
-  - closeout taxonomy normalization toward horizon-neutral signals
-  - compatibility aliases preserved for H2-prefixed checks/failures
-  - full validation passing
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 workstreams advance in code ahead of horizon promotion.
+- Branch: `cursor/h3-wal-policy-audit-prune-cc15` (large H3 durability slice).
 
-## What Was Just Completed
+## What Was Just Completed (H3 chunk)
 
-1. Canonical closeout gate signal added and propagated:
-   - `horizon_closeout_gate_failed`
-   - `horizonCloseoutGatePass`
-2. Promotion/closeout gating now accepts canonical + legacy aliases:
-   - canonical: `horizonCloseoutGatePass`, `closeoutRunCloseoutGate*`
-   - legacy: `h2CloseoutGatePass`, `closeoutRunH2CloseoutGate*`
-3. `run-h2-promotion` closeout-run failures now dual-report:
-   - canonical: `horizon_closeout_run_*`
-   - legacy/scoped aliases retained (including `h2_closeout_run_*` for H2)
+1. **File memory WAL** — optional `UNIFIED_MEMORY_JOURNAL_PATH`: append-only journal, replayed after JSON snapshot on load, cleared after atomic persist (`FileUnifiedMemoryStore`).
+2. **Dispatch audit lifecycle** — rotation (`UNIFIED_AUDIT_LOG_ROTATION_*`), numbered backups `.1`…`.N`, prune when `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BACKUPS` > 0.
+3. **Capability policy denial audit** — optional `UNIFIED_CAPABILITY_POLICY_AUDIT_PATH` + `appendCapabilityPolicyDenialAudit`; wired via `onPolicyDenial` in CLI.
+4. **Capability execution timeout** — `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` (capped at 24h); `Promise.race` on executor completion.
+5. **Preflight** — writable checks for memory journal and policy audit paths.
+6. **Vitest `globalSetup`** — creates `./evidence` for script integration tests.
 
 ## Read Order (Zero-Context Startup)
 
 1. `README.md`
 2. `AGENTS.md`
 3. `AGENT.md`
-4. `docs/CLOUD_AGENT_HANDOFF.md`
+4. `docs/CLOUD_AGENT_HANDOFF.md` (includes **H3 durability controls** section)
 5. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 6. `docs/HORIZON_STATUS.json`
 
 ## Immediate Next High-Output Targets
 
-1. Complete horizon-neutral taxonomy migration in `validate-horizon-closeout.mjs` for remaining H2-specific drill/check failure labels (keep compatibility aliases).
-2. Extend canonical naming propagation into any remaining H2-specific orchestrator outputs that feed closeout/promotion gates.
-3. Add targeted tests for canonical-first assertions with legacy alias compatibility.
-4. Keep artifacts and gate outputs schema-valid under `scripts/validate-manifest-schema.mjs`.
+1. Optional **dual-write verify** mode for memory (compare journal vs snapshot in tests / ops).
+2. **Lane subprocess cancellation** on capability timeout (harder; document limits today).
+3. Continue **horizon-neutral** closeout taxonomy where H2-prefixed IDs remain.
+4. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack
 
@@ -51,23 +44,13 @@ npm test
 npm run validate:all
 ```
 
-Targeted suites when touching promotion/closeout paths:
+## Guardrails
 
-```bash
-npm test -- test/h2-closeout-runner-script.test.ts test/promote-horizon-script.test.ts test/h2-promotion-runner-script.test.ts test/horizon-closeout-validation.test.ts
-```
-
-## Execution Guardrails
-
-- Never weaken rollback or fail-closed logic.
-- Keep deterministic artifact/evidence selection.
-- Keep outputs machine-readable JSON with explicit pass/fail signals.
-- Any policy/routing behavior change must include tests + evidence updates.
+- Never weaken rollback or fail-closed orchestration gates.
+- Policy audit failures must not block denial responses (best-effort append).
+- Memory journal replay must tolerate partial lines (skip invalid JSON lines).
 
 ## Delivery Checklist Per Iteration
 
-- Implement meaningful increment (not docs-only unless requested).
-- Add/adjust tests.
-- Run validation commands.
-- Update handoff docs (`agent.md` / `AGENT.md` / `docs/CLOUD_AGENT_HANDOFF.md`) as needed.
-- Commit, push, and update PR.
+- Implement + tests + docs for operator-visible behavior.
+- Commit, push, open/update PR.

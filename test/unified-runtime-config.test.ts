@@ -122,6 +122,27 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.auditLogPath).toBe("/tmp/unified-audit.jsonl");
   });
 
+  it("parses H3 durability env knobs", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_JOURNAL_PATH: "/tmp/mem.journal",
+          UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES: "5000",
+          UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES: "1000",
+          UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BACKUPS: "4",
+          UNIFIED_CAPABILITY_POLICY_AUDIT_PATH: "/tmp/cap-policy.jsonl",
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "30000",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryJournalPath).toBe("/tmp/mem.journal");
+    expect(config.auditLogRotationMaxBytes).toBe(5000);
+    expect(config.auditLogRotationRetainBytes).toBe(1000);
+    expect(config.auditLogRotateRetainBackupCount).toBe(4);
+    expect(config.capabilityPolicyAuditPath).toBe("/tmp/cap-policy.jsonl");
+    expect(config.capabilityExecutionTimeoutMs).toBe(30_000);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

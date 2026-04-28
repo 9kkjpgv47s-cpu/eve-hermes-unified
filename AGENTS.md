@@ -14,6 +14,10 @@ Converge Eve and Hermes into one operating runtime with one policy router, one c
 4. Maintain deterministic failure classification (`provider_limit`, `cooldown`, `dispatch_failure`, `state_unavailable`, `policy_failure`).
 5. Keep rollback commands operational and documented.
 
+## H3 runtime durability (optional, env-driven)
+
+File-backed unified memory can use `UNIFIED_MEMORY_JOURNAL_PATH` (WAL). Dispatch audit logs support size rotation and numbered backup retention (`UNIFIED_AUDIT_LOG_ROTATION_*`). Capability policy **denials** can append to `UNIFIED_CAPABILITY_POLICY_AUDIT_PATH`. Capability handlers can use `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`. Defaults keep prior behavior (paths empty or zero = disabled). See `.env.example` and `docs/CLOUD_AGENT_HANDOFF.md`.
+
 ## Mandatory Read Order (Before Editing)
 
 1. `README.md`

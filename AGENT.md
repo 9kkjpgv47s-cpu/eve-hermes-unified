@@ -16,6 +16,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
   - `git branch --show-current`
   - `git log --oneline -n 1`
   - `gh pr view --json number,title,headRefName,baseRefName,state`
+- **H3 runtime:** optional memory journal, dispatch audit rotation + backup retention, capability policy denial audit log, capability execution timeout — see `.env.example` and `docs/CLOUD_AGENT_HANDOFF.md` (“H3 durability controls”).
+- Vitest `globalSetup` creates `./evidence` (gitignored) before tests.
 
 ## Read Order (Do Not Skip)
 

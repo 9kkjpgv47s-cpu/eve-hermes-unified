@@ -15,6 +15,7 @@ import {
   createCapabilityPolicy,
   type CapabilityPolicyConfig,
 } from "../src/runtime/capability-policy.js";
+import { appendCapabilityPolicyDenialAudit } from "../src/runtime/capability-policy-audit.js";
 
 class FakeLaneAdapter implements LaneAdapter {
   constructor(
@@ -428,5 +429,106 @@ describe("UnifiedCapabilityEngine", () => {
     });
     expect(allowed.capabilityExecution?.status).toBe("pass");
     expect(allowed.capabilityExecution?.failureClass).toBe("none");
+  });
+
+  it("fails with timeout when capability handler exceeds execution budget", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-capability-timeout-"));
+    try {
+      const memoryPath = path.join(tempDir, "memory.json");
+      const memoryStore = new FileUnifiedMemoryStore(memoryPath);
+      const registry = new CapabilityRegistry();
+      registry.register(
+        {
+          id: "slow",
+          description: "slow capability",
+          owner: "eve",
+        },
+        async () => {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          return buildCapabilityResult("too late");
+        },
+      );
+      const engine = new UnifiedCapabilityEngine(registry, {
+        memoryStore,
+        dispatchLane: async () => fakeLaneState("eve", "lane_ok"),
+        executionTimeoutMs: 50,
+      });
+      const runtime = {
+        eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+        hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+        routerConfig: {
+          defaultPrimary: "eve" as const,
+          defaultFallback: "hermes" as const,
+          failClosed: false,
+          policyVersion: "v1",
+        },
+        capabilityEngine: engine,
+      };
+
+      const result = await dispatchUnifiedMessage(runtime, {
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "@cap slow",
+      });
+
+      expect(result.capabilityExecution?.status).toBe("failed");
+      expect(result.capabilityExecution?.reason).toBe("capability_execution_timeout");
+      expect(result.capabilityExecution?.failureClass).toBe("dispatch_failure");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("invokes onPolicyDenial hook on policy failure", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-cap-deny-hook-"));
+    try {
+      const auditPath = path.join(tempDir, "denials.jsonl");
+      const memoryStore = new FileUnifiedMemoryStore(path.join(tempDir, "m.json"));
+      const registry = new CapabilityRegistry();
+      registry.register(
+        { id: "x", description: "x", owner: "eve" },
+        () => buildCapabilityResult("ok"),
+      );
+      const policy = createCapabilityPolicy({
+        defaultMode: "deny",
+        allowCapabilities: [],
+        denyCapabilities: [],
+        allowedChatIds: [],
+        deniedChatIds: [],
+        allowCapabilityChats: {},
+        denyCapabilityChats: {},
+      });
+      const engine = new UnifiedCapabilityEngine(registry, {
+        memoryStore,
+        dispatchLane: async () => fakeLaneState("eve"),
+        policy,
+        onPolicyDenial: async (p) => {
+          await appendCapabilityPolicyDenialAudit(auditPath, p);
+        },
+      });
+      const runtime = {
+        eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+        hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+        routerConfig: {
+          defaultPrimary: "eve" as const,
+          defaultFallback: "hermes" as const,
+          failClosed: false,
+          policyVersion: "v1",
+        },
+        capabilityEngine: engine,
+      };
+      await dispatchUnifiedMessage(runtime, {
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "@cap x",
+      });
+      const raw = await readFile(auditPath, "utf8");
+      expect(raw).toContain("capability_policy_denial");
+      expect(raw).toContain("capability_policy_denied");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

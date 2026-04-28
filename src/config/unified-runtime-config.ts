@@ -11,6 +11,8 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
+  /** Optional append-only journal path when using file-backed memory (crash recovery). */
+  unifiedMemoryJournalPath: string;
   unifiedDispatchAuditLogPath: string;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
@@ -26,6 +28,11 @@ export type UnifiedRuntimeEnvConfig = {
     strict: boolean;
   };
   auditLogPath: string;
+  auditLogRotationMaxBytes: number;
+  auditLogRotationRetainBytes: number;
+  auditLogRotateRetainBackupCount: number;
+  capabilityPolicyAuditPath: string;
+  capabilityExecutionTimeoutMs: number;
   routerConfig: RouterPolicyConfig;
 };
 
@@ -106,6 +113,14 @@ function parsePercent(raw: string | undefined, fallback: number): number {
   return fallback;
 }
 
+function parseNonNegativeInt(raw: string | undefined, fallback: number): number {
+  const numeric = Number(raw);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return fallback;
+  }
+  return Math.floor(numeric);
+}
+
 export function loadUnifiedRuntimeEnvConfig(
   reader: Reader = (name) => process.env[name],
 ): UnifiedRuntimeEnvConfig {
@@ -126,6 +141,8 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
+  const unifiedMemoryJournalPath =
+    firstDefined(reader, ["UNIFIED_MEMORY_JOURNAL_PATH", "MEMORY_JOURNAL_PATH"]) ?? "";
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
@@ -218,6 +235,44 @@ export function loadUnifiedRuntimeEnvConfig(
   const auditLogPath =
     firstDefined(reader, ["UNIFIED_AUDIT_LOG_PATH", "AUDIT_LOG_PATH", "UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const auditLogRotationMaxBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES",
+      "AUDIT_LOG_ROTATION_MAX_BYTES",
+      "UNIFIED_DISPATCH_AUDIT_LOG_ROTATION_MAX_BYTES",
+    ]),
+    0,
+  );
+  const auditLogRotationRetainBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES",
+      "AUDIT_LOG_ROTATION_RETAIN_BYTES",
+      "UNIFIED_DISPATCH_AUDIT_LOG_ROTATION_RETAIN_BYTES",
+    ]),
+    0,
+  );
+  const auditLogRotateRetainBackupCount = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BACKUPS",
+      "AUDIT_LOG_ROTATION_RETAIN_BACKUPS",
+    ]),
+    0,
+  );
+  const capabilityPolicyAuditPath =
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_PATH",
+      "CAPABILITY_POLICY_AUDIT_PATH",
+    ]) ?? "";
+  const capabilityExecutionTimeoutMs = Math.min(
+    86_400_000,
+    parseNonNegativeInt(
+      firstDefined(reader, [
+        "UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS",
+        "CAPABILITY_EXECUTION_TIMEOUT_MS",
+      ]),
+      0,
+    ),
+  );
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -261,6 +316,7 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
+    unifiedMemoryJournalPath,
     unifiedDispatchAuditLogPath,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
@@ -276,6 +332,11 @@ export function loadUnifiedRuntimeEnvConfig(
       strict: preflightStrict,
     },
     auditLogPath,
+    auditLogRotationMaxBytes,
+    auditLogRotationRetainBytes,
+    auditLogRotateRetainBackupCount,
+    capabilityPolicyAuditPath,
+    capabilityExecutionTimeoutMs,
     routerConfig: {
       defaultPrimary,
       defaultFallback,

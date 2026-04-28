@@ -11,6 +11,7 @@ Use this document when one cloud agent hands execution to another. The objective
    - `docs/MASTER_EXECUTION_CHECKLIST.md`
    - `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
    - `docs/DISPATCH_CONTRACT_V1.md` (unified dispatch JSON contract version `v1`)
+   - `docs/LEGACY_DISPATCH_PATHS.md` (H4: where dispatch is invoked; static gate for adapter construction)
 2. Install and verify:
    - `npm install`
    - `npm run check`

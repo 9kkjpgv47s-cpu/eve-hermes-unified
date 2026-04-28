@@ -30,6 +30,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Dispatch contract fixtures + legacy path gate
+        run: npm run validate:dispatch-contract && npm run validate:legacy-dispatch-paths
+
       - name: Dispatch JSON transcript (CI stub)
         run: npm run validate:ci-dispatch-transcript
 

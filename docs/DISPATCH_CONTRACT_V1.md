@@ -27,7 +27,7 @@ Runtime code validates every outbound result via **`validateUnifiedDispatchResul
 
 ## Fixtures
 
-Canonical examples live under **`test/fixtures/`** (e.g. `unified-dispatch-result-v1-primary-pass.json`). CI and downstream parsers can use these for regression tests.
+Canonical examples live under **`test/fixtures/`** (e.g. `unified-dispatch-result-v1-primary-pass.json`). CI runs **`npm run validate:dispatch-contract`**, which executes `src/bin/validate-dispatch-contracts.ts` against every matching fixture.
 
 ## Upgrade path
 

@@ -40,6 +40,12 @@ export type UnifiedRuntimeEnvConfig = {
   auditLogRotationMaxBytes: number;
   /** Bytes of tail to keep in the primary log after rotation (line-aligned). */
   auditLogRotationRetainBytes: number;
+  /** Optional append-only JSONL for router policy events (e.g. no-fallback-on-class). */
+  routerTelemetryLogPath: string;
+  /** When > 0, rotate router telemetry log before append if file exceeds this many bytes. */
+  routerTelemetryRotationMaxBytes: number;
+  /** Bytes of tail to keep in the primary router telemetry log after rotation (line-aligned). */
+  routerTelemetryRotationRetainBytes: number;
   /** When > 0, fail capability execution if the handler does not settle within this many ms. */
   capabilityExecutionTimeoutMs: number;
   /** When true with a positive execution timeout, SIGTERM lane subprocess on budget expiry. */
@@ -338,6 +344,25 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     0,
   );
+  const routerTelemetryLogPath =
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_TELEMETRY_LOG_PATH",
+      "ROUTER_TELEMETRY_LOG_PATH",
+    ]) ?? "";
+  const routerTelemetryRotationMaxBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_TELEMETRY_ROTATION_MAX_BYTES",
+      "ROUTER_TELEMETRY_ROTATION_MAX_BYTES",
+    ]),
+    0,
+  );
+  const routerTelemetryRotationRetainBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_ROUTER_TELEMETRY_ROTATION_RETAIN_BYTES",
+      "ROUTER_TELEMETRY_ROTATION_RETAIN_BYTES",
+    ]),
+    0,
+  );
   const capabilityExecutionTimeoutMs = Math.min(
     86_400_000,
     parseNonNegativeInt(
@@ -453,6 +478,9 @@ export function loadUnifiedRuntimeEnvConfig(
     auditLogPath,
     auditLogRotationMaxBytes,
     auditLogRotationRetainBytes,
+    routerTelemetryLogPath,
+    routerTelemetryRotationMaxBytes,
+    routerTelemetryRotationRetainBytes,
     capabilityExecutionTimeoutMs,
     capabilityAbortLaneOnTimeout,
     tenantStrict,

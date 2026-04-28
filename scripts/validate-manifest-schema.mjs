@@ -1027,6 +1027,82 @@ export function validateUnifiedDispatchAuditJsonlText(raw) {
   return { valid: errors.length === 0, errors };
 }
 
+const ROUTER_TELEMETRY_LINE_SCHEMA_VERSION = 1;
+
+export function validateRouterTelemetryJsonlLine(record, lineIndex) {
+  const prefix = `line ${String(lineIndex + 1)}`;
+  const errors = [];
+  pushError(errors, record && typeof record === "object", `${prefix}: must be a JSON object`);
+  if (!record || typeof record !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    record.auditSchemaVersion === ROUTER_TELEMETRY_LINE_SCHEMA_VERSION,
+    `${prefix}: auditSchemaVersion must be ${String(ROUTER_TELEMETRY_LINE_SCHEMA_VERSION)}`,
+  );
+  pushError(
+    errors,
+    record.eventType === "router_no_fallback_skipped",
+    `${prefix}: eventType must be router_no_fallback_skipped`,
+  );
+  pushError(errors, isNonEmptyString(record.recordedAtIso), `${prefix}: recordedAtIso required`);
+  pushError(errors, isNonEmptyString(record.traceId), `${prefix}: traceId required`);
+  pushError(errors, isNonEmptyString(record.chatId), `${prefix}: chatId required`);
+  pushError(errors, isNonEmptyString(record.messageId), `${prefix}: messageId required`);
+  pushError(
+    errors,
+    record.tenantId === null || typeof record.tenantId === "string",
+    `${prefix}: tenantId must be null or string`,
+  );
+  if (record.tenantId !== null && record.tenantId !== undefined) {
+    pushError(errors, isValidDispatchAuditTenantId(record.tenantId), `${prefix}: tenantId invalid`);
+  }
+  pushError(errors, isNonEmptyString(record.policyVersion), `${prefix}: policyVersion required`);
+  pushError(errors, isNonEmptyString(record.routingReason), `${prefix}: routingReason required`);
+  pushError(errors, isLaneId(record.primaryLane), `${prefix}: primaryLane invalid`);
+  pushError(errors, isLaneId(record.skippedFallbackLane), `${prefix}: skippedFallbackLane invalid`);
+  pushError(errors, isFailureClass(record.primaryFailureClass), `${prefix}: primaryFailureClass invalid`);
+  pushError(
+    errors,
+    Array.isArray(record.noFallbackOnPrimaryFailureClasses),
+    `${prefix}: noFallbackOnPrimaryFailureClasses must be array`,
+  );
+  if (Array.isArray(record.noFallbackOnPrimaryFailureClasses)) {
+    for (let j = 0; j < record.noFallbackOnPrimaryFailureClasses.length; j += 1) {
+      pushError(
+        errors,
+        isFailureClass(record.noFallbackOnPrimaryFailureClasses[j]),
+        `${prefix}: noFallbackOnPrimaryFailureClasses[${String(j)}] invalid`,
+      );
+    }
+  }
+  pushError(errors, isNonEmptyString(record.primaryRunId), `${prefix}: primaryRunId required`);
+  pushError(errors, isNonEmptyString(record.primaryReason), `${prefix}: primaryReason required`);
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateRouterTelemetryJsonlText(raw) {
+  const errors = [];
+  const lines = String(raw ?? "").split(/\r?\n/);
+  const nonEmpty = lines.map((l) => l.trim()).filter((l) => l.length > 0);
+  pushError(errors, nonEmpty.length > 0, "file must contain at least one non-empty JSON line");
+  if (nonEmpty.length === 0) {
+    return { valid: false, errors };
+  }
+  for (let i = 0; i < nonEmpty.length; i += 1) {
+    let parsed;
+    try {
+      parsed = JSON.parse(nonEmpty[i]);
+    } catch {
+      errors.push(`line ${String(i + 1)}: invalid JSON`);
+      continue;
+    }
+    errors.push(...validateRouterTelemetryJsonlLine(parsed, i).errors);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 const CAPABILITY_POLICY_AUDIT_LINE_SCHEMA_VERSION = 1;
 
 function isSha256Hex(value) {
@@ -1168,6 +1244,16 @@ async function validateTypedArtifact(type, filePath) {
       errors: validation.errors,
     };
   }
+  if (type === "router-telemetry-jsonl") {
+    const raw = await readFile(resolved, "utf8");
+    const validation = validateRouterTelemetryJsonlText(raw);
+    return {
+      type,
+      file: resolved,
+      valid: validation.valid,
+      errors: validation.errors,
+    };
+  }
   const payload = JSON.parse(await readFile(resolved, "utf8"));
   const validation = validateManifestSchema(type, payload);
   return {
@@ -1227,6 +1313,7 @@ async function listAllManifestTargets(evidenceDir) {
   const stageDrillTargets = [];
   const dispatchAuditJsonlTargets = [];
   const capabilityPolicyAuditJsonlTargets = [];
+  const routerTelemetryJsonlTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1322,6 +1409,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "capability-policy-audit-jsonl",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("router-telemetry-") && entry.name.endsWith(".jsonl")) {
+      routerTelemetryJsonlTargets.push({
+        type: "router-telemetry-jsonl",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -1341,6 +1433,7 @@ async function listAllManifestTargets(evidenceDir) {
   stageDrillTargets.sort((a, b) => a.file.localeCompare(b.file));
   dispatchAuditJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   capabilityPolicyAuditJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
+  routerTelemetryJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1359,6 +1452,7 @@ async function listAllManifestTargets(evidenceDir) {
     stageDrillTargets,
     dispatchAuditJsonlTargets,
     capabilityPolicyAuditJsonlTargets,
+    routerTelemetryJsonlTargets,
   };
 }
 
@@ -1376,7 +1470,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|all)",
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|all)",
     );
   }
 
@@ -1475,6 +1569,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.routerTelemetryJsonlTargets.length > 0
+            ? [
+                targetGroups.routerTelemetryJsonlTargets[
+                  targetGroups.routerTelemetryJsonlTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1494,6 +1595,7 @@ async function main() {
           ...targetGroups.stageDrillTargets,
           ...targetGroups.dispatchAuditJsonlTargets,
           ...targetGroups.capabilityPolicyAuditJsonlTargets,
+          ...targetGroups.routerTelemetryJsonlTargets,
         ];
     const results = [];
     for (const target of targets) {

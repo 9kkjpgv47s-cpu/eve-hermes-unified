@@ -246,6 +246,21 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     ]);
   });
 
+  it("parses router telemetry log path and rotation bytes", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_TELEMETRY_LOG_PATH: "/tmp/router-tel.jsonl",
+          UNIFIED_ROUTER_TELEMETRY_ROTATION_MAX_BYTES: "8192",
+          UNIFIED_ROUTER_TELEMETRY_ROTATION_RETAIN_BYTES: "4096",
+        }),
+      ),
+    );
+    expect(config.routerTelemetryLogPath).toBe("/tmp/router-tel.jsonl");
+    expect(config.routerTelemetryRotationMaxBytes).toBe(8192);
+    expect(config.routerTelemetryRotationRetainBytes).toBe(4096);
+  });
+
   it("parses cutover stage controls and aliases", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

@@ -24,6 +24,7 @@ import type { CapabilityEngine } from "./capability-engine.js";
 import { TenantScopedMemoryStore } from "../memory/tenant-scoped-memory-store.js";
 import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
 import { normalizeValidatedTenantId, resolveEnvelopeTenantId } from "./tenant-scope.js";
+import { appendRouterTelemetryNoFallbackSkipped } from "./router-telemetry-append.js";
 
 export type UnifiedRuntime = {
   eveAdapter: LaneAdapter;
@@ -43,6 +44,12 @@ export type UnifiedRuntime = {
    * (no shared-namespace capability reads/writes without tenant prefix).
    */
   tenantMemoryIsolation?: boolean;
+  /** Optional append-only JSONL path for router policy telemetry (e.g. no-fallback-on-class). */
+  routerTelemetryLogPath?: string;
+  /** When > 0 with `routerTelemetryLogPath`, rotate telemetry log before append. */
+  routerTelemetryRotationMaxBytes?: number;
+  /** Bytes of tail to retain in primary telemetry log after rotation. */
+  routerTelemetryRotationRetainBytes?: number;
 };
 
 export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -264,6 +271,23 @@ export async function dispatchUnifiedMessage(
       const toLane = routing.fallbackLane;
       if (toLane === "none") {
         return buildResult(envelope, routing, primaryState, primaryState);
+      }
+      const telemetryPath = runtime.routerTelemetryLogPath?.trim();
+      if (telemetryPath) {
+        await appendRouterTelemetryNoFallbackSkipped(
+          telemetryPath,
+          {
+            envelope,
+            routing,
+            primaryState,
+            skippedFallbackLane: toLane,
+            noFallbackOnPrimaryFailureClasses: [...noFallbackClasses],
+          },
+          {
+            maxBytesBeforeRotate: runtime.routerTelemetryRotationMaxBytes,
+            retainBytesAfterRotate: runtime.routerTelemetryRotationRetainBytes,
+          },
+        );
       }
       return buildResult(envelope, routing, primaryState, primaryState, {
         fallbackInfo: {

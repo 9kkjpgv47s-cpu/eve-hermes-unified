@@ -99,4 +99,18 @@ describe("runRuntimePreflight", () => {
       );
     });
   });
+
+  it("fails when router telemetry log directory is not writable", async () => {
+    await withTempDir(async (dir) => {
+      const blockedFile = path.join(dir, "blocked");
+      await writeFile(blockedFile, "x", "utf8");
+      const config = {
+        ...baseConfig(dir),
+        routerTelemetryLogPath: path.join(blockedFile, "router-tel.jsonl"),
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "Router telemetry log path is not writable",
+      );
+    });
+  });
 });

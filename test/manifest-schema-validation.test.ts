@@ -703,6 +703,42 @@ describe("validate-manifest-schema.mjs", () => {
     });
   });
 
+  it("passes for valid router-telemetry jsonl", async () => {
+    await withTempDir(async (dir) => {
+      const auditPath = path.join(dir, "router-telemetry-20260428-000000.jsonl");
+      const line = {
+        auditSchemaVersion: 1,
+        eventType: "router_no_fallback_skipped",
+        recordedAtIso: new Date().toISOString(),
+        traceId: "t-rt",
+        chatId: "1",
+        messageId: "2",
+        tenantId: null,
+        policyVersion: "v1",
+        routingReason: "default_policy_lane",
+        primaryLane: "eve",
+        skippedFallbackLane: "hermes",
+        primaryFailureClass: "policy_failure",
+        noFallbackOnPrimaryFailureClasses: ["policy_failure"],
+        primaryRunId: "r1",
+        primaryReason: "blocked",
+      };
+      await writeFile(auditPath, `${JSON.stringify(line)}\n`, "utf8");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-manifest-schema.mjs",
+          "--type",
+          "router-telemetry-jsonl",
+          "--file",
+          auditPath,
+        ],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
   it("passes for valid stage-drill and auto-rollback-policy manifests", async () => {
     await withTempDir(async (dir) => {
       const stageDrillPath = path.join(dir, "stage-drill-canary-20260426-000000.json");

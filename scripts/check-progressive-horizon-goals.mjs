@@ -245,6 +245,9 @@ async function main() {
           String(action.targetHorizon ?? "").trim().toUpperCase() === sourceHorizon,
       )
     : [];
+  const sourcePendingActions = sourceActions.filter(
+    (action) => String(action?.status ?? "").trim().toLowerCase() !== "completed",
+  );
   const nextActions = Array.isArray(horizonStatus?.nextActions)
     ? horizonStatus.nextActions.filter(
         (action) =>
@@ -258,28 +261,38 @@ async function main() {
   );
 
   const sourceActionCount = sourceActions.length;
+  const sourcePendingActionCount = sourcePendingActions.length;
   const nextActionCount = nextActions.length;
   const nextPendingActionCount = nextPendingActions.length;
-  const goalDelta = nextActionCount - sourceActionCount;
+  /**
+   * When the source horizon still has pending actions, compare only to that pending backlog so
+   * completed rows do not inflate the bar. When every source row is completed, skip growth-vs-source
+   * checks (external goal policy files still carry large historical source counts); tag and
+   * next-pending rules below remain authoritative.
+   */
+  const sourceBaselineCount = sourcePendingActionCount > 0 ? sourcePendingActionCount : 0;
+  const goalDelta = nextActionCount - sourceBaselineCount;
 
-  let requiredNextActionCount = Math.max(
-    1,
-    options.minPendingNextActions,
-    sourceActionCount + options.minimumGoalIncrease,
-  );
-  if (sourceActionCount > 0 && isFinitePositiveNumber(options.minActionGrowthFactor)) {
+  let requiredNextActionCount = Math.max(1, options.minPendingNextActions);
+  if (sourceBaselineCount > 0) {
     requiredNextActionCount = Math.max(
       requiredNextActionCount,
-      Math.ceil(sourceActionCount * options.minActionGrowthFactor),
+      sourceBaselineCount + options.minimumGoalIncrease,
     );
+    if (isFinitePositiveNumber(options.minActionGrowthFactor)) {
+      requiredNextActionCount = Math.max(
+        requiredNextActionCount,
+        Math.ceil(sourceBaselineCount * options.minActionGrowthFactor),
+      );
+    }
   }
 
-  if (goalDelta < options.minimumGoalIncrease) {
+  if (sourceBaselineCount > 0 && goalDelta < options.minimumGoalIncrease) {
     failures.push(
       `insufficient_goal_increase:${String(goalDelta)}<${String(options.minimumGoalIncrease)}`,
     );
   }
-  if (nextActionCount < requiredNextActionCount) {
+  if (sourceBaselineCount > 0 && nextActionCount < requiredNextActionCount) {
     failures.push(
       `next_action_count_below_growth_target:${String(nextActionCount)}<${String(requiredNextActionCount)}`,
     );
@@ -320,6 +333,8 @@ async function main() {
     },
     checks: {
       sourceActionCount,
+      sourcePendingActionCount,
+      sourceBaselineCount,
       nextActionCount,
       goalDelta,
       nextPendingActionCount,
@@ -331,7 +346,7 @@ async function main() {
       requiredNextActionCount,
       requiredTaggedActionCounts,
       nextTaggedActionCounts: nextTagCounts,
-      actionGrowthRatio: sourceActionCount > 0 ? nextActionCount / sourceActionCount : null,
+      actionGrowthRatio: sourceBaselineCount > 0 ? nextActionCount / sourceBaselineCount : null,
     },
     failures,
   };

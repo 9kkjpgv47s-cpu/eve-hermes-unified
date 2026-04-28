@@ -16,6 +16,8 @@ export type RuntimePreflightConfig = {
   auditLogPath: string;
   /** When set and non-empty, parent directory must be writable (append-only policy audit). */
   capabilityPolicyAuditLogPath?: string;
+  /** When set and non-empty, parent directory must be writable (router telemetry JSONL). */
+  routerTelemetryLogPath?: string;
 };
 
 function shellEscape(value: string): string {
@@ -99,6 +101,14 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     const policyAuditWritable = await checkWritableParent(policyAudit);
     if (!policyAuditWritable) {
       issues.push(`Capability policy audit log path is not writable: ${policyAudit}`);
+    }
+  }
+
+  const routerTelemetry = config.routerTelemetryLogPath?.trim();
+  if (routerTelemetry && routerTelemetry.length > 0) {
+    const routerTelemetryWritable = await checkWritableParent(routerTelemetry);
+    if (!routerTelemetryWritable) {
+      issues.push(`Router telemetry log path is not writable: ${routerTelemetry}`);
     }
   }
 

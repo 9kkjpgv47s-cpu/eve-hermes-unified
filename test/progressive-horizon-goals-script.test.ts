@@ -21,11 +21,14 @@ async function seedHorizonStatus(
     activeHorizon?: string;
     h3PendingCount?: number;
     h3CapabilityCount?: number;
+    /** H2 rows marked `planned` from the start of the H2 block (remainder `completed`). Default 0 = all H2 completed. */
+    h2PendingCount?: number;
   },
 ): Promise<void> {
   const h2GoalCount = options?.h2GoalCount ?? 2;
   const h3GoalCount = options?.h3GoalCount ?? 4;
   const activeHorizon = options?.activeHorizon ?? "H2";
+  const h2PendingCount = Math.min(options?.h2PendingCount ?? 0, h2GoalCount);
   const nextActions: Array<{
     id: string;
     summary: string;
@@ -38,7 +41,7 @@ async function seedHorizonStatus(
       id: `h2-action-${String(index + 1)}`,
       summary: "h2 goal",
       targetHorizon: "H2",
-      status: "completed",
+      status: index < h2PendingCount ? "planned" : "completed",
     });
   }
   const h3PendingCount = options?.h3PendingCount ?? h3GoalCount;
@@ -286,10 +289,16 @@ describe("check-progressive-horizon-goals.mjs", () => {
       expect(result.code).toBe(0);
       const payload = JSON.parse(await readFile(outPath, "utf8")) as {
         pass: boolean;
-        checks: { goalDelta: number; minActionGrowthFactor: number; policyKey: string | null };
+        checks: {
+          goalDelta: number;
+          minActionGrowthFactor: number;
+          policyKey: string | null;
+          sourceBaselineCount: number;
+        };
       };
       expect(payload.pass).toBe(true);
-      expect(payload.checks.goalDelta).toBe(3);
+      expect(payload.checks.sourceBaselineCount).toBe(0);
+      expect(payload.checks.goalDelta).toBe(5);
       expect(payload.checks.minActionGrowthFactor).toBe(1.2);
       expect(payload.checks.policyKey).toBe("H2->H3");
     });
@@ -299,7 +308,12 @@ describe("check-progressive-horizon-goals.mjs", () => {
     await withTempDir(async (dir) => {
       const statusPath = path.join(dir, "HORIZON_STATUS.json");
       const outPath = path.join(dir, "progressive-goals.json");
-      await seedHorizonStatus(statusPath, { h2GoalCount: 3, h3GoalCount: 3, activeHorizon: "H2" });
+      await seedHorizonStatus(statusPath, {
+        h2GoalCount: 3,
+        h3GoalCount: 3,
+        h2PendingCount: 3,
+        activeHorizon: "H2",
+      });
 
       const result = await runCommandWithTimeout(
         [
@@ -430,7 +444,12 @@ describe("check-progressive-horizon-goals.mjs", () => {
       const statusPath = path.join(dir, "HORIZON_STATUS.json");
       const policyPath = path.join(dir, "GOAL_POLICIES.json");
       const outPath = path.join(dir, "progressive-goals.json");
-      await seedHorizonStatus(statusPath, { h2GoalCount: 2, h3GoalCount: 3, activeHorizon: "H2" });
+      await seedHorizonStatus(statusPath, {
+        h2GoalCount: 2,
+        h3GoalCount: 3,
+        h2PendingCount: 2,
+        activeHorizon: "H2",
+      });
       await seedGoalPolicyFile(policyPath, { includeTransition: true, minimumGoalIncrease: 3 });
       await removeGoalPoliciesFromStatus(statusPath);
 

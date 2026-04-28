@@ -9,7 +9,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3 durability advances in code ahead of promotion.
-- Branch: **`cursor/h5-tenant-runtime-cc15`** — tenant + policy audit + dispatch audit v2; shared **JSONL rotation** for dispatch and capability policy audit logs.
+- Branch: **`cursor/h3-router-telemetry-jsonl-cc15`** — optional **router telemetry JSONL** for no-fallback policy events + manifest validation.
 
 ## What Was Just Completed (large chunk)
 
@@ -19,6 +19,9 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 2. **Policy audit rotation** — **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_*`**; shared **`maybeRotateJsonlLogInPlace`** with dispatch audit.
 3. **Router fallback hardening** — **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** skips fallback lane on selected primary **`failureClass`** when **`failClosed=0`**; **`fallbackInfo`** carries **`primaryFailureClass`** + **`noFallbackOnPrimaryFailureClasses`** into dispatch audit JSONL.
 4. **Failure id inventory** — documented dual-report coverage in **`docs/CLOUD_AGENT_HANDOFF.md`** (`validate-horizon-closeout`, `promote-horizon`, `run-h2-closeout`, `run-h2-promotion`).
+5. **Router telemetry JSONL** — optional **`UNIFIED_ROUTER_TELEMETRY_LOG_PATH`** appends **`router_no_fallback_skipped`** events; **`validate-manifest-schema --type router-telemetry-jsonl`**; optional rotation env vars; dispatch calls **`appendRouterTelemetryNoFallbackSkipped`** when path set.
+6. **Progressive horizon goals** — **`check-progressive-horizon-goals`** uses pending source rows only; skips growth-vs-source when source has zero pending (compatible with **`docs/GOAL_POLICIES.json`**).
+7. **Horizon status** — **`h3-action-2`** marked **`completed`** in **`docs/HORIZON_STATUS.json`**.
 
 ## Read Order (Zero-Context Startup)
 
@@ -31,8 +34,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Horizon-neutral failure taxonomy** — sweep any new orchestration scripts for H2-only ids; current inventory is in **`docs/CLOUD_AGENT_HANDOFF.md`**.
-2. **Router telemetry** — extend with optional dedicated JSONL or metrics sink if operators need cardinality outside dispatch audit.
+1. **H3 durability queue** — `docs/HORIZON_STATUS.json` **`h3-action-1`** (persistent cross-lane dispatch recovery semantics).
+2. **Memory durability verification suite** — **`h3-action-4`** (crash/restart + cross-lane consistency).
 3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack

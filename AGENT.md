@@ -23,7 +23,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 - **Closeout validator:** `validate-horizon-closeout.mjs` dual-reports **`horizon_drill_*` / `h2_drill_*`** and appends **`h2_closeout_run_*` / `h2_promotion_run_*`** aliases for horizon closeout/promotion run failure ids.
 - **Horizon promotion:** `promote-horizon.mjs` emits **`closeout_run_horizon_closeout_gate_*`** and appends legacy **`closeout_run_h2_closeout_gate_*`** when the promotion source horizon is H2 or later (so H3→H4 promotions keep H2-keyed monitors working).
 - **H2 closeout runner:** `run-h2-closeout.mjs` appends **`h2_closeout_gate_failed`** alongside **`horizon_closeout_gate_failed`** when the closeout `--horizon` is H2 or later.
-- **Router fallback hardening:** **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** — skip Hermes fallback on selected primary **`failureClass`** values — see `docs/CLOUD_AGENT_HANDOFF.md`.
+- **Router fallback hardening + telemetry:** **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`**; optional **`UNIFIED_ROUTER_TELEMETRY_LOG_PATH`** JSONL (`validate-manifest-schema.mjs --type router-telemetry-jsonl`) — see `docs/CLOUD_AGENT_HANDOFF.md`.
+- **Progressive horizon goals:** **`npm run check:progressive-horizon-goals`** uses pending source-horizon rows as the growth baseline and skips growth-vs-source when the source horizon has zero pending (works with **`docs/GOAL_POLICIES.json`**) — see `docs/CLOUD_AGENT_HANDOFF.md`.
 
 ## Read Order (Do Not Skip)
 

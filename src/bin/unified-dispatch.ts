@@ -147,6 +147,8 @@ async function main() {
     auditEnabled: true,
     auditLogPath: config.unifiedDispatchAuditLogPath,
     capabilityPolicyAuditLogPath: policyAuditPath.length > 0 ? policyAuditPath : undefined,
+    routerTelemetryLogPath:
+      config.routerTelemetryLogPath.trim().length > 0 ? config.routerTelemetryLogPath.trim() : undefined,
   });
   if (preflightIssues.length > 0) {
     const reasons = preflightIssues.join("; ");
@@ -169,6 +171,13 @@ async function main() {
     tenantStrict: config.tenantStrict,
     tenantAllowlist: config.tenantAllowlist,
     tenantMemoryIsolation: config.tenantMemoryIsolation,
+    ...(config.routerTelemetryLogPath.trim().length > 0
+      ? {
+          routerTelemetryLogPath: config.routerTelemetryLogPath.trim(),
+          routerTelemetryRotationMaxBytes: config.routerTelemetryRotationMaxBytes,
+          routerTelemetryRotationRetainBytes: config.routerTelemetryRotationRetainBytes,
+        }
+      : {}),
   };
 
   const result = await dispatchUnifiedMessage(runtime, {

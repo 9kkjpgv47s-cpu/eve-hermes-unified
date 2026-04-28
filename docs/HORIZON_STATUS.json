@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T23:26:00Z",
+  "updatedAtIso": "2026-04-28T22:05:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -164,7 +164,7 @@
       "id": "h3-action-2",
       "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["policy-hardening", "runtime"]
     },
     {
@@ -391,6 +391,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
+    },
+    {
+      "timestamp": "2026-04-28T22:05:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "Completed h3-action-2: no-fallback-on-primary-failure-class policy, dispatch audit fallbackInfo telemetry, optional router-telemetry JSONL + schema gate; fixed progressive-horizon-goals to ignore completed source rows and skip growth-vs-source when source has zero pending (works with external GOAL_POLICIES.json)."
     }
   ]
 }

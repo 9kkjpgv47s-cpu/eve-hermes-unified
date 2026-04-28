@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import type { CapabilityExecutionResult, DispatchState, UnifiedCapabilityDecision } from "../src/contracts/types.js";
 import { dispatchUnifiedMessage } from "../src/runtime/unified-dispatch.js";
 import type { LaneAdapter, LaneDispatchInput } from "../src/adapters/lane-adapter.js";
@@ -199,6 +202,66 @@ describe("dispatchUnifiedMessage", () => {
       "policy_failure",
       "state_unavailable",
     ]);
+  });
+
+  it("appends router telemetry JSONL when no-fallback policy skips fallback and path is set", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "router-tel-dispatch-"));
+    const telPath = path.join(dir, "router-telemetry.jsonl");
+    try {
+      const runtime = {
+        eveAdapter: new FakeLaneAdapter("eve", {
+          status: "failed",
+          reason: "policy_blocked",
+          runtimeUsed: "eve",
+          runId: "r1",
+          elapsedMs: 5,
+          failureClass: "policy_failure",
+          sourceLane: "eve",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t1",
+        }),
+        hermesAdapter: new FakeLaneAdapter("hermes", {
+          status: "pass",
+          reason: "should_not_run",
+          runtimeUsed: "hermes",
+          runId: "r2",
+          elapsedMs: 1,
+          failureClass: "none",
+          sourceLane: "hermes",
+          sourceChatId: "1",
+          sourceMessageId: "2",
+          traceId: "t2",
+        }),
+        routerConfig: baseRouterConfig({
+          failClosed: false,
+          noFallbackOnPrimaryFailureClasses: ["policy_failure"],
+        }),
+        routerTelemetryLogPath: telPath,
+      };
+
+      const result = await dispatchUnifiedMessage(runtime, {
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "hello",
+      });
+
+      expect(result.fallbackInfo?.reason).toBe("no_fallback_for_primary_failure_class");
+      const raw = await readFile(telPath, "utf8");
+      const line = JSON.parse(raw.trim().split("\n")[0]!) as {
+        eventType?: string;
+        traceId?: string;
+        skippedFallbackLane?: string;
+        primaryFailureClass?: string;
+      };
+      expect(line.eventType).toBe("router_no_fallback_skipped");
+      expect(line.traceId).toBe(result.envelope.traceId);
+      expect(line.skippedFallbackLane).toBe("hermes");
+      expect(line.primaryFailureClass).toBe("policy_failure");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("stops on primary failure when failClosed=true", async () => {

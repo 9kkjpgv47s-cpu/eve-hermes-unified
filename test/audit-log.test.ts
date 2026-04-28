@@ -75,6 +75,31 @@ describe("appendDispatchAuditLog", () => {
     }
   });
 
+  it("includes partitionId on audit line when set on envelope (H6)", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "audit-partitionid-"));
+    const basePath = path.join(dir, "dispatch-audit.jsonl");
+    try {
+      await appendDispatchAuditLog(
+        basePath,
+        minimalResult({
+          envelope: {
+            traceId: "t-p",
+            channel: "telegram",
+            chatId: "1",
+            messageId: "1",
+            receivedAtIso: "2026-01-01T00:00:00Z",
+            text: "hi",
+            partitionId: "shard-7",
+          },
+        }),
+      );
+      const raw = await readFile(basePath, "utf8");
+      expect(raw).toContain("\"partitionId\":\"shard-7\"");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("rotates active log when maxBytesBeforeRotate exceeded", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "audit-rotate-"));
     const basePath = path.join(dir, "audit.jsonl");

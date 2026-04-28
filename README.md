@@ -106,7 +106,7 @@ npm run dispatch -- --text "check project status" --chat-id 123 --message-id 456
 Optional multi-tenant / multi-region flags (see `docs/H5_MULTI_TENANT_REGION.md`):
 
 ```bash
-npm run dispatch -- --text "hello" --chat-id 123 --message-id 456 --tenant-id acme --region-id us-west
+npm run dispatch -- --text "hello" --chat-id 123 --message-id 456 --tenant-id acme --region-id us-west --partition-id cell-1
 ```
 
 Key environment controls are in `.env.example`.

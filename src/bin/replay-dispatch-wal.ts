@@ -99,6 +99,7 @@ async function main() {
       text: o.text,
       ...(o.tenantId ? { tenantId: o.tenantId } : {}),
       ...(o.regionId ? { regionId: o.regionId } : {}),
+      ...(o.partitionId ? { partitionId: o.partitionId } : {}),
     });
     await appendDispatchAuditLog(config.unifiedDispatchAuditLogPath, result, {
       tenantPartition: config.dispatchAuditTenantPartition,

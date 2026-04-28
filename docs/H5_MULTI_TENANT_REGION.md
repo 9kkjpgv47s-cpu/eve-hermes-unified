@@ -6,11 +6,13 @@ This document describes the in-repo H5 slice for scale-oriented unified dispatch
 
 - `tenantId` (optional): scopes unified memory keys and participates in capability policy when per-tenant maps are configured. Omitted tenants use the legacy key space (no `tenant:` prefix) for backward compatibility.
 - `regionId` (optional): compared with `UNIFIED_ROUTER_REGION_ID` for alignment. When both are set and differ, the router deterministically swaps primary and fallback lanes before dispatch (see `mergeRegionRouting` / `routeMessage` in `src/router/policy-router.ts`).
+- `partitionId` (optional, H6): opaque correlation id for evidence (WAL, audit); does not affect routing or memory keys.
 
 Defaults from environment apply when the CLI omits flags:
 
 - `UNIFIED_DISPATCH_DEFAULT_TENANT_ID` (aliases: `UNIFIED_DISPATCH_TENANT_ID`)
 - `UNIFIED_DISPATCH_DEFAULT_REGION_ID` (aliases: `UNIFIED_DISPATCH_REGION_ID`)
+- `UNIFIED_DISPATCH_DEFAULT_PARTITION_ID` (aliases: `UNIFIED_DISPATCH_PARTITION_ID`, `DISPATCH_DEFAULT_PARTITION_ID`)
 
 ## CLI
 
@@ -18,8 +20,9 @@ Defaults from environment apply when the CLI omits flags:
 
 - `--tenant-id <id>`
 - `--region-id <id>`
+- `--partition-id <id>` (H6 correlation; optional)
 
-The durable WAL `dispatch_attempt` record includes `tenantId` and `regionId` when present. `dispatch_complete` lines include the same tenant/region when present, plus **`envelopeRegionId`**, **`routerRegionId`**, and **`regionAligned`** for correlation with routing decisions. `npm run replay:dispatch-wal` replays orphans with the same fields so replay stays consistent with the original attempt.
+The durable WAL `dispatch_attempt` record includes `tenantId` and `regionId` when present. `dispatch_complete` lines include the same tenant/region when present, plus **`partitionId`** when present, plus **`envelopeRegionId`**, **`routerRegionId`**, and **`regionAligned`** for correlation with routing decisions. `npm run replay:dispatch-wal` replays orphans with the same fields so replay stays consistent with the original attempt.
 
 ## Capability policy
 

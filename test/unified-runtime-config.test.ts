@@ -167,6 +167,7 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
         baseEnv({
           UNIFIED_DISPATCH_DEFAULT_TENANT_ID: "acme",
           UNIFIED_DISPATCH_DEFAULT_REGION_ID: "us-west",
+          UNIFIED_DISPATCH_DEFAULT_PARTITION_ID: "partition-a",
           UNIFIED_ROUTER_REGION_ID: "eu-central",
           UNIFIED_TENANT_ISOLATION_STRICT: "1",
           UNIFIED_CAPABILITY_DENY_CHAT_IDS_BY_TENANT: "acme/summarize_state:1,2",
@@ -175,6 +176,7 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     );
     expect(config.dispatchDefaultTenantId).toBe("acme");
     expect(config.dispatchDefaultRegionId).toBe("us-west");
+    expect(config.dispatchDefaultPartitionId).toBe("partition-a");
     expect(config.tenantIsolationStrict).toBe(true);
     expect(config.routerConfig.routerRegionId).toBe("eu-central");
     expect(config.capabilityPolicy.denyCapabilityChatsByTenant?.acme?.summarize_state).toEqual(["1", "2"]);

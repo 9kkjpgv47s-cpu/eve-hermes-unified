@@ -15,12 +15,14 @@ function parseArgs(argv: string[]): {
   messageId: string;
   tenantId?: string;
   regionId?: string;
+  partitionId?: string;
 } {
   let text = "";
   let chatId = "0";
   let messageId = "0";
   let tenantId: string | undefined;
   let regionId: string | undefined;
+  let partitionId: string | undefined;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--text") {
@@ -38,18 +40,23 @@ function parseArgs(argv: string[]): {
     } else if (arg === "--region-id") {
       regionId = argv[i + 1]?.trim() || undefined;
       i += 1;
+    } else if (arg === "--partition-id") {
+      partitionId = argv[i + 1]?.trim() || undefined;
+      i += 1;
     }
   }
   if (!text.trim()) {
     throw new Error("Missing required --text argument.");
   }
-  return { text, chatId, messageId, tenantId, regionId };
+  return { text, chatId, messageId, tenantId, regionId, partitionId };
 }
 
 async function main() {
   const rootDir = resolveRepoRootFromImportMeta(import.meta.url);
   await loadDotEnvFile(rootDir);
-  const { text, chatId, messageId, tenantId: tenantArg, regionId: regionArg } = parseArgs(process.argv.slice(2));
+  const { text, chatId, messageId, tenantId: tenantArg, regionId: regionArg, partitionId: partitionArg } = parseArgs(
+    process.argv.slice(2),
+  );
   const config = loadUnifiedRuntimeEnvConfig();
   const { runtime } = buildUnifiedDispatchRuntime(config);
 
@@ -58,6 +65,8 @@ async function main() {
     config.dispatchDefaultTenantId?.trim() ||
     "";
   const effectiveRegion = regionArg?.trim() || config.dispatchDefaultRegionId?.trim() || "";
+  const effectivePartition =
+    partitionArg?.trim() || config.dispatchDefaultPartitionId?.trim() || "";
 
   const preflightIssues = await runRuntimePreflight({
     enabled: config.preflight.enabled,
@@ -92,6 +101,7 @@ async function main() {
       text,
       ...(effectiveTenant ? { tenantId: effectiveTenant } : {}),
       ...(effectiveRegion ? { regionId: effectiveRegion } : {}),
+      ...(effectivePartition ? { partitionId: effectivePartition } : {}),
     };
     await appendDispatchWalLine(walPath, attempt);
   }
@@ -105,6 +115,7 @@ async function main() {
       text,
       ...(tenantArg?.trim() ? { tenantId: tenantArg.trim() } : {}),
       ...(regionArg?.trim() ? { regionId: regionArg.trim() } : {}),
+      ...(partitionArg?.trim() ? { partitionId: partitionArg.trim() } : {}),
     });
   } finally {
     if (walPath) {
@@ -119,6 +130,7 @@ async function main() {
         laneUsed: result?.response?.laneUsed ?? "eve",
         ...(result?.envelope.tenantId?.trim() ? { tenantId: result.envelope.tenantId.trim() } : {}),
         ...(result?.envelope.regionId?.trim() ? { regionId: result.envelope.regionId.trim() } : {}),
+        ...(result?.envelope.partitionId?.trim() ? { partitionId: result.envelope.partitionId.trim() } : {}),
         ...(result?.routing.dispatchRegionId ? { envelopeRegionId: result.routing.dispatchRegionId } : {}),
         ...(result?.routing.routerRegionId ? { routerRegionId: result.routing.routerRegionId } : {}),
         ...(result?.routing.regionAligned !== undefined ? { regionAligned: result.routing.regionAligned } : {}),

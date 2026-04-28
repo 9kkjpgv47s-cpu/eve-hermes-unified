@@ -82,6 +82,25 @@ describe("findOrphanDispatchAttempts", () => {
     });
   });
 
+  it("preserves partitionId on orphan attempts (H6)", async () => {
+    await withTempWal(async (walPath) => {
+      await appendDispatchWalLine(walPath, {
+        walVersion: "v1",
+        event: "dispatch_attempt",
+        attemptId: "a-part",
+        recordedAtIso: "2026-01-01T00:00:04Z",
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "p",
+        partitionId: "cell-east-1",
+      });
+      const orphans = await findOrphanDispatchAttempts(walPath);
+      expect(orphans).toHaveLength(1);
+      expect(orphans[0]?.partitionId).toBe("cell-east-1");
+    });
+  });
+
   it("dispatch_complete may carry region correlation fields", async () => {
     await withTempWal(async (walPath) => {
       await appendDispatchWalLine(walPath, {

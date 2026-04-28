@@ -33,6 +33,8 @@ export type UnifiedRuntime = {
   dispatchDefaults?: {
     defaultTenantId?: string;
     defaultRegionId?: string;
+    /** H6: applied when envelope omits partitionId. */
+    defaultPartitionId?: string;
   };
 };
 
@@ -150,10 +152,20 @@ export async function dispatchUnifiedMessage(
         ? regionFromDefaults
         : undefined;
 
+  const partitionFromInput = input.partitionId?.trim();
+  const partitionFromDefaults = runtime.dispatchDefaults?.defaultPartitionId?.trim();
+  const partitionId =
+    partitionFromInput && partitionFromInput.length > 0
+      ? partitionFromInput
+      : partitionFromDefaults && partitionFromDefaults.length > 0
+        ? partitionFromDefaults
+        : undefined;
+
   const envelope = validateEnvelope({
     ...input,
     tenantId,
     regionId,
+    partitionId,
     traceId: `unified-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`,
     receivedAtIso: new Date().toISOString(),
   });

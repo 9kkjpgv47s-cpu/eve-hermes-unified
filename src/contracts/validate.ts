@@ -31,6 +31,12 @@ export function validateEnvelope(value: UnifiedMessageEnvelope): UnifiedMessageE
   if (value.regionId !== undefined) {
     ensure(typeof value.regionId === "string" && value.regionId.trim().length > 0, "regionId must be non-empty when set.");
   }
+  if (value.partitionId !== undefined) {
+    ensure(
+      typeof value.partitionId === "string" && value.partitionId.trim().length > 0,
+      "partitionId must be non-empty when set.",
+    );
+  }
   return value;
 }
 

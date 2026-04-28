@@ -23,6 +23,8 @@ export type UnifiedRuntimeEnvConfig = {
   dispatchDefaultTenantId?: string;
   /** H5: default region when CLI/envelope omits regionId (optional). */
   dispatchDefaultRegionId?: string;
+  /** H6: default partition when CLI/envelope omits partitionId (optional). */
+  dispatchDefaultPartitionId?: string;
   /** H5: when true, preflight requires a non-empty effective tenant id. */
   tenantIsolationStrict?: boolean;
   capabilityPolicy: {
@@ -288,6 +290,11 @@ export function loadUnifiedRuntimeEnvConfig(
     "UNIFIED_DISPATCH_REGION_ID",
     "DISPATCH_DEFAULT_REGION_ID",
   ]);
+  const dispatchDefaultPartitionId = firstDefined(reader, [
+    "UNIFIED_DISPATCH_DEFAULT_PARTITION_ID",
+    "UNIFIED_DISPATCH_PARTITION_ID",
+    "DISPATCH_DEFAULT_PARTITION_ID",
+  ]);
   const tenantIsolationStrict = parseBooleanFlag(
     firstDefined(reader, ["UNIFIED_TENANT_ISOLATION_STRICT", "TENANT_ISOLATION_STRICT"]),
     false,
@@ -376,6 +383,7 @@ export function loadUnifiedRuntimeEnvConfig(
     dispatchAuditMaxBytesBeforeRotate,
     dispatchDefaultTenantId,
     dispatchDefaultRegionId,
+    dispatchDefaultPartitionId,
     tenantIsolationStrict,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,

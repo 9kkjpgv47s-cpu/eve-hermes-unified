@@ -65,6 +65,7 @@ export async function appendDispatchAuditLog(
     traceId: result.envelope.traceId,
     tenantId: result.envelope.tenantId,
     regionId: result.envelope.regionId,
+    partitionId: result.envelope.partitionId,
     chatId: result.envelope.chatId,
     messageId: result.envelope.messageId,
     contractVersion: result.contractVersion,

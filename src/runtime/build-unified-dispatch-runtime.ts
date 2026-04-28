@@ -67,6 +67,7 @@ export function buildUnifiedDispatchRuntime(config: UnifiedRuntimeEnvConfig): Bu
     dispatchDefaults: {
       defaultTenantId: config.dispatchDefaultTenantId?.trim() || undefined,
       defaultRegionId: config.dispatchDefaultRegionId?.trim() || undefined,
+      defaultPartitionId: config.dispatchDefaultPartitionId?.trim() || undefined,
     },
   };
   return { config, runtime };

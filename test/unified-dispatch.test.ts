@@ -273,6 +273,46 @@ describe("dispatchUnifiedMessage", () => {
     expect(result.primaryState.sourceLane).toBe("hermes");
   });
 
+  it("applies defaultPartitionId from dispatchDefaults when input omits partitionId (H6)", async () => {
+    const runtime = {
+      eveAdapter: new FakeLaneAdapter("eve", {
+        status: "pass",
+        reason: "ok",
+        runtimeUsed: "eve",
+        runId: "r1",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "eve",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t1",
+      }),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "failed",
+        reason: "unused",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "dispatch_failure",
+        sourceLane: "hermes",
+        sourceChatId: "1",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: baseRouterConfig(),
+      dispatchDefaults: { defaultPartitionId: "cell-default" },
+    };
+
+    const result = await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "1",
+      messageId: "2",
+      text: "hello",
+    });
+
+    expect(result.envelope.partitionId).toBe("cell-default");
+  });
+
   it("uses capability engine path when explicit capability command resolves", async () => {
     const runtime = {
       eveAdapter: new FakeLaneAdapter("eve", {

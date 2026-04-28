@@ -22,6 +22,8 @@ export type UnifiedMessageEnvelope = {
   tenantId?: string;
   /** H5: optional region hint for routing alignment checks. */
   regionId?: string;
+  /** H6: optional partition / cell correlation for evidence (WAL, audit); does not affect routing. */
+  partitionId?: string;
 };
 
 export type RoutingDecision = {

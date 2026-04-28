@@ -10,7 +10,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 - Horizon: `H5` (`docs/HORIZON_STATUS.json`, in progress)
 - Completed in-repo slices: H3–H5 through **h5-action-10** (H6 program scaffolded in `docs/HORIZON_STATUS.json` and `docs/GOAL_POLICIES.json`; `validate:all` runs `validate:h5-evidence-bundle` for the H5 evidence bundle).
-- Primary focus: **h6-action-1** onward (partition correlation and H6 evidence gates per `docs/H6_PROGRAM.md`)
+- Primary focus: **h6-action-2** (soak and evidence summaries: partition drill dimensions) per `docs/H6_PROGRAM.md`
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:

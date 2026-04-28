@@ -12,6 +12,7 @@ export type DispatchWalAttemptRecord = {
   text: string;
   tenantId?: string;
   regionId?: string;
+  partitionId?: string;
 };
 
 export type DispatchWalCompleteRecord = {
@@ -26,6 +27,8 @@ export type DispatchWalCompleteRecord = {
   /** H5: correlation with dispatch_attempt / envelope (optional). */
   tenantId?: string;
   regionId?: string;
+  /** H6: optional partition correlation (optional). */
+  partitionId?: string;
   envelopeRegionId?: string;
   routerRegionId?: string;
   regionAligned?: boolean;
@@ -57,6 +60,7 @@ export type OrphanDispatchAttempt = {
   recordedAtIso: string;
   tenantId?: string;
   regionId?: string;
+  partitionId?: string;
 };
 
 /**
@@ -105,6 +109,10 @@ export async function findOrphanDispatchAttempts(walPath: string): Promise<Orpha
         typeof parsed.regionId === "string" && parsed.regionId.trim().length > 0
           ? parsed.regionId.trim()
           : undefined;
+      const partitionId =
+        typeof parsed.partitionId === "string" && parsed.partitionId.trim().length > 0
+          ? parsed.partitionId.trim()
+          : undefined;
       if (chatId && messageId && text) {
         attempts.set(parsed.attemptId, {
           attemptId: parsed.attemptId,
@@ -115,6 +123,7 @@ export async function findOrphanDispatchAttempts(walPath: string): Promise<Orpha
           recordedAtIso,
           tenantId,
           regionId,
+          partitionId,
         });
       }
     }

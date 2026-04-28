@@ -8,11 +8,15 @@ import type {
 import { validateEnvelope, validateUnifiedResponse } from "../contracts/validate.js";
 import type { LaneAdapter } from "../adapters/lane-adapter.js";
 import { routeMessage, type RouterPolicyConfig } from "../router/policy-router.js";
+import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
+import type { CapabilityRegistry } from "../capabilities/capability-registry.js";
 
 export type UnifiedRuntime = {
   eveAdapter: LaneAdapter;
   hermesAdapter: LaneAdapter;
   routerConfig: RouterPolicyConfig;
+  memoryStore?: UnifiedMemoryStore;
+  capabilityRegistry?: CapabilityRegistry;
 };
 
 function getLaneAdapter(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -44,21 +48,65 @@ export async function dispatchUnifiedMessage(
   });
 
   const decision = routeMessage(envelope, runtime.routerConfig);
+  const memoryStore = runtime.memoryStore;
+  const memoryScope = {
+    chatId: envelope.chatId,
+    traceId: envelope.traceId,
+    messageId: envelope.messageId,
+  };
+  const memorySnapshot = memoryStore ? await memoryStore.readWorkingSet(memoryScope) : undefined;
+  const capReg = runtime.capabilityRegistry;
+
+  const primaryExtras = {
+    ...(memorySnapshot !== undefined ? { memorySnapshot } : {}),
+    ...(capReg ? { capabilityIds: capReg.forLane(decision.primaryLane).map((c) => c.id) as readonly string[] } : {}),
+  };
+
   const primary = getLaneAdapter(runtime, decision.primaryLane);
   const primaryState = await primary.dispatch({
     envelope,
     intentRoute: `unified:${decision.reason}`,
+    ...primaryExtras,
   });
+
+  if (memoryStore) {
+    await memoryStore.appendDispatchEvent({
+      ...memoryScope,
+      lane: decision.primaryLane,
+      phase: "primary",
+      status: primaryState.status,
+      reason: primaryState.reason,
+    });
+  }
+
   if (primaryState.status === "pass" || decision.fallbackLane === "none" || decision.failClosed) {
     const response = validateUnifiedResponse(responseFromState(primaryState, envelope.traceId));
     return { envelope, decision: decision.reason, response };
   }
 
   const fallback = getLaneAdapter(runtime, decision.fallbackLane);
+  const fallbackExtras = {
+    ...(memorySnapshot !== undefined ? { memorySnapshot } : {}),
+    ...(capReg
+      ? { capabilityIds: capReg.forLane(decision.fallbackLane).map((c) => c.id) as readonly string[] }
+      : {}),
+  };
   const fallbackState = await fallback.dispatch({
     envelope,
     intentRoute: `unified:fallback_after_${decision.reason}`,
+    ...fallbackExtras,
   });
+
+  if (memoryStore) {
+    await memoryStore.appendDispatchEvent({
+      ...memoryScope,
+      lane: decision.fallbackLane,
+      phase: "fallback",
+      status: fallbackState.status,
+      reason: fallbackState.reason,
+    });
+  }
+
   const response = validateUnifiedResponse(responseFromState(fallbackState, envelope.traceId));
   return { envelope, decision: `${decision.reason}:fallback`, response };
 }

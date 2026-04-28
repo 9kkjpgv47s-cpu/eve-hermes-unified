@@ -25,15 +25,31 @@ export async function runCommandWithTimeout(
     const child = spawn(command, args, {
       env: { ...process.env, ...(options?.env ?? {}) },
       stdio: ["ignore", "pipe", "pipe"],
+      detached: true,
     });
 
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let closed = false;
+    let killTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const killProcessTree = () => {
+      if (child.pid && !closed) {
+        try {
+          process.kill(-child.pid, "SIGKILL");
+        } catch {
+          child.kill("SIGKILL");
+        }
+      }
+    };
 
     const timeout = setTimeout(() => {
       timedOut = true;
       child.kill("SIGTERM");
+      killTimer = setTimeout(() => {
+        killProcessTree();
+      }, 200);
     }, timeoutMs);
 
     child.stdout.on("data", (chunk: Buffer) => {
@@ -44,10 +60,17 @@ export async function runCommandWithTimeout(
     });
     child.on("error", (error) => {
       clearTimeout(timeout);
+      if (killTimer) {
+        clearTimeout(killTimer);
+      }
       reject(error);
     });
     child.on("close", (code, signal) => {
+      closed = true;
       clearTimeout(timeout);
+      if (killTimer) {
+        clearTimeout(killTimer);
+      }
       resolve({
         stdout,
         stderr,

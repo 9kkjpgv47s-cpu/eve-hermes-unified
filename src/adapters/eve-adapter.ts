@@ -44,7 +44,8 @@ export class EveAdapter implements LaneAdapter {
 
   async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
     const runId = `unified-eve-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
-    await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
+    const started = Date.now();
+    const result = await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
       timeoutMs: this.dispatchTimeoutMs,
       env: {
         EVE_TASK_DISPATCH_RUN_ID: runId,
@@ -57,8 +58,76 @@ export class EveAdapter implements LaneAdapter {
       },
     });
 
-    const raw = await readFile(this.dispatchStatePath, "utf8");
-    const parsed = JSON.parse(raw) as EveDispatchStateFile;
+    if (result.termination === "timeout") {
+      const state: DispatchState = {
+        status: "failed",
+        reason: "eve_dispatch_timeout",
+        runtimeUsed: "eve",
+        runId,
+        elapsedMs: Math.max(0, Date.now() - started),
+        failureClass: "dispatch_failure",
+        sourceLane: "eve",
+        sourceChatId: input.envelope.chatId,
+        sourceMessageId: input.envelope.messageId,
+        traceId: input.envelope.traceId,
+      };
+      return validateDispatchState(state);
+    }
+
+    if (result.code !== 0) {
+      const state: DispatchState = {
+        status: "failed",
+        reason: `eve_dispatch_exit_${result.code ?? "null"}`,
+        runtimeUsed: "eve",
+        runId,
+        elapsedMs: Math.max(0, Date.now() - started),
+        failureClass: "dispatch_failure",
+        sourceLane: "eve",
+        sourceChatId: input.envelope.chatId,
+        sourceMessageId: input.envelope.messageId,
+        traceId: input.envelope.traceId,
+      };
+      return validateDispatchState(state);
+    }
+
+    let raw: string;
+    try {
+      raw = await readFile(this.dispatchStatePath, "utf8");
+    } catch {
+      const state: DispatchState = {
+        status: "failed",
+        reason: "eve_dispatch_state_unreadable",
+        runtimeUsed: "eve",
+        runId,
+        elapsedMs: Math.max(0, Date.now() - started),
+        failureClass: "state_unavailable",
+        sourceLane: "eve",
+        sourceChatId: input.envelope.chatId,
+        sourceMessageId: input.envelope.messageId,
+        traceId: input.envelope.traceId,
+      };
+      return validateDispatchState(state);
+    }
+
+    let parsed: EveDispatchStateFile;
+    try {
+      parsed = JSON.parse(raw) as EveDispatchStateFile;
+    } catch {
+      const state: DispatchState = {
+        status: "failed",
+        reason: "eve_dispatch_state_invalid_json",
+        runtimeUsed: "eve",
+        runId,
+        elapsedMs: Math.max(0, Date.now() - started),
+        failureClass: "state_unavailable",
+        sourceLane: "eve",
+        sourceChatId: input.envelope.chatId,
+        sourceMessageId: input.envelope.messageId,
+        traceId: input.envelope.traceId,
+      };
+      return validateDispatchState(state);
+    }
+
     const state: DispatchState = {
       status: parsed.status === "pass" ? "pass" : "failed",
       reason: parsed.reason ?? "unknown",

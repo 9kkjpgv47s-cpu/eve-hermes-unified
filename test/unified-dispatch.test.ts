@@ -327,4 +327,75 @@ describe("dispatchUnifiedMessage", () => {
 
     expect(result.response.traceId).toBe(result.envelope.traceId);
   });
+
+  it("passes memory snapshot and lane capability ids to primary dispatch", async () => {
+    let primaryInput: LaneDispatchInput | undefined;
+    class CapturingEve implements LaneAdapter {
+      laneId: "eve" = "eve";
+      async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
+        primaryInput = input;
+        return {
+          status: "pass",
+          reason: "ok",
+          runtimeUsed: "eve",
+          runId: "r1",
+          elapsedMs: 1,
+          failureClass: "none",
+          sourceLane: "eve",
+          sourceChatId: input.envelope.chatId,
+          sourceMessageId: input.envelope.messageId,
+          traceId: input.envelope.traceId,
+        };
+      }
+    }
+
+    const { CapabilityRegistry, defaultCapabilityCatalog } = await import(
+      "../src/capabilities/capability-registry.js"
+    );
+    const { InMemoryUnifiedMemoryStore } = await import("../src/memory/unified-memory-store.js");
+
+    const memory = new InMemoryUnifiedMemoryStore();
+    memory.setChatKey("9", "ctx", "x");
+
+    const caps = new CapabilityRegistry();
+    caps.registerAll(defaultCapabilityCatalog);
+
+    const runtime = {
+      eveAdapter: new CapturingEve(),
+      hermesAdapter: new FakeLaneAdapter("hermes", {
+        status: "pass",
+        reason: "unused",
+        runtimeUsed: "hermes",
+        runId: "r2",
+        elapsedMs: 1,
+        failureClass: "none",
+        sourceLane: "hermes",
+        sourceChatId: "9",
+        sourceMessageId: "2",
+        traceId: "t2",
+      }),
+      routerConfig: {
+        defaultPrimary: "eve" as const,
+        defaultFallback: "hermes" as const,
+        failClosed: false,
+        policyVersion: "v1",
+      },
+      memoryStore: memory,
+      capabilityRegistry: caps,
+    };
+
+    await dispatchUnifiedMessage(runtime, {
+      channel: "telegram",
+      chatId: "9",
+      messageId: "2",
+      text: "hello",
+    });
+
+    expect(primaryInput?.memorySnapshot?.ctx).toBe("x");
+    expect(primaryInput?.capabilityIds).toEqual(["eve.dispatch_script"]);
+    const events = memory.getEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.lane).toBe("eve");
+    expect(events[0]?.phase).toBe("primary");
+  });
 });

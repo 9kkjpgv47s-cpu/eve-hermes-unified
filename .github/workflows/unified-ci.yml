@@ -29,3 +29,13 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Gateway smoke and evidence transcript
+        run: bash ./scripts/ci-record-dispatch-evidence.sh
+
+      - name: Upload evidence artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unified-dispatch-evidence
+          path: evidence/

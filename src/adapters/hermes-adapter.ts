@@ -41,14 +41,24 @@ export class HermesAdapter implements LaneAdapter {
       },
     });
 
-    const reason = result.code === 0 ? "hermes_dispatch_success" : `hermes_dispatch_exit_${result.code ?? "null"}`;
+    const reason =
+      result.termination === "timeout"
+        ? "hermes_dispatch_timeout"
+        : result.code === 0
+          ? "hermes_dispatch_success"
+          : `hermes_dispatch_exit_${result.code ?? "null"}`;
     const state: DispatchState = {
-      status: result.code === 0 ? "pass" : "failed",
+      status: result.termination === "timeout" || result.code !== 0 ? "failed" : "pass",
       reason,
       runtimeUsed: "hermes",
       runId,
       elapsedMs: Math.max(0, Date.now() - started),
-      failureClass: result.code === 0 ? "none" : classifyHermesFailure(reason),
+      failureClass:
+        result.code === 0 && result.termination !== "timeout"
+          ? "none"
+          : result.termination === "timeout"
+            ? "dispatch_failure"
+            : classifyHermesFailure(reason),
       sourceLane: "hermes",
       sourceChatId: input.envelope.chatId,
       sourceMessageId: input.envelope.messageId,

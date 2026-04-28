@@ -9,7 +9,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 ## Current State Snapshot
 
 - Active horizon: `H2` (`docs/HORIZON_STATUS.json`); H3/H4 workstreams advance in code ahead of horizon promotion.
-- Branch: **`cursor/h5-tenant-isolation-cc15`** — H5-style optional tenant gate + scoped capability memory + lane `UNIFIED_TENANT_ID` env (on top of H3/H4 durability and legacy-path guard).
+- Branch: **`cursor/h5-tenant-isolation-cc15`** — H5 tenant gate + scoped capability memory + lane `UNIFIED_TENANT_ID`; **lane abort** (`AbortSignal` / optional capability-budget SIGTERM) + **horizon-neutral** drill failure aliases in closeout validator.
 
 ## What Was Just Completed (large chunk)
 
@@ -19,7 +19,7 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 2. **Persist verify** — `UNIFIED_MEMORY_VERIFY_PERSIST=1` re-reads snapshot + hash/map compare after each persist.
 3. **Dispatch audit** — rotation + backup prune; each line includes **`auditSchemaVersion`** (`src/contracts/dispatch-audit-version.ts`).
 4. **Capability policy audit** — denials + **config snapshots** when stable policy fingerprint changes (`stableCapabilityPolicyJson` + SHA-256); startup append in CLI when audit path set.
-5. **Capability execution timeout** — env-driven `Promise.race` (documented subprocess limitation).
+5. **Capability execution timeout** — env-driven `Promise.race`; optional **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT`** sends SIGTERM to in-flight **lane** subprocess started via `dispatchLane` when budget elapses.
 6. **Preflight** — journal + policy audit path writable checks.
 7. **Vitest `globalSetup`** — `./evidence` for script tests.
 
@@ -33,6 +33,11 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 1. **Tenant gate** — `UNIFIED_TENANT_ALLOWLIST`, `UNIFIED_TENANT_STRICT`; optional `UnifiedMessageEnvelope.tenantId` / `metadata.tenantId`; CLI `--tenant-id`.
 2. **Memory isolation** — `TenantScopedMemoryStore` for capability-engine reads/writes when tenant present.
 3. **Lane subprocess** — `UNIFIED_TENANT_ID` in Eve/Hermes adapter env when envelope carries tenant.
+4. **Lane cooperative cancel** — `LaneDispatchInput.signal` / `runCommandWithTimeout` abort; `UnifiedRuntime.abortSignal` for primary/fallback dispatch.
+
+### Tooling
+
+1. **`validate-horizon-closeout.mjs`** — for `h2-drill-suite` verification failures, appends **`horizon_drill_*`** aliases alongside legacy **`h2_drill_*`** ids.
 
 ## Read Order (Zero-Context Startup)
 
@@ -46,10 +51,9 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next High-Output Targets
 
-1. **Lane subprocess cancellation** or explicit lane-level timeouts aligned with capability budget (tenant env is wired; cancellation still open).
-2. **Horizon-neutral** closeout taxonomy cleanup (remaining `h2_*` IDs where safe).
-3. **Schema gate** for new audit line fields in `validate-manifest-schema` if manifests consume dispatch audit JSONL.
-4. Keep `npm run check && npm test && npm run validate:all` green before merge.
+1. **Schema gate** for new audit line fields in `validate-manifest-schema` if manifests consume dispatch audit JSONL.
+2. **Horizon-neutral** taxonomy: consume `horizon_drill_*` aliases where scripts filter failure ids; extend aliases to other gates as needed.
+3. Keep `npm run check && npm test && npm run validate:all` green before merge.
 
 ## Validation Pack
 

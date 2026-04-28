@@ -30,6 +30,36 @@ function deriveNextHorizon(sourceHorizon) {
   return HORIZON_SEQUENCE[sourceIndex + 1];
 }
 
+/** Dual-report horizon-neutral drill failure ids alongside legacy h2_* names. */
+function appendHorizonDrillSuiteFailureAliases(checks) {
+  const prefix = "h2_drill_suite_schema_invalid:";
+  const neutralPrefix = "horizon_drill_suite_schema_invalid:";
+  for (const c of [...checks]) {
+    if (typeof c !== "string") {
+      continue;
+    }
+    if (c.startsWith(prefix)) {
+      checks.push(`${neutralPrefix}${c.slice(prefix.length)}`);
+      continue;
+    }
+    const table = {
+      h2_drill_suite_not_passed: "horizon_drill_suite_not_passed",
+      h2_drill_canary_hold_failed: "horizon_drill_canary_hold_failed",
+      h2_drill_majority_hold_failed: "horizon_drill_majority_hold_failed",
+      h2_drill_rollback_simulation_failed: "horizon_drill_rollback_simulation_failed",
+      h2_drill_rollback_simulation_not_triggered: "horizon_drill_rollback_simulation_not_triggered",
+      h2_drill_rollback_source_consistency_signals_not_reported:
+        "horizon_drill_rollback_source_consistency_signals_not_reported",
+      h2_drill_rollback_source_consistency_signals_not_passed:
+        "horizon_drill_rollback_source_consistency_signals_not_passed",
+    };
+    const alias = table[c];
+    if (alias) {
+      checks.push(alias);
+    }
+  }
+}
+
 function normalizeCommand(value) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
@@ -586,6 +616,7 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     } else if (payload?.checks?.rollbackPolicySourceConsistencySignalsPass !== true) {
       checks.push("h2_drill_rollback_source_consistency_signals_not_passed");
     }
+    appendHorizonDrillSuiteFailureAliases(checks);
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "horizon-closeout-run") {

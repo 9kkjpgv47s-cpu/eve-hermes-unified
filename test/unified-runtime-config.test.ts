@@ -145,6 +145,17 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.capabilityExecutionTimeoutMs).toBe(30_000);
   });
 
+  it("parses capability lane abort-on-timeout flag", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT: "1",
+        }),
+      ),
+    );
+    expect(config.capabilityAbortLaneOnTimeout).toBe(true);
+  });
+
   it("parses tenant isolation env knobs", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(

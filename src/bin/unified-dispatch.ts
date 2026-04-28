@@ -76,6 +76,7 @@ async function main() {
     messageId: string;
     traceId: string;
     tenantId?: string;
+    signal?: AbortSignal;
   }) => {
     const adapter = input.lane === "eve" ? eveAdapter : hermesAdapter;
     const baseEnvelope = {
@@ -92,6 +93,7 @@ async function main() {
     return adapter.dispatch({
       envelope,
       intentRoute: input.intentRoute,
+      signal: input.signal,
     });
   };
   registerDefaultCapabilityExecutors(capabilityRegistry, {
@@ -111,6 +113,7 @@ async function main() {
     dispatchLane,
     policy: capabilityPolicy,
     executionTimeoutMs: config.capabilityExecutionTimeoutMs,
+    abortLaneOnCapabilityTimeout: config.capabilityAbortLaneOnTimeout,
     onPolicyDenial:
       policyAuditPath.length > 0
         ? async (payload) => {

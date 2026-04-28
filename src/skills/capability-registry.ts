@@ -18,6 +18,8 @@ export type CapabilityExecutionContext = {
   traceId: string;
   /** Resolved tenant scope for lane env / isolation (optional). */
   tenantId?: string;
+  /** Aborts in-flight lane subprocess when capability execution budget is exceeded. */
+  signal?: AbortSignal;
   dispatchLane: (input: CapabilityLaneDispatchInput) => Promise<DispatchState>;
   memoryStore: UnifiedMemoryStore;
 };
@@ -46,6 +48,8 @@ export type CapabilityLaneDispatchInput = {
   intentRoute: string;
   /** Optional tenant scope propagated to lane subprocess env (H5). */
   tenantId?: string;
+  /** When set, lane subprocess is SIGTERM'd if this aborts (capability budget / cooperative cancel). */
+  signal?: AbortSignal;
 };
 
 export type CapabilityLaneDispatcher = (
@@ -166,6 +170,7 @@ export function registerEveCommandWrappers(
             text: probeText,
             intentRoute: "capability:check_status",
             tenantId: context.tenantId,
+            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",
@@ -203,6 +208,7 @@ export function registerEveCommandWrappers(
             text: taskText,
             intentRoute: "capability:eve_dispatch_task",
             tenantId: context.tenantId,
+            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",
@@ -243,6 +249,7 @@ export function registerHermesTools(
             text: summarizeText,
             intentRoute: "capability:summarize_state",
             tenantId: context.tenantId,
+            signal: context.signal,
           });
           const recentExecutions = await context.memoryStore.list({
             lane: "hermes",
@@ -286,6 +293,7 @@ export function registerHermesTools(
             text: taskText,
             intentRoute: "capability:hermes_dispatch_task",
             tenantId: context.tenantId,
+            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",

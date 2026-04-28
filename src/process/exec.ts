@@ -13,6 +13,8 @@ export async function runCommandWithTimeout(
   options?: {
     timeoutMs?: number;
     env?: Record<string, string>;
+    /** When aborted, sends SIGTERM to the child (same as wall-clock timeout). */
+    signal?: AbortSignal;
   },
 ): Promise<CommandResult> {
   if (argv.length === 0) {
@@ -20,6 +22,17 @@ export async function runCommandWithTimeout(
   }
   const [command, ...args] = argv;
   const timeoutMs = options?.timeoutMs ?? 60_000;
+  const externalSignal = options?.signal;
+
+  if (externalSignal?.aborted) {
+    return {
+      stdout: "",
+      stderr: "",
+      code: null,
+      signal: "SIGTERM",
+      termination: "signal",
+    };
+  }
 
   return await new Promise<CommandResult>((resolve, reject) => {
     const child = spawn(command, args, {
@@ -30,11 +43,28 @@ export async function runCommandWithTimeout(
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let abortedBySignal = false;
+
+    const killChild = () => {
+      if (!child.killed && child.exitCode === null) {
+        child.kill("SIGTERM");
+      }
+    };
 
     const timeout = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGTERM");
+      killChild();
     }, timeoutMs);
+
+    const onExternalAbort = () => {
+      clearTimeout(timeout);
+      abortedBySignal = true;
+      killChild();
+    };
+
+    if (externalSignal) {
+      externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+    }
 
     child.stdout.on("data", (chunk: Buffer) => {
       stdout += chunk.toString("utf8");
@@ -44,16 +74,23 @@ export async function runCommandWithTimeout(
     });
     child.on("error", (error) => {
       clearTimeout(timeout);
+      if (externalSignal) {
+        externalSignal.removeEventListener("abort", onExternalAbort);
+      }
       reject(error);
     });
     child.on("close", (code, signal) => {
       clearTimeout(timeout);
+      if (externalSignal) {
+        externalSignal.removeEventListener("abort", onExternalAbort);
+      }
+      const termination = timedOut ? "timeout" : abortedBySignal || signal ? "signal" : "exit";
       resolve({
         stdout,
         stderr,
         code,
         signal,
-        termination: timedOut ? "timeout" : signal ? "signal" : "exit",
+        termination,
       });
     });
   });

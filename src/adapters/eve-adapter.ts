@@ -60,6 +60,7 @@ export class EveAdapter implements LaneAdapter {
     const commandResult = await runCommandWithTimeout([this.dispatchScriptPath, input.envelope.text], {
       timeoutMs: this.dispatchTimeoutMs,
       env,
+      signal: input.signal,
     });
 
     let parsed: EveDispatchStateFile | null = null;
@@ -73,11 +74,15 @@ export class EveAdapter implements LaneAdapter {
       parsedStateAvailable = false;
     }
 
-    const commandSucceeded = commandResult.code === 0 && commandResult.termination !== "timeout";
+    const commandSucceeded =
+      commandResult.code === 0 && commandResult.termination === "exit";
     const isPass = parsed?.status === "pass" && commandSucceeded;
-    const reasonFromExit = commandResult.termination === "timeout"
-      ? "eve_dispatch_timeout"
-      : `eve_dispatch_exit_${commandResult.code ?? "null"}`;
+    const reasonFromExit =
+      commandResult.termination === "timeout"
+        ? "eve_dispatch_timeout"
+        : commandResult.termination === "signal"
+          ? "eve_dispatch_aborted"
+          : `eve_dispatch_exit_${commandResult.code ?? "null"}`;
     const fallbackReason = parsed?.reason
       ?? (commandSucceeded && !parsedStateAvailable
         ? "eve_dispatch_state_unavailable"

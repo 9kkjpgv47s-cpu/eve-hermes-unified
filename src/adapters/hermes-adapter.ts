@@ -6,6 +6,9 @@ import type { LaneAdapter, LaneDispatchInput } from "./lane-adapter.js";
 
 function classifyHermesFailure(reason: string): DispatchState["failureClass"] {
   const lower = reason.toLowerCase();
+  if (lower.includes("aborted")) {
+    return "dispatch_failure";
+  }
   const exitMatch = lower.match(/hermes_dispatch_exit_(\d+)/);
   const exitCode = exitMatch ? Number(exitMatch[1]) : Number.NaN;
   if (Number.isFinite(exitCode) && exitCode >= 128) {
@@ -60,6 +63,7 @@ export class HermesAdapter implements LaneAdapter {
         {
           timeoutMs: this.timeoutMs,
           env,
+          signal: input.signal,
         },
       );
     } catch {
@@ -88,12 +92,14 @@ export class HermesAdapter implements LaneAdapter {
             : null;
     const reason = result.termination === "timeout"
       ? "hermes_dispatch_timeout"
-      : result.code === 0
+      : result.termination === "signal"
+        ? "hermes_dispatch_aborted"
+        : result.code === 0
         ? "hermes_dispatch_success"
         : inferredFailureReason
           ?? (result.code === null ? "hermes_dispatch_state_unavailable" : `hermes_dispatch_exit_${result.code}`);
     const state: DispatchState = {
-      status: result.code === 0 ? "pass" : "failed",
+      status: result.code === 0 && result.termination === "exit" ? "pass" : "failed",
       reason,
       runtimeUsed: "hermes",
       runId,

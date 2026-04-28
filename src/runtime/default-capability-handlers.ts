@@ -41,6 +41,7 @@ function buildLaneDispatcher(deps: CapabilityRegistrationDeps) {
     messageId: string,
     traceId: string,
     tenantId?: string,
+    signal?: AbortSignal,
   ): Promise<DispatchState> => {
     return deps.dispatchLane({
       lane,
@@ -50,6 +51,7 @@ function buildLaneDispatcher(deps: CapabilityRegistrationDeps) {
       messageId,
       traceId,
       tenantId,
+      signal,
     });
   };
 }
@@ -77,6 +79,7 @@ export function registerDefaultCapabilityExecutors(
         context.messageId,
         context.traceId,
         context.tenantId,
+        context.signal,
       );
       return {
         consumed: state.status === "pass",
@@ -108,6 +111,7 @@ export function registerDefaultCapabilityExecutors(
         context.messageId,
         context.traceId,
         context.tenantId,
+        context.signal,
       );
       return {
         consumed: state.status === "pass",
@@ -136,6 +140,7 @@ export function registerDefaultCapabilityExecutors(
         context.messageId,
         context.traceId,
         context.tenantId,
+        context.signal,
       );
       const recent = await context.memoryStore.list({
         lane: "hermes",
@@ -174,6 +179,7 @@ export function registerDefaultCapabilityExecutors(
         context.messageId,
         context.traceId,
         context.tenantId,
+        context.signal,
       );
       return {
         consumed: state.status === "pass",

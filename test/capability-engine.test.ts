@@ -480,6 +480,62 @@ describe("UnifiedCapabilityEngine", () => {
     }
   });
 
+  it("optionally aborts lane subprocess signal when capability budget elapses", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-cap-lane-abort-"));
+    try {
+      const memoryPath = path.join(tempDir, "memory.json");
+      const memoryStore = new FileUnifiedMemoryStore(memoryPath);
+      const registry = new CapabilityRegistry();
+      const laneSignals: (AbortSignal | undefined)[] = [];
+      registry.register(
+        {
+          id: "lane_slow",
+          description: "lane slow",
+          owner: "eve",
+        },
+        async (ctx) => {
+          await ctx.dispatchLane({ lane: "eve", text: "x", intentRoute: "cap:lane_slow" });
+          return buildCapabilityResult("done");
+        },
+      );
+      const engine = new UnifiedCapabilityEngine(registry, {
+        memoryStore,
+        dispatchLane: async (input) => {
+          laneSignals.push(input.signal);
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          return fakeLaneState("eve", "lane_ok");
+        },
+        executionTimeoutMs: 80,
+        abortLaneOnCapabilityTimeout: true,
+      });
+      const runtime = {
+        eveAdapter: new FakeLaneAdapter("eve", fakeLaneState("eve")),
+        hermesAdapter: new FakeLaneAdapter("hermes", fakeLaneState("hermes")),
+        routerConfig: {
+          defaultPrimary: "eve" as const,
+          defaultFallback: "hermes" as const,
+          failClosed: false,
+          policyVersion: "v1",
+        },
+        capabilityEngine: engine,
+      };
+
+      const result = await dispatchUnifiedMessage(runtime, {
+        channel: "telegram",
+        chatId: "1",
+        messageId: "2",
+        text: "@cap lane_slow",
+      });
+
+      expect(result.capabilityExecution?.reason).toBe("capability_execution_timeout");
+      expect(result.capabilityExecution?.metadata?.laneAbort).toBe("1");
+      expect(laneSignals.length).toBeGreaterThanOrEqual(1);
+      expect(laneSignals[0]?.aborted).toBe(true);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("invokes onPolicyDenial hook on policy failure", async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-cap-deny-hook-"));
     try {

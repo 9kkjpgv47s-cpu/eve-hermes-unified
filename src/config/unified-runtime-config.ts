@@ -33,6 +33,8 @@ export type UnifiedRuntimeEnvConfig = {
   auditLogRotateRetainBackupCount: number;
   capabilityPolicyAuditPath: string;
   capabilityExecutionTimeoutMs: number;
+  /** When true with a positive execution timeout, SIGTERM lane subprocess on budget expiry. */
+  capabilityAbortLaneOnTimeout: boolean;
   /** When true with file store, verify on-disk snapshot matches memory after each persist. */
   unifiedMemoryVerifyPersist: boolean;
   /** When true, reject requests without tenant when allowlist is set, or without tenant when allowlist empty. */
@@ -279,6 +281,13 @@ export function loadUnifiedRuntimeEnvConfig(
       0,
     ),
   );
+  const capabilityAbortLaneOnTimeout = parseBooleanFlag(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT",
+      "CAPABILITY_ABORT_LANE_ON_TIMEOUT",
+    ]),
+    false,
+  );
   const unifiedMemoryVerifyPersist = parseBooleanFlag(
     firstDefined(reader, [
       "UNIFIED_MEMORY_VERIFY_PERSIST",
@@ -357,6 +366,7 @@ export function loadUnifiedRuntimeEnvConfig(
     auditLogRotateRetainBackupCount,
     capabilityPolicyAuditPath,
     capabilityExecutionTimeoutMs,
+    capabilityAbortLaneOnTimeout,
     unifiedMemoryVerifyPersist,
     tenantStrict,
     tenantAllowlist,

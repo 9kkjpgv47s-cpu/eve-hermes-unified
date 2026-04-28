@@ -31,6 +31,8 @@ export type UnifiedRuntime = {
   tenantStrict?: boolean;
   /** Allowed tenant IDs when non-empty (envelope tenantId must match one). */
   tenantAllowlist?: string[];
+  /** When aborted, in-flight lane dispatch receives SIGTERM (HTTP/gateway cooperative cancel). */
+  abortSignal?: AbortSignal;
 };
 
 export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -215,6 +217,7 @@ export async function dispatchUnifiedMessage(
     await primary.dispatch({
       envelope,
       intentRoute: `unified:${routing.reason}`,
+      signal: runtime.abortSignal,
     }),
     envelope.traceId,
   );
@@ -227,6 +230,7 @@ export async function dispatchUnifiedMessage(
     await fallback.dispatch({
       envelope,
       intentRoute: `unified:fallback_after_${routing.reason}`,
+      signal: runtime.abortSignal,
     }),
     envelope.traceId,
   );

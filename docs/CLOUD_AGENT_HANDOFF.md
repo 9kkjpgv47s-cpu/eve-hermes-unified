@@ -51,7 +51,7 @@ Optional production-hardening via environment (see `.env.example`):
 - **Memory journal:** `UNIFIED_MEMORY_JOURNAL_PATH` — append-only WAL replayed on startup after the JSON snapshot; truncated after each successful persist.
 - **Dispatch audit rotation:** `UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES`, `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES`, `UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BACKUPS` — size-triggered rotation to `<audit>.1`, `<audit>.2`, … with pruning of older backups.
 - **Capability policy audit:** `UNIFIED_CAPABILITY_POLICY_AUDIT_PATH` — append-only JSONL for **denials** and **config snapshots** (fingerprinted stable JSON) when policy changes between process starts.
-- **Capability execution timeout:** `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` — wall-clock budget for the capability **executor** return value (0 = off); does not cancel subprocesses already started inside a handler.
+- **Capability execution timeout:** `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS` — wall-clock budget for the capability **executor** return value (0 = off). With **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT=1`**, in-flight **lane** subprocesses started via `dispatchLane` receive **SIGTERM** when the budget elapses (still does not cancel work the handler started without going through `dispatchLane`).
 - **Memory persist verify:** `UNIFIED_MEMORY_VERIFY_PERSIST=1` — after each successful file persist, re-read the snapshot from disk and verify it matches the in-memory map (and hash).
 
 ## H4 legacy path expectations
@@ -65,6 +65,7 @@ Optional production-hardening via environment (see `.env.example`):
 - **CLI:** `--tenant-id <id>` sets `UnifiedMessageEnvelope.tenantId` for the single-shot dispatch binary.
 - **Lane env:** when an envelope carries a tenant, adapters set **`UNIFIED_TENANT_ID`** for Eve/Hermes subprocesses.
 - **Memory:** capability-engine reads/writes use **`TenantScopedMemoryStore`** (namespace prefix `tenant:<id>:`) when a tenant is present so capability execution records do not collide across tenants on a shared backing file.
+- **Lane cooperative cancel:** `UnifiedRuntime.abortSignal` is passed to primary/fallback `LaneAdapter.dispatch` so gateways can abort in-flight lane work (SIGTERM to subprocess).
 
 ## Cutover and Rollback Commands
 

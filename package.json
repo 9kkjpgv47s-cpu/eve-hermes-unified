@@ -31,6 +31,7 @@
     "run:h5-closeout-evidence": "node ./scripts/run-h5-closeout-evidence.mjs",
     "run:h6-assurance-bundle": "node ./scripts/run-h6-assurance-bundle.mjs",
     "verify:sustainment-loop": "node ./scripts/run-post-h6-sustainment-loop.mjs",
+    "validate:post-h6-sustainment-manifest": "node ./scripts/validate-post-h6-sustainment-manifest.mjs",
     "check:progressive-horizon-goals": "node ./scripts/check-progressive-horizon-goals.mjs",
     "check:goal-policy-coverage": "node ./scripts/check-goal-policy-coverage.mjs",
     "audit:goal-policy-readiness": "node ./scripts/audit-goal-policy-readiness.mjs",

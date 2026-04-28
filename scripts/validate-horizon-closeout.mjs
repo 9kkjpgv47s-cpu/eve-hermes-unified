@@ -290,6 +290,9 @@ function commandVerificationType(command) {
   if (command === "node ./scripts/run-h6-assurance-bundle.mjs") {
     return "h6-assurance-bundle";
   }
+  if (command === "node ./scripts/run-post-h6-sustainment-loop.mjs") {
+    return "post-h6-sustainment-loop";
+  }
   return "existence-only";
 }
 
@@ -910,6 +913,23 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     if (signal.unifiedEntrypointsPass !== true) {
       checks.push("h6_assurance_unified_entrypoints_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h6-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h6_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h6_horizon_status_not_passed");
+    }
+    if (signal.h6AssuranceBundlePass !== true) {
+      checks.push("post_h6_h6_assurance_bundle_not_passed");
+    }
+    if (signal.h6CloseoutGatePass !== true) {
+      checks.push("post_h6_h6_closeout_gate_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }

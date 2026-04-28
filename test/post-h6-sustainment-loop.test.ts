@@ -13,7 +13,7 @@ describe("run-post-h6-sustainment-loop.mjs", () => {
     expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h6-sustainment-loop.mjs");
   });
 
-  it("exits 0 when horizon status, H6 bundle, and H6 closeout pass", async () => {
+  it("emits pass and structured checks in sustainment loop manifest", async () => {
     const result = await runCommandWithTimeout(
       ["node", path.join(repoRoot, "scripts/run-post-h6-sustainment-loop.mjs")],
       { timeoutMs: 120_000 },
@@ -21,6 +21,26 @@ describe("run-post-h6-sustainment-loop.mjs", () => {
     expect(result.code).toBe(0);
     const out = result.stdout.trim();
     const last = out.split("\n").filter(Boolean).pop() ?? "";
-    expect(last).toMatch(/post-h6-sustainment-loop-.*\.json$/);
+    const raw = await readFile(last, "utf8");
+    const payload = JSON.parse(raw) as {
+      pass?: boolean;
+      checks?: {
+        horizonStatusPass?: boolean;
+        h6AssuranceBundlePass?: boolean;
+        h6CloseoutGatePass?: boolean;
+      };
+    };
+    expect(payload.pass).toBe(true);
+    expect(payload.checks?.horizonStatusPass).toBe(true);
+    expect(payload.checks?.h6AssuranceBundlePass).toBe(true);
+    expect(payload.checks?.h6CloseoutGatePass).toBe(true);
+  });
+
+  it("validate:post-h6-sustainment-manifest passes on latest loop output", async () => {
+    const result = await runCommandWithTimeout(
+      ["node", path.join(repoRoot, "scripts/validate-post-h6-sustainment-manifest.mjs")],
+      { timeoutMs: 15_000 },
+    );
+    expect(result.code).toBe(0);
   });
 });

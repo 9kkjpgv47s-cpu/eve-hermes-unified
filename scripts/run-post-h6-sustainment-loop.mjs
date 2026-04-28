@@ -37,12 +37,19 @@ const horizonStatus = runNpm("validate:horizon-status");
 const assurance = runNpm("run:h6-assurance-bundle");
 const closeout = runNpm("validate:h6-closeout");
 
-const pass =
-  horizonStatus.exitCode === 0 && assurance.exitCode === 0 && closeout.exitCode === 0;
+const horizonStatusPass = horizonStatus.exitCode === 0;
+const h6AssuranceBundlePass = assurance.exitCode === 0;
+const h6CloseoutGatePass = closeout.exitCode === 0;
+const pass = horizonStatusPass && h6AssuranceBundlePass && h6CloseoutGatePass;
 
 const manifest = {
   generatedAtIso: new Date().toISOString(),
   pass,
+  checks: {
+    horizonStatusPass,
+    h6AssuranceBundlePass,
+    h6CloseoutGatePass,
+  },
   steps: [
     { id: "validate_horizon_status", ...horizonStatus },
     { id: "run_h6_assurance_bundle", ...assurance },

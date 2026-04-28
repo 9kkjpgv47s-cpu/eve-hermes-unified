@@ -184,7 +184,7 @@ Mitigations:
 
 ### Post-H6 operations
 
-After **H6** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for a single chained verification that refreshes assurance evidence and runs **`validate:h6-closeout`**.
+After **H6** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for a single chained verification that refreshes assurance evidence and runs **`validate:h6-closeout`**. Optionally **`npm run validate:post-h6-sustainment-manifest`** checks the latest **`evidence/post-h6-sustainment-loop-*.json`** without re-running the loop.
 
 ## Cross-Horizon Execution Rules
 

@@ -93,9 +93,13 @@ After horizon **H6** is completed in `docs/HORIZON_STATUS.json`, operators and a
 - [ ] `npm run run:h6-assurance-bundle` exits `0` and emits `evidence/h6-assurance-bundle-*.json`.
 - [ ] `npm run validate:h6-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains the three above and writes `evidence/post-h6-sustainment-loop-*.json`):
+Single command (chains the three above and writes `evidence/post-h6-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [ ] `npm run verify:sustainment-loop` exits `0`.
+
+Optional re-validation of the latest loop artifact without re-running:
+
+- [ ] `npm run validate:post-h6-sustainment-manifest` exits `0`.
 
 Exit criteria:
 

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T01:00:00Z",
+  "updatedAtIso": "2026-04-29T02:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H6",
   "activeStatus": "completed",
-  "summary": "Horizons H1–H6 complete; post-H6 sustainment: verify:sustainment-loop + MASTER_EXECUTION_CHECKLIST Phase 8.",
+  "summary": "Horizons H1–H6 complete; post-H6 sustainment via verify:sustainment-loop (manifest validates end-to-end including validate:h6-closeout); MASTER_EXECUTION_CHECKLIST Phase 8.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -527,10 +527,10 @@
       "note": "H5 closeout: requiredEvidence scoped legacy gates to H1–H4; added h5-closeout-evidence; validate-horizon-closeout skips stage-promotion for terminal H5; promotionReadiness.targetStage full; run-h5-closeout-evidence.mjs aggregates bounded playbook manifest."
     },
     {
-      "timestamp": "2026-04-29T01:00:00Z",
+      "timestamp": "2026-04-29T02:00:00Z",
       "horizon": "H6",
       "status": "completed",
-      "note": "Post-H6 operator loop: run-post-h6-sustainment-loop.mjs and npm run verify:sustainment-loop; MASTER_EXECUTION_CHECKLIST Phase 8; CLOUD_AGENT_HANDOFF sustainment verification pointer."
+      "note": "Post-H6 sustainment: run-post-h6-sustainment-loop emits checks.horizonStatusPass/h6AssuranceBundlePass/h6CloseoutGatePass; validate-horizon-closeout can evaluate post-h6 manifests when present (not requiredEvidence—avoid circular dependency with validate:h6-closeout inside the loop)."
     }
   ]
 }

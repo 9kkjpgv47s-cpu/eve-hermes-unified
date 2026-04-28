@@ -62,13 +62,13 @@ Every PR should include:
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
 - **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H6**.
 
-## Sustainment assurance (terminal H10)
+## Sustainment assurance (terminal H11)
 
-- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h9-assurance-bundle`**.
-- **H10 bundle** (current): `npm run run:h10-assurance-bundle` adds dispatch durability queue retention proof (`test/dispatch-durability-queue-retention.test.ts`) on top of H9 gates.
-- **Closeout gate**: `npm run validate:h10-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
-- **Horizon index**: orchestration scripts include **H10** as the terminal horizon sequence entry.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H10** assurance bundle + `validate:h10-closeout` → `evidence/post-h10-sustainment-loop-*.json`. **`npm run validate:post-h10-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h9-legacy`** / **`validate:post-h9-sustainment-manifest`**; **`verify:sustainment-loop:h8-legacy`** … **`h6-legacy`**.
+- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h10-assurance-bundle`**.
+- **H11 bundle** (current): `npm run run:h11-assurance-bundle` adds capability policy audit JSONL rotation proof (`test/capability-policy-audit-rotation.test.ts`) on top of H10 gates.
+- **Closeout gate**: `npm run validate:h11-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
+- **Horizon index**: orchestration scripts include **H11** as the terminal horizon sequence entry.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H11** assurance bundle + `validate:h11-closeout` → `evidence/post-h11-sustainment-loop-*.json`. **`npm run validate:post-h11-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h10-legacy`** / **`validate:post-h10-sustainment-manifest`**; **`verify:sustainment-loop:h9-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 
@@ -88,6 +88,11 @@ Every PR should include:
 
 - **Env**: **`UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX`** (alias **`DISPATCH_QUEUE_RETENTION_NON_TERMINAL_MAX`**) — max **`dispatched`** / **`failed`** rows to keep (**oldest** pruned first after each mutation). **`0`** = unlimited. **`pending`** entries are never removed by pruning.
 - **Runtime**: **`FileDispatchDurabilityQueue`** passes retention into each atomic queue save via **`pruneCompletedDispatchQueueEntries`**.
+
+## Capability policy audit rotation (H11)
+
+- **Env**: **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`** (alias **`CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`**, 0 = off), **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT`** (alias **`CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT`**, default 8).
+- **Behavior**: before each capability policy audit append in **`appendCapabilityPolicyAuditLog`**, when max-bytes is set, rotate active JSONL to **`${path}.${timestamp}.jsonl`** (same naming pattern as dispatch audit); **`UnifiedCapabilityEngine`** passes rotation when configured via **`unified-dispatch`** runtime config.
 
 ## Cutover and Rollback Commands
 

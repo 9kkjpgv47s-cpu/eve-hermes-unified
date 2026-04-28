@@ -44,6 +44,8 @@ export type CapabilityExecutionDependencies = {
   executionTimeoutMs?: number;
   /** When set, append JSONL capability policy authorization records (@cap) after each policy evaluation. */
   capabilityPolicyAuditLogPath?: string;
+  /** Optional rotation for capability policy audit JSONL (disabled when maxBytes is 0). */
+  capabilityPolicyAuditRotation?: { maxBytes: number; retainCount: number };
 };
 
 async function withCapabilityExecutorTimeout<T>(
@@ -168,18 +170,25 @@ export class UnifiedCapabilityEngine implements CapabilityEngine {
       });
       const auditPath = this.dependencies.capabilityPolicyAuditLogPath?.trim();
       if (auditPath) {
-        await appendCapabilityPolicyAuditLog(auditPath, {
-          recordedAtIso: new Date().toISOString(),
-          traceId: envelope.traceId,
-          capabilityId: selection.id,
-          lane: selection.lane,
-          chatId: envelope.chatId,
-          messageId: envelope.messageId,
-          ...(envelope.tenantId?.trim() ? { tenantId: envelope.tenantId.trim() } : {}),
-          ...(envelope.regionId?.trim() ? { regionId: envelope.regionId.trim() } : {}),
-          allowed: authorization.allowed,
-          policyReason: authorization.reason,
-        });
+        const rotation = this.dependencies.capabilityPolicyAuditRotation;
+        await appendCapabilityPolicyAuditLog(
+          auditPath,
+          {
+            recordedAtIso: new Date().toISOString(),
+            traceId: envelope.traceId,
+            capabilityId: selection.id,
+            lane: selection.lane,
+            chatId: envelope.chatId,
+            messageId: envelope.messageId,
+            ...(envelope.tenantId?.trim() ? { tenantId: envelope.tenantId.trim() } : {}),
+            ...(envelope.regionId?.trim() ? { regionId: envelope.regionId.trim() } : {}),
+            allowed: authorization.allowed,
+            policyReason: authorization.reason,
+          },
+          rotation && rotation.maxBytes > 0
+            ? { rotation: { maxBytes: rotation.maxBytes, retainCount: rotation.retainCount } }
+            : undefined,
+        );
       }
       if (!authorization.allowed) {
         const denied = denialExecutionResult(

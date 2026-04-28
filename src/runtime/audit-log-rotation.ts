@@ -105,3 +105,6 @@ export async function maybeRotateDispatchAuditLog(
   const removedPaths = await enforceDispatchAuditRetention(logPath, retainCount);
   return { rotated: true, rotatedToPath, removedPaths };
 }
+
+/** Same size-based rotate + retention as dispatch audit; works for any append-only `*.jsonl` audit sink using `${path}.${timestamp}.jsonl` archives. */
+export const maybeRotateAppendOnlyJsonlAuditLog = maybeRotateDispatchAuditLog;

@@ -171,6 +171,21 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
       ),
     );
     expect(config.capabilityPolicyAuditLogPath).toBe("/tmp/explicit-cap-policy.jsonl");
+    expect(config.capabilityPolicyAuditRotationMaxBytes).toBe(0);
+    expect(config.capabilityPolicyAuditRotationRetainCount).toBe(8);
+  });
+
+  it("parses capability policy audit rotation env", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES: "65536",
+          CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT: "5",
+        }),
+      ),
+    );
+    expect(config.capabilityPolicyAuditRotationMaxBytes).toBe(65536);
+    expect(config.capabilityPolicyAuditRotationRetainCount).toBe(5);
   });
 
   it("parses cutover stage controls and aliases", () => {

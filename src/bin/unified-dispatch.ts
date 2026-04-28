@@ -133,6 +133,13 @@ async function buildDispatchRuntime(): Promise<{
     dispatchLane,
     policy: capabilityPolicy,
     capabilityPolicyAuditLogPath: config.capabilityPolicyAuditLogPath,
+    capabilityPolicyAuditRotation:
+      config.capabilityPolicyAuditRotationMaxBytes > 0
+        ? {
+            maxBytes: config.capabilityPolicyAuditRotationMaxBytes,
+            retainCount: config.capabilityPolicyAuditRotationRetainCount,
+          }
+        : undefined,
     executionTimeoutMs:
       config.capabilityExecutionTimeoutMs > 0 ? config.capabilityExecutionTimeoutMs : undefined,
   });

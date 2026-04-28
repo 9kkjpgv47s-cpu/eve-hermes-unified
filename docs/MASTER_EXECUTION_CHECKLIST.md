@@ -85,23 +85,23 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H10 sustainment (continuous)
+## Phase 8 - Post-H11 sustainment (continuous)
 
-After horizon **H10** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H11** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
 - [ ] `npm run validate:horizon-status` exits `0`.
-- [ ] `npm run run:h10-assurance-bundle` exits `0` and emits `evidence/h10-assurance-bundle-*.json`.
-- [ ] `npm run validate:h10-closeout` exits `0` (uses evidence under `evidence/`).
+- [ ] `npm run run:h11-assurance-bundle` exits `0` and emits `evidence/h11-assurance-bundle-*.json`.
+- [ ] `npm run validate:h11-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains the three above and writes `evidence/post-h10-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains the three above and writes `evidence/post-h11-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [ ] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [ ] `npm run validate:post-h10-sustainment-manifest` exits `0`.
+- [ ] `npm run validate:post-h11-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h9-legacy`** / **`validate:post-h9-sustainment-manifest`** (H9 chain); **`verify:sustainment-loop:h8-legacy`** / **`validate:post-h8-sustainment-manifest`** (H8 chain); **`verify:sustainment-loop:h7-legacy`** / **`validate:post-h7-sustainment-manifest`** (H7 chain); **`verify:sustainment-loop:h6-legacy`** / **`validate:post-h6-sustainment-manifest`** (H6-only chain).
+Historical sustainment: **`npm run verify:sustainment-loop:h10-legacy`** / **`validate:post-h10-sustainment-manifest`** (H10 chain); **`verify:sustainment-loop:h9-legacy`** / **`validate:post-h9-sustainment-manifest`** (H9 chain); **`verify:sustainment-loop:h8-legacy`** … **`h6-legacy`**.
 
 Exit criteria:
 

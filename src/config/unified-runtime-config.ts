@@ -47,6 +47,10 @@ export type UnifiedRuntimeEnvConfig = {
   auditRotationRetainCount: number;
   /** Append-only JSONL log for capability policy authorization decisions (@cap). */
   capabilityPolicyAuditLogPath: string;
+  /** Rotate capability policy audit JSONL when active file exceeds this size (bytes); 0 = disabled. */
+  capabilityPolicyAuditRotationMaxBytes: number;
+  /** Keep at most this many generations (active log + rotated siblings). */
+  capabilityPolicyAuditRotationRetainCount: number;
   /** When non-empty, dispatch rejects envelopes whose tenantId is missing or not in this list. */
   tenantAllowlist: string[];
   /** Dispatch rejects envelopes whose tenantId is in this list. */
@@ -334,6 +338,22 @@ export function loadUnifiedRuntimeEnvConfig(
   const capabilityPolicyAuditLogPath =
     firstDefined(reader, ["UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH", "CAPABILITY_POLICY_AUDIT_LOG_PATH"]) ??
     path.join(path.dirname(auditLogPath), "unified-capability-policy-audit.jsonl");
+  const capabilityPolicyAuditRotationMaxBytes = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES",
+      "CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES",
+    ]),
+    0,
+  );
+  const capabilityPolicyAuditRotationRetainCountRaw = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT",
+      "CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT",
+    ]),
+    8,
+  );
+  const capabilityPolicyAuditRotationRetainCount =
+    capabilityPolicyAuditRotationRetainCountRaw <= 0 ? 1 : capabilityPolicyAuditRotationRetainCountRaw;
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -414,6 +434,8 @@ export function loadUnifiedRuntimeEnvConfig(
     auditRotationMaxBytes,
     auditRotationRetainCount,
     capabilityPolicyAuditLogPath,
+    capabilityPolicyAuditRotationMaxBytes,
+    capabilityPolicyAuditRotationRetainCount,
     tenantAllowlist: dispatchAllowedTenantIds,
     tenantDenylist: dispatchDeniedTenantIds,
     routerConfig: {

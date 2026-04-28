@@ -180,7 +180,7 @@ Primary risks:
 - Drift between documented horizons and `VALID_HORIZONS` in tooling.
 
 Mitigations:
-- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H10**).
+- Single source: update `docs/HORIZON_STATUS.json` and run `npm run validate:horizon-status` (validator accepts **H1–H11**).
 
 ### Horizon H7 - Dispatch audit lifecycle (rotation and retention)
 
@@ -273,9 +273,32 @@ Mitigations:
 
 - Sensible default (**5000**); document **`0`** for unlimited retention when disk is not a concern.
 
-### Post-H10 operations
+### Horizon H11 - Capability policy audit JSONL lifecycle (rotation)
 
-After **H10** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h10-closeout`**. Optionally **`npm run validate:post-h10-sustainment-manifest`** checks the latest **`evidence/post-h10-sustainment-loop-*.json`**. Legacy: **`verify:sustainment-loop:h9-legacy`** / **`validate:post-h9-sustainment-manifest`**, **`verify:sustainment-loop:h8-legacy`** … **`h6-legacy`**.
+Goal: align **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** append-only JSONL with the dispatch audit **rotation pattern** so noisy `@cap` workloads cannot grow a single file without bound when operators opt in.
+
+Workstreams:
+
+- **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`** / **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT`** (aliases without **`UNIFIED_`** prefix); **`0`** max-bytes keeps rotation off (H8 default append-only behavior unchanged).
+- **`appendCapabilityPolicyAuditLog`** calls **`maybeRotateAppendOnlyJsonlAuditLog`** before append when configured; **`UnifiedCapabilityEngine`** receives rotation via **`unified-dispatch`** runtime wiring.
+- Executable proof via **`npm run run:h11-assurance-bundle`** (extends H10 gates with **`test/capability-policy-audit-rotation.test.ts`**) and **`validate:h11-closeout`**.
+
+Exit evidence:
+
+- **`npm run run:h11-assurance-bundle`** passes and artifact matches **`evidence/h11-assurance-bundle-*.json`** (includes **`capabilityPolicyAuditRotationPass`**).
+- **`npm run validate:h11-closeout`** passes when evidence is present (H11 is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- Operators enable aggressive thresholds and rotate away forensic history unexpectedly.
+
+Mitigations:
+
+- Document **`0`** default for max-bytes (rotation disabled until explicitly configured).
+
+### Post-H11 operations
+
+After **H11** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h11-closeout`**. Optionally **`npm run validate:post-h11-sustainment-manifest`** checks the latest **`evidence/post-h11-sustainment-loop-*.json`**. Legacy: **`verify:sustainment-loop:h10-legacy`** / **`validate:post-h10-sustainment-manifest`**, **`verify:sustainment-loop:h9-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 

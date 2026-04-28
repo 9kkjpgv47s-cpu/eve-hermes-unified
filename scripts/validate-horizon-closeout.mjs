@@ -50,6 +50,16 @@ function parseHorizonRunnerCommand(command) {
   };
 }
 
+function resolveBooleanSignal(checks, keys) {
+  for (const key of keys) {
+    const candidate = checks?.[key];
+    if (typeof candidate === "boolean") {
+      return { reported: true, pass: candidate };
+    }
+  }
+  return { reported: false, pass: false };
+}
+
 function evidenceEntryAppliesToHorizon(entry, targetHorizon) {
   if (!entry || typeof entry !== "object") {
     return false;
@@ -570,16 +580,61 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     } else if (expectedNext && next !== expectedNext) {
       checks.push(`horizon_closeout_run_next_horizon_mismatch:${next}!=${expectedNext}`);
     }
-    const closeoutGateReported =
-      typeof payload?.checks?.horizonCloseoutGatePass === "boolean"
-      || typeof payload?.checks?.h2CloseoutGatePass === "boolean";
-    const closeoutGatePass =
-      payload?.checks?.horizonCloseoutGatePass === true
-      || payload?.checks?.h2CloseoutGatePass === true;
-    if (!closeoutGateReported) {
+    const signalChecks =
+      payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
+    const closeoutGateSignal = resolveBooleanSignal(signalChecks, [
+      "horizonCloseoutGatePass",
+      "h2CloseoutGatePass",
+    ]);
+    if (!closeoutGateSignal.reported) {
       checks.push("horizon_closeout_run_gate_not_reported");
-    } else if (!closeoutGatePass) {
+    } else if (!closeoutGateSignal.pass) {
       checks.push("horizon_closeout_run_gate_not_passed");
+    }
+    const supervisedSimulationSignal = resolveBooleanSignal(signalChecks, [
+      "supervisedSimulationPass",
+    ]);
+    if (!supervisedSimulationSignal.reported) {
+      checks.push("horizon_closeout_run_supervised_simulation_not_reported");
+    } else if (!supervisedSimulationSignal.pass) {
+      checks.push("horizon_closeout_run_supervised_simulation_not_passed");
+    }
+    const validationPropagationReported = resolveBooleanSignal(signalChecks, [
+      "supervisedSimulationStageGoalPolicyPropagationReported",
+      "supervisedSimulationStageGoalPolicyValidationPropagationReported",
+      "supervisedSimulationStagePolicySignalsReported",
+    ]);
+    const validationPropagationPassed = resolveBooleanSignal(signalChecks, [
+      "supervisedSimulationStageGoalPolicyPropagationPassed",
+      "supervisedSimulationStageGoalPolicyValidationPropagationPassed",
+      "supervisedSimulationStagePolicySignalsPass",
+    ]);
+    if (!validationPropagationReported.reported || !validationPropagationReported.pass) {
+      checks.push("horizon_closeout_run_supervised_stage_goal_policy_not_reported");
+    } else if (!validationPropagationPassed.reported) {
+      checks.push("horizon_closeout_run_supervised_stage_goal_policy_pass_not_reported");
+    } else if (!validationPropagationPassed.pass) {
+      checks.push("horizon_closeout_run_supervised_stage_goal_policy_not_passed");
+    }
+    const sourceConsistencyPropagationReported = resolveBooleanSignal(signalChecks, [
+      "supervisedSimulationStageGoalPolicySourceConsistencyPropagationReported",
+      "supervisedSimulationStageSourceConsistencySignalsReported",
+    ]);
+    const sourceConsistencyPropagationPassed = resolveBooleanSignal(signalChecks, [
+      "supervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed",
+      "supervisedSimulationStageSourceConsistencySignalsPass",
+    ]);
+    if (
+      !sourceConsistencyPropagationReported.reported
+      || !sourceConsistencyPropagationReported.pass
+    ) {
+      checks.push("horizon_closeout_run_supervised_stage_goal_policy_source_consistency_not_reported");
+    } else if (!sourceConsistencyPropagationPassed.reported) {
+      checks.push(
+        "horizon_closeout_run_supervised_stage_goal_policy_source_consistency_pass_not_reported",
+      );
+    } else if (!sourceConsistencyPropagationPassed.pass) {
+      checks.push("horizon_closeout_run_supervised_stage_goal_policy_source_consistency_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -617,10 +672,67 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     } else if (expectedNext && next !== expectedNext) {
       checks.push(`horizon_promotion_run_next_horizon_mismatch:${next}!=${expectedNext}`);
     }
-    if (typeof payload?.checks?.horizonPromotionPass !== "boolean") {
+    const signalChecks =
+      payload?.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (typeof signalChecks.horizonPromotionPass !== "boolean") {
       checks.push("horizon_promotion_run_gate_not_reported");
-    } else if (payload?.checks?.horizonPromotionPass !== true) {
+    } else if (signalChecks.horizonPromotionPass !== true) {
       checks.push("horizon_promotion_run_gate_not_passed");
+    }
+    const closeoutRunPassSignal = resolveBooleanSignal(signalChecks, [
+      "closeoutRunPass",
+    ]);
+    if (!closeoutRunPassSignal.reported) {
+      checks.push("horizon_promotion_run_closeout_run_pass_not_reported");
+    } else if (!closeoutRunPassSignal.pass) {
+      checks.push("horizon_promotion_run_closeout_run_not_passed");
+    }
+    const closeoutGateSignal = resolveBooleanSignal(signalChecks, [
+      "closeoutGatePass",
+      "closeoutRunH2CloseoutGatePass",
+      "closeoutRunHorizonCloseoutGatePass",
+    ]);
+    if (!closeoutGateSignal.reported) {
+      checks.push("horizon_promotion_run_closeout_gate_not_reported");
+    } else if (!closeoutGateSignal.pass) {
+      checks.push("horizon_promotion_run_closeout_gate_not_passed");
+    }
+    const validationPropagationReported = resolveBooleanSignal(signalChecks, [
+      "closeoutRunSupervisedSimulationStageGoalPolicyPropagationReported",
+      "closeoutRunSupervisedSimulationStageGoalPolicyValidationPropagationReported",
+    ]);
+    const validationPropagationPassed = resolveBooleanSignal(signalChecks, [
+      "closeoutRunSupervisedSimulationStageGoalPolicyPropagationPassed",
+      "closeoutRunSupervisedSimulationStageGoalPolicyValidationPropagationPassed",
+    ]);
+    if (!validationPropagationReported.reported || !validationPropagationReported.pass) {
+      checks.push("horizon_promotion_run_closeout_run_supervised_stage_goal_policy_not_reported");
+    } else if (!validationPropagationPassed.reported) {
+      checks.push("horizon_promotion_run_closeout_run_supervised_stage_goal_policy_pass_not_reported");
+    } else if (!validationPropagationPassed.pass) {
+      checks.push("horizon_promotion_run_closeout_run_supervised_stage_goal_policy_not_passed");
+    }
+    const sourceConsistencyPropagationReported = resolveBooleanSignal(signalChecks, [
+      "closeoutRunSupervisedSimulationStageGoalPolicySourceConsistencyPropagationReported",
+    ]);
+    const sourceConsistencyPropagationPassed = resolveBooleanSignal(signalChecks, [
+      "closeoutRunSupervisedSimulationStageGoalPolicySourceConsistencyPropagationPassed",
+    ]);
+    if (
+      !sourceConsistencyPropagationReported.reported
+      || !sourceConsistencyPropagationReported.pass
+    ) {
+      checks.push(
+        "horizon_promotion_run_closeout_run_supervised_stage_goal_policy_source_consistency_not_reported",
+      );
+    } else if (!sourceConsistencyPropagationPassed.reported) {
+      checks.push(
+        "horizon_promotion_run_closeout_run_supervised_stage_goal_policy_source_consistency_pass_not_reported",
+      );
+    } else if (!sourceConsistencyPropagationPassed.pass) {
+      checks.push(
+        "horizon_promotion_run_closeout_run_supervised_stage_goal_policy_source_consistency_not_passed",
+      );
     }
     return { pass: checks.length === 0, checks };
   }

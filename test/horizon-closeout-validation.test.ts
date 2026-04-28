@@ -894,4 +894,303 @@ describe("validate-horizon-closeout.mjs", () => {
       ).toBe(true);
     });
   });
+
+  it("fails when H3 closeout-run artifact omits supervised stage propagation signals", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "h3-closeout.json");
+      await seedEvidence(evidenceDir);
+      await seedH3H4SpecificEvidence(evidenceDir);
+
+      await writeFile(
+        horizonPath,
+        JSON.stringify(
+          {
+            schemaVersion: "v1",
+            updatedAtIso: new Date().toISOString(),
+            owner: "cloud-agent",
+            activeHorizon: "H3",
+            activeStatus: "in_progress",
+            summary: "H3 closeout fixture",
+            blockers: [],
+            requiredEvidence: [
+              {
+                id: "h1-release-readiness",
+                command: "npm run validate:release-readiness",
+                artifactPattern: "evidence/release-readiness-*.json",
+                required: true,
+              },
+              {
+                id: "h1-cutover-readiness",
+                command: "npm run validate:cutover-readiness",
+                artifactPattern: "evidence/cutover-readiness-*.json",
+                required: true,
+              },
+              {
+                id: "h1-merge-bundle",
+                command: "npm run validate:merge-bundle",
+                artifactPattern: "evidence/merge-bundle-validation-*.json",
+                required: true,
+              },
+              {
+                id: "h1-bundle-verification",
+                command: "npm run verify:merge-bundle",
+                artifactPattern: "evidence/bundle-verification-*.json",
+                required: true,
+              },
+              {
+                id: "h1-evidence-summary",
+                command: "npm run validate:evidence-summary",
+                artifactPattern: "evidence/validation-summary-*.json",
+                required: true,
+              },
+              {
+                id: "h3-closeout-run",
+                command: "npm run run:h3-closeout",
+                artifactPattern: "evidence/horizon-closeout-run-H3-*.json",
+                required: true,
+                horizons: ["H3"],
+              },
+            ],
+            nextActions: [
+              {
+                id: "h3-action-1",
+                summary: "closeout fixture action",
+                targetHorizon: "H3",
+                status: "completed",
+              },
+            ],
+            promotionReadiness: {
+              targetStage: "full",
+              gates: {
+                releaseReadinessPass: true,
+                mergeBundlePass: true,
+                bundleVerificationPass: true,
+                cutoverReadinessPass: true,
+                evidenceSummaryPass: true,
+              },
+            },
+            horizonStates: {
+              H1: { status: "completed", summary: "H1 complete" },
+              H2: { status: "completed", summary: "H2 complete" },
+              H3: { status: "in_progress", summary: "H3 active" },
+              H4: { status: "planned", summary: "H4 planned" },
+              H5: { status: "planned", summary: "H5 planned" },
+            },
+            history: [
+              {
+                timestamp: new Date().toISOString(),
+                horizon: "H3",
+                status: "in_progress",
+                note: "seed fixture",
+              },
+            ],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const closeoutRunPath = path.join(evidenceDir, "horizon-closeout-run-H3-20260426-000123.json");
+      const closeoutRunPayload = JSON.parse(await readFile(closeoutRunPath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      closeoutRunPayload.checks = {
+        ...(closeoutRunPayload.checks ?? {}),
+      };
+      delete closeoutRunPayload.checks.supervisedSimulationStageGoalPolicyPropagationReported;
+      delete closeoutRunPayload.checks.supervisedSimulationStageGoalPolicyPropagationPassed;
+      await writeFile(closeoutRunPath, `${JSON.stringify(closeoutRunPayload, null, 2)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H3",
+          "--next-horizon",
+          "H4",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--allow-horizon-mismatch",
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          requiredEvidence: Array<{ id: string; pass: boolean; checks: string[] }>;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("required_evidence_failed:h3-closeout-run");
+      expect(payload.checks.requiredEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "h3-closeout-run",
+            pass: false,
+            checks: expect.arrayContaining([
+              "horizon_closeout_run_supervised_stage_goal_policy_not_reported",
+            ]),
+          }),
+        ]),
+      );
+    });
+  });
+
+  it("fails when H3 promotion-run artifact omits closeout-run gate pass signal", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "h3-closeout.json");
+      await seedEvidence(evidenceDir);
+      await seedH3H4SpecificEvidence(evidenceDir);
+
+      await writeFile(
+        horizonPath,
+        JSON.stringify(
+          {
+            schemaVersion: "v1",
+            updatedAtIso: new Date().toISOString(),
+            owner: "cloud-agent",
+            activeHorizon: "H3",
+            activeStatus: "in_progress",
+            summary: "H3 closeout fixture",
+            blockers: [],
+            requiredEvidence: [
+              {
+                id: "h1-release-readiness",
+                command: "npm run validate:release-readiness",
+                artifactPattern: "evidence/release-readiness-*.json",
+                required: true,
+              },
+              {
+                id: "h1-cutover-readiness",
+                command: "npm run validate:cutover-readiness",
+                artifactPattern: "evidence/cutover-readiness-*.json",
+                required: true,
+              },
+              {
+                id: "h1-merge-bundle",
+                command: "npm run validate:merge-bundle",
+                artifactPattern: "evidence/merge-bundle-validation-*.json",
+                required: true,
+              },
+              {
+                id: "h1-bundle-verification",
+                command: "npm run verify:merge-bundle",
+                artifactPattern: "evidence/bundle-verification-*.json",
+                required: true,
+              },
+              {
+                id: "h1-evidence-summary",
+                command: "npm run validate:evidence-summary",
+                artifactPattern: "evidence/validation-summary-*.json",
+                required: true,
+              },
+              {
+                id: "h3-promotion-run",
+                command: "npm run run:h3-promotion",
+                artifactPattern: "evidence/horizon-promotion-run-H3-*.json",
+                required: true,
+                horizons: ["H3"],
+              },
+            ],
+            nextActions: [
+              {
+                id: "h3-action-1",
+                summary: "closeout fixture action",
+                targetHorizon: "H3",
+                status: "completed",
+              },
+            ],
+            promotionReadiness: {
+              targetStage: "full",
+              gates: {
+                releaseReadinessPass: true,
+                mergeBundlePass: true,
+                bundleVerificationPass: true,
+                cutoverReadinessPass: true,
+                evidenceSummaryPass: true,
+              },
+            },
+            horizonStates: {
+              H1: { status: "completed", summary: "H1 complete" },
+              H2: { status: "completed", summary: "H2 complete" },
+              H3: { status: "in_progress", summary: "H3 active" },
+              H4: { status: "planned", summary: "H4 planned" },
+              H5: { status: "planned", summary: "H5 planned" },
+            },
+            history: [
+              {
+                timestamp: new Date().toISOString(),
+                horizon: "H3",
+                status: "in_progress",
+                note: "seed fixture",
+              },
+            ],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const promotionRunPath = path.join(evidenceDir, "horizon-promotion-run-H3-20260426-000123.json");
+      const promotionRunPayload = JSON.parse(await readFile(promotionRunPath, "utf8")) as {
+        checks?: Record<string, unknown>;
+      };
+      promotionRunPayload.checks = {
+        ...(promotionRunPayload.checks ?? {}),
+      };
+      delete promotionRunPayload.checks.closeoutRunPass;
+      await writeFile(promotionRunPath, `${JSON.stringify(promotionRunPayload, null, 2)}\n`, "utf8");
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-horizon-closeout.mjs",
+          "--horizon",
+          "H3",
+          "--next-horizon",
+          "H4",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--allow-horizon-mismatch",
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: {
+          requiredEvidence: Array<{ id: string; pass: boolean; checks: string[] }>;
+        };
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.failures).toContain("required_evidence_failed:h3-promotion-run");
+      expect(payload.checks.requiredEvidence).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "h3-promotion-run",
+            pass: false,
+            checks: expect.arrayContaining(["horizon_promotion_run_closeout_run_pass_not_reported"]),
+          }),
+        ]),
+      );
+    });
+  });
 });

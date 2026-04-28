@@ -71,4 +71,33 @@ describe("runRuntimePreflight", () => {
       );
     });
   });
+
+  it("fails when dual-write shadow path equals primary path", async () => {
+    await withTempDir(async (dir) => {
+      const mem = path.join(dir, "same.json");
+      const config = {
+        ...baseConfig(dir),
+        unifiedMemoryFilePath: mem,
+        unifiedMemoryDualWriteFilePath: mem,
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "dual-write shadow path must differ",
+      );
+    });
+  });
+
+  it("fails when durable WAL path parent is not writable", async () => {
+    await withTempDir(async (dir) => {
+      const blocked = path.join(dir, "blocked");
+      await writeFile(blocked, "x", "utf8");
+      const walPath = path.join(blocked, "nested", "wal.jsonl");
+      const config = {
+        ...baseConfig(dir),
+        dispatchDurableWalPath: walPath,
+      };
+      await expect(runRuntimePreflight(config)).rejects.toThrow(
+        "Dispatch durable WAL path is not writable",
+      );
+    });
+  });
 });

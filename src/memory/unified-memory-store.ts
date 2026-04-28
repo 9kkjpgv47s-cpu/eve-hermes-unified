@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { LaneId } from "../contracts/types.js";
 
@@ -70,6 +71,19 @@ function cloneEntry(entry: UnifiedMemoryEntry): UnifiedMemoryEntry {
 function serializeRecordMap(records: Map<string, UnifiedMemoryEntry>): string {
   return JSON.stringify([...records.values()], null, 2);
 }
+
+export async function writeJsonFileAtomically(filePath: string, payload: string): Promise<void> {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  const dir = path.dirname(filePath);
+  const tmp = path.join(dir, `.${path.basename(filePath)}.${randomUUID()}.tmp`);
+  await writeFile(tmp, payload, "utf8");
+  await rename(tmp, filePath);
+}
+
+export type UnifiedMemoryStoreFactoryOptions = {
+  /** When set, mirror every write to this second file-backed store (must differ from primary path). */
+  dualWriteShadowFilePath?: string;
+};
 
 function parseRecordList(raw: string): UnifiedMemoryEntry[] {
   const parsed = JSON.parse(raw) as unknown;
@@ -172,8 +186,7 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 
   private async persist(): Promise<void> {
-    await mkdir(path.dirname(this.filePath), { recursive: true });
-    await writeFile(this.filePath, serializeRecordMap(this.records), "utf8");
+    await writeJsonFileAtomically(this.filePath, serializeRecordMap(this.records));
   }
 
   private async queueWrite(operation: () => Promise<void>): Promise<void> {
@@ -192,13 +205,14 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
     target: UnifiedMemoryKey,
     value: string,
     metadata?: Record<string, string>,
+    options?: { updatedAtIso?: string },
   ): Promise<UnifiedMemoryEntry> {
     const normalized = normalizeMemoryKey(target);
     await this.ensureLoaded();
     const entry: UnifiedMemoryEntry = {
       ...normalized,
       value,
-      updatedAtIso: new Date().toISOString(),
+      updatedAtIso: options?.updatedAtIso ?? new Date().toISOString(),
       metadata: metadata ? { ...metadata } : undefined,
     };
     await this.queueWrite(async () => {
@@ -245,12 +259,52 @@ export class FileUnifiedMemoryStore implements UnifiedMemoryStore {
   }
 }
 
+export class DualWriteUnifiedMemoryStore implements UnifiedMemoryStore {
+  constructor(
+    private readonly primary: FileUnifiedMemoryStore,
+    private readonly shadow: FileUnifiedMemoryStore,
+  ) {}
+
+  async get(target: UnifiedMemoryKey): Promise<UnifiedMemoryEntry | undefined> {
+    return this.primary.get(target);
+  }
+
+  async set(
+    target: UnifiedMemoryKey,
+    value: string,
+    metadata?: Record<string, string>,
+  ): Promise<UnifiedMemoryEntry> {
+    const entry = await this.primary.set(target, value, metadata);
+    await this.shadow.set(target, value, metadata, { updatedAtIso: entry.updatedAtIso });
+    return entry;
+  }
+
+  async delete(target: UnifiedMemoryKey): Promise<boolean> {
+    const deleted = await this.primary.delete(target);
+    await this.shadow.delete(target);
+    return deleted;
+  }
+
+  async list(query?: UnifiedMemoryListQuery): Promise<UnifiedMemoryEntry[]> {
+    return this.primary.list(query);
+  }
+}
+
 export function createUnifiedMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
+  options?: UnifiedMemoryStoreFactoryOptions,
 ): UnifiedMemoryStore {
   if (kind === "file") {
-    return new FileUnifiedMemoryStore(filePath);
+    const primary = new FileUnifiedMemoryStore(filePath);
+    const shadowPath = options?.dualWriteShadowFilePath?.trim();
+    if (shadowPath && shadowPath.length > 0) {
+      if (path.resolve(shadowPath) === path.resolve(filePath)) {
+        throw new Error("dualWriteShadowFilePath must differ from unified memory file path.");
+      }
+      return new DualWriteUnifiedMemoryStore(primary, new FileUnifiedMemoryStore(shadowPath));
+    }
+    return primary;
   }
   return new InMemoryUnifiedMemoryStore();
 }

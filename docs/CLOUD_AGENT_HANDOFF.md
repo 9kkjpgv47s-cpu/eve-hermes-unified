@@ -58,6 +58,15 @@ Rollback:
 npm run cutover:rollback
 ```
 
+## H3 durability (runtime)
+
+- Optional append-only WAL: set `UNIFIED_DISPATCH_DURABLE_WAL_PATH`; unified-dispatch writes `dispatch_attempt` / `dispatch_complete` per request.
+- Replay orphans: `npm run replay:dispatch-wal -- --dry-run` (or `--wal <path> --limit N --out <json>`).
+- Optional memory shadow: `UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH` (must differ from primary).
+- Policy-gated fallback: `UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES` (comma-separated failure classes); when primary fails outside the list, result includes `primaryFallbackLimited: true` and no fallback lane run.
+- Capability wall-clock timeout: `UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`.
+- Evidence: `npm run summarize:soak` (drift alarms on latest `soak-*.jsonl`), `npm run run:emergency-rollback-rehearsal` (manifest under `evidence/`).
+
 ## Evidence Expectations
 
 Before marking a phase complete, include artifacts from:

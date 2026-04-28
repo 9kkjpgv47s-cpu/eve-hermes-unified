@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-26T23:26:00Z",
+  "updatedAtIso": "2026-04-28T21:08:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -157,43 +157,64 @@
       "id": "h3-action-1",
       "summary": "Harden runtime durability boundaries with persistent queue/replay semantics for cross-lane dispatch recovery.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "runtime"]
     },
     {
       "id": "h3-action-2",
       "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["policy-hardening", "runtime"]
     },
     {
       "id": "h3-action-3",
       "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["capability", "policy-hardening"]
     },
     {
       "id": "h3-action-4",
       "summary": "Add memory durability verification suite for crash/restart recovery and cross-lane consistency checks.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["durability", "memory"]
     },
     {
       "id": "h3-action-5",
       "summary": "Create long-window soak validation for H3 policy and durability changes with explicit SLO drift alarms.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
     },
     {
       "id": "h3-action-6",
       "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
       "targetHorizon": "H3",
-      "status": "planned",
+      "status": "completed",
       "tags": ["rollback", "operations"]
+    },
+    {
+      "id": "h4-action-1",
+      "summary": "Add CI/static gate ensuring unified dispatch is the only production ingress for lane adapter construction.",
+      "targetHorizon": "H4",
+      "status": "planned",
+      "tags": ["legacy", "validation"]
+    },
+    {
+      "id": "h4-action-2",
+      "summary": "Freeze versioned unified dispatch contract surface with fixture conformance tests for downstream consumers.",
+      "targetHorizon": "H4",
+      "status": "planned",
+      "tags": ["contract", "validation"]
+    },
+    {
+      "id": "h4-action-3",
+      "summary": "Publish deprecation map for legacy operator shell bypasses in contract documentation.",
+      "targetHorizon": "H4",
+      "status": "planned",
+      "tags": ["legacy", "documentation"]
     }
   ],
   "goalPolicies": {
@@ -266,7 +287,7 @@
     },
     "H3": {
       "status": "planned",
-      "summary": "Runtime durability and policy maturity hardening."
+      "summary": "First H3 slice landed: durable dispatch WAL with replay CLI, atomic file memory + optional dual-write, failure-class-gated fallback with primaryFallbackLimited, capability execution timeout, soak drift summary script, emergency rollback rehearsal manifest, evidence summarizer prefers soak-*.jsonl."
     },
     "H4": {
       "status": "planned",
@@ -391,6 +412,12 @@
       "horizon": "H2",
       "status": "in_progress",
       "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
+    },
+    {
+      "timestamp": "2026-04-28T21:08:00Z",
+      "horizon": "H3",
+      "status": "planned",
+      "note": "Implemented durable dispatch WAL (attempt/complete), replay-dispatch-wal CLI, buildUnifiedDispatchRuntime, atomic JSON memory writes with optional dual-write shadow, UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES + primaryFallbackLimited, UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS, summarize:soak and run:emergency-rollback-rehearsal in validate:all; summarize-evidence selects soak-*.jsonl over soak-summary artifacts."
     }
   ]
 }

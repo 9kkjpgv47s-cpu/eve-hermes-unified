@@ -1,4 +1,4 @@
-import type { LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
+import type { FailureClass, LaneId, RoutingDecision, UnifiedMessageEnvelope } from "../contracts/types.js";
 import { validateRoutingDecision } from "../contracts/validate.js";
 
 export type RouterCutoverStage = "shadow" | "canary" | "majority" | "full";
@@ -8,6 +8,11 @@ export type RouterPolicyConfig = {
   defaultFallback: LaneId | "none";
   failClosed: boolean;
   policyVersion: string;
+  /**
+   * When non-empty, only these primary failure classes may trigger automatic fallback.
+   * When empty/omitted, any primary failure may trigger fallback (subject to failClosed and fallbackLane).
+   */
+  dispatchFailureClassesAllowingFallback?: FailureClass[];
   cutoverStage?: RouterCutoverStage;
   canaryChatIds?: string[];
   majorityPercent?: number;

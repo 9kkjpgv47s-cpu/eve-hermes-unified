@@ -1,4 +1,4 @@
-import type { LaneId } from "../contracts/types.js";
+import type { LaneId, FailureClass } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
 import type { UnifiedMemoryStoreKind } from "../memory/unified-memory-store.js";
@@ -11,7 +11,13 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
+  /** Optional shadow file for dual-write durability (must differ from primary path). */
+  unifiedMemoryDualWriteFilePath?: string;
   unifiedDispatchAuditLogPath: string;
+  /** Optional append-only WAL for dispatch attempts (H3). */
+  dispatchDurableWalPath?: string;
+  /** When set (>0), capability executors are bounded by wall-clock timeout (ms). */
+  unifiedCapabilityExecutionTimeoutMs?: number;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
@@ -106,6 +112,35 @@ function parsePercent(raw: string | undefined, fallback: number): number {
   return fallback;
 }
 
+function parsePositiveIntMs(raw: string | undefined): number | undefined {
+  if (!raw?.trim()) {
+    return undefined;
+  }
+  const n = Number.parseInt(raw.trim(), 10);
+  if (!Number.isFinite(n) || n <= 0) {
+    return undefined;
+  }
+  return n;
+}
+
+function parseDispatchFallbackFailureClasses(raw: string | undefined): FailureClass[] {
+  if (!raw?.trim()) {
+    return [];
+  }
+  const allowed = new Set([
+    "none",
+    "provider_limit",
+    "cooldown",
+    "dispatch_failure",
+    "state_unavailable",
+    "policy_failure",
+  ]);
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => allowed.has(s)) as FailureClass[];
+}
+
 export function loadUnifiedRuntimeEnvConfig(
   reader: Reader = (name) => process.env[name],
 ): UnifiedRuntimeEnvConfig {
@@ -126,6 +161,20 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
+  const unifiedMemoryDualWriteFilePath = firstDefined(reader, [
+    "UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH",
+    "UNIFIED_MEMORY_SHADOW_FILE_PATH",
+  ]);
+  const dispatchDurableWalPath = firstDefined(reader, [
+    "UNIFIED_DISPATCH_DURABLE_WAL_PATH",
+    "DISPATCH_DURABLE_WAL_PATH",
+  ]);
+  const unifiedCapabilityExecutionTimeoutMs = parsePositiveIntMs(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS",
+      "CAPABILITY_EXECUTION_TIMEOUT_MS",
+    ]),
+  );
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
@@ -253,6 +302,9 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
+  const dispatchFailureClassesAllowingFallback = parseDispatchFallbackFailureClasses(
+    firstDefined(reader, ["UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES", "ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES"]),
+  );
 
   return {
     eveDispatchScript,
@@ -261,6 +313,9 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
+    unifiedMemoryDualWriteFilePath,
+    dispatchDurableWalPath,
+    unifiedCapabilityExecutionTimeoutMs,
     unifiedDispatchAuditLogPath,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
@@ -285,6 +340,7 @@ export function loadUnifiedRuntimeEnvConfig(
       canaryChatIds,
       majorityPercent,
       hashSalt,
+      dispatchFailureClassesAllowingFallback,
     },
   };
 }

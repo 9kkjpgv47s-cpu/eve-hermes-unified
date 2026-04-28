@@ -140,4 +140,24 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.hashSalt).toBe("salt-1");
     expect(config.preflight.enabled).toBe(false);
   });
+
+  it("parses H3 durability and policy env knobs", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_DUAL_WRITE_FILE_PATH: "/tmp/shadow-memory.json",
+          UNIFIED_DISPATCH_DURABLE_WAL_PATH: "/tmp/dispatch.wal.jsonl",
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "15000",
+          UNIFIED_ROUTER_DISPATCH_FALLBACK_FAILURE_CLASSES: "dispatch_failure,state_unavailable,bogus",
+        }),
+      ),
+    );
+    expect(config.unifiedMemoryDualWriteFilePath).toBe("/tmp/shadow-memory.json");
+    expect(config.dispatchDurableWalPath).toBe("/tmp/dispatch.wal.jsonl");
+    expect(config.unifiedCapabilityExecutionTimeoutMs).toBe(15000);
+    expect(config.routerConfig.dispatchFailureClassesAllowingFallback).toEqual([
+      "dispatch_failure",
+      "state_unavailable",
+    ]);
+  });
 });

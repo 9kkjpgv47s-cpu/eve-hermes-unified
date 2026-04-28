@@ -80,6 +80,8 @@ export type UnifiedDispatchResult = {
   primaryState: DispatchState;
   fallbackState?: DispatchState;
   fallbackInfo?: DispatchFallbackInfo;
+  /** When true, fallback was skipped because primary failure class was not allowlisted for fallback. */
+  primaryFallbackLimited?: boolean;
   capabilityDecision?: UnifiedCapabilityDecision;
   capabilityExecution?: CapabilityExecutionResult;
   response: UnifiedResponse;

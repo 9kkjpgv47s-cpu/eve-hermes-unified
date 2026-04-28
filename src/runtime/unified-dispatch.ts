@@ -3,6 +3,7 @@ import type {
   CapabilityExecutionResult,
   DispatchFallbackInfo,
   DispatchState,
+  FailureClass,
   LaneId,
   RoutingDecision,
   UnifiedCapabilityDecision,
@@ -53,6 +54,16 @@ function withCanonicalTraceId(state: DispatchState, traceId: string): DispatchSt
   return validateDispatchState({ ...state, traceId });
 }
 
+function failureClassAllowsFallback(
+  failureClass: FailureClass,
+  allowlist: FailureClass[] | undefined,
+): boolean {
+  if (!allowlist || allowlist.length === 0) {
+    return true;
+  }
+  return allowlist.includes(failureClass);
+}
+
 function toDispatchStateFromCapability(
   capabilityDecision: UnifiedCapabilityDecision,
   result: CapabilityExecutionResult,
@@ -80,6 +91,7 @@ function buildResult(
   options?: {
     fallbackState?: DispatchState;
     fallbackInfo?: DispatchFallbackInfo;
+    primaryFallbackLimited?: boolean;
     capabilityDecision?: UnifiedCapabilityDecision;
     capabilityExecution?: CapabilityExecutionResult;
   },
@@ -102,6 +114,7 @@ function buildResult(
     primaryState,
     fallbackState: options?.fallbackState,
     fallbackInfo,
+    primaryFallbackLimited: options?.primaryFallbackLimited,
     capabilityDecision,
     capabilityExecution,
     response,
@@ -149,8 +162,21 @@ export async function dispatchUnifiedMessage(
     }),
     envelope.traceId,
   );
+  const allowlist = runtime.routerConfig.dispatchFailureClassesAllowingFallback;
+  const fallbackAllowed =
+    primaryState.status !== "pass" &&
+    routing.fallbackLane !== "none" &&
+    !routing.failClosed &&
+    failureClassAllowsFallback(primaryState.failureClass, allowlist);
+
   if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed) {
     return buildResult(envelope, routing, primaryState, primaryState);
+  }
+
+  if (!fallbackAllowed) {
+    return buildResult(envelope, routing, primaryState, primaryState, {
+      primaryFallbackLimited: true,
+    });
   }
 
   const fallback = getLaneAdapter(runtime, routing.fallbackLane);

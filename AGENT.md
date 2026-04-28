@@ -60,6 +60,8 @@ npm run validate:horizon-status
 npm run validate:release-readiness
 npm run validate:merge-bundle
 npm run verify:merge-bundle -- --evidence-dir evidence --latest
+npm run replay:dispatch-wal -- --dry-run
+npm run summarize:soak
 ```
 
 ## Guardrails

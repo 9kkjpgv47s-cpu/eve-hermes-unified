@@ -25,6 +25,9 @@ npm run build
 npm run validate:failure-injection
 npm run validate:soak
 npm run validate:evidence-summary
+npm run replay:dispatch-wal -- --dry-run
+npm run summarize:soak
+npm run run:emergency-rollback-rehearsal
 npm run validate:regression-eve-primary
 npm run validate:cutover-readiness
 npm run validate:release-readiness

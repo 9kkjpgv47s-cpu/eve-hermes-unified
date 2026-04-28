@@ -106,6 +106,10 @@ export function validateUnifiedDispatchResult(value: UnifiedDispatchResult): Uni
   if (value.fallbackState) {
     validateDispatchState(value.fallbackState);
   }
+  if (value.primaryFallbackLimited === true) {
+    ensure(!value.fallbackState, "primaryFallbackLimited must not include fallbackState.");
+    ensure(!value.fallbackInfo, "primaryFallbackLimited must not include fallbackInfo.");
+  }
   validateUnifiedResponse(value.response);
   if (value.capabilityDecision) {
     validateCapabilityDecision(value.capabilityDecision);

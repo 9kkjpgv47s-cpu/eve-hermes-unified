@@ -286,7 +286,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h11-assurance-bundle`** passes and artifact matches **`evidence/h11-assurance-bundle-*.json`** (includes **`capabilityPolicyAuditRotationPass`**).
-- **`npm run validate:h11-closeout`** passes when evidence is present (H11 is terminal: stage-promotion readiness skipped in closeout validator).
+- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H12**).
 
 Primary risks:
 
@@ -296,9 +296,32 @@ Mitigations:
 
 - Document **`0`** default for max-bytes (rotation disabled until explicitly configured).
 
-### Post-H11 operations
+### Horizon H12 - Dispatch durability queue replay attempt bound
 
-After **H11** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h11-closeout`**. Optionally **`npm run validate:post-h11-sustainment-manifest`** checks the latest **`evidence/post-h11-sustainment-loop-*.json`**. Legacy: **`verify:sustainment-loop:h10-legacy`** / **`validate:post-h10-sustainment-manifest`**, **`verify:sustainment-loop:h9-legacy`** … **`h6-legacy`**.
+Goal: prevent indefinite retries for poison messages by capping replay attempts per **`pending`** durability queue row while preserving **`0`** (unlimited) as the default for backward compatibility.
+
+Workstreams:
+
+- **`UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY`** (alias **`DISPATCH_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY`**); **`0`** disables the cap.
+- **`replayPendingDispatches`** marks entries **`failed`** with **`replay_max_attempts_exceeded`** when **`attempts`** reach the cap before another replay dispatch.
+- Executable proof via **`npm run run:h12-assurance-bundle`** (extends H11 gates with **`test/dispatch-durability-queue-replay-limit.test.ts`**) and **`validate:h12-closeout`**.
+
+Exit evidence:
+
+- **`npm run run:h12-assurance-bundle`** passes and artifact matches **`evidence/h12-assurance-bundle-*.json`**.
+- **`npm run validate:h12-closeout`** passes when evidence is present (**H12** is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- Operators set the cap too low and drop legitimate transient failures into **`failed`** prematurely.
+
+Mitigations:
+
+- Default **`0`** (unbounded retries); document tuning against **`attempts`** telemetry from queue JSON.
+
+### Post-H12 operations (terminal sustainment)
+
+After **H12** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h12-closeout`**. Optionally **`npm run validate:post-h12-sustainment-manifest`** checks the latest **`evidence/post-h12-sustainment-loop-*.json`**. Legacy prior chains: **`verify:sustainment-loop:h11-legacy`** / **`validate:post-h11-sustainment-manifest`**, **`verify:sustainment-loop:h10-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 
@@ -307,7 +330,9 @@ After **H11** is marked completed, use **`npm run verify:sustainment-loop`** (se
 3. Every horizon change set must update `docs/CLOUD_AGENT_HANDOFF.md` with new operational expectations.
 4. If a horizon introduces a new critical artifact, add validation script + test before rollout.
 
-## Immediate Next Actions (Current Execution Slice - H2)
+## Immediate Next Actions (archived H2 drill checklist)
+
+The roadmap horizons **H1–H12** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h12-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
 
 1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report.
 2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:

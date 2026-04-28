@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-30T00:05:00Z",
+  "updatedAtIso": "2026-04-30T18:15:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H12",
   "activeStatus": "completed",
@@ -849,6 +849,12 @@
       "horizon": "H12",
       "status": "completed",
       "note": "H12 durability queue replay limit: optional UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY caps replay attempts per pending row; run-h12-assurance-bundle + post-H12 sustainment; terminal closeout at H12."
+    },
+    {
+      "timestamp": "2026-04-30T18:15:00Z",
+      "horizon": "H12",
+      "status": "completed",
+      "note": "Roadmap merged to main: H12 terminal horizon documented in NEXT_LONG_HORIZON_ACTION_PLAN (H12 section + post-H12 sustainment); CLOUD_AGENT_HANDOFF terminal closeout wording aligned (H5 retroactive skip references H12)."
     }
   ]
 }

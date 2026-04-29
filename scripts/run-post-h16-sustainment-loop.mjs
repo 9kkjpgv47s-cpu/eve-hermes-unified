@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Post-H16 sustainment loop: horizon metadata, terminal assurance bundle (H21 chains H20→…→H16),
+ * Post-H16 sustainment loop: horizon metadata, terminal assurance bundle (H22 chains H21→…→H16),
  * evidence volume. Horizon closeout gates that require this manifest must not nest the
  * same closeout command inside this loop.
  */
@@ -35,7 +35,7 @@ const manifestPath =
   path.join(evidenceDir, `post-h16-sustainment-loop-${stamp}.json`);
 
 const horizonStatus = runNpm("validate:horizon-status");
-const assurance = runNpm("run:h21-assurance-bundle");
+const assurance = runNpm("run:h22-assurance-bundle");
 const evidenceVolume = runNpm("validate:evidence-volume");
 
 const horizonStatusPass = horizonStatus.exitCode === 0;
@@ -54,7 +54,7 @@ const manifest = {
   },
   steps: [
     { id: "validate_horizon_status", ...horizonStatus },
-    { id: "run_h21_assurance_bundle", ...assurance },
+    { id: "run_h22_assurance_bundle", ...assurance },
     { id: "validate_evidence_volume", ...evidenceVolume },
   ],
 };

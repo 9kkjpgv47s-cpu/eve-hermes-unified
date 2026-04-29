@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-05T12:00:00Z",
+  "updatedAtIso": "2026-05-06T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H17",
+  "activeHorizon": "H18",
   "activeStatus": "completed",
-  "summary": "Horizon H17 (merge bundle operational assurance): run-h17-assurance-bundle runs validate:merge-bundle + validate:manifest-schemas + verify:merge-bundle; CI runs H16 pre-validate:all then merge gates after initial-scope; verify:sustainment-loop post-H17; verify:sustainment-loop:h16-legacy for post-H16 loop.",
+  "summary": "Horizon H18 (progressive cutover rehearsal): run-h18-assurance-bundle runs dry-run H2 drill suite after merge-bundle gates; verify:sustainment-loop post-H18 chains H17 bundle + H18 rehearsal + validate:h18-closeout; verify:sustainment-loop:h17-legacy for prior chain.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -152,7 +152,14 @@
       "command": "node ./scripts/run-h17-assurance-bundle.mjs",
       "artifactPattern": "evidence/h17-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H17"]
+      "horizons": ["H17", "H18"]
+    },
+    {
+      "id": "h18-assurance-bundle",
+      "command": "node ./scripts/run-h18-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h18-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H18"]
     }
   ],
   "nextActions": [
@@ -548,21 +555,21 @@
     },
     {
       "id": "h16-action-1",
-      "summary": "H16 assurance bundle: H15 sub-bundle plus validate:goal-policy-file (H2→H17) and validate:manifest-schemas evidence sweep.",
+      "summary": "H16 assurance bundle: H15 sub-bundle plus validate:goal-policy-file (H2→H18) and validate:manifest-schemas evidence sweep.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["validation", "policy", "tooling"]
     },
     {
       "id": "h16-action-2",
-      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop is post-H17.",
+      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H18.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h16-action-3",
-      "summary": "Goal policy H15→H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2→H17 before validate:all in CI.",
+      "summary": "Goal policy H15→H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2→H18 before validate:all in CI.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["policy", "documentation", "ci"]
@@ -576,7 +583,7 @@
     },
     {
       "id": "h17-action-2",
-      "summary": "post-H17 sustainment loop; verify:sustainment-loop; verify:sustainment-loop:h16-legacy for H16 chain.",
+      "summary": "Legacy post-H17 sustainment replay; verify:sustainment-loop:h17-legacy; verify:sustainment-loop:h16-legacy for H16 chain.",
       "targetHorizon": "H17",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
@@ -585,6 +592,27 @@
       "id": "h17-action-3",
       "summary": "Goal policy H16→H17 transition; unified-ci runs H17 bundle after initial-scope and before stage-promotion.",
       "targetHorizon": "H17",
+      "status": "completed",
+      "tags": ["policy", "documentation", "ci"]
+    },
+    {
+      "id": "h18-action-1",
+      "summary": "run-h18-assurance-bundle: dry-run H2 drill suite (canary + majority + rollback simulation) with merge-bundle evidence present.",
+      "targetHorizon": "H18",
+      "status": "completed",
+      "tags": ["operations", "validation", "cutover"]
+    },
+    {
+      "id": "h18-action-2",
+      "summary": "post-H18 sustainment loop; verify:sustainment-loop; verify:sustainment-loop:h17-legacy for H17-only chain.",
+      "targetHorizon": "H18",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h18-action-3",
+      "summary": "Goal policy H17→H18 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H18.",
+      "targetHorizon": "H18",
       "status": "completed",
       "tags": ["policy", "documentation", "ci"]
     }
@@ -815,6 +843,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H17->H18": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -891,11 +934,15 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H17 + manifest schemas + H15 chain; runs before validate:all in CI."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H18 + manifest schemas + H15 chain; runs before validate:all in CI."
     },
     "H17": {
       "status": "completed",
-      "summary": "Merge bundle assurance: run-h17-assurance-bundle replaces standalone merge-bundle/schema/verify steps after release artifacts exist; terminal sustainment post-H17."
+      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18 progressive cutover rehearsal."
+    },
+    "H18": {
+      "status": "completed",
+      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; terminal sustainment post-H18 via verify:sustainment-loop."
     }
   },
   "history": [
@@ -1113,13 +1160,19 @@
       "timestamp": "2026-05-04T12:00:00Z",
       "horizon": "H16",
       "status": "completed",
-      "note": "H16 merge readiness policy gates: run-h16-assurance-bundle chains H15 + validate:goal-policy-file (H2→H17) + validate:manifest-schemas; verify:sustainment-loop:h16-legacy for replay; H15->H16 goal policy."
+      "note": "H16 merge readiness policy gates: run-h16-assurance-bundle chains H15 + validate:goal-policy-file (H2→H18) + validate:manifest-schemas; verify:sustainment-loop:h16-legacy for replay; H15->H16 goal policy."
     },
     {
       "timestamp": "2026-05-05T12:00:00Z",
       "horizon": "H17",
       "status": "completed",
-      "note": "H17 merge bundle assurance: run-h17-assurance-bundle after release-readiness + initial-scope (validate:merge-bundle + validate:manifest-schemas + verify:merge-bundle); unified-ci consolidates merge steps; verify:sustainment-loop post-H17; verify:sustainment-loop:h16-legacy; H16->H17 goal policy; terminal closeout at H17."
+      "note": "H17 merge bundle assurance: run-h17-assurance-bundle after release-readiness + initial-scope; prerequisite for H18 cutover rehearsal bundle; verify:sustainment-loop:h17-legacy replays H17-only sustainment; H16->H17 goal policy."
+    },
+    {
+      "timestamp": "2026-05-06T12:00:00Z",
+      "horizon": "H18",
+      "status": "completed",
+      "note": "H18 progressive cutover rehearsal: run-h18-assurance-bundle (npm run run:h2-drill-suite --dry-run) after H17 merge gates; verify:sustainment-loop post-H18; validate:post-h18-sustainment-manifest; H17->H18 goal policy; terminal closeout at H18."
     }
   ]
 }

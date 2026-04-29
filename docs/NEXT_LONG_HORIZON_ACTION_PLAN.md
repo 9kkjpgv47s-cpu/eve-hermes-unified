@@ -286,7 +286,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h11-assurance-bundle`** passes and artifact matches **`evidence/h11-assurance-bundle-*.json`** (includes **`capabilityPolicyAuditRotationPass`**).
-- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H17**).
+- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H18**).
 
 Primary risks:
 
@@ -309,7 +309,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h12-assurance-bundle`** passes and artifact matches **`evidence/h12-assurance-bundle-*.json`**.
-- **`npm run validate:h12-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H17**).
+- **`npm run validate:h12-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H18**).
 
 Primary risks:
 
@@ -332,7 +332,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h13-assurance-bundle`** passes and artifact matches **`evidence/h13-assurance-bundle-*.json`**.
-- **`npm run validate:h13-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H17**).
+- **`npm run validate:h13-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H18**).
 
 Primary risks:
 
@@ -399,11 +399,11 @@ Mitigations:
 
 ### Post-H15 operations (sustainment; subsumed by H17 terminal chain)
 
-After **H15** is marked completed, **`npm run run:h15-assurance-bundle`** remains the shell CI convergence path; terminal sustainment uses **Post-H17** below. Legacy: **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
+After **H15** is marked completed, **`npm run run:h15-assurance-bundle`** remains the shell CI convergence path; terminal sustainment uses **Post-H18** below. Legacy: **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
 
 ### Horizon H16 - Merge readiness policy gates (goal policy + manifest schemas)
 
-Goal: tie **merge-bundle readiness discipline** to executable assurance by chaining **`validate:goal-policy-file`** (full runway **H2→H17**) and **`validate:manifest-schemas`** on **`evidence/`** after the **H15** bundle, so horizon transitions stay aligned with machine-readable evidence shapes before **`validate:all`**.
+Goal: tie **merge-bundle readiness discipline** to executable assurance by chaining **`validate:goal-policy-file`** (full runway **H2→H18**) and **`validate:manifest-schemas`** on **`evidence/`** after the **H15** bundle, so horizon transitions stay aligned with machine-readable evidence shapes before **`validate:all`**.
 
 Workstreams:
 
@@ -413,7 +413,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h16-assurance-bundle`** passes and artifact matches **`evidence/h16-assurance-bundle-*.json`**.
-- **`npm run validate:h16-closeout`** passes when evidence is present (retroactive closeout when **H17** is terminal).
+- **`npm run validate:h16-closeout`** passes when evidence is present (retroactive closeout when **H18** is terminal).
 
 Primary risks:
 
@@ -430,12 +430,12 @@ Goal: after **`validate:release-readiness`** and **`validate:initial-scope`** pr
 Workstreams:
 
 - **`npm run run:h17-assurance-bundle`**: **`validate:merge-bundle`** + **`validate:manifest-schemas`** + **`verify:merge-bundle --latest --no-require-archive`** (reads **`bundle-verification-*.json`** or parses multi-line stdout for **`pass`**).
-- **`npm run validate:h17-closeout`**, **`npm run verify:sustainment-loop`** (post-H17), **`npm run validate:post-h17-sustainment-manifest`**.
+- **`npm run validate:h17-closeout`** (replay / legacy closeout when **`docs/HORIZON_STATUS.json`** is pinned to **H17**).
 
 Exit evidence:
 
 - **`npm run run:h17-assurance-bundle`** passes and artifact matches **`evidence/h17-assurance-bundle-*.json`**.
-- **`npm run validate:h17-closeout`** passes when evidence is present (**H17** is terminal: stage-promotion readiness skipped in closeout validator).
+- **`npm run validate:h17-closeout`** passes when evidence is present (retroactive closeout when **H18** is terminal).
 
 Primary risks:
 
@@ -445,9 +445,31 @@ Mitigations:
 
 - Keep Phase 8 operator checklist items **`[x]`** when the horizon is marked completed.
 
-### Post-H17 operations (terminal sustainment)
+### Horizon H18 - Progressive cutover rehearsal (dry-run drill suite)
 
-After **H17** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8). Optionally **`npm run validate:post-h17-sustainment-manifest`**. Legacy prior chains: **`verify:sustainment-loop:h16-legacy`** / **`validate:post-h16-sustainment-manifest`**, **`verify:sustainment-loop:h15-legacy`** … **`h6-legacy`**.
+Goal: after merge gates (**H17** bundle) pass, continuously exercise **canary + majority + rollback simulation** stage drills in **dry-run** mode so promotion and rollback-policy evidence paths stay wired to the same **`evidence/`** snapshot CI uses for release readiness.
+
+Workstreams:
+
+- **`npm run run:h18-assurance-bundle`**: invokes **`npm run run:h2-drill-suite`** with **`--dry-run`**, **`--allow-horizon-mismatch`**, and pinned **`--canary-chats` / `--majority-percent`** for deterministic CI.
+- **`npm run validate:h18-closeout`**, **`npm run verify:sustainment-loop`** (post-H18), **`npm run validate:post-h18-sustainment-manifest`**.
+
+Exit evidence:
+
+- **`npm run run:h18-assurance-bundle`** passes and artifact matches **`evidence/h18-assurance-bundle-*.json`**.
+- **`npm run validate:h18-closeout`** passes when evidence is present (**H18** is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- Drill suite depends on **`docs/HORIZON_STATUS.json`** **`promotionReadiness`** gates and merged evidence; misaligned **`latest-passing`** artifacts can fail drills even when merge gates pass.
+
+Mitigations:
+
+- Keep **`verify:sustainment-loop`** green in CI after every change affecting stage drills or evidence selection.
+
+### Post-H18 operations (terminal sustainment)
+
+After **H18** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8). Optionally **`npm run validate:post-h18-sustainment-manifest`**. Legacy prior chains: **`verify:sustainment-loop:h17-legacy`** / **`validate:post-h17-sustainment-manifest`**, **`verify:sustainment-loop:h16-legacy`** / **`validate:post-h16-sustainment-manifest`**, **`verify:sustainment-loop:h15-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 
@@ -458,7 +480,7 @@ After **H17** is marked completed, use **`npm run verify:sustainment-loop`** (se
 
 ## Immediate Next Actions (archived H2 drill checklist)
 
-The roadmap horizons **H1–H17** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h17-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
+The roadmap horizons **H1–H18** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h18-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
 
 1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report. **Dry-run** auto-relaxes the sequential **current→target** check when **`--current-stage`** is omitted (gateway env may still read **shadow**). Align **merge-bundle** / **bundle-verification** / **release-readiness** artifacts (**`latest-passing`** vs **`latest`**) before expecting a green readiness gate.
 2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:

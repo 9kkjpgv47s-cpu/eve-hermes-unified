@@ -84,11 +84,14 @@ jobs:
       - name: H17 merge readiness assurance bundle
         run: npm run run:h17-assurance-bundle
 
-      - name: Post-H17 sustainment loop (horizon + closeout gate)
+      - name: H18 progressive cutover rehearsal bundle
+        run: npm run run:h18-assurance-bundle
+
+      - name: Post-H18 sustainment loop (horizon + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H17 sustainment manifest
-        run: npm run validate:post-h17-sustainment-manifest
+      - name: Validate post-H18 sustainment manifest
+        run: npm run validate:post-h18-sustainment-manifest
 
       - name: Stage promotion readiness gate
         run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch

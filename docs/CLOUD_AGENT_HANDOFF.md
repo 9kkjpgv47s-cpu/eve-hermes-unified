@@ -68,7 +68,7 @@ Every PR should include:
 - **H16 bundle** (current): `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H16**) and **`validate:manifest-schemas`** over **`evidence/`**.
 - **Closeout gate**: `npm run validate:h16-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
 - **Horizon index**: orchestration scripts include **H16** as the terminal horizon sequence entry.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **`run:h23-assurance-bundle`** (H22 stack + final **`validate-horizon-status`** on `docs/HORIZON_STATUS.json` after the full chain) + **`validate:evidence-volume`**. Run **`npm run validate:h17-closeout`** … **`npm run validate:h23-closeout`** separately when required (do not nest closeout inside the sustainment loop). Legacy: **`verify:sustainment-loop:h15-legacy`** … **`h6-legacy`**.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **`run:h24-assurance-bundle`** (H23 stack + **`validate:manifest-schemas`**, which re-validates evidence manifests after the full chain) + **`validate:evidence-volume`**. Run **`npm run validate:h17-closeout`** … **`npm run validate:h24-closeout`** separately when required (do not nest closeout inside the sustainment loop). Legacy: **`verify:sustainment-loop:h15-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 

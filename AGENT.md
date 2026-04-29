@@ -8,7 +8,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: see **`agent.md`** and **`docs/HORIZON_STATUS.json`** (terminal program horizon is **H23** as of the latest roadmap closeout; `AGENT.md` defers to those for horizon index).
+- Horizon: see **`agent.md`** and **`docs/HORIZON_STATUS.json`** (terminal program horizon is **H24** as of the latest roadmap closeout; `AGENT.md` defers to those for horizon index).
 - Primary focus: staged promotion drills + rollback-policy enforcement with auditable artifacts
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`

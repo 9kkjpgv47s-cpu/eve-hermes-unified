@@ -30,16 +30,13 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Unified adapter entrypoints gate
-        run: npm run validate:unified-entrypoints
-
       - name: H5 tenant isolation and region failover gates
         run: npm run validate:tenant-isolation && npm run rehearse:region-failover
 
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: H16 sustainment assurance bundle (goal policy through H21 + H15 gates)
+      - name: H16 sustainment assurance bundle (goal policy through H22 + H15 gates)
         run: npm run run:h16-assurance-bundle
 
       - name: Build
@@ -81,14 +78,14 @@ jobs:
       - name: Initial scope gate
         run: npm run validate:initial-scope
 
-      - name: H21 manifest-schemas + H20 evidence-gates assurance bundle
-        run: npm run run:h21-assurance-bundle
+      - name: H22 unified-entrypoints + H21 manifest + H20 evidence-gates assurance bundle
+        run: npm run run:h22-assurance-bundle
 
-      - name: Post-H21 sustainment loop (closeout gate)
+      - name: Post-H22 sustainment loop (closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H21 sustainment manifest
-        run: npm run validate:post-h21-sustainment-manifest
+      - name: Validate post-H22 sustainment manifest
+        run: npm run validate:post-h22-sustainment-manifest
 
       - name: Upload evidence artifacts
         uses: actions/upload-artifact@v4

@@ -396,6 +396,7 @@ async function seedHorizonStatus(filePath: string): Promise<void> {
           H19: { status: "planned", summary: "H19 planned" },
           H20: { status: "planned", summary: "H20 planned" },
           H21: { status: "planned", summary: "H21 planned" },
+          H22: { status: "planned", summary: "H22 planned" },
         },
         promotionReadiness: {
           targetStage: "canary",

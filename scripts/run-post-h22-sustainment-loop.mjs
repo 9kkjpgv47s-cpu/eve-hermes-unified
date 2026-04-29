@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 /**
- * Legacy post-H21 sustainment loop (pre-H22). Prefer **`npm run verify:sustainment-loop`** (post-H22).
- *
- * Chains H21 assurance + **`validate:h21-closeout`** (retroactive closeout when **H22** is terminal).
+ * Post-H22 sustainment loop: H22 assurance (unified entrypoints + H21 chain) and H22 closeout gate.
  *
  * Run **`npm run run:h16-assurance-bundle`** first when reproducing a full chain locally or after **`npm run validate:all`** when **`evidence/`** lacks goal-policy output through **H22**.
  */
@@ -13,7 +11,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const evidenceDir = process.env.POST_H21_SUSTAINMENT_EVIDENCE_DIR ?? path.join(root, "evidence");
+const evidenceDir = process.env.POST_H22_SUSTAINMENT_EVIDENCE_DIR ?? path.join(root, "evidence");
 mkdirSync(evidenceDir, { recursive: true });
 
 function runNpm(script) {
@@ -33,26 +31,26 @@ function runNpm(script) {
 
 const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
 const manifestPath =
-  process.env.POST_H21_SUSTAINMENT_LOOP_OUT ??
-  path.join(evidenceDir, `post-h21-sustainment-loop-${stamp}.json`);
+  process.env.POST_H22_SUSTAINMENT_LOOP_OUT ??
+  path.join(evidenceDir, `post-h22-sustainment-loop-${stamp}.json`);
 
-const assurance = runNpm("run:h21-assurance-bundle");
-const closeout = runNpm("validate:h21-closeout");
+const assurance = runNpm("run:h22-assurance-bundle");
+const closeout = runNpm("validate:h22-closeout");
 
-const h21AssuranceBundlePass = assurance.exitCode === 0;
-const h21CloseoutGatePass = closeout.exitCode === 0;
-const pass = h21AssuranceBundlePass && h21CloseoutGatePass;
+const h22AssuranceBundlePass = assurance.exitCode === 0;
+const h22CloseoutGatePass = closeout.exitCode === 0;
+const pass = h22AssuranceBundlePass && h22CloseoutGatePass;
 
 const manifest = {
   generatedAtIso: new Date().toISOString(),
   pass,
   checks: {
-    h21AssuranceBundlePass,
-    h21CloseoutGatePass,
+    h22AssuranceBundlePass,
+    h22CloseoutGatePass,
   },
   steps: [
-    { id: "run_h21_assurance_bundle", ...assurance },
-    { id: "validate_h21_closeout", ...closeout },
+    { id: "run_h22_assurance_bundle", ...assurance },
+    { id: "validate_h22_closeout", ...closeout },
   ],
 };
 

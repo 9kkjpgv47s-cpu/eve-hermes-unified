@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-07T00:00:00Z",
+  "updatedAtIso": "2026-05-08T00:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H21",
+  "activeHorizon": "H22",
   "activeStatus": "completed",
-  "summary": "Horizon H21 (manifest schema terminal assurance): run-h21-assurance-bundle chains validate:manifest-schemas + run-h20-assurance-bundle; verify:sustainment-loop post-H21; verify:sustainment-loop:h20-legacy for post-H20 chain; goal-policy runway H2→H21.",
+  "summary": "Horizon H22 (unified entrypoints terminal assurance): run-h22-assurance-bundle chains validate:unified-entrypoints + run-h21-assurance-bundle; verify:sustainment-loop post-H22; verify:sustainment-loop:h21-legacy for post-H21 chain; goal-policy runway H2→H22.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -181,6 +181,13 @@
       "artifactPattern": "evidence/h21-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H21"]
+    },
+    {
+      "id": "h22-assurance-bundle",
+      "command": "node ./scripts/run-h22-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h22-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H22"]
     }
   ],
   "nextActions": [
@@ -576,7 +583,7 @@
     },
     {
       "id": "h16-action-1",
-      "summary": "H16 assurance bundle: H15 sub-bundle plus validate:goal-policy-file (H2→H21); manifest schema sweep moved to run-h21-assurance-bundle after validate:all.",
+      "summary": "H16 assurance bundle: H15 sub-bundle plus validate:goal-policy-file (H2→H22); manifest schema sweep moved to run-h21-assurance-bundle after validate:all.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["validation", "policy", "tooling"]
@@ -632,7 +639,7 @@
     },
     {
       "id": "h18-action-3",
-      "summary": "Goal policy H17→H18 transition; validate:goal-policy-file H2→H21; terminal closeout skips stage-promotion at H21.",
+      "summary": "Goal policy H17→H18 transition; validate:goal-policy-file H2→H22; terminal closeout skips stage-promotion at H22.",
       "targetHorizon": "H18",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -646,14 +653,14 @@
     },
     {
       "id": "h19-action-2",
-      "summary": "Legacy post-H19 sustainment (verify:sustainment-loop:h19-legacy); terminal loop is post-H21.",
+      "summary": "Legacy post-H19 sustainment (verify:sustainment-loop:h19-legacy); terminal loop is post-H22.",
       "targetHorizon": "H19",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h19-action-3",
-      "summary": "Goal policy H18→H19 transition; terminal closeout skips stage-promotion at H21.",
+      "summary": "Goal policy H18→H19 transition; terminal closeout skips stage-promotion at H22.",
       "targetHorizon": "H19",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -667,14 +674,14 @@
     },
     {
       "id": "h20-action-2",
-      "summary": "Legacy post-H20 sustainment (verify:sustainment-loop:h20-legacy); terminal loop is post-H21.",
+      "summary": "Legacy post-H20 sustainment (verify:sustainment-loop:h20-legacy); terminal loop is post-H22.",
       "targetHorizon": "H20",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h20-action-3",
-      "summary": "Goal policy H19→H20 transition; terminal closeout skips stage-promotion at H21.",
+      "summary": "Goal policy H19→H20 transition; terminal closeout skips stage-promotion at H22.",
       "targetHorizon": "H20",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -688,15 +695,36 @@
     },
     {
       "id": "h21-action-2",
-      "summary": "post-H21 sustainment loop; verify:sustainment-loop; verify:sustainment-loop:h20-legacy for H20 chain.",
+      "summary": "Legacy post-H21 sustainment (verify:sustainment-loop:h21-legacy); terminal loop is post-H22.",
       "targetHorizon": "H21",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h21-action-3",
-      "summary": "Goal policy H20→H21 transition; terminal closeout skips stage-promotion at H21.",
+      "summary": "Goal policy H20→H21 transition; terminal closeout skips stage-promotion at H22.",
       "targetHorizon": "H21",
+      "status": "completed",
+      "tags": ["policy", "documentation", "validation"]
+    },
+    {
+      "id": "h22-action-1",
+      "summary": "run-h22-assurance-bundle: validate:unified-entrypoints + run-h21-assurance-bundle; folds adapter entrypoint gate into terminal assurance after validate:all.",
+      "targetHorizon": "H22",
+      "status": "completed",
+      "tags": ["validation", "ci", "tooling"]
+    },
+    {
+      "id": "h22-action-2",
+      "summary": "post-H22 sustainment loop; verify:sustainment-loop; verify:sustainment-loop:h21-legacy for H21 chain.",
+      "targetHorizon": "H22",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h22-action-3",
+      "summary": "Goal policy H21→H22 transition; terminal closeout skips stage-promotion at H22.",
+      "targetHorizon": "H22",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
     }
@@ -987,6 +1015,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H21->H22": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "capability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -1063,7 +1106,7 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H21 + H15 chain; manifest schema sweep is terminal in run-h21-assurance-bundle after validate:all."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H22 + H15 chain; manifest schema sweep is in run-h21-assurance-bundle after validate:all."
     },
     "H17": {
       "status": "completed",
@@ -1083,7 +1126,11 @@
     },
     "H21": {
       "status": "completed",
-      "summary": "Manifest schema terminal assurance: run-h21-assurance-bundle chains validate:manifest-schemas + H20 bundle; terminal sustainment post-H21 via verify:sustainment-loop."
+      "summary": "Manifest schema assurance: run-h21-assurance-bundle chains validate:manifest-schemas + H20 bundle; superseded as terminal chain by H22 which adds validate:unified-entrypoints."
+    },
+    "H22": {
+      "status": "completed",
+      "summary": "Unified entrypoints terminal assurance: run-h22-assurance-bundle chains validate:unified-entrypoints + H21 bundle; terminal sustainment post-H22 via verify:sustainment-loop."
     }
   },
   "history": [
@@ -1325,13 +1372,19 @@
       "timestamp": "2026-05-06T00:00:00Z",
       "horizon": "H20",
       "status": "completed",
-      "note": "H20 evidence-gates assurance: run-h20-assurance-bundle chains validate:evidence-gates + run-h19-assurance-bundle; superseded as terminal chain by H21 which adds validate:manifest-schemas; verify:sustainment-loop:h20-legacy; validate:goal-policy-file H2→H21; H19->H20 goal policy; terminal closeout at H21."
+      "note": "H20 evidence-gates assurance: run-h20-assurance-bundle chains validate:evidence-gates + run-h19-assurance-bundle; superseded as terminal chain by H22 which adds validate:unified-entrypoints via run-h22-assurance-bundle; verify:sustainment-loop:h20-legacy; validate:goal-policy-file H2→H22; H19->H20 goal policy; terminal closeout at H22."
     },
     {
       "timestamp": "2026-05-07T00:00:00Z",
       "horizon": "H21",
       "status": "completed",
-      "note": "H21 manifest schema terminal assurance: run-h21-assurance-bundle chains validate:manifest-schemas + run-h20-assurance-bundle; verify:sustainment-loop post-H21; verify:sustainment-loop:h20-legacy; validate:goal-policy-file H2→H21; H20->H21 goal policy; terminal closeout at H21."
+      "note": "H21 manifest schema assurance: run-h21-assurance-bundle chains validate:manifest-schemas + run-h20-assurance-bundle; superseded as terminal chain by H22 which adds validate:unified-entrypoints; verify:sustainment-loop:h21-legacy; validate:goal-policy-file H2→H22; H20->H21 goal policy; terminal closeout at H22."
+    },
+    {
+      "timestamp": "2026-05-08T00:00:00Z",
+      "horizon": "H22",
+      "status": "completed",
+      "note": "H22 unified entrypoints terminal assurance: run-h22-assurance-bundle chains validate:unified-entrypoints + run-h21-assurance-bundle; verify:sustainment-loop post-H22; verify:sustainment-loop:h21-legacy; validate:goal-policy-file H2→H22; H21->H22 goal policy; terminal closeout at H22."
     }
   ]
 }

@@ -61,11 +61,11 @@ async function seedMergeBundleInputs() {
   expect(init.code).toBe(0);
 }
 
-describe("run-post-h21-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop:h21-legacy npm script", async () => {
+describe("run-post-h22-sustainment-loop.mjs", () => {
+  it("exposes verify:sustainment-loop npm script", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop:h21-legacy"]).toContain("run-post-h21-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h22-sustainment-loop.mjs");
   });
 
   it(
@@ -73,8 +73,8 @@ describe("run-post-h21-sustainment-loop.mjs", () => {
     async () => {
       await seedMergeBundleInputs();
       const result = await runCommandWithTimeout(
-        ["node", path.join(repoRoot, "scripts/run-post-h21-sustainment-loop.mjs")],
-        { timeoutMs: 420_000 },
+        ["node", path.join(repoRoot, "scripts/run-post-h22-sustainment-loop.mjs")],
+        { timeoutMs: 480_000 },
       );
       expect(result.code).toBe(0);
       const out = result.stdout.trim();
@@ -83,20 +83,20 @@ describe("run-post-h21-sustainment-loop.mjs", () => {
       const payload = JSON.parse(raw) as {
         pass?: boolean;
         checks?: {
-          h21AssuranceBundlePass?: boolean;
-          h21CloseoutGatePass?: boolean;
+          h22AssuranceBundlePass?: boolean;
+          h22CloseoutGatePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
-      expect(payload.checks?.h21AssuranceBundlePass).toBe(true);
-      expect(payload.checks?.h21CloseoutGatePass).toBe(true);
+      expect(payload.checks?.h22AssuranceBundlePass).toBe(true);
+      expect(payload.checks?.h22CloseoutGatePass).toBe(true);
     },
     900_000,
   );
 
-  it("validate:post-h21-sustainment-manifest passes on latest loop output", async () => {
+  it("validate:post-h22-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/validate-post-h21-sustainment-manifest.mjs")],
+      ["node", path.join(repoRoot, "scripts/validate-post-h22-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

@@ -317,6 +317,7 @@ async function seedHorizonStatus(
           H27: { status: "planned", summary: "H27 planned" },
           H28: { status: "planned", summary: "H28 planned" },
           H29: { status: "planned", summary: "H29 planned" },
+          H30: { status: "planned", summary: "H30 planned" },
         },
         promotionReadiness: {
           targetStage,

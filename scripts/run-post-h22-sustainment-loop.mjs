@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 /**
- * Post-H22 sustainment loop: horizon metadata, H17 merge-bundle assurance, H18 cutover rehearsal,
- * CI soak SLO drift gate, unified entrypoints evidence, shell unified-dispatch CI scan evidence,
- * tenant isolation evidence, H22 closeout gate.
- *
- * Run **`npm run run:h16-assurance-bundle`** first when reproducing a full chain locally or after **`npm run validate:all`** when **`evidence/`** lacks goal-policy output through **H22**.
+ * Post-H22 sustainment core: horizon metadata, H17/H18 bundles, CI soak, entrypoints, shell CI, tenant isolation.
+ * Does not run H22 closeout (chained by post-H23 terminal sustainment).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -43,7 +40,6 @@ const ciSoakSlo = runNpm("run:ci-soak-slo-gate");
 const entrypoints = runNpm("run:unified-entrypoints-evidence");
 const shellCi = runNpm("run:shell-unified-dispatch-ci-evidence");
 const tenantIsolation = runNpm("run:tenant-isolation-evidence");
-const closeout = runNpm("validate:h22-closeout");
 
 const horizonStatusPass = horizonStatus.exitCode === 0;
 const h17AssuranceBundlePass = assuranceH17.exitCode === 0;
@@ -52,7 +48,6 @@ const ciSoakSloGatePass = ciSoakSlo.exitCode === 0;
 const unifiedEntrypointsEvidencePass = entrypoints.exitCode === 0;
 const shellUnifiedDispatchCiEvidencePass = shellCi.exitCode === 0;
 const tenantIsolationEvidencePass = tenantIsolation.exitCode === 0;
-const h22CloseoutGatePass = closeout.exitCode === 0;
 const pass =
   horizonStatusPass &&
   h17AssuranceBundlePass &&
@@ -60,8 +55,7 @@ const pass =
   ciSoakSloGatePass &&
   unifiedEntrypointsEvidencePass &&
   shellUnifiedDispatchCiEvidencePass &&
-  tenantIsolationEvidencePass &&
-  h22CloseoutGatePass;
+  tenantIsolationEvidencePass;
 
 const manifest = {
   generatedAtIso: new Date().toISOString(),
@@ -74,7 +68,6 @@ const manifest = {
     unifiedEntrypointsEvidencePass,
     shellUnifiedDispatchCiEvidencePass,
     tenantIsolationEvidencePass,
-    h22CloseoutGatePass,
   },
   steps: [
     { id: "validate_horizon_status", ...horizonStatus },
@@ -84,7 +77,6 @@ const manifest = {
     { id: "run_unified_entrypoints_evidence", ...entrypoints },
     { id: "run_shell_unified_dispatch_ci_evidence", ...shellCi },
     { id: "run_tenant_isolation_evidence", ...tenantIsolation },
-    { id: "validate_h22_closeout", ...closeout },
   ],
 };
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Validates the newest evidence/post-h22-sustainment-loop-*.json (after npm run verify:sustainment-loop).
+ * Validates the newest evidence/post-h22-sustainment-loop-*.json (post-H22 core chain; no H22 closeout in-manifest).
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -36,7 +36,6 @@ if (checks.ciSoakSloGatePass !== true) failures.push("ciSoakSloGatePass");
 if (checks.unifiedEntrypointsEvidencePass !== true) failures.push("unifiedEntrypointsEvidencePass");
 if (checks.shellUnifiedDispatchCiEvidencePass !== true) failures.push("shellUnifiedDispatchCiEvidencePass");
 if (checks.tenantIsolationEvidencePass !== true) failures.push("tenantIsolationEvidencePass");
-if (checks.h22CloseoutGatePass !== true) failures.push("h22CloseoutGatePass");
 
 if (failures.length > 0) {
   process.stderr.write(`Invalid post-H22 sustainment manifest ${manifestPath}: ${failures.join(", ")}\n`);

@@ -4,7 +4,38 @@ import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19", "H20", "H21", "H22"];
+const HORIZON_SEQUENCE = [
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "H7",
+  "H8",
+  "H9",
+  "H10",
+  "H11",
+  "H12",
+  "H13",
+  "H14",
+  "H15",
+  "H16",
+  "H17",
+  "H18",
+  "H19",
+  "H20",
+  "H21",
+  "H22",
+  "H23",
+  "H24",
+  "H25",
+  "H26",
+  "H27",
+  "H28",
+  "H29",
+  "H30",
+];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
@@ -28,6 +59,14 @@ const HORIZON_STAGE_MAP = {
   H20: "full",
   H21: "full",
   H22: "full",
+  H23: "full",
+  H24: "full",
+  H25: "full",
+  H26: "full",
+  H27: "full",
+  H28: "full",
+  H29: "full",
+  H30: "full",
 };
 
 function isNonEmptyString(value) {
@@ -398,6 +437,60 @@ function commandVerificationType(command) {
   }
   if (command === "node ./scripts/run-post-h22-sustainment-loop.mjs") {
     return "post-h22-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h23-sustainment-loop.mjs") {
+    return "post-h23-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h24-sustainment-loop.mjs") {
+    return "post-h24-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h25-sustainment-loop.mjs") {
+    return "post-h25-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h26-sustainment-loop.mjs") {
+    return "post-h26-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h27-sustainment-loop.mjs") {
+    return "post-h27-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h28-sustainment-loop.mjs") {
+    return "post-h28-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h29-sustainment-loop.mjs") {
+    return "post-h29-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h30-sustainment-loop.mjs") {
+    return "post-h30-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-evidence-gates-evidence.mjs") {
+    return "evidence-gates-evidence";
+  }
+  if (command === "node ./scripts/run-region-failover-evidence.mjs") {
+    return "region-failover-evidence";
+  }
+  if (command === "node ./scripts/run-agent-remediation-evidence.mjs") {
+    return "agent-remediation-evidence";
+  }
+  if (command === "node ./scripts/run-emergency-rollback-evidence.mjs") {
+    return "emergency-rollback-evidence";
+  }
+  if (command === "node ./scripts/run-manifest-schemas-terminal-evidence.mjs") {
+    return "manifest-schemas-terminal-evidence";
+  }
+  if (command === "node ./scripts/run-manifest-schemas-post-h27-loop-evidence.mjs") {
+    return "manifest-schemas-post-h27-loop-evidence";
+  }
+  if (command === "node ./scripts/run-manifest-schemas-post-h28-loop-evidence.mjs") {
+    return "manifest-schemas-post-h28-loop-evidence";
+  }
+  if (command === "node ./scripts/run-manifest-schemas-post-h29-loop-evidence.mjs") {
+    return "manifest-schemas-post-h29-loop-evidence";
+  }
+  if (command === "node ./scripts/run-stage-promotion-sustainment-evidence.mjs") {
+    return "stage-promotion-sustainment-evidence";
+  }
+  if (command === "node ./scripts/run-dispatch-contract-fixtures-evidence.mjs") {
+    return "dispatch-contract-fixtures-evidence";
   }
   if (command === "node ./scripts/run-tenant-isolation-evidence.mjs") {
     return "tenant-isolation-evidence";
@@ -1671,9 +1764,169 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     if (signal.tenantIsolationEvidencePass !== true) {
       checks.push("post_h22_tenant_isolation_evidence_not_passed");
     }
-    if (signal.h22CloseoutGatePass !== true) {
-      checks.push("post_h22_h22_closeout_gate_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h23-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("post_h23_sustainment_loop_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH22SustainmentChainPass !== true) checks.push("post_h23_post_h22_chain_not_passed");
+    if (signal.evidenceGatesEvidencePass !== true) checks.push("post_h23_evidence_gates_not_passed");
+    if (signal.h23CloseoutGatePass !== true) checks.push("post_h23_closeout_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h24-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("post_h24_sustainment_loop_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH23SustainmentChainPass !== true) checks.push("post_h24_post_h23_chain_not_passed");
+    if (signal.regionFailoverEvidencePass !== true) checks.push("post_h24_region_failover_not_passed");
+    if (signal.h24CloseoutGatePass !== true) checks.push("post_h24_closeout_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h25-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("post_h25_sustainment_loop_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH24SustainmentChainPass !== true) checks.push("post_h25_post_h24_chain_not_passed");
+    if (signal.agentRemediationEvidencePass !== true) checks.push("post_h25_agent_remediation_not_passed");
+    if (signal.h25CloseoutGatePass !== true) checks.push("post_h25_closeout_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h26-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("post_h26_sustainment_loop_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH25SustainmentChainPass !== true) checks.push("post_h26_post_h25_chain_not_passed");
+    if (signal.emergencyRollbackEvidencePass !== true) checks.push("post_h26_emergency_rollback_not_passed");
+    if (signal.h26CloseoutGatePass !== true) checks.push("post_h26_closeout_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h27-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("post_h27_sustainment_loop_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH26SustainmentChainPass !== true) checks.push("post_h27_post_h26_chain_not_passed");
+    if (signal.manifestSchemasTerminalEvidencePass !== true) {
+      checks.push("post_h27_manifest_schemas_terminal_not_passed");
     }
+    if (signal.h27CloseoutGatePass !== true) checks.push("post_h27_closeout_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h28-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("post_h28_sustainment_loop_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH27SustainmentChainPass !== true) checks.push("post_h28_post_h27_chain_not_passed");
+    if (signal.manifestSchemasPostH27LoopEvidencePass !== true) {
+      checks.push("post_h28_manifest_schemas_post_h27_not_passed");
+    }
+    if (signal.stagePromotionSustainmentEvidencePass !== true) {
+      checks.push("post_h28_stage_promotion_sustainment_not_passed");
+    }
+    if (signal.h28CloseoutGatePass !== true) checks.push("post_h28_closeout_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h29-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("post_h29_sustainment_loop_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH28SustainmentChainPass !== true) checks.push("post_h29_post_h28_chain_not_passed");
+    if (signal.manifestSchemasPostH28LoopEvidencePass !== true) {
+      checks.push("post_h29_manifest_schemas_post_h28_not_passed");
+    }
+    if (signal.dispatchContractFixturesEvidencePass !== true) {
+      checks.push("post_h29_dispatch_contract_fixtures_not_passed");
+    }
+    if (signal.h29CloseoutGatePass !== true) checks.push("post_h29_closeout_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h30-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("post_h30_sustainment_loop_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH29SustainmentChainPass !== true) checks.push("post_h30_post_h29_chain_not_passed");
+    if (signal.manifestSchemasPostH29LoopEvidencePass !== true) {
+      checks.push("post_h30_manifest_schemas_post_h29_not_passed");
+    }
+    if (signal.h22CloseoutGatePass !== true) checks.push("post_h30_h22_closeout_not_passed");
+    if (signal.h30CloseoutGatePass !== true) checks.push("post_h30_closeout_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "evidence-gates-evidence") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("evidence_gates_evidence_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.inputsResolved !== true) checks.push("evidence_gates_inputs_not_resolved");
+    if (signal.evidenceGatesCliPass !== true) checks.push("evidence_gates_cli_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "region-failover-evidence") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("region_failover_evidence_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.rehearsalCliPass !== true) checks.push("region_failover_cli_not_passed");
+    if (signal.standbySwapManifestPass !== true) checks.push("region_failover_swap_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "agent-remediation-evidence") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("agent_remediation_evidence_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.playbookCliPass !== true) checks.push("agent_remediation_cli_not_passed");
+    if (signal.boundedDryRunPolicyPass !== true) checks.push("agent_remediation_bounded_policy_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "emergency-rollback-evidence") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("emergency_rollback_evidence_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.rehearsalCliPass !== true) checks.push("emergency_rollback_cli_not_passed");
+    if (signal.emergencyRollbackDryRunEvidencePass !== true) {
+      checks.push("emergency_rollback_dry_run_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "manifest-schemas-terminal-evidence") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("manifest_schemas_terminal_evidence_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.manifestSchemasSweepPass !== true) checks.push("manifest_schemas_sweep_not_passed");
+    if (signal.postH26SustainmentLoopSchemaPass !== true) checks.push("post_h26_loop_schema_not_passed");
+    if (signal.postH26SustainmentLoopPayloadPass !== true) checks.push("post_h26_loop_payload_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (
+    verificationType === "manifest-schemas-post-h27-loop-evidence"
+    || verificationType === "manifest-schemas-post-h28-loop-evidence"
+    || verificationType === "manifest-schemas-post-h29-loop-evidence"
+  ) {
+    const checks = [];
+    if (payload.pass !== true) checks.push("manifest_schemas_loop_pin_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.manifestSchemasSweepPass !== true) checks.push("manifest_schemas_sweep_not_passed");
+    const schemaKey = Object.keys(signal).find((k) => k.endsWith("SustainmentLoopSchemaPass"));
+    const payloadKey = Object.keys(signal).find((k) => k.endsWith("SustainmentLoopPayloadPass"));
+    if (schemaKey && signal[schemaKey] !== true) checks.push("sustainment_loop_schema_not_passed");
+    if (payloadKey && signal[payloadKey] !== true) checks.push("sustainment_loop_payload_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "stage-promotion-sustainment-evidence") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("stage_promotion_sustainment_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.stagePromotionReadinessCliPass !== true) checks.push("stage_promotion_readiness_cli_not_passed");
+    if (signal.readinessSchemaPass !== true) checks.push("stage_promotion_readiness_schema_not_passed");
+    if (signal.readinessPayloadPass !== true) checks.push("stage_promotion_readiness_payload_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "dispatch-contract-fixtures-evidence") {
+    const checks = [];
+    if (payload.pass !== true) checks.push("dispatch_contract_fixtures_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.contractVersionReported !== true) checks.push("dispatch_contract_version_not_reported");
+    if (signal.fixtureCountPositive !== true) checks.push("dispatch_contract_fixtures_empty");
+    if (signal.allFixturesValidatedPass !== true) checks.push("dispatch_contract_fixture_validation_failed");
     return { pass: checks.length === 0, checks };
   }
   const checks = payload.pass === true ? [] : ["artifact_not_passed"];
@@ -1745,10 +1998,10 @@ async function main() {
       nextHorizon && horizonStatus?.horizonStates?.[nextHorizon]
         ? horizonStatus.horizonStates[nextHorizon]
         : null;
-    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H22, or next horizon already completed (retroactive closeout). */
+    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H30, or next horizon already completed (retroactive closeout). */
     const skipStagePromotionReadiness =
       derivedNext === "" ||
-      targetHorizon === "H22" ||
+      targetHorizon === "H30" ||
       Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
 
     if (!skipStagePromotionReadiness) {

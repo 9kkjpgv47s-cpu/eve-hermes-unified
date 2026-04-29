@@ -44,7 +44,12 @@ const payload = {
     { id: "optional-apply", status: process.env.ER_APPLY_STEP },
   ],
 };
-writeFileSync(process.env.ER_MANIFEST!, JSON.stringify(payload, null, 2) + "\n", "utf8");
+const manifestPath = process.env.ER_MANIFEST;
+if (!manifestPath) {
+  console.error("Missing ER_MANIFEST");
+  process.exit(1);
+}
+writeFileSync(manifestPath, JSON.stringify(payload, null, 2) + "\n", "utf8");
 console.log(process.env.ER_MANIFEST);
 NODE
 

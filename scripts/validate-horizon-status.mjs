@@ -4,7 +4,38 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDuplicateTransitionKeysFromRawJson } from "./goal-policy-source.mjs";
 
-const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19", "H20", "H21", "H22"];
+const VALID_HORIZONS = [
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "H7",
+  "H8",
+  "H9",
+  "H10",
+  "H11",
+  "H12",
+  "H13",
+  "H14",
+  "H15",
+  "H16",
+  "H17",
+  "H18",
+  "H19",
+  "H20",
+  "H21",
+  "H22",
+  "H23",
+  "H24",
+  "H25",
+  "H26",
+  "H27",
+  "H28",
+  "H29",
+  "H30",
+];
 const VALID_STATUSES = ["planned", "in_progress", "blocked", "completed"];
 const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];
@@ -234,8 +265,8 @@ export function validateHorizonStatus(payload) {
         if (policyKey === "transitions" && policyContainer === payload.goalPolicies) {
           continue;
         }
-        if (!/^H(1[0-9]|2[0-2]|[1-9])->H(1[0-9]|2[0-2]|[1-9])$/.test(policyKey)) {
-          errors.push(`${basePrefix} key must match pattern H<1-22>->H<1-22>`);
+        if (!/^H(1[0-9]|2[0-9]|30|[1-9])->H(1[0-9]|2[0-9]|30|[1-9])$/.test(policyKey)) {
+          errors.push(`${basePrefix} key must match pattern H<1-30>->H<1-30>`);
         }
         if (!policyValue || typeof policyValue !== "object" || Array.isArray(policyValue)) {
           errors.push(`${basePrefix} must be an object`);

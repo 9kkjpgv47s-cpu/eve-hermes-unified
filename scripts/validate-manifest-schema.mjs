@@ -815,6 +815,403 @@ export function validateStageDrillManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
+function validateSustainmentLoopManifestWithChecks(payload, requiredBoolKeys) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    for (const key of requiredBoolKeys) {
+      pushError(errors, typeof checks[key] === "boolean", `checks.${key} must be boolean`);
+    }
+  }
+  pushError(errors, Array.isArray(payload.steps), "steps must be an array");
+  if (Array.isArray(payload.steps)) {
+    payload.steps.forEach((step, index) => {
+      const prefix = `steps[${String(index)}]`;
+      pushError(errors, step && typeof step === "object", `${prefix} must be an object`);
+      if (!step || typeof step !== "object") {
+        return;
+      }
+      pushError(errors, isNonEmptyString(step.script), `${prefix}.script must be non-empty string`);
+      pushError(errors, Number.isFinite(step.exitCode), `${prefix}.exitCode must be a finite number`);
+    });
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validatePostH22SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "horizonStatusPass",
+    "h17AssuranceBundlePass",
+    "h18AssuranceBundlePass",
+    "ciSoakSloGatePass",
+    "unifiedEntrypointsEvidencePass",
+    "shellUnifiedDispatchCiEvidencePass",
+    "tenantIsolationEvidencePass",
+  ]);
+}
+
+export function validatePostH23SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH22SustainmentChainPass",
+    "evidenceGatesEvidencePass",
+    "h23CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH24SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH23SustainmentChainPass",
+    "regionFailoverEvidencePass",
+    "h24CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH25SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH24SustainmentChainPass",
+    "agentRemediationEvidencePass",
+    "h25CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH26SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH25SustainmentChainPass",
+    "emergencyRollbackEvidencePass",
+    "h26CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH27SustainmentLoopManifest(payload) {
+  const checks = payload && typeof payload === "object" ? payload.checks : null;
+  if (checks && typeof checks === "object" && typeof checks.postH26SustainmentChainPass === "boolean") {
+    return validateSustainmentLoopManifestWithChecks(payload, [
+      "postH26SustainmentChainPass",
+      "manifestSchemasTerminalEvidencePass",
+      "h27CloseoutGatePass",
+    ]);
+  }
+  if (checks && typeof checks === "object" && typeof checks.horizonStatusPass === "boolean") {
+    return validateSustainmentLoopManifestWithChecks(payload, [
+      "horizonStatusPass",
+      "h17AssuranceBundlePass",
+      "h18AssuranceBundlePass",
+      "ciSoakSloGatePass",
+      "unifiedEntrypointsEvidencePass",
+      "shellUnifiedDispatchCiEvidencePass",
+      "evidenceGatesEvidencePass",
+      "tenantIsolationEvidencePass",
+      "regionFailoverEvidencePass",
+      "agentRemediationEvidencePass",
+      "emergencyRollbackEvidencePass",
+      "manifestSchemasTerminalEvidencePass",
+      "h27CloseoutGatePass",
+    ]);
+  }
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH26SustainmentChainPass",
+    "manifestSchemasTerminalEvidencePass",
+    "h27CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH28SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH27SustainmentChainPass",
+    "manifestSchemasPostH27LoopEvidencePass",
+    "stagePromotionSustainmentEvidencePass",
+    "h28CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH29SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH28SustainmentChainPass",
+    "manifestSchemasPostH28LoopEvidencePass",
+    "dispatchContractFixturesEvidencePass",
+    "h29CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH30SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH29SustainmentChainPass",
+    "manifestSchemasPostH29LoopEvidencePass",
+    "h22CloseoutGatePass",
+    "h30CloseoutGatePass",
+  ]);
+}
+
+export function validateEvidenceGatesEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.kind === "evidence-gates-evidence", "kind must be evidence-gates-evidence");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.inputsResolved === "boolean", "checks.inputsResolved must be boolean");
+    pushError(errors, typeof checks.evidenceGatesCliPass === "boolean", "checks.evidenceGatesCliPass must be boolean");
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateRegionFailoverEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.kind === "region-failover-evidence", "kind must be region-failover-evidence");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.rehearsalCliPass === "boolean", "checks.rehearsalCliPass must be boolean");
+    pushError(
+      errors,
+      typeof checks.standbySwapManifestPass === "boolean",
+      "checks.standbySwapManifestPass must be boolean",
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateAgentRemediationEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.kind === "agent-remediation-evidence", "kind must be agent-remediation-evidence");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.playbookCliPass === "boolean", "checks.playbookCliPass must be boolean");
+    pushError(
+      errors,
+      typeof checks.boundedDryRunPolicyPass === "boolean",
+      "checks.boundedDryRunPolicyPass must be boolean",
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateEmergencyRollbackEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.kind === "emergency-rollback-evidence", "kind must be emergency-rollback-evidence");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.rehearsalCliPass === "boolean", "checks.rehearsalCliPass must be boolean");
+    pushError(
+      errors,
+      typeof checks.emergencyRollbackDryRunEvidencePass === "boolean",
+      "checks.emergencyRollbackDryRunEvidencePass must be boolean",
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateManifestSchemasTerminalEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.kind === "manifest-schemas-terminal-evidence", "kind must be manifest-schemas-terminal-evidence");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.manifestSchemasSweepPass === "boolean", "checks.manifestSchemasSweepPass must be boolean");
+    pushError(
+      errors,
+      typeof checks.postH26SustainmentLoopSchemaPass === "boolean",
+      "checks.postH26SustainmentLoopSchemaPass must be boolean",
+    );
+    pushError(
+      errors,
+      typeof checks.postH26SustainmentLoopPayloadPass === "boolean",
+      "checks.postH26SustainmentLoopPayloadPass must be boolean",
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateManifestSchemasPostH27LoopEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    payload.kind === "manifest-schemas-post-h27-loop-evidence",
+    "kind must be manifest-schemas-post-h27-loop-evidence",
+  );
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.manifestSchemasSweepPass === "boolean", "checks.manifestSchemasSweepPass must be boolean");
+    pushError(
+      errors,
+      typeof checks.postH27SustainmentLoopSchemaPass === "boolean",
+      "checks.postH27SustainmentLoopSchemaPass must be boolean",
+    );
+    pushError(
+      errors,
+      typeof checks.postH27SustainmentLoopPayloadPass === "boolean",
+      "checks.postH27SustainmentLoopPayloadPass must be boolean",
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateManifestSchemasPostH28LoopEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    payload.kind === "manifest-schemas-post-h28-loop-evidence",
+    "kind must be manifest-schemas-post-h28-loop-evidence",
+  );
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.manifestSchemasSweepPass === "boolean", "checks.manifestSchemasSweepPass must be boolean");
+    pushError(
+      errors,
+      typeof checks.postH28SustainmentLoopSchemaPass === "boolean",
+      "checks.postH28SustainmentLoopSchemaPass must be boolean",
+    );
+    pushError(
+      errors,
+      typeof checks.postH28SustainmentLoopPayloadPass === "boolean",
+      "checks.postH28SustainmentLoopPayloadPass must be boolean",
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateManifestSchemasPostH29LoopEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    payload.kind === "manifest-schemas-post-h29-loop-evidence",
+    "kind must be manifest-schemas-post-h29-loop-evidence",
+  );
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.manifestSchemasSweepPass === "boolean", "checks.manifestSchemasSweepPass must be boolean");
+    pushError(
+      errors,
+      typeof checks.postH29SustainmentLoopSchemaPass === "boolean",
+      "checks.postH29SustainmentLoopSchemaPass must be boolean",
+    );
+    pushError(
+      errors,
+      typeof checks.postH29SustainmentLoopPayloadPass === "boolean",
+      "checks.postH29SustainmentLoopPayloadPass must be boolean",
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateStagePromotionSustainmentEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    payload.kind === "stage-promotion-sustainment-evidence",
+    "kind must be stage-promotion-sustainment-evidence",
+  );
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(
+      errors,
+      typeof checks.stagePromotionReadinessCliPass === "boolean",
+      "checks.stagePromotionReadinessCliPass must be boolean",
+    );
+    pushError(errors, typeof checks.readinessSchemaPass === "boolean", "checks.readinessSchemaPass must be boolean");
+    pushError(errors, typeof checks.readinessPayloadPass === "boolean", "checks.readinessPayloadPass must be boolean");
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateDispatchContractFixturesEvidenceManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(
+    errors,
+    payload.kind === "dispatch-contract-fixtures-evidence",
+    "kind must be dispatch-contract-fixtures-evidence",
+  );
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(
+      errors,
+      typeof checks.contractVersionReported === "boolean",
+      "checks.contractVersionReported must be boolean",
+    );
+    pushError(errors, typeof checks.fixtureCountPositive === "boolean", "checks.fixtureCountPositive must be boolean");
+    pushError(
+      errors,
+      typeof checks.allFixturesValidatedPass === "boolean",
+      "checks.allFixturesValidatedPass must be boolean",
+    );
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateManifestSchema(type, payload) {
   if (type === "release-readiness") {
     return validateReleaseReadinessManifest(payload);
@@ -863,6 +1260,63 @@ export function validateManifestSchema(type, payload) {
   }
   if (type === "stage-drill") {
     return validateStageDrillManifest(payload);
+  }
+  if (type === "post-h22-sustainment-loop") {
+    return validatePostH22SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h23-sustainment-loop") {
+    return validatePostH23SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h24-sustainment-loop") {
+    return validatePostH24SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h25-sustainment-loop") {
+    return validatePostH25SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h26-sustainment-loop") {
+    return validatePostH26SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h27-sustainment-loop") {
+    return validatePostH27SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h28-sustainment-loop") {
+    return validatePostH28SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h29-sustainment-loop") {
+    return validatePostH29SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h30-sustainment-loop") {
+    return validatePostH30SustainmentLoopManifest(payload);
+  }
+  if (type === "evidence-gates-evidence") {
+    return validateEvidenceGatesEvidenceManifest(payload);
+  }
+  if (type === "region-failover-evidence") {
+    return validateRegionFailoverEvidenceManifest(payload);
+  }
+  if (type === "agent-remediation-evidence") {
+    return validateAgentRemediationEvidenceManifest(payload);
+  }
+  if (type === "emergency-rollback-evidence") {
+    return validateEmergencyRollbackEvidenceManifest(payload);
+  }
+  if (type === "manifest-schemas-terminal-evidence") {
+    return validateManifestSchemasTerminalEvidenceManifest(payload);
+  }
+  if (type === "manifest-schemas-post-h27-loop-evidence") {
+    return validateManifestSchemasPostH27LoopEvidenceManifest(payload);
+  }
+  if (type === "manifest-schemas-post-h28-loop-evidence") {
+    return validateManifestSchemasPostH28LoopEvidenceManifest(payload);
+  }
+  if (type === "manifest-schemas-post-h29-loop-evidence") {
+    return validateManifestSchemasPostH29LoopEvidenceManifest(payload);
+  }
+  if (type === "stage-promotion-sustainment-evidence") {
+    return validateStagePromotionSustainmentEvidenceManifest(payload);
+  }
+  if (type === "dispatch-contract-fixtures-evidence") {
+    return validateDispatchContractFixturesEvidenceManifest(payload);
   }
   return { valid: false, errors: [`Unsupported manifest type: ${type}`] };
 }
@@ -922,6 +1376,25 @@ async function listAllManifestTargets(evidenceDir) {
   const stagePromotionExecutionTargets = [];
   const autoRollbackPolicyTargets = [];
   const stageDrillTargets = [];
+  const postH22SustainmentLoopTargets = [];
+  const postH23SustainmentLoopTargets = [];
+  const postH24SustainmentLoopTargets = [];
+  const postH25SustainmentLoopTargets = [];
+  const postH26SustainmentLoopTargets = [];
+  const postH27SustainmentLoopTargets = [];
+  const postH28SustainmentLoopTargets = [];
+  const postH29SustainmentLoopTargets = [];
+  const postH30SustainmentLoopTargets = [];
+  const evidenceGatesEvidenceTargets = [];
+  const regionFailoverEvidenceTargets = [];
+  const agentRemediationEvidenceTargets = [];
+  const emergencyRollbackEvidenceTargets = [];
+  const manifestSchemasTerminalEvidenceTargets = [];
+  const manifestSchemasPostH27LoopEvidenceTargets = [];
+  const manifestSchemasPostH28LoopEvidenceTargets = [];
+  const manifestSchemasPostH29LoopEvidenceTargets = [];
+  const stagePromotionSustainmentEvidenceTargets = [];
+  const dispatchContractFixturesEvidenceTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1007,6 +1480,116 @@ async function listAllManifestTargets(evidenceDir) {
         type: "stage-drill",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("post-h22-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH22SustainmentLoopTargets.push({
+        type: "post-h22-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h23-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH23SustainmentLoopTargets.push({
+        type: "post-h23-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h24-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH24SustainmentLoopTargets.push({
+        type: "post-h24-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h25-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH25SustainmentLoopTargets.push({
+        type: "post-h25-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h26-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH26SustainmentLoopTargets.push({
+        type: "post-h26-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h27-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH27SustainmentLoopTargets.push({
+        type: "post-h27-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h28-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH28SustainmentLoopTargets.push({
+        type: "post-h28-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h29-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH29SustainmentLoopTargets.push({
+        type: "post-h29-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h30-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH30SustainmentLoopTargets.push({
+        type: "post-h30-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("evidence-gates-evidence-") && entry.name.endsWith(".json")) {
+      evidenceGatesEvidenceTargets.push({
+        type: "evidence-gates-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("region-failover-evidence-") && entry.name.endsWith(".json")) {
+      regionFailoverEvidenceTargets.push({
+        type: "region-failover-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("agent-remediation-evidence-") && entry.name.endsWith(".json")) {
+      agentRemediationEvidenceTargets.push({
+        type: "agent-remediation-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("emergency-rollback-evidence-") && entry.name.endsWith(".json")) {
+      emergencyRollbackEvidenceTargets.push({
+        type: "emergency-rollback-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("manifest-schemas-terminal-evidence-") && entry.name.endsWith(".json")) {
+      manifestSchemasTerminalEvidenceTargets.push({
+        type: "manifest-schemas-terminal-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (
+      entry.name.startsWith("manifest-schemas-post-h27-loop-evidence-") &&
+      entry.name.endsWith(".json")
+    ) {
+      manifestSchemasPostH27LoopEvidenceTargets.push({
+        type: "manifest-schemas-post-h27-loop-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (
+      entry.name.startsWith("manifest-schemas-post-h28-loop-evidence-") &&
+      entry.name.endsWith(".json")
+    ) {
+      manifestSchemasPostH28LoopEvidenceTargets.push({
+        type: "manifest-schemas-post-h28-loop-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (
+      entry.name.startsWith("manifest-schemas-post-h29-loop-evidence-") &&
+      entry.name.endsWith(".json")
+    ) {
+      manifestSchemasPostH29LoopEvidenceTargets.push({
+        type: "manifest-schemas-post-h29-loop-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (
+      entry.name.startsWith("stage-promotion-sustainment-evidence-") &&
+      entry.name.endsWith(".json")
+    ) {
+      stagePromotionSustainmentEvidenceTargets.push({
+        type: "stage-promotion-sustainment-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (
+      entry.name.startsWith("dispatch-contract-fixtures-evidence-") &&
+      entry.name.endsWith(".json")
+    ) {
+      dispatchContractFixturesEvidenceTargets.push({
+        type: "dispatch-contract-fixtures-evidence",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -1024,6 +1607,25 @@ async function listAllManifestTargets(evidenceDir) {
   stagePromotionExecutionTargets.sort((a, b) => a.file.localeCompare(b.file));
   autoRollbackPolicyTargets.sort((a, b) => a.file.localeCompare(b.file));
   stageDrillTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH22SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH23SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH24SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH25SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH26SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH27SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH28SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH29SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH30SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  evidenceGatesEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  regionFailoverEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  agentRemediationEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  emergencyRollbackEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  manifestSchemasTerminalEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  manifestSchemasPostH27LoopEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  manifestSchemasPostH28LoopEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  manifestSchemasPostH29LoopEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  stagePromotionSustainmentEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  dispatchContractFixturesEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1040,6 +1642,25 @@ async function listAllManifestTargets(evidenceDir) {
     stagePromotionExecutionTargets,
     autoRollbackPolicyTargets,
     stageDrillTargets,
+    postH22SustainmentLoopTargets,
+    postH23SustainmentLoopTargets,
+    postH24SustainmentLoopTargets,
+    postH25SustainmentLoopTargets,
+    postH26SustainmentLoopTargets,
+    postH27SustainmentLoopTargets,
+    postH28SustainmentLoopTargets,
+    postH29SustainmentLoopTargets,
+    postH30SustainmentLoopTargets,
+    evidenceGatesEvidenceTargets,
+    regionFailoverEvidenceTargets,
+    agentRemediationEvidenceTargets,
+    emergencyRollbackEvidenceTargets,
+    manifestSchemasTerminalEvidenceTargets,
+    manifestSchemasPostH27LoopEvidenceTargets,
+    manifestSchemasPostH28LoopEvidenceTargets,
+    manifestSchemasPostH29LoopEvidenceTargets,
+    stagePromotionSustainmentEvidenceTargets,
+    dispatchContractFixturesEvidenceTargets,
   };
 }
 
@@ -1057,7 +1678,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|all)",
+      "Missing --type (see validate-manifest-schema.mjs: release-readiness through dispatch-contract-fixtures-evidence, or all)",
     );
   }
 
@@ -1142,6 +1763,139 @@ async function main() {
           ...(targetGroups.stageDrillTargets.length > 0
             ? [targetGroups.stageDrillTargets[targetGroups.stageDrillTargets.length - 1]]
             : []),
+          ...(targetGroups.postH22SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH22SustainmentLoopTargets[
+                  targetGroups.postH22SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH23SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH23SustainmentLoopTargets[
+                  targetGroups.postH23SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH24SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH24SustainmentLoopTargets[
+                  targetGroups.postH24SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH25SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH25SustainmentLoopTargets[
+                  targetGroups.postH25SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH26SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH26SustainmentLoopTargets[
+                  targetGroups.postH26SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH27SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH27SustainmentLoopTargets[
+                  targetGroups.postH27SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH28SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH28SustainmentLoopTargets[
+                  targetGroups.postH28SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH29SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH29SustainmentLoopTargets[
+                  targetGroups.postH29SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH30SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH30SustainmentLoopTargets[
+                  targetGroups.postH30SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.evidenceGatesEvidenceTargets.length > 0
+            ? [
+                targetGroups.evidenceGatesEvidenceTargets[
+                  targetGroups.evidenceGatesEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.regionFailoverEvidenceTargets.length > 0
+            ? [
+                targetGroups.regionFailoverEvidenceTargets[
+                  targetGroups.regionFailoverEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.agentRemediationEvidenceTargets.length > 0
+            ? [
+                targetGroups.agentRemediationEvidenceTargets[
+                  targetGroups.agentRemediationEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.emergencyRollbackEvidenceTargets.length > 0
+            ? [
+                targetGroups.emergencyRollbackEvidenceTargets[
+                  targetGroups.emergencyRollbackEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.manifestSchemasTerminalEvidenceTargets.length > 0
+            ? [
+                targetGroups.manifestSchemasTerminalEvidenceTargets[
+                  targetGroups.manifestSchemasTerminalEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.manifestSchemasPostH27LoopEvidenceTargets.length > 0
+            ? [
+                targetGroups.manifestSchemasPostH27LoopEvidenceTargets[
+                  targetGroups.manifestSchemasPostH27LoopEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.manifestSchemasPostH28LoopEvidenceTargets.length > 0
+            ? [
+                targetGroups.manifestSchemasPostH28LoopEvidenceTargets[
+                  targetGroups.manifestSchemasPostH28LoopEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.manifestSchemasPostH29LoopEvidenceTargets.length > 0
+            ? [
+                targetGroups.manifestSchemasPostH29LoopEvidenceTargets[
+                  targetGroups.manifestSchemasPostH29LoopEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.stagePromotionSustainmentEvidenceTargets.length > 0
+            ? [
+                targetGroups.stagePromotionSustainmentEvidenceTargets[
+                  targetGroups.stagePromotionSustainmentEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.dispatchContractFixturesEvidenceTargets.length > 0
+            ? [
+                targetGroups.dispatchContractFixturesEvidenceTargets[
+                  targetGroups.dispatchContractFixturesEvidenceTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1159,6 +1913,25 @@ async function main() {
           ...targetGroups.stagePromotionExecutionTargets,
           ...targetGroups.autoRollbackPolicyTargets,
           ...targetGroups.stageDrillTargets,
+          ...targetGroups.postH22SustainmentLoopTargets,
+          ...targetGroups.postH23SustainmentLoopTargets,
+          ...targetGroups.postH24SustainmentLoopTargets,
+          ...targetGroups.postH25SustainmentLoopTargets,
+          ...targetGroups.postH26SustainmentLoopTargets,
+          ...targetGroups.postH27SustainmentLoopTargets,
+          ...targetGroups.postH28SustainmentLoopTargets,
+          ...targetGroups.postH29SustainmentLoopTargets,
+          ...targetGroups.postH30SustainmentLoopTargets,
+          ...targetGroups.evidenceGatesEvidenceTargets,
+          ...targetGroups.regionFailoverEvidenceTargets,
+          ...targetGroups.agentRemediationEvidenceTargets,
+          ...targetGroups.emergencyRollbackEvidenceTargets,
+          ...targetGroups.manifestSchemasTerminalEvidenceTargets,
+          ...targetGroups.manifestSchemasPostH27LoopEvidenceTargets,
+          ...targetGroups.manifestSchemasPostH28LoopEvidenceTargets,
+          ...targetGroups.manifestSchemasPostH29LoopEvidenceTargets,
+          ...targetGroups.stagePromotionSustainmentEvidenceTargets,
+          ...targetGroups.dispatchContractFixturesEvidenceTargets,
         ];
     const results = [];
     for (const target of targets) {

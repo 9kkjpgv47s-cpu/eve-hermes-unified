@@ -62,14 +62,14 @@ async function seedMergeBundleInputs() {
 }
 
 describe("run-post-h22-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop npm script (post-H22 terminal chain)", async () => {
+  it("exposes verify:sustainment-loop:h22-core npm script (post-H22 sustainment core)", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h22-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop:h22-core"]).toContain("run-post-h22-sustainment-loop.mjs");
   });
 
   it(
-    "emits pass and structured checks in post-H22 sustainment loop manifest",
+    "emits pass and structured checks in post-H22 sustainment core manifest (no H22 closeout)",
     async () => {
       await seedMergeBundleInputs();
       const result = await runCommandWithTimeout(
@@ -93,7 +93,6 @@ describe("run-post-h22-sustainment-loop.mjs", () => {
           unifiedEntrypointsEvidencePass?: boolean;
           shellUnifiedDispatchCiEvidencePass?: boolean;
           tenantIsolationEvidencePass?: boolean;
-          h22CloseoutGatePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
@@ -104,7 +103,6 @@ describe("run-post-h22-sustainment-loop.mjs", () => {
       expect(payload.checks?.unifiedEntrypointsEvidencePass).toBe(true);
       expect(payload.checks?.shellUnifiedDispatchCiEvidencePass).toBe(true);
       expect(payload.checks?.tenantIsolationEvidencePass).toBe(true);
-      expect(payload.checks?.h22CloseoutGatePass).toBe(true);
     },
     900_000,
   );

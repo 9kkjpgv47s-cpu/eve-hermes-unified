@@ -44,7 +44,7 @@ npm run validate:h9-closeout
 npm run validate:h5-closeout
 npm run validate:regression-eve-primary
 npm run validate:cutover-readiness
-npm run validate:release-readiness
+npm run emit:validate-all-chain-posture
 npm run validate:initial-scope
 npm run validate:merge-bundle
 npm run bundle:merge-readiness

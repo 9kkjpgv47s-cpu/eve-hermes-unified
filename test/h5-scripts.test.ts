@@ -825,6 +825,111 @@ describe("H5 operator scripts", () => {
     });
   });
 
+  it("emit-validate-all-chain-posture fails when h9-closeout manifest is missing", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990109-310000";
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          sloPosture: {
+            schemaVersion: "h8-slo-posture-v1",
+            generatedAtIso: new Date().toISOString(),
+            gatesPassed: true,
+            metrics: { successRate: 1, missingTraceRate: 0 },
+            evidenceGates: {},
+          },
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `regression-eve-primary-${stamp}.json`),
+        JSON.stringify({ pass: true }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `cutover-readiness-${stamp}.json`),
+        JSON.stringify({ pass: true }),
+        "utf8",
+      );
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/emit-validate-all-chain-posture.mjs", "--evidence-dir", evidenceDir],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      expect(result.stdout).toContain('"pass":false');
+    });
+  });
+
+  it("emit-validate-all-chain-posture passes when all tail artifacts pass", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990109-320000";
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          sloPosture: {
+            schemaVersion: "h8-slo-posture-v1",
+            generatedAtIso: new Date().toISOString(),
+            gatesPassed: true,
+            metrics: { successRate: 1, missingTraceRate: 0 },
+            evidenceGates: {},
+          },
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h8-closeout-evidence-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          pass: true,
+          closeout: { horizon: "H8", nextHorizon: null, canCloseHorizon: true, canStartNextHorizon: false },
+          checks: { horizonCloseoutGatePass: true },
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h9-closeout-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h9-closeout-v1",
+          pass: true,
+          closeout: { horizon: "H8", nextHorizon: "H9" },
+          checks: { h9HorizonCloseoutGatePass: true },
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `regression-eve-primary-${stamp}.json`),
+        JSON.stringify({ pass: true, iterations: 1 }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `cutover-readiness-${stamp}.json`),
+        JSON.stringify({ pass: true, stagePass: true }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "chain-posture-pass.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/emit-validate-all-chain-posture.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(0);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as {
+        schemaVersion?: string;
+        gatesPassed?: boolean;
+        horizonProgram?: string;
+        checks?: { validationSummarySloPostureGatesPassed?: boolean };
+      };
+      expect(parsed.schemaVersion).toBe("h9-validate-all-chain-v1");
+      expect(parsed.horizonProgram).toBe("H9");
+      expect(parsed.gatesPassed).toBe(true);
+      expect(parsed.checks?.validationSummarySloPostureGatesPassed).toBe(true);
+    });
+  });
+
   it("validate-h5-tenant-isolation emits valid JSON", async () => {
     const result = await runCommandWithTimeout(["node", "scripts/validate-h5-tenant-isolation.mjs"], {
       timeoutMs: 10_000,

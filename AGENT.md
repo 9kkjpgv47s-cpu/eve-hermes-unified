@@ -8,9 +8,9 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: **`H8`** active (`docs/HORIZON_STATUS.json`); **H9** planned with **`h9-action-*`** and **`docs/H9_PROGRAM.md`**
-- Completed in-repo through **h8-action-3** (status bump + H9 scaffold + **`H8->H9`** goal policy + validate gates)
-- Primary focus: **h9-action-1** (lock H9 goals and evidence gates) per `docs/H9_PROGRAM.md`
+- Horizon: **`H8`** active (`docs/HORIZON_STATUS.json`); **H9** program completed in-repo through **h9-action-2**; **`h9-action-3`** optional promotion bump — see **`docs/H9_PROGRAM.md`**
+- Completed in-repo through **h9-action-2** (H9 program doc + validate-all chain posture emitter at end of `validate:all`)
+- Primary focus: **h9-action-3** (post–H8→H9 promotion status bump / H10 seed) when operators run **`promote:horizon`**
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:

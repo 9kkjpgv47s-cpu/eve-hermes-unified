@@ -66,7 +66,7 @@ describe("run-post-h35-sustainment-loop.mjs", () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
     expect(pkg.scripts?.["verify:sustainment-loop:h35-legacy"]).toContain("run-post-h35-sustainment-loop.mjs");
-    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h38-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h42-sustainment-loop.mjs");
   });
 
   it(

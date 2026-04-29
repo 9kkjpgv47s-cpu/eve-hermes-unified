@@ -399,11 +399,11 @@ Mitigations:
 
 ### Post-H15 operations (sustainment; subsumed by H17 terminal chain)
 
-After **H15** is marked completed, **`npm run run:h15-assurance-bundle`** remains the shell CI convergence path; terminal sustainment uses **Post-H38** below. Legacy: **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
+After **H15** is marked completed, **`npm run run:h15-assurance-bundle`** remains the shell CI convergence path; terminal sustainment uses **Post-H42** below. Legacy: **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
 
 ### Horizon H16 - Merge readiness policy gates (goal policy + manifest schemas)
 
-Goal: tie **merge-bundle readiness discipline** to executable assurance by chaining **`validate:goal-policy-file`** (full runway **H2→H38**) and **`validate:manifest-schemas`** on **`evidence/`** after the **H15** bundle, so horizon transitions stay aligned with machine-readable evidence shapes before **`validate:all`**.
+Goal: tie **merge-bundle readiness discipline** to executable assurance by chaining **`validate:goal-policy-file`** (full runway **H2→H42**) and **`validate:manifest-schemas`** on **`evidence/`** after the **H15** bundle, so horizon transitions stay aligned with machine-readable evidence shapes before **`validate:all`**.
 
 Workstreams:
 
@@ -413,7 +413,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h16-assurance-bundle`** passes and artifact matches **`evidence/h16-assurance-bundle-*.json`**.
-- **`npm run validate:h16-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h16-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 Primary risks:
 
@@ -435,7 +435,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h17-assurance-bundle`** passes and artifact matches **`evidence/h17-assurance-bundle-*.json`**.
-- **`npm run validate:h17-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h17-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 Primary risks:
 
@@ -452,12 +452,12 @@ Goal: after merge gates (**H17** bundle) pass, continuously exercise **canary + 
 Workstreams:
 
 - **`npm run run:h18-assurance-bundle`**: invokes **`npm run run:h2-drill-suite`** with **`--dry-run`**, **`--allow-horizon-mismatch`**, and pinned **`--canary-chats` / `--majority-percent`** for deterministic CI.
-- **`npm run validate:h18-closeout`** (H18 replay when **H38** is terminal).
+- **`npm run validate:h18-closeout`** (H18 replay when **H42** is terminal).
 
 Exit evidence:
 
 - **`npm run run:h18-assurance-bundle`** passes and artifact matches **`evidence/h18-assurance-bundle-*.json`**.
-- **`npm run validate:h18-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h18-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 Primary risks:
 
@@ -480,7 +480,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h19-legacy`** passes when reproducing the H19-only sustainment chain.
-- **`npm run validate:h19-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h19-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H20 - Unified entrypoints evidence in sustainment (legacy terminal chain)
 
@@ -495,7 +495,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h20-legacy`** passes when reproducing the H20-only sustainment chain.
-- **`npm run validate:h20-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h20-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H21 - Shell unified-dispatch CI evidence in sustainment (legacy terminal chain)
 
@@ -510,7 +510,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h21-legacy`** passes when reproducing the H21-only sustainment chain.
-- **`npm run validate:h21-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h21-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H22 - Tenant isolation evidence in sustainment (legacy terminal chain)
 
@@ -525,7 +525,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h22-legacy`** passes when reproducing the post-H22 chain without **H23–H36** terminal slices.
-- **`npm run validate:h22-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h22-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H23 - Manifest schema slice on terminal sustainment chain
 
@@ -540,7 +540,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h23-legacy`** passes and the newest manifest satisfies **`validate:post-h23-sustainment-manifest`**.
-- **`npm run validate:h23-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h23-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H24 - Horizon-status recheck on H23 bundle (legacy terminal chain)
 
@@ -555,7 +555,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h24-legacy`** passes and the newest manifest satisfies **`validate:post-h24-sustainment-manifest`**.
-- **`npm run validate:h24-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h24-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H25 - Manifest schema slice on post-H24 sustainment chain
 
@@ -570,7 +570,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h25-legacy`** passes and the newest manifest satisfies **`validate:post-h25-sustainment-manifest`**.
-- **`npm run validate:h25-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h25-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H26 - Horizon-status recheck on H25 bundle (legacy terminal chain)
 
@@ -585,7 +585,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h26-legacy`** passes and the newest manifest satisfies **`validate:post-h26-sustainment-manifest`**.
-- **`npm run validate:h26-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h26-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H27 - Manifest schema slice on post-H26 sustainment chain
 
@@ -600,7 +600,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h27-legacy`** passes and the newest manifest satisfies **`validate:post-h27-sustainment-manifest`**.
-- **`npm run validate:h27-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h27-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H28 - Horizon-status recheck on H27 bundle (legacy terminal chain)
 
@@ -615,7 +615,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h28-legacy`** passes and the newest manifest satisfies **`validate:post-h28-sustainment-manifest`**.
-- **`npm run validate:h28-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h28-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H29 - Manifest schema slice on post-H28 sustainment chain
 
@@ -630,7 +630,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h29-legacy`** passes and the newest manifest satisfies **`validate:post-h29-sustainment-manifest`**.
-- **`npm run validate:h29-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h29-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H30 - Terminal sustainment + horizon-status recheck
 
@@ -645,7 +645,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h30-legacy`** passes and the newest manifest satisfies **`validate:post-h30-sustainment-manifest`**.
-- **`npm run validate:h30-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h30-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H31 - Manifest schema slice on post-H30 sustainment chain
 
@@ -660,7 +660,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h31-legacy`** passes and the newest manifest satisfies **`validate:post-h31-sustainment-manifest`**.
-- **`npm run validate:h31-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h31-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H32 - Terminal sustainment + horizon-status recheck
 
@@ -675,7 +675,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h32-legacy`** passes and the newest manifest satisfies **`validate:post-h32-sustainment-manifest`**.
-- **`npm run validate:h32-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h32-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H33 - Manifest schema slice on post-H32 sustainment chain
 
@@ -690,7 +690,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h33-legacy`** passes and the newest manifest satisfies **`validate:post-h33-sustainment-manifest`**.
-- **`npm run validate:h33-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h33-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H34 - Horizon-status recheck on H33 assurance chain
 
@@ -720,7 +720,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h35-legacy`** passes and the newest manifest satisfies **`validate:post-h35-sustainment-manifest`**.
-- **`npm run validate:h35-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h35-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
 ### Horizon H36 - Horizon-status recheck on H35 assurance chain
 
@@ -750,26 +750,86 @@ Workstreams:
 Exit evidence:
 
 - **`npm run verify:sustainment-loop:h37-legacy`** passes and the newest manifest satisfies **`validate:post-h37-sustainment-manifest`**.
-- **`npm run validate:h37-closeout`** passes when evidence is present (retroactive closeout when **H38** is terminal).
+- **`npm run validate:h37-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
-### Horizon H38 - Terminal sustainment + horizon-status recheck
+### Horizon H38 - Horizon-status recheck on H37 assurance chain
 
-Goal: after **H37** manifest-schema bundling passes, re-validate **`docs/HORIZON_STATUS.json`** end-to-end so horizon metadata and embedded goal policies stay consistent with the full terminal chain.
+Goal: after **H37** manifest-schema bundling passes, re-validate **`docs/HORIZON_STATUS.json`** end-to-end so horizon metadata and embedded goal policies stay consistent before **H39** manifest-schema slice and **H40** horizon-status recheck.
 
 Workstreams:
 
 - **`npm run run:h38-assurance-bundle`**: **`run-h38-assurance-bundle.mjs`** chains **`run-h37-assurance-bundle.mjs`** + **`validate-horizon-status`** on **`docs/HORIZON_STATUS.json`**; writes **`evidence/h38-assurance-bundle-*.json`**.
-- **`npm run verify:sustainment-loop`**: **`run-post-h38-sustainment-loop.mjs`** runs the post-H22 chain then **`run:h38-assurance-bundle`** + **`validate:h38-closeout`** → **`evidence/post-h38-sustainment-loop-*.json`**.
+- **`npm run verify:sustainment-loop:h38-legacy`**: **`run-post-h38-sustainment-loop.mjs`** runs the post-H22 chain then **`run:h38-assurance-bundle`** + **`validate:h38-closeout`** → **`evidence/post-h38-sustainment-loop-*.json`**.
 - **`npm run validate:post-h38-sustainment-manifest`**, **`npm run verify:sustainment-loop:h37-legacy`** / **`validate:post-h37-sustainment-manifest`**.
 
 Exit evidence:
 
-- **`npm run verify:sustainment-loop`** passes and the newest manifest satisfies **`validate:post-h38-sustainment-manifest`**.
-- **`npm run validate:h38-closeout`** passes when evidence is present (**H38** is terminal: stage-promotion readiness skipped in closeout validator).
+- **`npm run verify:sustainment-loop:h38-legacy`** passes and the newest manifest satisfies **`validate:post-h38-sustainment-manifest`**.
+- **`npm run validate:h38-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
 
-### Post-H38 operations (terminal sustainment)
+### Horizon H39 - Manifest schema slice on post-H38 sustainment chain
 
-After **H38** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8). Optionally **`npm run validate:post-h38-sustainment-manifest`**. Legacy prior chains: **`verify:sustainment-loop:h37-legacy`** / **`validate:post-h37-sustainment-manifest`**, **`verify:sustainment-loop:h36-legacy`** / **`validate:post-h36-sustainment-manifest`**, **`verify:sustainment-loop:h35-legacy`** / **`validate:post-h35-sustainment-manifest`**, **`verify:sustainment-loop:h34-legacy`** / **`validate:post-h34-sustainment-manifest`**, **`verify:sustainment-loop:h33-legacy`** / **`validate:post-h33-sustainment-manifest`**, **`verify:sustainment-loop:h32-legacy`** / **`validate:post-h32-sustainment-manifest`**, **`verify:sustainment-loop:h31-legacy`** / **`validate:post-h31-sustainment-manifest`**, **`verify:sustainment-loop:h30-legacy`** / **`validate:post-h30-sustainment-manifest`**, **`verify:sustainment-loop:h29-legacy`** / **`validate:post-h29-sustainment-manifest`**, **`verify:sustainment-loop:h28-legacy`** / **`validate:post-h28-sustainment-manifest`**, **`verify:sustainment-loop:h27-legacy`** / **`validate:post-h27-sustainment-manifest`**, **`verify:sustainment-loop:h26-legacy`** / **`validate:post-h26-sustainment-manifest`**, **`verify:sustainment-loop:h25-legacy`** / **`validate:post-h25-sustainment-manifest`**, **`verify:sustainment-loop:h24-legacy`** / **`validate:post-h24-sustainment-manifest`**, **`verify:sustainment-loop:h23-legacy`** / **`validate:post-h23-sustainment-manifest`**, **`verify:sustainment-loop:h22-legacy`** … **`h6-legacy`**.
+Goal: after the **post-H38** sustainment chain passes, fail-closed **`validate:manifest-schemas`** over **`evidence/`** before **H40** horizon-status recheck.
+
+Workstreams:
+
+- **`npm run run:h39-assurance-bundle`**: **`run-h39-assurance-bundle.mjs`** chains **`run-post-h38-sustainment-loop.mjs`** + **`validate:manifest-schemas`**; writes **`evidence/h39-assurance-bundle-*.json`**.
+- **`npm run verify:sustainment-loop:h39-legacy`**: **`run-post-h39-sustainment-loop.mjs`** runs the post-H22 chain then **`run:h39-assurance-bundle`** + **`validate:h39-closeout`** → **`evidence/post-h39-sustainment-loop-*.json`**.
+- **`npm run validate:post-h39-sustainment-manifest`**, **`npm run verify:sustainment-loop:h38-legacy`** / **`validate:post-h38-sustainment-manifest`**.
+
+Exit evidence:
+
+- **`npm run verify:sustainment-loop:h39-legacy`** passes and the newest manifest satisfies **`validate:post-h39-sustainment-manifest`**.
+- **`npm run validate:h39-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
+
+### Horizon H40 - Horizon-status recheck on H39 assurance chain
+
+Goal: after **H39** manifest-schema bundling passes, re-validate **`docs/HORIZON_STATUS.json`** end-to-end before **H41** manifest-schema slice and **H42** horizon-status recheck.
+
+Workstreams:
+
+- **`npm run run:h40-assurance-bundle`**: **`run-h40-assurance-bundle.mjs`** chains **`run-h39-assurance-bundle.mjs`** + **`validate-horizon-status`** on **`docs/HORIZON_STATUS.json`**; writes **`evidence/h40-assurance-bundle-*.json`**.
+- **`npm run verify:sustainment-loop:h40-legacy`**: **`run-post-h40-sustainment-loop.mjs`** runs the post-H22 chain then **`run:h40-assurance-bundle`** + **`validate:h40-closeout`** → **`evidence/post-h40-sustainment-loop-*.json`**.
+- **`npm run validate:post-h40-sustainment-manifest`**, **`npm run verify:sustainment-loop:h39-legacy`** / **`validate:post-h39-sustainment-manifest`**.
+
+Exit evidence:
+
+- **`npm run verify:sustainment-loop:h40-legacy`** passes and the newest manifest satisfies **`validate:post-h40-sustainment-manifest`**.
+- **`npm run validate:h40-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
+
+### Horizon H41 - Manifest schema slice on post-H40 sustainment chain
+
+Goal: after the **post-H40** sustainment chain passes, fail-closed **`validate:manifest-schemas`** over **`evidence/`** before **H42** horizon-status recheck.
+
+Workstreams:
+
+- **`npm run run:h41-assurance-bundle`**: **`run-h41-assurance-bundle.mjs`** chains **`run-post-h40-sustainment-loop.mjs`** + **`validate:manifest-schemas`**; writes **`evidence/h41-assurance-bundle-*.json`**.
+- **`npm run verify:sustainment-loop:h41-legacy`**: **`run-post-h41-sustainment-loop.mjs`** runs the post-H22 chain then **`run:h41-assurance-bundle`** + **`validate:h41-closeout`** → **`evidence/post-h41-sustainment-loop-*.json`**.
+- **`npm run validate:post-h41-sustainment-manifest`**, **`npm run verify:sustainment-loop:h40-legacy`** / **`validate:post-h40-sustainment-manifest`**.
+
+Exit evidence:
+
+- **`npm run verify:sustainment-loop:h41-legacy`** passes and the newest manifest satisfies **`validate:post-h41-sustainment-manifest`**.
+- **`npm run validate:h41-closeout`** passes when evidence is present (retroactive closeout when **H42** is terminal).
+
+### Horizon H42 - Terminal sustainment + horizon-status recheck
+
+Goal: after **H41** manifest-schema bundling passes, re-validate **`docs/HORIZON_STATUS.json`** end-to-end so horizon metadata and embedded goal policies stay consistent with the full terminal chain.
+
+Workstreams:
+
+- **`npm run run:h42-assurance-bundle`**: **`run-h42-assurance-bundle.mjs`** chains **`run-h41-assurance-bundle.mjs`** + **`validate-horizon-status`** on **`docs/HORIZON_STATUS.json`**; writes **`evidence/h42-assurance-bundle-*.json`**.
+- **`npm run verify:sustainment-loop`**: **`run-post-h42-sustainment-loop.mjs`** runs the post-H22 chain then **`run:h42-assurance-bundle`** + **`validate:h42-closeout`** → **`evidence/post-h42-sustainment-loop-*.json`**.
+- **`npm run validate:post-h42-sustainment-manifest`**, **`npm run verify:sustainment-loop:h41-legacy`** / **`validate:post-h41-sustainment-manifest`**.
+
+Exit evidence:
+
+- **`npm run verify:sustainment-loop`** passes and the newest manifest satisfies **`validate:post-h42-sustainment-manifest`**.
+- **`npm run validate:h42-closeout`** passes when evidence is present (**H42** is terminal: stage-promotion readiness skipped in closeout validator).
+
+### Post-H42 operations (terminal sustainment)
+
+After **H42** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8). Optionally **`npm run validate:post-h42-sustainment-manifest`**. Legacy prior chains: **`verify:sustainment-loop:h41-legacy`** / **`validate:post-h41-sustainment-manifest`**, **`verify:sustainment-loop:h40-legacy`** / **`validate:post-h40-sustainment-manifest`**, **`verify:sustainment-loop:h39-legacy`** / **`validate:post-h39-sustainment-manifest`**, **`verify:sustainment-loop:h38-legacy`** / **`validate:post-h38-sustainment-manifest`**, **`verify:sustainment-loop:h37-legacy`** / **`validate:post-h37-sustainment-manifest`**, **`verify:sustainment-loop:h36-legacy`** / **`validate:post-h36-sustainment-manifest`**, **`verify:sustainment-loop:h35-legacy`** / **`validate:post-h35-sustainment-manifest`**, **`verify:sustainment-loop:h34-legacy`** / **`validate:post-h34-sustainment-manifest`**, **`verify:sustainment-loop:h33-legacy`** / **`validate:post-h33-sustainment-manifest`**, **`verify:sustainment-loop:h32-legacy`** / **`validate:post-h32-sustainment-manifest`**, **`verify:sustainment-loop:h31-legacy`** / **`validate:post-h31-sustainment-manifest`**, **`verify:sustainment-loop:h30-legacy`** / **`validate:post-h30-sustainment-manifest`**, **`verify:sustainment-loop:h29-legacy`** / **`validate:post-h29-sustainment-manifest`**, **`verify:sustainment-loop:h28-legacy`** / **`validate:post-h28-sustainment-manifest`**, **`verify:sustainment-loop:h27-legacy`** / **`validate:post-h27-sustainment-manifest`**, **`verify:sustainment-loop:h26-legacy`** / **`validate:post-h26-sustainment-manifest`**, **`verify:sustainment-loop:h25-legacy`** / **`validate:post-h25-sustainment-manifest`**, **`verify:sustainment-loop:h24-legacy`** / **`validate:post-h24-sustainment-manifest`**, **`verify:sustainment-loop:h23-legacy`** / **`validate:post-h23-sustainment-manifest`**, **`verify:sustainment-loop:h22-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 
@@ -780,7 +840,7 @@ After **H38** is marked completed, use **`npm run verify:sustainment-loop`** (se
 
 ## Immediate Next Actions (archived H2 drill checklist)
 
-The roadmap horizons **H1–H38** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h38-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
+The roadmap horizons **H1–H42** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h42-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
 
 1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report. **Dry-run** auto-relaxes the sequential **current→target** check when **`--current-stage`** is omitted (gateway env may still read **shadow**). Align **merge-bundle** / **bundle-verification** / **release-readiness** artifacts (**`latest-passing`** vs **`latest`**) before expecting a green readiness gate.
 2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:

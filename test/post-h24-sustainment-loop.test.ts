@@ -71,7 +71,7 @@ describe("run-post-h24-sustainment-loop.mjs", () => {
   it("exposes verify:sustainment-loop npm script (post-H32 terminal chain)", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h38-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h42-sustainment-loop.mjs");
   });
 
   it(

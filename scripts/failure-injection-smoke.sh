@@ -28,14 +28,34 @@ JSON
 SCRIPT
 chmod +x "$fake_eve_script"
 
+dispatch_bin="${UNIFIED_DISPATCH_BIN:-$ROOT_DIR/dist/src/bin/unified-dispatch.js}"
+dispatch_cmd=()
+if [[ -f "$dispatch_bin" ]]; then
+  dispatch_cmd=(node "$dispatch_bin")
+elif [[ -x "$ROOT_DIR/node_modules/.bin/tsx" && -f "$ROOT_DIR/src/bin/unified-dispatch.ts" ]]; then
+  dispatch_cmd=("$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/src/bin/unified-dispatch.ts")
+else
+  echo "Missing dispatch runner. Expected dist binary or local tsx install." >&2
+  exit 70
+fi
+
 timestamp="$(date +%Y%m%d-%H%M%S)"
 report="$OUT_DIR/failure-injection-$timestamp.txt"
 
+case_counter=0
 run_case() {
   local label="$1"
   shift
+  case_counter=$((case_counter + 1))
+  local json_out="$tmp_dir/dispatch-case-${case_counter}.json"
   echo "==== $label ===="
-  "$@" || true
+  "$@" >"$json_out" 2>&1 || true
+  if [[ "${UNIFIED_FAILURE_INJECTION_VALIDATE_DISPATCH_CONTRACT:-0}" == "1" ]]; then
+    if [[ -x "$ROOT_DIR/node_modules/.bin/tsx" ]]; then
+      "$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/src/bin/validate-dispatch-contracts.ts" --file "$json_out" >/dev/null || true
+    fi
+  fi
+  cat "$json_out"
   echo
 }
 
@@ -50,7 +70,7 @@ run_case() {
       UNIFIED_ROUTER_FAIL_CLOSED=1 \
       UNIFIED_EVE_TASK_DISPATCH_SCRIPT="/bin/sleep" \
       UNIFIED_EVE_DISPATCH_TIMEOUT_MS=10 \
-      node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "2" --chat-id "100" --message-id "1"
+      "${dispatch_cmd[@]}" --compact-json --text "2" --chat-id "100" --message-id "1"
 
   run_case "Case 2: Hermes lane non-zero exit" \
     env \
@@ -65,7 +85,7 @@ run_case() {
       EVE_DISPATCH_RESULT_PATH="$tmp_dir/eve-state.json" \
       UNIFIED_HERMES_LAUNCH_COMMAND="/bin/false" \
       UNIFIED_HERMES_LAUNCH_ARGS= \
-      node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "hermes fail case" --chat-id "100" --message-id "2"
+      "${dispatch_cmd[@]}" --compact-json --text "hermes fail case" --chat-id "100" --message-id "2"
 
   run_case "Case 3: Synthetic provider-limit mapping" \
     env \
@@ -80,7 +100,7 @@ run_case() {
       EVE_DISPATCH_RESULT_PATH="$tmp_dir/eve-state.json" \
       UNIFIED_HERMES_LAUNCH_COMMAND="/bin/sh" \
       UNIFIED_HERMES_LAUNCH_ARGS="-c printf 'provider_limit\\n' 1>&2; exit 1" \
-      node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "provider limit simulation" --chat-id "100" --message-id "3"
+      "${dispatch_cmd[@]}" --compact-json --text "provider limit simulation" --chat-id "100" --message-id "3"
 
   run_case "Case 4: Dispatch-state read mismatch" \
     env \
@@ -91,7 +111,7 @@ run_case() {
       UNIFIED_ROUTER_FAIL_CLOSED=1 \
       UNIFIED_EVE_TASK_DISPATCH_SCRIPT="/bin/true" \
       UNIFIED_EVE_DISPATCH_RESULT_PATH="/tmp/unified-missing-eve-state-${timestamp}.json" \
-      node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "state mismatch case" --chat-id "100" --message-id "4"
+      "${dispatch_cmd[@]}" --compact-json --text "state mismatch case" --chat-id "100" --message-id "4"
 
   run_case "Case 5: Policy fail-closed path with no fallback" \
     env \
@@ -105,7 +125,7 @@ run_case() {
       UNIFIED_EVE_DISPATCH_RESULT_PATH="$tmp_dir/eve-state.json" \
       EVE_DISPATCH_RESULT_PATH="$tmp_dir/eve-state.json" \
       UNIFIED_CAPABILITY_POLICY_DEFAULT=deny \
-      node "$ROOT_DIR/dist/src/bin/unified-dispatch.js" --text "@cap summarize_state denied" --chat-id "100" --message-id "5"
+      "${dispatch_cmd[@]}" --compact-json --text "@cap summarize_state denied" --chat-id "100" --message-id "5"
 
   echo "Failure injection smoke ended: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } >"$report" 2>&1

@@ -20,6 +20,8 @@ async function seedEvidence(
     p95LatencyMs?: number;
     missingTraceRate?: number;
     unclassifiedFailures?: number;
+    dispatchFailureRate?: number;
+    policyFailureRate?: number;
     releasePass?: boolean;
     cutoverPass?: boolean;
     stagePromotionPass?: boolean;
@@ -86,6 +88,8 @@ async function seedEvidence(
           missingTraceRate: options?.missingTraceRate ?? 0,
           unclassifiedFailures: options?.unclassifiedFailures ?? 0,
           failureScenarioPassCount: 5,
+          dispatchFailureRate: options?.dispatchFailureRate ?? 0,
+          policyFailureRate: options?.policyFailureRate ?? 0,
         },
         gates: {
           passed:
@@ -487,6 +491,51 @@ describe("evaluate-auto-rollback-policy.mjs", () => {
       expect(payload.pass).toBe(true);
       expect(payload.decision.action).toBe("hold");
       expect(payload.reasons).toEqual([]);
+    });
+  });
+
+  it("triggers canary rollback when dispatch failure rate exceeds threshold despite high success rate", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(evidenceDir, "rollback-policy.json");
+      await seedEvidence(evidenceDir, {
+        successRate: 0.999,
+        p95LatencyMs: 200,
+        missingTraceRate: 0,
+        unclassifiedFailures: 0,
+        dispatchFailureRate: 0.25,
+        policyFailureRate: 0,
+        includeCooldownSignals: false,
+      });
+      await seedHorizonStatus(horizonPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/evaluate-auto-rollback-policy.mjs",
+          "--stage",
+          "canary",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(result.code).toBe(2);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        decision: { action: string };
+        reasons: string[];
+      };
+      expect(payload.pass).toBe(false);
+      expect(payload.decision.action).toBe("rollback");
+      expect(
+        payload.reasons.some((reason) => reason.startsWith("dispatch_failure_rate_above_threshold")),
+      ).toBe(true);
     });
   });
 

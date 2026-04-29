@@ -8,6 +8,7 @@ import {
   type UnifiedMessageEnvelope,
   type UnifiedResponse,
 } from "./types.js";
+import { UNIFIED_DISPATCH_CONTRACT_VERSION } from "./schema-version.js";
 
 function ensure(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -108,6 +109,10 @@ export function validateCapabilityExecutionResult(
 }
 
 export function validateUnifiedDispatchResult(value: UnifiedDispatchResult): UnifiedDispatchResult {
+  ensure(
+    value.contractVersion === UNIFIED_DISPATCH_CONTRACT_VERSION,
+    `Unified dispatch contractVersion must be ${UNIFIED_DISPATCH_CONTRACT_VERSION}.`,
+  );
   validateEnvelope(value.envelope);
   validateRoutingDecision(value.routing);
   validateDispatchState(value.primaryState);

@@ -27,6 +27,8 @@ async function seedRequiredEvidence(evidenceDir: string): Promise<void> {
           unclassifiedFailures: 0,
           p95LatencyMs: 500,
           failureScenarioPassCount: 5,
+          dispatchFailureRate: 0,
+          policyFailureRate: 0,
         },
         gates: {
           passed: true,

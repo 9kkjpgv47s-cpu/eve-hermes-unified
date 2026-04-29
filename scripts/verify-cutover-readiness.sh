@@ -57,13 +57,26 @@ run_dispatch_json() {
   EVE_DISPATCH_RESULT_PATH="${EVE_DISPATCH_RESULT_PATH:-/tmp/eve-dispatch-result.json}" \
   UNIFIED_MEMORY_STORE_KIND="${UNIFIED_MEMORY_STORE_KIND:-file}" \
   UNIFIED_MEMORY_FILE_PATH="${UNIFIED_MEMORY_FILE_PATH:-/tmp/eve-hermes-unified-memory.json}" \
-    "${dispatch_runner[@]}" "$dispatch_entry" --text "$text" --chat-id "$chat_id" --message-id "$message_id"
+    "${dispatch_runner[@]}" "$dispatch_entry" --compact-json --text "$text" --chat-id "$chat_id" --message-id "$message_id" >"$tmp_dir/dispatch-${chat_id}-${message_id}.json"
+  validate_dispatch_contract_json "$tmp_dir/dispatch-${chat_id}-${message_id}.json"
+  cat "$tmp_dir/dispatch-${chat_id}-${message_id}.json"
 }
 
 extract_json_field() {
   local json="$1"
   local expr="$2"
   node -e 'const d=JSON.parse(process.argv[1]); const e=process.argv[2].split("."); let v=d; for (const k of e) v=v?.[k]; process.stdout.write(String(v));' "$json" "$expr"
+}
+
+validate_dispatch_contract_json() {
+  local json_path="$1"
+  if [[ "${UNIFIED_CUTOVER_READINESS_VALIDATE_DISPATCH_CONTRACT:-0}" != "1" ]]; then
+    return 0
+  fi
+  if [[ ! -x "$ROOT_DIR/node_modules/.bin/tsx" ]]; then
+    return 0
+  fi
+  "$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/src/bin/validate-dispatch-contracts.ts" --file "$json_path" >/dev/null
 }
 
 run_stage() {

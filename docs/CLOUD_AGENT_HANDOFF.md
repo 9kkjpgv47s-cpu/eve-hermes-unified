@@ -48,7 +48,8 @@ Every PR should include:
 
 - **Canonical binary**: `src/bin/unified-dispatch.ts` — only location that may construct `EveAdapter` / `HermesAdapter` for production-shaped runs.
 - **CI gate**: `npm run validate:unified-entrypoints` scans `src/**/*.ts` for stray adapter constructors.
-- **Contract**: `UNIFIED_DISPATCH_CONTRACT_VERSION` in `src/contracts/schema-version.ts`; fixtures under `test/fixtures/contracts/` validate with `validateUnifiedDispatchResult`.
+- **Contract**: `UNIFIED_DISPATCH_CONTRACT_VERSION` in `src/contracts/schema-version.ts`; each `UnifiedDispatchResult` includes **`contractVersion`**; fixtures under `test/fixtures/contracts/` validate with `validateUnifiedDispatchResult`. Run **`npm run validate:dispatch-contract`** (CLI: `src/bin/validate-dispatch-contracts.ts`) in CI and locally after contract changes.
+- **Soak SLOs**: `scripts/soak-simulate.sh` writes JSONL and optional metrics + SLO gate via `scripts/ci-soak-metrics-from-jsonl.mjs` / `scripts/ci-soak-slo-gate.mjs`; multi-stage runs use **`npm run validate:soak-matrix`** (`scripts/soak-matrix.sh`, env `UNIFIED_SOAK_MATRIX_STAGES`).
 - **Deprecation map**: `docs/LEGACY_ENTRYPOINT_DEPRECATION_MAP.md`.
 
 ## Tenant, region, and bounded automation (H5)

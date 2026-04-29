@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import os from "node:os";
 import path from "node:path";
 import { dispatchUnifiedEnvelope } from "../src/runtime/unified-dispatch.js";
+import { UNIFIED_DISPATCH_CONTRACT_VERSION } from "../src/contracts/schema-version.js";
 import {
   FileDispatchDurabilityQueue,
   replayPendingDispatches,
@@ -86,6 +87,7 @@ describe("FileDispatchDurabilityQueue", () => {
     );
 
     expect(replayed).toHaveLength(1);
+    expect(replayed[0].result.contractVersion).toBe(UNIFIED_DISPATCH_CONTRACT_VERSION);
     expect(replayed[0].result.envelope.traceId).toBe(traceId);
     expect(replayed[0].result.primaryState.traceId).toBe(traceId);
     expect(eve.dispatches).toHaveLength(1);

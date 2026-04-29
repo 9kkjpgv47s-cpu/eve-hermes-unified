@@ -2,22 +2,39 @@
 /**
  * Validates the newest evidence/post-h13-sustainment-loop-*.json (after npm run verify:sustainment-loop).
  */
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
 const evidenceDir = path.resolve(process.cwd(), process.env.POST_H13_SUSTAINMENT_EVIDENCE_DIR ?? "evidence");
 
-async function newestLoopManifest(dir) {
+async function pickLoopManifest(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = entries
     .filter((e) => e.isFile() && e.name.startsWith("post-h13-sustainment-loop-") && e.name.endsWith(".json"))
-    .map((e) => path.join(dir, e.name))
-    .sort();
-  return files.length ? files[files.length - 1] : "";
+    .map((e) => path.join(dir, e.name));
+  if (files.length === 0) {
+    return "";
+  }
+  const scored = await Promise.all(
+    files.map(async (filePath) => {
+      const st = await stat(filePath);
+      let pass = false;
+      try {
+        const raw = await readFile(filePath, "utf8");
+        pass = JSON.parse(raw)?.pass === true;
+      } catch {
+        pass = false;
+      }
+      return { filePath, mtimeMs: st.mtimeMs, pass };
+    }),
+  );
+  scored.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  const latestPass = scored.find((row) => row.pass);
+  return latestPass?.filePath ?? scored[0].filePath;
 }
 
-const manifestPath = await newestLoopManifest(evidenceDir);
+const manifestPath = await pickLoopManifest(evidenceDir);
 if (!manifestPath) {
   process.stderr.write(`No evidence/post-h13-sustainment-loop-*.json under ${evidenceDir}\n`);
   process.exit(2);

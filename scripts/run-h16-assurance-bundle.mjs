@@ -4,7 +4,7 @@
  *
  * Goal-policy file validation (**`validate:goal-policy-file`**) and evidence manifest schema sweep (**`validate:manifest-schemas`**),
  * plus the operational gates formerly chained here, run in **`run-h23-assurance-bundle.mjs`** after **`validate:release-readiness`** /
- * **`validate:initial-scope`** / **`validate:all`** (terminal chain).
+ * **`validate:initial-scope`** / **`validate:all`** (also chained under **`run-h24-assurance-bundle`** inside **`run-h25-assurance-bundle`**).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";

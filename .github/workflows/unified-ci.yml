@@ -30,12 +30,6 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: H6 horizon metadata assurance bundle
-        run: npm run run:h6-assurance-bundle
-
-      - name: H16 horizon metadata assurance bundle (goal policy + manifest schemas run in H23 terminal bundle)
-        run: npm run run:h16-assurance-bundle
-
       - name: Build
         run: npm run build
 
@@ -75,14 +69,14 @@ jobs:
       - name: Initial scope gate
         run: npm run validate:initial-scope
 
-      - name: H24 terminal assurance bundle (pre-build gates + H23 policy/manifest + slim H22 chain)
-        run: npm run run:h24-assurance-bundle
+      - name: H25 terminal assurance bundle (H6 + H16 replay + H24 chain)
+        run: npm run run:h25-assurance-bundle
 
-      - name: Post-H24 sustainment loop (horizon + H24 bundle + closeout gate)
+      - name: Post-H25 sustainment loop (horizon + H25 bundle + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H24 sustainment manifest
-        run: npm run validate:post-h24-sustainment-manifest
+      - name: Validate post-H25 sustainment manifest
+        run: npm run validate:post-h25-sustainment-manifest
 
       - name: Stage promotion readiness gate
         run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch

@@ -3,7 +3,7 @@
  * Horizon H6 sustainment bundle: horizon metadata validation only.
  *
  * Tenant isolation (**`validate:tenant-isolation`**), region failover rehearsal (**`rehearse:region-failover`**),
- * and unified entrypoints (**`validate:unified-entrypoints`**) run earlier in unified-ci standalone gates before **`npm run build`**.
+ * and unified entrypoints (**`validate:unified-entrypoints`**) run inside **`run-h24-assurance-bundle`** (invoked from **`run-h25-assurance-bundle`** in **`unified-ci`**).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";

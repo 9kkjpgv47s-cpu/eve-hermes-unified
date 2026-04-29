@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-13T12:00:00Z",
+  "updatedAtIso": "2026-05-13T18:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H24",
+  "activeHorizon": "H25",
   "activeStatus": "completed",
-  "summary": "Horizon H24 (terminal assurance): run-h24-assurance-bundle chains validate:unified-entrypoints + validate:tenant-isolation + rehearse:region-failover + run-h23-assurance-bundle (policy/manifest + slim H22 chain); verify:sustainment-loop post-H24; verify:sustainment-loop:h23-legacy for prior chain; run-h22-assurance-bundle drops entrypoints/tenant evidence steps (moved to H24).",
+  "summary": "Horizon H25 (terminal assurance): run-h25-assurance-bundle chains run-h6-assurance-bundle + run-h16-assurance-bundle + run-h24-assurance-bundle (pre-build gates + H23 policy/manifest + slim H22); unified-ci drops standalone H6/H16 steps; verify:sustainment-loop post-H25; verify:sustainment-loop:h24-legacy for prior chain.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -224,7 +224,8 @@
         "H21",
         "H22",
         "H23",
-        "H24"
+        "H24",
+        "H25"
       ]
     },
     {
@@ -239,7 +240,8 @@
         "H21",
         "H22",
         "H23",
-        "H24"
+        "H24",
+        "H25"
       ]
     },
     {
@@ -253,7 +255,8 @@
         "H21",
         "H22",
         "H23",
-        "H24"
+        "H24",
+        "H25"
       ]
     },
     {
@@ -266,7 +269,8 @@
         "H21",
         "H22",
         "H23",
-        "H24"
+        "H24",
+        "H25"
       ]
     },
     {
@@ -278,7 +282,8 @@
         "H21",
         "H22",
         "H23",
-        "H24"
+        "H24",
+        "H25"
       ]
     },
     {
@@ -297,7 +302,8 @@
       "required": true,
       "horizons": [
         "H23",
-        "H24"
+        "H24",
+        "H25"
       ]
     },
     {
@@ -306,7 +312,17 @@
       "artifactPattern": "evidence/h24-assurance-bundle-*.json",
       "required": true,
       "horizons": [
-        "H24"
+        "H24",
+        "H25"
+      ]
+    },
+    {
+      "id": "h25-assurance-bundle",
+      "command": "node ./scripts/run-h25-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h25-assurance-bundle-*.json",
+      "required": true,
+      "horizons": [
+        "H25"
       ]
     }
   ],
@@ -1133,7 +1149,7 @@
     },
     {
       "id": "h24-action-2",
-      "summary": "post-H24 sustainment loop; verify:sustainment-loop; validate:post-h24-sustainment-manifest; verify:sustainment-loop:h23-legacy for H23 chain.",
+      "summary": "Legacy post-H24 sustainment (verify:sustainment-loop:h24-legacy); terminal loop is post-H25 (run-post-h24-sustainment-loop-legacy.mjs).",
       "targetHorizon": "H24",
       "status": "completed",
       "tags": [
@@ -1146,6 +1162,39 @@
       "id": "h24-action-3",
       "summary": "Goal policy H23\u2192H24 transition; validate:goal-policy-file extends through H24 inside run-h23-assurance-bundle.",
       "targetHorizon": "H24",
+      "status": "completed",
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
+    },
+    {
+      "id": "h25-action-1",
+      "summary": "run-h25-assurance-bundle: H6 + H16 horizon-metadata replay + run-h24-assurance-bundle terminal chain.",
+      "targetHorizon": "H25",
+      "status": "completed",
+      "tags": [
+        "ci",
+        "validation",
+        "operations"
+      ]
+    },
+    {
+      "id": "h25-action-2",
+      "summary": "post-H25 sustainment loop; verify:sustainment-loop; validate:post-h25-sustainment-manifest; verify:sustainment-loop:h24-legacy for H24 chain.",
+      "targetHorizon": "H25",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
+    },
+    {
+      "id": "h25-action-3",
+      "summary": "Goal policy H24\u2192H25 transition; validate:goal-policy-file extends through H25 inside run-h23-assurance-bundle.",
+      "targetHorizon": "H25",
       "status": "completed",
       "tags": [
         "policy",
@@ -1485,6 +1534,25 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H24->H25": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          },
+          "ci": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -1561,7 +1629,7 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Horizon-metadata sustainment: run-h16-assurance-bundle is validate:horizon-status only; goal-policy + manifest schemas moved to run-h23-assurance-bundle (terminal)."
+      "summary": "Horizon-metadata replay: run-h16-assurance-bundle is validate:horizon-status only; also invoked inside run-h25-assurance-bundle alongside H6 replay."
     },
     "H17": {
       "status": "completed",
@@ -1593,7 +1661,11 @@
     },
     "H24": {
       "status": "completed",
-      "summary": "Terminal assurance: run-h24-assurance-bundle (pre-build gates + H23 chain); post-H24 sustainment via verify:sustainment-loop + validate:h24-closeout."
+      "summary": "Pre-build + policy sub-chain (non-terminal vs H25): run-h24-assurance-bundle (entrypoints + tenant + region + run-h23-assurance-bundle); consumed by run-h25-assurance-bundle."
+    },
+    "H25": {
+      "status": "completed",
+      "summary": "Terminal assurance: run-h25-assurance-bundle (H6 + H16 replay + H24 chain); post-H25 sustainment via verify:sustainment-loop + validate:h25-closeout."
     }
   },
   "history": [
@@ -1860,6 +1932,12 @@
       "horizon": "H24",
       "status": "completed",
       "note": "H24 terminal assurance: run-h24-assurance-bundle chains entrypoints + tenant + region rehearsal + run-h23-assurance-bundle; slim run-h22-assurance-bundle; verify:sustainment-loop post-H24; verify:sustainment-loop:h23-legacy; H23->H24 goal policy."
+    },
+    {
+      "timestamp": "2026-05-13T18:00:00Z",
+      "horizon": "H25",
+      "status": "completed",
+      "note": "H25 terminal assurance: run-h25-assurance-bundle chains H6 + H16 horizon-metadata bundles + run-h24-assurance-bundle; unified-ci drops standalone H6/H16 steps; verify:sustainment-loop post-H25; verify:sustainment-loop:h24-legacy; H24->H25 goal policy."
     }
   ]
 }

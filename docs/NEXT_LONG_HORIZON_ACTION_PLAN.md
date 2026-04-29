@@ -529,7 +529,7 @@ Exit evidence:
 
 ### Horizon H23 - Goal policy + manifest schemas + slim H22 operational chain
 
-Goal: consolidate **merge readiness policy** (**`validate:goal-policy-file`** full runway **H2→H24**) and **manifest schema sweep** with the slim **H22** operational chain into **`run-h23-assurance-bundle`** (**H22** drops unified-entrypoints + tenant-isolation evidence wrappers — those run under **H24**).
+Goal: consolidate **merge readiness policy** (**`validate:goal-policy-file`** full runway **H2→H25**) and **manifest schema sweep** with the slim **H22** operational chain into **`run-h23-assurance-bundle`** (**H22** drops unified-entrypoints + tenant-isolation evidence wrappers — those run under **H24**).
 
 Workstreams:
 
@@ -539,27 +539,42 @@ Workstreams:
 
 Exit evidence:
 
-- **`npm run verify:sustainment-loop:h23-legacy`** passes and the newest manifest satisfies **`validate:post-h23-sustainment-manifest`** (when **H24** is terminal, **H23** is a legacy replay).
-- **`npm run validate:h23-closeout`** passes when evidence is present (retroactive closeout when **H24** is terminal).
+- **`npm run verify:sustainment-loop:h23-legacy`** passes and the newest manifest satisfies **`validate:post-h23-sustainment-manifest`** (when **H25** is terminal, **H23** is a legacy replay).
+- **`npm run validate:h23-closeout`** passes when evidence is present (retroactive closeout when **H25** is terminal).
 
 ### Horizon H24 - Pre-build routing gates + H23 terminal chain
 
-Goal: fold **unified entrypoints**, **tenant isolation**, and **region failover rehearsal** into **`run-h24-assurance-bundle`** so **`unified-ci`** does not duplicate standalone pre-build steps; **`verify:sustainment-loop`** becomes the thin post-terminal gate (**horizon status + H24 bundle + H24 closeout**).
+Goal: fold **unified entrypoints**, **tenant isolation**, and **region failover rehearsal** into **`run-h24-assurance-bundle`** so **`unified-ci`** does not duplicate standalone pre-build steps; **`verify:sustainment-loop`** advances to **post-H25** (**`run-post-h25-sustainment-loop.mjs`**); legacy **post-H24** replay via **`verify:sustainment-loop:h24-legacy`**.
 
 Workstreams:
 
 - **`npm run run:h24-assurance-bundle`**: **`validate:unified-entrypoints`** + **`validate:tenant-isolation`** + **`rehearse:region-failover`** + **`run:h23-assurance-bundle`** → **`evidence/h24-assurance-bundle-*.json`**.
-- **`npm run verify:sustainment-loop`**: **`run-post-h24-sustainment-loop.mjs`** chains **`validate:horizon-status`** + **`run:h24-assurance-bundle`** + **`validate:h24-closeout`** → **`evidence/post-h24-sustainment-loop-*.json`**.
+- **`npm run verify:sustainment-loop:h24-legacy`**: **`run-post-h24-sustainment-loop-legacy.mjs`** chains **`validate:horizon-status`** + **`run:h24-assurance-bundle`** + **`validate:h24-closeout`** → **`evidence/post-h24-sustainment-loop-*.json`**.
 - **`npm run validate:post-h24-sustainment-manifest`**, **`npm run verify:sustainment-loop:h23-legacy`** / **`validate:post-h23-sustainment-manifest`**.
 
 Exit evidence:
 
-- **`npm run verify:sustainment-loop`** passes and the newest manifest satisfies **`validate:post-h24-sustainment-manifest`**.
-- **`npm run validate:h24-closeout`** passes when evidence is present (**H24** is terminal: stage-promotion readiness skipped in closeout validator).
+- **`npm run verify:sustainment-loop:h24-legacy`** passes and the newest manifest satisfies **`validate:post-h24-sustainment-manifest`**.
+- **`npm run validate:h24-closeout`** passes when evidence is present (retroactive closeout when **H25** is terminal).
 
-### Post-H24 operations (terminal sustainment)
+### Horizon H25 - Horizon-metadata replay + H24 terminal chain
 
-After **H24** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8). Optionally **`npm run validate:post-h24-sustainment-manifest`**. Legacy prior chains: **`verify:sustainment-loop:h23-legacy`** / **`validate:post-h23-sustainment-manifest`**, **`verify:sustainment-loop:h22-legacy`** … **`h6-legacy`**.
+Goal: fold **`run-h6-assurance-bundle`** + **`run-h16-assurance-bundle`** into **`run-h25-assurance-bundle`** so **`unified-ci`** does not duplicate standalone horizon-metadata steps before **`validate:all`**; terminal sustainment chains **`run:h25-assurance-bundle`** + **`validate:h25-closeout`**.
+
+Workstreams:
+
+- **`npm run run:h25-assurance-bundle`**: **`run-h6-assurance-bundle`** + **`run-h16-assurance-bundle`** + **`run-h24-assurance-bundle`** → **`evidence/h25-assurance-bundle-*.json`**.
+- **`npm run verify:sustainment-loop`**: **`run-post-h25-sustainment-loop.mjs`** chains **`validate:horizon-status`** + **`run:h25-assurance-bundle`** + **`validate:h25-closeout`** → **`evidence/post-h25-sustainment-loop-*.json`**.
+- **`npm run validate:post-h25-sustainment-manifest`**, **`npm run verify:sustainment-loop:h24-legacy`** / **`validate:post-h24-sustainment-manifest`**.
+
+Exit evidence:
+
+- **`npm run verify:sustainment-loop`** passes and the newest manifest satisfies **`validate:post-h25-sustainment-manifest`**.
+- **`npm run validate:h25-closeout`** passes when evidence is present (**H25** is terminal: stage-promotion readiness skipped in closeout validator).
+
+### Post-H25 operations (terminal sustainment)
+
+After **H25** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8). Optionally **`npm run validate:post-h25-sustainment-manifest`**. Legacy prior chains: **`verify:sustainment-loop:h24-legacy`** / **`validate:post-h24-sustainment-manifest`**, **`verify:sustainment-loop:h23-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 
@@ -570,7 +585,7 @@ After **H24** is marked completed, use **`npm run verify:sustainment-loop`** (se
 
 ## Immediate Next Actions (archived H2 drill checklist)
 
-The roadmap horizons **H1–H24** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h24-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
+The roadmap horizons **H1–H25** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h25-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
 
 1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report. **Dry-run** auto-relaxes the sequential **current→target** check when **`--current-stage`** is omitted (gateway env may still read **shadow**). Align **merge-bundle** / **bundle-verification** / **release-readiness** artifacts (**`latest-passing`** vs **`latest`**) before expecting a green readiness gate.
 2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:

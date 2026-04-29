@@ -90,8 +90,21 @@ npm run bundle:h5-evidence-baseline -- --evidence-dir ./evidence
 - Output: `evidence/h5-evidence-baseline-<timestamp>.json` (and `evidence/soak-slo-baseline-<timestamp>.json` from the embedded soak SLO run).
 - Schema: `node scripts/validate-manifest-schema.mjs --type h5-evidence-baseline --file <path>`.
 - Volume and latency budgets: `UNIFIED_H5_BASELINE_MAX_SOAK_LINES` (default `50000`), `UNIFIED_H5_BASELINE_MAX_P95_LATENCY_MS` (default `10000`; compared to `metrics.p95LatencyMs` when validation-summary `gates.passed` is true).
-- Optional **release-readiness** enforcement: set `UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1` so `scripts/release-readiness.mjs` requires a latest passing `h5-evidence-baseline-*.json` in the evidence directory (alongside optional `UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO`).
+- Optional **release-readiness** enforcement: set `UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1` so `scripts/validate-release-readiness.sh` runs `npm run bundle:h5-evidence-baseline` and `scripts/release-readiness.mjs` requires a latest passing `h5-evidence-baseline-*.json` (CI **unified-ci** enables this). Set alongside optional `UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO` when you want both gates.
 - Rollback rehearsal: keep `npm run bundle:emergency-rollback` in the incident path; when an `emergency-rollback-bundle-*.json` is present under `evidence/`, the H5 baseline gate also validates its manifest schema.
+
+### Long-window soak (scheduled SLO archival)
+
+For heavier load than the default **`npm run validate:soak`** (20 iterations):
+
+```bash
+npm run validate:soak-long-window -- 200
+# or: bash scripts/run-long-window-soak.sh 200
+```
+
+- Default iterations when omitted: **`UNIFIED_SOAK_LONG_ITERATIONS`** (default `200`, hard cap `2000` in the script).
+- Writes **`evidence/soak-*.jsonl`** plus **`evidence/soak-slo-scheduled-<utc-stamp>.json`** (same schema as **`validate-soak-slo`** output).
+- **CI:** workflow **`soak-long-window`** (`.github/workflows/soak-long-window-scheduled.yml`) runs weekly and on **`workflow_dispatch`**; download artifacts **`soak-long-window-evidence`** and **`soak-slo-scheduled`** for dashboards.
 
 ## Merge Bundle Retrieval and Verification (Operator Procedure)
 

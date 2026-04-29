@@ -13,6 +13,7 @@
     "bootstrap:sources": "bash ./scripts/bootstrap-sources.sh",
     "validate:failure-injection": "bash ./scripts/failure-injection-smoke.sh",
     "validate:soak": "bash ./scripts/soak-simulate.sh 20",
+    "validate:soak-long-window": "bash ./scripts/run-long-window-soak.sh",
     "validate:soak-slo": "node ./scripts/validate-soak-slo.mjs",
     "bundle:emergency-rollback": "node ./scripts/build-emergency-rollback-bundle.mjs --evidence-dir ./evidence",
     "bundle:h4-closeout-evidence": "node ./scripts/h4-closeout-evidence.mjs --evidence-dir ./evidence",

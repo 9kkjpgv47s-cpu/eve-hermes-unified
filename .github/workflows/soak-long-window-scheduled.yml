@@ -1,0 +1,62 @@
+name: soak-long-window
+
+on:
+  schedule:
+    # Weekly Monday 06:15 UTC — dedicated long-window soak + SLO archival (H5-action-8).
+    - cron: "15 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "Soak iterations (1–2000, default 200)"
+        required: false
+        default: "200"
+
+jobs:
+  long-soak:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install
+        run: npm install
+
+      - name: Build dispatch binary
+        run: npm run build
+
+      - name: Long-window soak + SLO manifest
+        env:
+          UNIFIED_ROUTER_DEFAULT_PRIMARY: hermes
+          UNIFIED_ROUTER_DEFAULT_FALLBACK: none
+          UNIFIED_ROUTER_FAIL_CLOSED: "1"
+          UNIFIED_ROUTER_CUTOVER_STAGE: full
+          UNIFIED_MEMORY_STORE_KIND: file
+          UNIFIED_MEMORY_FILE_PATH: /tmp/eve-hermes-long-soak-memory.json
+          EVE_TASK_DISPATCH_SCRIPT: /bin/true
+          EVE_DISPATCH_RESULT_PATH: /tmp/eve-long-soak-dispatch.json
+          HERMES_LAUNCH_COMMAND: /bin/true
+          HERMES_LAUNCH_ARGS: ""
+        run: |
+          iters="${{ github.event.inputs.iterations }}"
+          if [[ -z "${iters:-}" ]]; then iters=200; fi
+          bash ./scripts/run-long-window-soak.sh "$iters"
+
+      - name: Upload soak artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-long-window-evidence
+          path: evidence/soak-*.jsonl
+          if-no-files-found: error
+
+      - name: Upload SLO manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-slo-scheduled
+          path: evidence/soak-slo-scheduled-*.json
+          if-no-files-found: error

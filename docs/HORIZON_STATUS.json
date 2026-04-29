@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T18:00:00Z",
+  "updatedAtIso": "2026-04-29T22:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -297,15 +297,22 @@
       "id": "h5-action-8",
       "summary": "Schedule long-window soak in CI or dedicated runner and archive soak-slo manifests for regression dashboards.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability", "rollback"]
     },
     {
       "id": "h5-action-9",
       "summary": "Optional release-readiness gate: require latest h5-evidence-baseline pass when UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h5-action-10",
+      "summary": "Wire H5 baseline + soak SLO into operator promotion checklist and evidence retention policy (artifact TTL / pruning).",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "operations", "rollback"]
     }
   ],
   "goalPolicies": {
@@ -539,6 +546,12 @@
       "horizon": "H5",
       "status": "planned",
       "note": "Completed h5-action-1..7: h5-evidence-baseline.mjs + manifest schema + horizon-closeout mapping, runbook H5 section, env thresholds, CI bundle:h5-evidence-baseline. Added h5-action-8/9 for soak scheduling and optional release-readiness baseline gate."
+    },
+    {
+      "timestamp": "2026-04-29T22:00:00Z",
+      "horizon": "H5",
+      "status": "planned",
+      "note": "Completed h5-action-8: .github/workflows/soak-long-window-scheduled.yml + scripts/run-long-window-soak.sh + npm run validate:soak-long-window (soak-slo-scheduled-*.json). Completed h5-action-9: validate-release-readiness.sh runs bundle:h5-evidence-baseline when UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1; unified-ci enables gate and reorders release-readiness after baseline. Added h5-action-10 for retention/TTL follow-up."
     }
   ]
 }

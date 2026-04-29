@@ -44,25 +44,6 @@ jobs:
           HERMES_LAUNCH_ARGS: ""
         run: npm run validate:all
 
-      - name: Release readiness
-        env:
-          UNIFIED_RELEASE_READINESS_RUN_VALIDATE_ALL: "0"
-          UNIFIED_RELEASE_READINESS_SKIP_TEST: "1"
-          UNIFIED_RELEASE_READINESS_EVIDENCE_MIN_SUCCESS_RATE: "0.95"
-          UNIFIED_RELEASE_READINESS_EVIDENCE_MAX_P95_LATENCY_MS: "2500"
-          UNIFIED_RELEASE_READINESS_EVIDENCE_REQUIRE_FAILURE_SCENARIOS: "1"
-          UNIFIED_ROUTER_DEFAULT_PRIMARY: hermes
-          UNIFIED_ROUTER_DEFAULT_FALLBACK: none
-          UNIFIED_ROUTER_FAIL_CLOSED: "1"
-          UNIFIED_ROUTER_CUTOVER_STAGE: full
-          UNIFIED_MEMORY_STORE_KIND: file
-          UNIFIED_MEMORY_FILE_PATH: /tmp/eve-hermes-unified-memory.json
-          EVE_TASK_DISPATCH_SCRIPT: /bin/true
-          EVE_DISPATCH_RESULT_PATH: /tmp/eve-dispatch.json
-          HERMES_LAUNCH_COMMAND: /bin/true
-          HERMES_LAUNCH_ARGS: ""
-        run: npm run validate:release-readiness
-
       - name: Initial scope gate
         run: npm run validate:initial-scope
 
@@ -80,6 +61,26 @@ jobs:
 
       - name: H5 evidence baseline bundle
         run: npm run bundle:h5-evidence-baseline
+
+      - name: Release readiness
+        env:
+          UNIFIED_RELEASE_READINESS_RUN_VALIDATE_ALL: "0"
+          UNIFIED_RELEASE_READINESS_SKIP_TEST: "1"
+          UNIFIED_RELEASE_READINESS_EVIDENCE_MIN_SUCCESS_RATE: "0.95"
+          UNIFIED_RELEASE_READINESS_EVIDENCE_MAX_P95_LATENCY_MS: "2500"
+          UNIFIED_RELEASE_READINESS_EVIDENCE_REQUIRE_FAILURE_SCENARIOS: "1"
+          UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE: "1"
+          UNIFIED_ROUTER_DEFAULT_PRIMARY: hermes
+          UNIFIED_ROUTER_DEFAULT_FALLBACK: none
+          UNIFIED_ROUTER_FAIL_CLOSED: "1"
+          UNIFIED_ROUTER_CUTOVER_STAGE: full
+          UNIFIED_MEMORY_STORE_KIND: file
+          UNIFIED_MEMORY_FILE_PATH: /tmp/eve-hermes-unified-memory.json
+          EVE_TASK_DISPATCH_SCRIPT: /bin/true
+          EVE_DISPATCH_RESULT_PATH: /tmp/eve-dispatch.json
+          HERMES_LAUNCH_COMMAND: /bin/true
+          HERMES_LAUNCH_ARGS: ""
+        run: npm run validate:release-readiness
 
       - name: Verify merge bundle package
         run: npm run verify:merge-bundle

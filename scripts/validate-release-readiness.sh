@@ -112,6 +112,10 @@ else
   run_step "validate:cutover-readiness" npm --prefix "$ROOT_DIR" run validate:cutover-readiness
 fi
 
+if [[ "${UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE:-0}" == "1" ]]; then
+  run_step "bundle:h5-evidence-baseline" npm --prefix "$ROOT_DIR" run bundle:h5-evidence-baseline
+fi
+
 if [[ "${UNIFIED_RELEASE_READINESS_RUN_GOAL_POLICY_FILE_VALIDATION:-1}" == "1" ]]; then
   run_step \
     "validate:goal-policy-file" \

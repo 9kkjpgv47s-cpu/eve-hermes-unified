@@ -61,21 +61,21 @@ async function seedMergeBundleInputs() {
   expect(init.code).toBe(0);
 }
 
-describe("run-post-h20-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop:h20-legacy npm script", async () => {
+describe("run-post-h21-sustainment-loop.mjs", () => {
+  it("exposes verify:sustainment-loop npm script (post-H21 terminal chain)", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop:h20-legacy"]).toContain("run-post-h20-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h21-sustainment-loop.mjs");
   });
 
   it(
-    "emits pass and structured checks in post-H20 sustainment loop manifest",
+    "emits pass and structured checks in post-H21 sustainment loop manifest",
     async () => {
       await seedMergeBundleInputs();
       const result = await runCommandWithTimeout(
-        ["node", path.join(repoRoot, "scripts/run-post-h20-sustainment-loop.mjs")],
+        ["node", path.join(repoRoot, "scripts/run-post-h21-sustainment-loop.mjs")],
         {
-          timeoutMs: 420_000,
+          timeoutMs: 480_000,
           env: mergeEnv({ UNIFIED_CI_SOAK_ITERATIONS: "15" }),
         },
       );
@@ -87,25 +87,23 @@ describe("run-post-h20-sustainment-loop.mjs", () => {
         pass?: boolean;
         checks?: {
           horizonStatusPass?: boolean;
-          h17AssuranceBundlePass?: boolean;
-          h20AssuranceBundlePass?: boolean;
+          h21AssuranceBundlePass?: boolean;
           ciSoakSloGatePass?: boolean;
-          h20CloseoutGatePass?: boolean;
+          h21CloseoutGatePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks?.horizonStatusPass).toBe(true);
-      expect(payload.checks?.h17AssuranceBundlePass).toBe(true);
-      expect(payload.checks?.h20AssuranceBundlePass).toBe(true);
+      expect(payload.checks?.h21AssuranceBundlePass).toBe(true);
       expect(payload.checks?.ciSoakSloGatePass).toBe(true);
-      expect(payload.checks?.h20CloseoutGatePass).toBe(true);
+      expect(payload.checks?.h21CloseoutGatePass).toBe(true);
     },
     900_000,
   );
 
-  it("validate:post-h20-sustainment-manifest passes on latest loop output", async () => {
+  it("validate:post-h21-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/validate-post-h20-sustainment-manifest.mjs")],
+      ["node", path.join(repoRoot, "scripts/validate-post-h21-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

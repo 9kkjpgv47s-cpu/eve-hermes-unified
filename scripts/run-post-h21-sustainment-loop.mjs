@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Legacy post-H20 sustainment loop (pre-H21). Prefer **`npm run verify:sustainment-loop`** (post-H21).
+ * Post-H21 sustainment loop (terminal): horizon metadata, H21 merge + tenant/cutover assurance bundle,
+ * CI soak SLO drift gate, H21 closeout gate.
  *
- * Chain: horizon-status + **`run:h17-assurance-bundle`** + **`run:h20-assurance-bundle`** + **`run:ci-soak-slo-gate`** + **`validate:h20-closeout`**.
+ * Run **`npm run run:h16-assurance-bundle`** first when reproducing locally when **`evidence/`** lacks goal-policy output through **H21**.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -11,7 +12,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const evidenceDir = process.env.POST_H20_SUSTAINMENT_EVIDENCE_DIR ?? path.join(root, "evidence");
+const evidenceDir = process.env.POST_H21_SUSTAINMENT_EVIDENCE_DIR ?? path.join(root, "evidence");
 mkdirSync(evidenceDir, { recursive: true });
 
 function runNpm(script, extraEnv = {}) {
@@ -31,45 +32,36 @@ function runNpm(script, extraEnv = {}) {
 
 const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
 const manifestPath =
-  process.env.POST_H20_SUSTAINMENT_LOOP_OUT ??
-  path.join(evidenceDir, `post-h20-sustainment-loop-${stamp}.json`);
+  process.env.POST_H21_SUSTAINMENT_LOOP_OUT ??
+  path.join(evidenceDir, `post-h21-sustainment-loop-${stamp}.json`);
 
 const soakIterations = process.env.UNIFIED_CI_SOAK_ITERATIONS ?? "25";
 
 const horizonStatus = runNpm("validate:horizon-status");
-const assuranceH17 = runNpm("run:h17-assurance-bundle");
-const assuranceH20 = runNpm("run:h20-assurance-bundle");
+const assuranceH21 = runNpm("run:h21-assurance-bundle");
 const ciSoakSlo = runNpm("run:ci-soak-slo-gate", { UNIFIED_CI_SOAK_ITERATIONS: soakIterations });
-const closeout = runNpm("validate:h20-closeout");
+const closeout = runNpm("validate:h21-closeout");
 
 const horizonStatusPass = horizonStatus.exitCode === 0;
-const h17AssuranceBundlePass = assuranceH17.exitCode === 0;
-const h20AssuranceBundlePass = assuranceH20.exitCode === 0;
+const h21AssuranceBundlePass = assuranceH21.exitCode === 0;
 const ciSoakSloGatePass = ciSoakSlo.exitCode === 0;
-const h20CloseoutGatePass = closeout.exitCode === 0;
-const pass =
-  horizonStatusPass &&
-  h17AssuranceBundlePass &&
-  h20AssuranceBundlePass &&
-  ciSoakSloGatePass &&
-  h20CloseoutGatePass;
+const h21CloseoutGatePass = closeout.exitCode === 0;
+const pass = horizonStatusPass && h21AssuranceBundlePass && ciSoakSloGatePass && h21CloseoutGatePass;
 
 const manifest = {
   generatedAtIso: new Date().toISOString(),
   pass,
   checks: {
     horizonStatusPass,
-    h17AssuranceBundlePass,
-    h20AssuranceBundlePass,
+    h21AssuranceBundlePass,
     ciSoakSloGatePass,
-    h20CloseoutGatePass,
+    h21CloseoutGatePass,
   },
   steps: [
     { id: "validate_horizon_status", ...horizonStatus },
-    { id: "run_h17_assurance_bundle", ...assuranceH17 },
-    { id: "run_h20_assurance_bundle", ...assuranceH20 },
+    { id: "run_h21_assurance_bundle", ...assuranceH21 },
     { id: "run_ci_soak_slo_gate", ...ciSoakSlo },
-    { id: "validate_h20_closeout", ...closeout },
+    { id: "validate_h21_closeout", ...closeout },
   ],
 };
 

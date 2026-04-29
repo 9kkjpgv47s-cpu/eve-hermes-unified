@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-10T12:00:00Z",
+  "updatedAtIso": "2026-05-11T15:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H20",
+  "activeHorizon": "H21",
   "activeStatus": "completed",
-  "summary": "Horizon H20 (tenant/region + unified entrypoints + cutover rehearsal terminal assurance): run-h20-assurance-bundle chains validate:tenant-isolation + rehearse:region-failover + validate:unified-entrypoints + run-h18-assurance-bundle; verify:sustainment-loop post-H20; verify:sustainment-loop:h19-legacy for prior chain; goal-policy runway H2\u2192H20.",
+  "summary": "Horizon H21 (merge + tenant/cutover terminal assurance): run-h21-assurance-bundle chains run-h17-assurance-bundle + run-h20-assurance-bundle; verify:sustainment-loop post-H21; verify:sustainment-loop:h20-legacy for prior chain; goal-policy runway H2\u2192H21.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -220,7 +220,8 @@
         "H17",
         "H18",
         "H19",
-        "H20"
+        "H20",
+        "H21"
       ]
     },
     {
@@ -231,7 +232,8 @@
       "horizons": [
         "H18",
         "H19",
-        "H20"
+        "H20",
+        "H21"
       ]
     },
     {
@@ -241,7 +243,8 @@
       "required": true,
       "horizons": [
         "H19",
-        "H20"
+        "H20",
+        "H21"
       ]
     },
     {
@@ -250,7 +253,17 @@
       "artifactPattern": "evidence/h20-assurance-bundle-*.json",
       "required": true,
       "horizons": [
-        "H20"
+        "H20",
+        "H21"
+      ]
+    },
+    {
+      "id": "h21-assurance-bundle",
+      "command": "node ./scripts/run-h21-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h21-assurance-bundle-*.json",
+      "required": true,
+      "horizons": [
+        "H21"
       ]
     }
   ],
@@ -946,7 +959,7 @@
     },
     {
       "id": "h20-action-2",
-      "summary": "post-H20 sustainment loop; verify:sustainment-loop; validate:post-h20-sustainment-manifest; verify:sustainment-loop:h19-legacy for H19 chain.",
+      "summary": "Legacy post-H20 sustainment (verify:sustainment-loop:h20-legacy); terminal loop is post-H21.",
       "targetHorizon": "H20",
       "status": "completed",
       "tags": [
@@ -957,8 +970,41 @@
     },
     {
       "id": "h20-action-3",
-      "summary": "Goal policy H19\u2192H20 transition; terminal closeout skips stage-promotion at H20.",
+      "summary": "Goal policy H19\u2192H20 transition; H20 subsumed as non-terminal by H21 merge+cutover bundle.",
       "targetHorizon": "H20",
+      "status": "completed",
+      "tags": [
+        "policy",
+        "documentation",
+        "validation"
+      ]
+    },
+    {
+      "id": "h21-action-1",
+      "summary": "run-h21-assurance-bundle: H17 merge readiness + H20 tenant/region/unified-entrypoints/cutover rehearsal; deduplicates separate unified-ci H17+H20 steps.",
+      "targetHorizon": "H21",
+      "status": "completed",
+      "tags": [
+        "ci",
+        "validation",
+        "operations"
+      ]
+    },
+    {
+      "id": "h21-action-2",
+      "summary": "post-H21 sustainment loop; verify:sustainment-loop; validate:post-h21-sustainment-manifest; verify:sustainment-loop:h20-legacy for H20 chain.",
+      "targetHorizon": "H21",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
+    },
+    {
+      "id": "h21-action-3",
+      "summary": "Goal policy H20\u2192H21 transition; terminal closeout skips stage-promotion at H21.",
+      "targetHorizon": "H21",
       "status": "completed",
       "tags": [
         "policy",
@@ -1238,6 +1284,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H20->H21": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "ci": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -1314,11 +1375,11 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2\u2192H19 + manifest schemas + H15 chain; runs before validate:all in CI."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2\u2192H21 + manifest schemas + H15 chain; runs before validate:all in CI."
     },
     "H17": {
       "status": "completed",
-      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18 progressive cutover rehearsal and H19 sustainment."
+      "summary": "Merge bundle assurance (run-h17-assurance-bundle): chained inside run-h21-assurance-bundle for terminal CI; verify:sustainment-loop:h17-legacy for H17-only replay."
     },
     "H18": {
       "status": "completed",
@@ -1326,11 +1387,15 @@
     },
     "H19": {
       "status": "completed",
-      "summary": "Prior terminal sustainment chain (superseded by H20): CI soak SLO in sustainment; verify:sustainment-loop:h19-legacy; H18\u2192H19 goal policy."
+      "summary": "Legacy CI soak sustainment chain (superseded): verify:sustainment-loop:h19-legacy; H18\u2192H19 goal policy."
     },
     "H20": {
       "status": "completed",
-      "summary": "Terminal assurance: run-h20-assurance-bundle (tenant + region + unified entrypoints + H18 drill); post-H20 sustainment via verify:sustainment-loop + validate:h20-closeout."
+      "summary": "Tenant/region/unified-entrypoints + H18 drill sub-chain (run-h20-assurance-bundle): chained inside run-h21-assurance-bundle; verify:sustainment-loop:h20-legacy."
+    },
+    "H21": {
+      "status": "completed",
+      "summary": "Terminal assurance: run-h21-assurance-bundle (H17 + H20); post-H21 sustainment via verify:sustainment-loop + validate:h21-closeout."
     }
   },
   "history": [
@@ -1573,6 +1638,12 @@
       "horizon": "H20",
       "status": "completed",
       "note": "H20 tenant/region + unified entrypoints + cutover rehearsal terminal assurance: run-h20-assurance-bundle; verify:sustainment-loop post-H20; H19->H20 goal policy; H6\u2013H12 bundles slimmed (gates in H20 terminal chain)."
+    },
+    {
+      "timestamp": "2026-05-11T15:00:00Z",
+      "horizon": "H21",
+      "status": "completed",
+      "note": "H21 merge + tenant/cutover terminal assurance: run-h21-assurance-bundle; verify:sustainment-loop post-H21; H20->H21 goal policy; unified-ci runs single H21 bundle instead of separate H17+H20 steps."
     }
   ]
 }

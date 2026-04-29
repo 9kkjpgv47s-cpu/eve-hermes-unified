@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * H10 closeout gate (h9-action-3): wraps the latest H9 evidence-bundle manifest
- * (`h9-closeout-evidence-*.json` from `npm run validate:h9-evidence-bundle`) and requires
- * the newest `validate-all-chain-posture-*.json` with passing gates (h9-validate-all-chain-v1).
- * Emits `h10-closeout-*.json` for operators pinning `promote:horizon` H9→H10 with
- * `--closeout-file` alongside `H9->H10` goal policy checks in docs/GOAL_POLICIES.json.
+ * H12 closeout gate: wraps the latest H11 evidence-bundle manifest
+ * (`h11-closeout-evidence-*.json` from `npm run validate:h11-evidence-bundle`) and requires
+ * the newest `validate-all-chain-posture-h12-*.json` with passing gates (h9-validate-all-chain-v1)
+ * and `horizonProgram: "H12"`.
+ * Emits `h12-closeout-*.json` for operators pinning `promote:horizon` H11→H12 with
+ * `--closeout-file` alongside `H11->H12` goal policy checks in docs/GOAL_POLICIES.json.
  */
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -53,21 +54,21 @@ async function newestMatchingFile(dir, predicate) {
  * @param {unknown} chain
  * @returns {string[]}
  */
-function validateChainPosture(chain) {
+function validateChainPostureH12(chain) {
   const failures = [];
   if (!chain || typeof chain !== "object") {
-    failures.push("missing_validate_all_chain_posture");
+    failures.push("missing_validate_all_chain_posture_h12");
     return failures;
   }
   const o = /** @type {Record<string, unknown>} */ (chain);
   if (o.schemaVersion !== "h9-validate-all-chain-v1") {
-    failures.push(`chain_posture_schema_version:${String(o.schemaVersion)}`);
+    failures.push(`chain_posture_h12_schema_version:${String(o.schemaVersion)}`);
   }
   if (o.gatesPassed !== true) {
-    failures.push("validate_all_chain_posture_gatesPassed_false");
+    failures.push("validate_all_chain_posture_h12_gatesPassed_false");
   }
-  if (o.horizonProgram !== "H10") {
-    failures.push(`chain_posture_horizonProgram_expected_H10:${String(o.horizonProgram)}`);
+  if (o.horizonProgram !== "H12") {
+    failures.push(`chain_posture_h12_horizonProgram_expected_H12:${String(o.horizonProgram)}`);
   }
   return failures;
 }
@@ -76,26 +77,26 @@ function validateChainPosture(chain) {
  * @param {unknown} vs
  * @returns {string[]}
  */
-function validateValidationSummarySloForH10(vs) {
+function validateValidationSummarySloForH11(vs) {
   const failures = [];
   if (!vs || typeof vs !== "object") {
-    failures.push("validation_summary_missing_for_h10_slo");
+    failures.push("validation_summary_missing_for_h11_slo");
     return failures;
   }
   const sp = /** @type {Record<string, unknown>} */ (vs).sloPosture;
   if (!sp || typeof sp !== "object") {
-    failures.push("validation_summary_missing_sloPosture_h10");
+    failures.push("validation_summary_missing_sloPosture_h11");
     return failures;
   }
   const o = /** @type {Record<string, unknown>} */ (sp);
   if (o.schemaVersion !== "h8-slo-posture-v1") {
-    failures.push(`h10_slo_posture_schema_version:${String(o.schemaVersion)}`);
+    failures.push(`h11_slo_posture_schema_version:${String(o.schemaVersion)}`);
   }
   if (o.gatesPassed !== true) {
-    failures.push("h10_slo_posture_gatesPassed_false");
+    failures.push("h11_slo_posture_gatesPassed_false");
   }
-  if (o.horizonProgram !== "H10" && o.horizonProgram !== "H11") {
-    failures.push(`h10_slo_posture_horizonProgram_expected_H10_or_H11:${String(o.horizonProgram)}`);
+  if (o.horizonProgram !== "H11") {
+    failures.push(`h11_slo_posture_horizonProgram_expected_H11:${String(o.horizonProgram)}`);
   }
   return failures;
 }
@@ -109,32 +110,32 @@ async function main() {
   });
 
   const failures = [];
-  const h9Path = await newestMatchingFile(
+  const h11Path = await newestMatchingFile(
     evidenceDir,
-    (n) => n.startsWith("h9-closeout-evidence-") && n.endsWith(".json"),
+    (n) => n.startsWith("h11-closeout-evidence-") && n.endsWith(".json"),
   );
-  if (!h9Path) {
-    failures.push("missing_h9_evidence_closeout_manifest");
+  if (!h11Path) {
+    failures.push("missing_h11_evidence_closeout_manifest");
   }
 
-  let h9Payload = null;
-  if (h9Path) {
+  let h11Payload = null;
+  if (h11Path) {
     try {
-      h9Payload = JSON.parse(await readFile(h9Path, "utf8"));
+      h11Payload = JSON.parse(await readFile(h11Path, "utf8"));
     } catch (e) {
-      failures.push(`h9_closeout_evidence_manifest_unreadable:${String(e?.message ?? e)}`);
+      failures.push(`h11_closeout_evidence_manifest_unreadable:${String(e?.message ?? e)}`);
     }
   }
 
-  if (h9Payload && typeof h9Payload === "object") {
-    if (h9Payload.pass !== true) {
-      failures.push("h9_evidence_bundle_pass_false");
+  if (h11Payload && typeof h11Payload === "object") {
+    if (h11Payload.pass !== true) {
+      failures.push("h11_evidence_bundle_pass_false");
     }
-    if (h9Payload.checks?.horizonCloseoutGatePass !== true) {
-      failures.push("h9_evidence_bundle_horizonCloseoutGatePass_false");
+    if (h11Payload.checks?.horizonCloseoutGatePass !== true) {
+      failures.push("h11_evidence_bundle_horizonCloseoutGatePass_false");
     }
-    if (h9Payload.closeout?.horizon !== undefined && h9Payload.closeout?.horizon !== "H9") {
-      failures.push(`h9_closeout_evidence_unexpected_horizon:${String(h9Payload.closeout?.horizon)}`);
+    if (h11Payload.closeout?.horizon !== undefined && h11Payload.closeout?.horizon !== "H11") {
+      failures.push(`h11_closeout_evidence_unexpected_horizon:${String(h11Payload.closeout?.horizon)}`);
     }
   }
 
@@ -144,7 +145,7 @@ async function main() {
   );
   let validationPayload = null;
   if (!validationSummaryPath) {
-    failures.push("missing_validation_summary_for_h10_closeout");
+    failures.push("missing_validation_summary_for_h12_closeout");
   } else {
     try {
       validationPayload = JSON.parse(await readFile(validationSummaryPath, "utf8"));
@@ -152,82 +153,80 @@ async function main() {
       failures.push(`validation_summary_unreadable:${String(e?.message ?? e)}`);
     }
   }
-  failures.push(...validateValidationSummarySloForH10(validationPayload));
+  failures.push(...validateValidationSummarySloForH11(validationPayload));
 
   const chainPath = await newestMatchingFile(
     evidenceDir,
-    (n) =>
-      n.startsWith("validate-all-chain-posture-")
-      && n.endsWith(".json")
-      && !n.startsWith("validate-all-chain-posture-h1"),
+    (n) => n.startsWith("validate-all-chain-posture-h12-") && n.endsWith(".json"),
   );
   let chainPayload = null;
   if (!chainPath) {
-    failures.push("missing_validate_all_chain_posture_file");
+    failures.push("missing_validate_all_chain_posture_h12_file");
   } else {
     try {
       chainPayload = JSON.parse(await readFile(chainPath, "utf8"));
     } catch (e) {
-      failures.push(`validate_all_chain_posture_unreadable:${String(e?.message ?? e)}`);
+      failures.push(`validate_all_chain_posture_h12_unreadable:${String(e?.message ?? e)}`);
     }
   }
-  failures.push(...validateChainPosture(chainPayload));
+  failures.push(...validateChainPostureH12(chainPayload));
 
   const pass = failures.length === 0;
   const outPath =
     opts.out ||
-    path.join(evidenceDir, `h10-closeout-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+    path.join(evidenceDir, `h12-closeout-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
 
   let manifest = {
-    schemaVersion: "h10-closeout-v1",
+    schemaVersion: "h12-closeout-v1",
     generatedAtIso: new Date().toISOString(),
     pass,
     closeout: {
-      horizon: "H9",
-      nextHorizon: "H10",
+      horizon: "H11",
+      nextHorizon: "H12",
       canCloseHorizon: pass,
       canStartNextHorizon: pass,
     },
     files: {
       evidenceDir,
       horizonStatusFile,
-      h9EvidenceCloseoutPath: h9Path,
+      h11EvidenceCloseoutPath: h11Path,
       validationSummaryPath,
-      validateAllChainPosturePath: chainPath,
+      validateAllChainPostureH12Path: chainPath,
       outPath,
     },
     checks: {
-      h10HorizonCloseoutGatePass: pass,
+      h12HorizonCloseoutGatePass: pass,
       horizonCloseoutGatePass: pass,
-      h9EvidenceBundlePresent: Boolean(h9Path),
-      h9EvidenceBundlePass: h9Payload?.pass === true,
-      h9HorizonCloseoutGatePass: h9Payload?.checks?.horizonCloseoutGatePass === true,
+      h11EvidenceBundlePresent: Boolean(h11Path),
+      h11EvidenceBundlePass: h11Payload?.pass === true,
+      h11HorizonCloseoutGatePass: h11Payload?.checks?.horizonCloseoutGatePass === true,
       validationSummaryPresent: Boolean(validationSummaryPath),
-      sloPostureHorizonProgramH10: validationPayload?.sloPosture?.horizonProgram === "H10",
+      sloPostureHorizonProgramH11: validationPayload?.sloPosture?.horizonProgram === "H11",
       sloPostureGatesPassed: validationPayload?.sloPosture?.gatesPassed === true,
-      validateAllChainPosturePresent: Boolean(chainPath),
-      validateAllChainPostureGatesPassed: chainPayload?.gatesPassed === true,
+      validateAllChainPostureH12Present: Boolean(chainPath),
+      validateAllChainPostureH12GatesPassed: chainPayload?.gatesPassed === true,
     },
-    upstream: h9Payload
+    upstream: h11Payload
       ? {
-          path: h9Path,
-          pass: h9Payload.pass,
-          checks: h9Payload.checks ?? null,
-          failures: Array.isArray(h9Payload.failures) ? h9Payload.failures : [],
+          path: h11Path,
+          pass: h11Payload.pass,
+          checks: h11Payload.checks ?? null,
+          failures: Array.isArray(h11Payload.failures) ? h11Payload.failures : [],
         }
       : null,
-    chainPosture: chainPayload && typeof chainPayload === "object"
+    chainPostureH12: chainPayload && typeof chainPayload === "object"
       ? {
           path: chainPath,
           schemaVersion: chainPayload.schemaVersion,
           gatesPassed: chainPayload.gatesPassed,
+          horizonProgram: chainPayload.horizonProgram,
         }
       : null,
     notes: {
-      goalPolicyTransition: "H9->H10",
+      goalPolicyTransition: "H11->H12",
       goalPolicySources: ["docs/GOAL_POLICIES.json", "docs/HORIZON_STATUS.json goalPolicies"],
       promoteHorizonCloseoutFile:
-        "Pin the newest h10-closeout-*.json from npm run validate:h10-closeout on npm run promote:horizon -- --horizon H9 --next-horizon H10 --closeout-file <path> --goal-policy-key H9->H10; add --strict-goal-policy-gates when policy matrix must pass.",
+        "Pin the newest h12-closeout-*.json from npm run validate:h12-closeout on npm run promote:horizon -- --horizon H11 --next-horizon H12 --closeout-file <path> --goal-policy-key H11->H12; add --strict-goal-policy-gates when policy matrix must pass.",
     },
     failures,
   };
@@ -239,7 +238,7 @@ async function main() {
       ...manifest,
       pass: false,
       closeout: { ...manifest.closeout, canCloseHorizon: false },
-      checks: { ...manifest.checks, h10HorizonCloseoutGatePass: false },
+      checks: { ...manifest.checks, h12HorizonCloseoutGatePass: false },
       failures: [...manifest.failures, ...schemaFailures],
     };
   }
@@ -249,7 +248,7 @@ async function main() {
 
   process.stdout.write(`${JSON.stringify({ pass: manifest.pass, outPath, failureCount: manifest.failures.length })}\n`);
   if (!manifest.pass) {
-    process.stderr.write(`H10 closeout validation failed:\n- ${manifest.failures.join("\n- ")}\n`);
+    process.stderr.write(`H12 closeout validation failed:\n- ${manifest.failures.join("\n- ")}\n`);
     process.exitCode = 2;
   }
 }

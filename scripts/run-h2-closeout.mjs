@@ -561,6 +561,9 @@ async function main() {
     if (sourceHorizon === "H10") {
       closeoutArgv.push("--require-h10-evidence-bundle");
     }
+    if (sourceHorizon === "H11") {
+      closeoutArgv.push("--require-h11-evidence-bundle");
+    }
     if (options.requireActiveNextHorizon) {
       closeoutArgv.push("--require-active-next-horizon");
     }

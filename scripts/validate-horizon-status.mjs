@@ -235,7 +235,7 @@ export function validateHorizonStatus(payload) {
         if (policyKey === "transitions" && policyContainer === payload.goalPolicies) {
           continue;
         }
-        if (!/^H(11|10|[1-9])->H(11|10|[1-9])$/.test(policyKey)) {
+        if (!/^H(12|11|10|[1-9])->H(12|11|10|[1-9])$/.test(policyKey)) {
           errors.push(`${basePrefix} key must match pattern H<1-11>->H<1-11>`);
         }
         if (!policyValue || typeof policyValue !== "object" || Array.isArray(policyValue)) {

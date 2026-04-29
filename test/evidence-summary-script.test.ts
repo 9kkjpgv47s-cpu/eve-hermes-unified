@@ -70,6 +70,8 @@ describe("summarize-evidence.mjs", () => {
       expect(raw).toContain("\"p95LatencyMs\": 0");
       expect(raw).toContain("\"sloPosture\"");
       expect(raw).toContain("\"h8-slo-posture-v1\"");
+      const parsed = JSON.parse(raw) as { sloPosture?: { horizonProgram?: string } };
+      expect(parsed.sloPosture?.horizonProgram).toBe("H11");
     });
   });
 

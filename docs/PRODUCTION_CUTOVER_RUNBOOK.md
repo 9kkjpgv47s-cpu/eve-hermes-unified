@@ -507,8 +507,8 @@ Useful flags:
   - if no co-located file exists, it falls back to `goalPolicies` inside `docs/HORIZON_STATUS.json`
 - `--require-goal-policy-coverage` to require machine-checkable transition policy coverage before promotion
   - default scope checks from source horizon through `--goal-policy-coverage-until-horizon` (default `H11`)
-  - set `--goal-policy-coverage-until-horizon H11` to require policy coverage through remaining horizons (e.g., H2->H3->H4->H5->H6->H7->H8->H9->H10->H11)
-  - add `--required-policy-transitions "H2->H3,H3->H4,H4->H5,H5->H6,H6->H7,H7->H8,H8->H9,H9->H10,H10->H11"` for explicit transition sets
+  - set `--goal-policy-coverage-until-horizon H12` to require policy coverage through remaining horizons (e.g., H2->H3->H4->H5->H6->H7->H8->H9->H10->H11->H12)
+  - add `--required-policy-transitions "H2->H3,H3->H4,H4->H5,H5->H6,H6->H7,H7->H8,H8->H9,H9->H10,H10->H11,H11->H12"` for explicit transition sets
   - add `--require-policy-tagged-targets` to require tagged target requirements per transition policy
   - add `--require-positive-pending-policy-min` to require each covered transition policy to declare a positive pending action minimum
 - `--require-goal-policy-readiness-audit` to run `audit:goal-policy-readiness` as an explicit promotion gate

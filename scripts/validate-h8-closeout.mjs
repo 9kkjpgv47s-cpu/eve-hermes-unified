@@ -86,7 +86,7 @@ function validateSloPosture(sp) {
     failures.push("slo_posture_missing_evidenceGates");
   }
   const hp = o.horizonProgram;
-  if (hp !== "H8" && hp !== "H9" && hp !== "H10") {
+  if (hp !== "H8" && hp !== "H9" && hp !== "H10" && hp !== "H11") {
     failures.push(`slo_posture_horizonProgram_not_eligible_for_h8_closeout:${String(hp)}`);
   }
   return failures;

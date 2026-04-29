@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * H9 (h9-action-2): after validate:h9-closeout, regression, and cutover readiness,
+ * After validate closeout(s), regression, and cutover readiness,
  * emit a single machine-readable posture proving the tail of `validate:all` passed.
  * Writes `<filePrefix>*.json` (default `validate-all-chain-posture-`, schema h9-validate-all-chain-v1).
- * `--horizon-program` defaults to H9; use H10 for the first validate:all tail, H11 for the second emit.
- * `--file-prefix` sets the output filename prefix (e.g. `validate-all-chain-posture-h11-` for H11 closeout).
+ * `--horizon-program` stamps the manifest (H10 / H11 / H12, …).
+ * `--file-prefix` sets the output filename prefix (e.g. `validate-all-chain-posture-h11-`).
+ * `--promotion-closeout-prefix` selects the promotion pin (default `h9-closeout-`; use `h11-closeout-` for H12 chain).
  */
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -12,9 +13,16 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA_VERSION = "h9-validate-all-chain-v1";
+const DEFAULT_PROMOTION_PREFIX = "h9-closeout-";
 
 function parseArgs(argv) {
-  const opts = { evidenceDir: "", out: "", horizonProgram: "H9", filePrefix: "validate-all-chain-posture-" };
+  const opts = {
+    evidenceDir: "",
+    out: "",
+    horizonProgram: "H9",
+    filePrefix: "validate-all-chain-posture-",
+    promotionCloseoutPrefix: DEFAULT_PROMOTION_PREFIX,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--evidence-dir" && argv[i + 1]) {
@@ -28,6 +36,9 @@ function parseArgs(argv) {
       i += 1;
     } else if (a === "--file-prefix" && argv[i + 1]) {
       opts.filePrefix = argv[i + 1];
+      i += 1;
+    } else if (a === "--promotion-closeout-prefix" && argv[i + 1]) {
+      opts.promotionCloseoutPrefix = argv[i + 1];
       i += 1;
     }
   }
@@ -78,12 +89,22 @@ async function main() {
     typeof opts.horizonProgram === "string" && opts.horizonProgram.trim() ? opts.horizonProgram.trim() : "H9";
   const filePrefix =
     typeof opts.filePrefix === "string" && opts.filePrefix.trim() ? opts.filePrefix.trim() : "validate-all-chain-posture-";
+  const promotionPrefix =
+    typeof opts.promotionCloseoutPrefix === "string" && opts.promotionCloseoutPrefix.trim()
+      ? opts.promotionCloseoutPrefix.trim()
+      : DEFAULT_PROMOTION_PREFIX;
 
   const failures = [];
 
-  const h9Path = await newestMatchingFile(evidenceDir, (n) => n.startsWith("h9-closeout-") && n.endsWith(".json"));
-  if (!h9Path) {
-    failures.push("missing_h9_closeout_manifest");
+  const promotionPath = await newestMatchingFile(
+    evidenceDir,
+    (n) =>
+      n.startsWith(promotionPrefix)
+      && n.endsWith(".json")
+      && !n.includes("-closeout-evidence-"),
+  );
+  if (!promotionPath) {
+    failures.push(`missing_promotion_closeout_manifest:${promotionPrefix}`);
   }
 
   const regressionPath = await newestMatchingFile(
@@ -122,11 +143,11 @@ async function main() {
     }
   }
 
-  let h9 = null;
-  if (h9Path) {
-    h9 = await loadPassingJson(h9Path, "h9_closeout");
-    if (!h9.pass) {
-      failures.push("h9_closeout_pass_false");
+  let promotion = null;
+  if (promotionPath) {
+    promotion = await loadPassingJson(promotionPath, "promotion_closeout");
+    if (!promotion.pass) {
+      failures.push("promotion_closeout_pass_false");
     }
   }
 
@@ -151,6 +172,8 @@ async function main() {
     opts.out ||
     path.join(evidenceDir, `${filePrefix}${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
 
+  const useLegacyH9Fields = promotionPrefix === DEFAULT_PROMOTION_PREFIX;
+
   const manifest = {
     schemaVersion: SCHEMA_VERSION,
     generatedAtIso: new Date().toISOString(),
@@ -159,7 +182,9 @@ async function main() {
     files: {
       evidenceDir,
       validationSummaryPath,
-      h9CloseoutPath: h9Path,
+      promotionCloseoutPrefix: promotionPrefix,
+      promotionCloseoutPath: promotionPath,
+      ...(useLegacyH9Fields ? { h9CloseoutPath: promotionPath } : {}),
       regressionEvePrimaryPath: regressionPath,
       cutoverReadinessPath: cutoverPath,
       outPath,
@@ -167,15 +192,24 @@ async function main() {
     checks: {
       validationSummaryPresent: Boolean(validationSummaryPath),
       validationSummarySloPostureGatesPassed: sloGatesPassed,
-      h9CloseoutPresent: Boolean(h9Path),
-      h9CloseoutPass: h9?.pass === true,
+      promotionCloseoutPresent: Boolean(promotionPath),
+      promotionCloseoutPass: promotion?.pass === true,
+      ...(useLegacyH9Fields
+        ? {
+            h9CloseoutPresent: Boolean(promotionPath),
+            h9CloseoutPass: promotion?.pass === true,
+          }
+        : {}),
       regressionEvePrimaryPresent: Boolean(regressionPath),
       regressionEvePrimaryPass: regression?.pass === true,
       cutoverReadinessPresent: Boolean(cutoverPath),
       cutoverReadinessPass: cutover?.pass === true,
     },
     upstream: {
-      h9Closeout: h9 ? { path: h9.path, pass: h9.pass } : null,
+      promotionCloseout: promotion ? { path: promotion.path, pass: promotion.pass } : null,
+      ...(useLegacyH9Fields
+        ? { h9Closeout: promotion ? { path: promotion.path, pass: promotion.pass } : null }
+        : {}),
       regressionEvePrimary: regression ? { path: regression.path, pass: regression.pass } : null,
       cutoverReadiness: cutover ? { path: cutover.path, pass: cutover.pass } : null,
     },

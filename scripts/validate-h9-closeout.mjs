@@ -85,8 +85,8 @@ function validateSloPosture(sp) {
   if (!eg || typeof eg !== "object") {
     failures.push("slo_posture_missing_evidenceGates");
   }
-  if (o.horizonProgram !== "H10") {
-    failures.push(`slo_posture_horizonProgram_expected_H10:${String(o.horizonProgram)}`);
+  if (o.horizonProgram !== "H10" && o.horizonProgram !== "H11") {
+    failures.push(`slo_posture_horizonProgram_expected_H10_or_H11:${String(o.horizonProgram)}`);
   }
   return failures;
 }

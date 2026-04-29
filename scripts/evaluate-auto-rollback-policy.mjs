@@ -392,7 +392,7 @@ async function main() {
 
   const activeHorizon = String(horizonStatus?.activeHorizon ?? "");
   const inferredStage = normalizeStage(
-    options.stage || (activeHorizon === "H2" ? "canary" : activeHorizon === "H3" ? "majority" : activeHorizon === "H4" || activeHorizon === "H5" || activeHorizon === "H6" || activeHorizon === "H7" || activeHorizon === "H8" || activeHorizon === "H9" || activeHorizon === "H10" || activeHorizon === "H11" ? "full" : "shadow"),
+    options.stage || (activeHorizon === "H2" ? "canary" : activeHorizon === "H3" ? "majority" : activeHorizon === "H4" || activeHorizon === "H5" || activeHorizon === "H6" || activeHorizon === "H7" || activeHorizon === "H8" || activeHorizon === "H9" || activeHorizon === "H10" || activeHorizon === "H11" || activeHorizon === "H12" ? "full" : "shadow"),
     "shadow",
   );
   const stage = normalizeStage(options.stage, inferredStage);

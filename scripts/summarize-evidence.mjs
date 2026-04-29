@@ -12,12 +12,16 @@ function parseArgs(argv) {
     maxMissingTraceRate: Number.NaN,
     maxUnclassifiedFailures: Number.NaN,
     requireFailureScenarios: false,
+    sloHorizonProgram: process.env.UNIFIED_EVIDENCE_SLO_HORIZON_PROGRAM?.trim() || "H11",
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const value = argv[i + 1];
     if (arg === "--evidence-dir") {
       options.evidenceDir = value ?? "";
+      i += 1;
+    } else if (arg === "--slo-horizon-program" && value) {
+      options.sloHorizonProgram = String(value).trim();
       i += 1;
     } else if (arg === "--out") {
       options.out = value ?? "";
@@ -167,11 +171,11 @@ async function newestSoakDispatchJsonl(dir) {
   return matches[matches.length - 1];
 }
 
-function buildSloPostureFromGates(metrics, gateOptions, gatesPassed) {
+function buildSloPostureFromGates(metrics, gateOptions, gatesPassed, horizonProgram) {
   return {
     schemaVersion: "h8-slo-posture-v1",
     generatedAtIso: new Date().toISOString(),
-    horizonProgram: "H10",
+    horizonProgram: typeof horizonProgram === "string" && horizonProgram.trim() ? horizonProgram.trim() : "H11",
     metrics: {
       totalRecords: metrics.totalRecords,
       successRate: metrics.successRate,
@@ -300,6 +304,7 @@ async function main() {
       requireFailureScenarios: options.requireFailureScenarios,
     },
     gateEvaluation.passed,
+    options.sloHorizonProgram,
   );
 
   const summary = {

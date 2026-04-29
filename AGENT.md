@@ -8,8 +8,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: **`H10`** active (`docs/HORIZON_STATUS.json`); **H11** planned with **`h11-action-*`** — see **`docs/H10_PROGRAM.md`** / **`docs/H11_PROGRAM.md`**
-- Completed in-repo through **h10-action-2** (H10 program + H10→H11 evidence chain in **`validate:all`**)
+- Horizon: **`H10`** active (`docs/HORIZON_STATUS.json`); **H11** planned (dual-tail chain integrity); **H12** planned — see **`docs/H10_PROGRAM.md`**, **`docs/H11_PROGRAM.md`**, **`docs/H12_PROGRAM.md`**
+- Completed in-repo through **h11-action-2** (H11 program + H11→H12 evidence chain tail in **`validate:all`**)
 - Primary focus: **h10-action-3** (post–H9→H10 promotion status bump / H12 seed) when operators run **`promote:horizon`**
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
@@ -26,7 +26,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 4. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 5. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
 6. `docs/HORIZON_STATUS.json`
-7. `docs/H7_PROGRAM.md` / `docs/H8_PROGRAM.md` / `docs/H9_PROGRAM.md` / `docs/H10_PROGRAM.md` / `docs/H11_PROGRAM.md` (when working H7–H11 runway)
+7. `docs/H7_PROGRAM.md` / `docs/H8_PROGRAM.md` / `docs/H9_PROGRAM.md` / `docs/H10_PROGRAM.md` / `docs/H11_PROGRAM.md` / `docs/H12_PROGRAM.md` (when working H7–H12 runway)
 
 ## High-Output Execution Loop
 
@@ -76,12 +76,16 @@ npm run validate:h10-closeout
 npm run emit:validate-all-chain-posture-h11
 npm run validate:h10-evidence-bundle
 npm run validate:h11-closeout
+npm run emit:validate-all-chain-posture-h12
+npm run validate:h11-evidence-bundle
+npm run validate:h12-closeout
 npm run validate:h5-closeout
 npm run validate:h6-horizon-closeout
 npm run validate:h7-horizon-closeout
 npm run validate:h8-horizon-closeout
 npm run validate:h9-horizon-closeout
 npm run validate:h10-horizon-closeout
+npm run validate:h11-horizon-closeout
 ```
 
 ### Readiness / Evidence Gates

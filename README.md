@@ -16,12 +16,12 @@ Use this ordered reading path before touching code:
 8. `docs/VALIDATION_HARDENING_MATRIX.md`
 9. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
 
-Long-horizon status lives in `docs/HORIZON_STATUS.json` (currently **H1–H15 completed** with **post-H15 sustainment** commands). After `npm install`, periodic operators/agents should:
+Long-horizon status lives in `docs/HORIZON_STATUS.json` (currently **H1–H16 completed** with **post-H16 sustainment** commands). After `npm install`, periodic operators/agents should:
 
 ```bash
 mkdir -p evidence
 npm run verify:sustainment-loop
-npm run validate:post-h15-sustainment-manifest
+npm run validate:post-h16-sustainment-manifest
 ```
 
 Validation command set:
@@ -50,8 +50,8 @@ npm run validate:goal-policy-file -- --horizon-status-file docs/HORIZON_STATUS.j
 # optional explicit report pinning:
 #   UNIFIED_RELEASE_READINESS_GOAL_POLICY_FILE_VALIDATION_REPORT=evidence/goal-policy-file-validation.json
 npm run check:progressive-horizon-goals -- --source-horizon H2 --next-horizon H3 --minimum-goal-increase 1 --policy-key H2->H3 --horizon-status-file docs/HORIZON_STATUS.json
-npm run check:goal-policy-coverage -- --source-horizon H2 --until-horizon H15 --require-positive-pending-min --horizon-status-file docs/HORIZON_STATUS.json
-npm run audit:goal-policy-readiness -- --source-horizon H2 --max-target-horizon H15 --horizon-status-file docs/HORIZON_STATUS.json
+npm run check:goal-policy-coverage -- --source-horizon H2 --until-horizon H16 --require-positive-pending-min --horizon-status-file docs/HORIZON_STATUS.json
+npm run audit:goal-policy-readiness -- --source-horizon H2 --max-target-horizon H16 --horizon-status-file docs/HORIZON_STATUS.json
  npm run promote:horizon -- --horizon H2 --next-horizon H3 --horizon-status-file docs/HORIZON_STATUS.json --evidence-dir evidence --allow-horizon-mismatch --goal-policy-key H2->H3 --strict-goal-policy-gates --require-goal-policy-file-validation --goal-policy-file-validation-until-horizon H3
  npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --runtime-env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch --skip-cutover-readiness --goal-policy-key H2->H3 --strict-goal-policy-gates --require-goal-policy-file-validation --goal-policy-file-validation-until-horizon H3
 npm run check:stage-promotion -- --target-stage canary

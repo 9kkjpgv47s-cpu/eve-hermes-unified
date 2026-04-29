@@ -39,14 +39,14 @@ jobs:
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: H15 sustainment assurance bundle (shell CI scan + H14 gates)
-        run: npm run run:h15-assurance-bundle
+      - name: H16 sustainment assurance bundle (goal policy + manifest schemas + H15 gates)
+        run: npm run run:h16-assurance-bundle
 
-      - name: Post-H15 sustainment loop (horizon + closeout gate)
+      - name: Post-H16 sustainment loop (horizon + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H15 sustainment manifest
-        run: npm run validate:post-h15-sustainment-manifest
+      - name: Validate post-H16 sustainment manifest
+        run: npm run validate:post-h16-sustainment-manifest
 
       - name: Build
         run: npm run build

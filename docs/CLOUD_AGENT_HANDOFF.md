@@ -60,15 +60,15 @@ Every PR should include:
 - **Standby region routing**: `UNIFIED_ROUTER_STANDBY_REGION` — when it equals `envelope.regionId`, primary and fallback lanes swap for failover drills (skipped when fallback is `none`).
 - **Lane env passthrough**: Eve receives `EVE_TASK_DISPATCH_TENANT_ID` / `EVE_TASK_DISPATCH_REGION_ID`; Hermes receives `HERMES_UNIFIED_TENANT_ID` / `HERMES_UNIFIED_REGION_ID` when set.
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
-- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H15** (no downstream horizon).
+- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H16** (no downstream horizon).
 
-## Sustainment assurance (terminal H15)
+## Sustainment assurance (terminal H16)
 
-- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h14-assurance-bundle`**.
-- **H15 bundle** (current): `npm run run:h15-assurance-bundle` chains **`run-h14-assurance-bundle.mjs`** plus **`validate-shell-unified-dispatch-ci.mjs`** (forbids shell scripts from bypassing **`unified-dispatch-runner.sh`**).
-- **Closeout gate**: `npm run validate:h15-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
-- **Horizon index**: orchestration scripts include **H15** as the terminal horizon sequence entry.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H15** assurance bundle + `validate:h15-closeout` → `evidence/post-h15-sustainment-loop-*.json`. **`npm run validate:post-h15-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h14-legacy`** / **`validate:post-h14-sustainment-manifest`**; **`verify:sustainment-loop:h13-legacy`** … **`h6-legacy`**.
+- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h15-assurance-bundle`**.
+- **H16 bundle** (current): `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H16**) and **`validate:manifest-schemas`** over **`evidence/`**.
+- **Closeout gate**: `npm run validate:h16-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
+- **Horizon index**: orchestration scripts include **H16** as the terminal horizon sequence entry.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H16** assurance bundle + `validate:h16-closeout` → `evidence/post-h16-sustainment-loop-*.json`. **`npm run validate:post-h16-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h15-legacy`** / **`validate:post-h15-sustainment-manifest`**; **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 
@@ -103,7 +103,7 @@ Every PR should include:
 
 - **Scripts**: **`scripts/run-ci-soak-slo-gate.mjs`** runs **`soak-simulate.sh`** (iterations from **`UNIFIED_CI_SOAK_ITERATIONS`**, default **25**) then **`summarize-soak-report.mjs`** with **`UNIFIED_SOAK_FAIL_ON_DRIFT=1`** so trace rate, success rate, and P95 latency thresholds fail the process on drift.
 - **Evidence**: **`evidence/ci-soak-slo-gate-*.json`** records **`checks.ciSoakDriftPass`** and any **`driftAlarms`** from the summarizer.
-- **CI**: **`unified-ci`** runs **`npm run run:h15-assurance-bundle`** (includes H13 sub-bundle + shell gate + H15 shell CI scan) before the full **`validate:all`** chain.
+- **CI**: **`unified-ci`** runs **`npm run run:h16-assurance-bundle`** (includes H15 sub-bundle + goal-policy validation + manifest schema sweep) before the full **`validate:all`** chain.
 
 ## Shell unified dispatch ingress (H14)
 

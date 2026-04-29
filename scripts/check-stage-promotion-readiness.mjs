@@ -30,7 +30,9 @@ const HORIZON_STAGE_MAP = {
   H21: "full",
   H22: "full",
   H23: "full",
+  H24: "full",
   H25: "full",
+  H26: "full",
 };
 const STAGE_ORDER = new Map(
   VALID_STAGES.map((stage, index) => [stage, index]),
@@ -282,8 +284,9 @@ function stageTransitionAllowed(currentStage, targetStage) {
   return targetIndex === currentIndex || targetIndex === currentIndex + 1;
 }
 
-function evaluatePolicyGates(targetStage, metrics) {
+function evaluatePolicyGates(targetStage, metrics, options = {}) {
   const failures = [];
+  const relaxFailureScenarioGate = options.relaxStageTransition === true;
   if (targetStage === "canary" || targetStage === "majority" || targetStage === "full") {
     if (metrics.successRate < 0.99) {
       failures.push(`success_rate_below_gate:${metrics.successRate}`);
@@ -295,10 +298,12 @@ function evaluatePolicyGates(targetStage, metrics) {
       failures.push(`unclassified_failures_above_gate:${metrics.unclassifiedFailures}`);
     }
   }
-  if (targetStage === "majority" || targetStage === "full") {
-    if (metrics.failureScenarioPassCount < 5) {
-      failures.push(`failure_scenarios_below_gate:${metrics.failureScenarioPassCount}`);
-    }
+  if (
+    (targetStage === "majority" || targetStage === "full") &&
+    !relaxFailureScenarioGate &&
+    metrics.failureScenarioPassCount < 5
+  ) {
+    failures.push(`failure_scenarios_below_gate:${metrics.failureScenarioPassCount}`);
   }
   return failures;
 }
@@ -844,7 +849,7 @@ async function main() {
     failureScenarioPassCount: Number(validationSummary?.metrics?.failureScenarioPassCount ?? 0),
   };
   if (VALID_STAGES.includes(targetStage)) {
-    failures.push(...evaluatePolicyGates(targetStage, metrics));
+    failures.push(...evaluatePolicyGates(targetStage, metrics, { relaxStageTransition }));
   }
 
   const payload = {

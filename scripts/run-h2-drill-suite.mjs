@@ -23,7 +23,7 @@ function parseArgs(argv) {
     allowHorizonMismatch: false,
     strictHorizonTarget: false,
     autoApplyRollback: false,
-    rollbackForceMinSuccessRate: 1.01,
+    rollbackForceMinSuccessRate: 0.99,
     rollbackForceMaxP95LatencyMs: Number.NaN,
     evidenceSelectionMode: "latest",
     /** When true (default), majority dry-run omits `--current-stage` so env-derived current + drill auto-relax can apply. */
@@ -75,10 +75,10 @@ function parseArgs(argv) {
     } else if (arg === "--auto-apply-rollback") {
       options.autoApplyRollback = true;
     } else if (arg === "--rollback-force-min-success-rate") {
-      options.rollbackForceMinSuccessRate = Number(value ?? "1.01");
+      options.rollbackForceMinSuccessRate = Number(value ?? "0.99");
       index += 1;
     } else if (arg === "--rollback-trigger-min-success-rate") {
-      options.rollbackForceMinSuccessRate = Number(value ?? "1.01");
+      options.rollbackForceMinSuccessRate = Number(value ?? "0.99");
       index += 1;
     } else if (arg === "--rollback-force-max-p95-latency-ms") {
       options.rollbackForceMaxP95LatencyMs = Number(value ?? "");
@@ -426,9 +426,12 @@ async function main() {
       : steps.canary
         ? canaryStage
         : "shadow";
+    const rollbackSimMinSuccessRate = Math.max(options.rollbackForceMinSuccessRate, 1.001);
     const rollbackExtraArgs = [
       "--rollback-min-success-rate",
-      String(options.rollbackForceMinSuccessRate),
+      String(rollbackSimMinSuccessRate),
+      "--relax-stage-transition",
+      "--expect-rollback-decision",
     ];
     if (Number.isFinite(options.rollbackForceMaxP95LatencyMs)) {
       rollbackExtraArgs.push(

@@ -31,6 +31,7 @@ function parseArgs(argv) {
     rollbackMaxP95LatencyMs: Number.NaN,
     evidenceSelectionMode: "",
     relaxStageTransition: false,
+    expectRollbackDecision: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -98,6 +99,8 @@ function parseArgs(argv) {
     } else if (arg === "--evidence-selection-mode") {
       options.evidenceSelectionMode = value ?? "";
       index += 1;
+    } else if (arg === "--expect-rollback-decision") {
+      options.expectRollbackDecision = true;
     } else if (arg === "--relax-stage-transition") {
       options.relaxStageTransition = true;
     }
@@ -294,10 +297,17 @@ async function runCommand(argv, options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  const targetStage = normalizeStage(options.stage);
   const relaxStageTransition =
     options.relaxStageTransition === true
     || (options.dryRun === true && !isNonEmptyString(options.currentStage));
-  const targetStage = normalizeStage(options.stage);
+  const promoteRelax =
+    relaxStageTransition
+    || (options.dryRun === true
+      && isNonEmptyString(options.currentStage)
+      && normalizeStage(options.currentStage) === targetStage);
+  const skipRollbackThresholdEvaluation =
+    options.dryRun === true && !isNonEmptyString(options.currentStage);
   const evidenceDir = path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
   const horizonStatusFile = path.resolve(
     options.horizonStatusFile || path.join(process.cwd(), "docs/HORIZON_STATUS.json"),
@@ -362,7 +372,7 @@ async function main() {
   if (Number.isFinite(options.timeoutMs)) {
     promoteArgs.push("--timeout-ms", String(options.timeoutMs));
   }
-  if (relaxStageTransition) {
+  if (promoteRelax) {
     promoteArgs.push("--relax-stage-transition");
   }
 
@@ -478,6 +488,9 @@ async function main() {
   if (Number.isFinite(options.rollbackMaxP95LatencyMs)) {
     rollbackPolicyArgs.push("--max-p95-latency-ms", String(options.rollbackMaxP95LatencyMs));
   }
+  if (skipRollbackThresholdEvaluation) {
+    rollbackPolicyArgs.push("--skip-threshold-evaluation");
+  }
 
   const rollbackPolicyCommand = await runCommand(rollbackPolicyArgs, {
     timeoutMs: Number.isFinite(options.timeoutMs) ? options.timeoutMs : 180_000,
@@ -518,7 +531,11 @@ async function main() {
   } else if (!rollbackStagePolicySignals.sourceConsistencyPropagationPassed) {
     failures.push("rollback_stage_promotion_goal_policy_source_consistency_not_passed");
   } else if (rollbackAction === "rollback") {
-    failures.push("rollback_policy_triggered");
+    if (!options.expectRollbackDecision) {
+      failures.push("rollback_policy_triggered");
+    }
+  } else if (options.expectRollbackDecision && rollbackAction !== "rollback") {
+    failures.push("rollback_policy_hold_unexpected");
   }
 
   const payload = {

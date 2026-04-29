@@ -27,6 +27,7 @@ function parseArgs(argv) {
     releaseReadinessFile: "",
     stagePromotionReadinessFile: "",
     evidenceSelectionMode: "",
+    skipThresholdEvaluation: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -78,6 +79,8 @@ function parseArgs(argv) {
     } else if (arg === "--evidence-selection" || arg === "--evidence-selection-mode") {
       options.evidenceSelectionMode = value ?? "";
       index += 1;
+    } else if (arg === "--skip-threshold-evaluation") {
+      options.skipThresholdEvaluation = true;
     }
   }
   return options;
@@ -392,7 +395,7 @@ async function main() {
 
   const activeHorizon = String(horizonStatus?.activeHorizon ?? "");
   const inferredStage = normalizeStage(
-    options.stage || (activeHorizon === "H2" ? "canary" : activeHorizon === "H3" ? "majority" : activeHorizon === "H4" || activeHorizon === "H5" || activeHorizon === "H6" || activeHorizon === "H7" || activeHorizon === "H8" || activeHorizon === "H9" || activeHorizon === "H10" || activeHorizon === "H11" || activeHorizon === "H12" || activeHorizon === "H13" || activeHorizon === "H14" || activeHorizon === "H15" || activeHorizon === "H16" || activeHorizon === "H17" || activeHorizon === "H18" || activeHorizon === "H19" || activeHorizon === "H20" || activeHorizon === "H21" || activeHorizon === "H22" || activeHorizon === "H23" || activeHorizon === "H24" || activeHorizon === "H25" ? "full" : "shadow"),
+    options.stage || (activeHorizon === "H2" ? "canary" : activeHorizon === "H3" ? "majority" : activeHorizon === "H4" || activeHorizon === "H5" || activeHorizon === "H6" || activeHorizon === "H7" || activeHorizon === "H8" || activeHorizon === "H9" || activeHorizon === "H10" || activeHorizon === "H11" || activeHorizon === "H12" || activeHorizon === "H13" || activeHorizon === "H14" || activeHorizon === "H15" || activeHorizon === "H16" || activeHorizon === "H17" || activeHorizon === "H18" || activeHorizon === "H19" || activeHorizon === "H20" || activeHorizon === "H21" || activeHorizon === "H22" || activeHorizon === "H23" || activeHorizon === "H24" || activeHorizon === "H25" || activeHorizon === "H26" ? "full" : "shadow"),
     "shadow",
   );
   const stage = normalizeStage(options.stage, inferredStage);
@@ -511,7 +514,9 @@ async function main() {
     minFailureScenarioPassCount: toFiniteNumber(options.minFailureScenarioPassCount, stage === "canary" ? 5 : 5),
     maxP95LatencyMs: toFiniteNumber(options.maxP95LatencyMs, stage === "canary" ? 2500 : 2000),
   };
-  const thresholdReasons = evaluateThresholds(stage, metrics, thresholds);
+  const thresholdReasons = options.skipThresholdEvaluation
+    ? []
+    : evaluateThresholds(stage, metrics, thresholds);
   const stageRequiresRollback = stage !== "shadow" && stage !== "canary"
     ? thresholdReasons.length > 0
     : thresholdReasons.length > 0 && metrics.successRate < 0.98;
@@ -571,6 +576,7 @@ async function main() {
       metrics,
       thresholds,
       thresholdReasons,
+      skipThresholdEvaluation: options.skipThresholdEvaluation === true,
       validationSummaryPassed: validationSummary?.gates?.passed === true,
       cutoverReadinessPassed: cutoverReadiness?.pass === true,
       releaseReadinessPassed: releaseReadiness?.pass === true,

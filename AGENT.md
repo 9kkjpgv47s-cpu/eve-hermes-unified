@@ -8,9 +8,9 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: **`H8`** active (`docs/HORIZON_STATUS.json`); **H9** program completed in-repo through **h9-action-2**; **`h9-action-3`** optional promotion bump — see **`docs/H9_PROGRAM.md`**
-- Completed in-repo through **h9-action-2** (H9 program doc + validate-all chain posture emitter at end of `validate:all`)
-- Primary focus: **h9-action-3** (post–H8→H9 promotion status bump / H10 seed) when operators run **`promote:horizon`**
+- Horizon: **`H9`** active (`docs/HORIZON_STATUS.json`); **H10** planned with **`h10-action-*`** — see **`docs/H9_PROGRAM.md`** / **`docs/H10_PROGRAM.md`**
+- Completed in-repo through **h9-action-3** (status bump + H10 scaffold + **`H9->H10`** evidence gates in **`validate:all`**)
+- Primary focus: **h10-action-1** (lock H10 goals and evidence gates) per **`docs/H10_PROGRAM.md`**
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -26,7 +26,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 4. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 5. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
 6. `docs/HORIZON_STATUS.json`
-7. `docs/H7_PROGRAM.md` / `docs/H8_PROGRAM.md` / `docs/H9_PROGRAM.md` (when working H7–H9 runway)
+7. `docs/H7_PROGRAM.md` / `docs/H8_PROGRAM.md` / `docs/H9_PROGRAM.md` / `docs/H10_PROGRAM.md` (when working H7–H10 runway)
 
 ## High-Output Execution Loop
 
@@ -67,13 +67,17 @@ npm run validate:h6-closeout
 npm run validate:h6-evidence-bundle
 npm run validate:h7-closeout
 npm run validate:h7-evidence-bundle
-npm run validate:h8-closeout
-npm run validate:h8-evidence-bundle
 npm run validate:h9-closeout
+npm run validate:regression-eve
+npm run validate:cutover-readiness
+npm run emit:validate-all-chain-posture
+npm run validate:h9-evidence-bundle
+npm run validate:h10-closeout
 npm run validate:h5-closeout
 npm run validate:h6-horizon-closeout
 npm run validate:h7-horizon-closeout
 npm run validate:h8-horizon-closeout
+npm run validate:h9-horizon-closeout
 ```
 
 ### Readiness / Evidence Gates

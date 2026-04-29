@@ -3,6 +3,7 @@
  * H9 (h9-action-2): after validate:h9-closeout, regression, and cutover readiness,
  * emit a single machine-readable posture proving the tail of `validate:all` passed.
  * Writes `validate-all-chain-posture-*.json` (schema h9-validate-all-chain-v1).
+ * `--horizon-program` defaults to H9; use H10 when the active program horizon is H10.
  */
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -12,7 +13,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA_VERSION = "h9-validate-all-chain-v1";
 
 function parseArgs(argv) {
-  const opts = { evidenceDir: "", out: "" };
+  const opts = { evidenceDir: "", out: "", horizonProgram: "H9" };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--evidence-dir" && argv[i + 1]) {
@@ -20,6 +21,9 @@ function parseArgs(argv) {
       i += 1;
     } else if (a === "--out" && argv[i + 1]) {
       opts.out = argv[i + 1];
+      i += 1;
+    } else if (a === "--horizon-program" && argv[i + 1]) {
+      opts.horizonProgram = argv[i + 1];
       i += 1;
     }
   }
@@ -65,6 +69,9 @@ async function main() {
   await access(evidenceDir).catch(() => {
     throw new Error(`evidence dir missing: ${evidenceDir}`);
   });
+
+  const horizonProgram =
+    typeof opts.horizonProgram === "string" && opts.horizonProgram.trim() ? opts.horizonProgram.trim() : "H9";
 
   const failures = [];
 
@@ -141,7 +148,7 @@ async function main() {
   const manifest = {
     schemaVersion: SCHEMA_VERSION,
     generatedAtIso: new Date().toISOString(),
-    horizonProgram: "H9",
+    horizonProgram,
     gatesPassed,
     files: {
       evidenceDir,

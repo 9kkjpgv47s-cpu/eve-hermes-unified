@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-05T00:00:00Z",
+  "updatedAtIso": "2026-05-06T00:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H8",
+  "activeHorizon": "H9",
   "activeStatus": "in_progress",
-  "summary": "H8 release posture / soak SLO slice active; H9 program locked in docs/H9_PROGRAM.md (validate-all completion posture + validate-all-chain-posture manifest). h9-action-1..2 completed in-repo. Prior horizons H1–H7 closed with machine-verified validate:all evidence.",
+  "summary": "H9 validate-all completion slice active: sloPosture horizonProgram H9, validate-all-chain-posture (h9-validate-all-chain-v1, horizonProgram H10), validate:h9-evidence-bundle + validate:h10-closeout in validate:all. H8 release posture closed in status; H10 runway seeded (h10-action-1..2). Prior horizons H1–H7 closed with machine-verified validate:all evidence.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -388,8 +388,22 @@
       "id": "h9-action-3",
       "summary": "Optional: after promote:horizon marks H8 completed, set activeHorizon to H9 and seed H10 or product-specific nextActions when scope is ready.",
       "targetHorizon": "H9",
-      "status": "planned",
+      "status": "completed",
       "tags": ["operations", "validation"]
+    },
+    {
+      "id": "h10-action-1",
+      "summary": "Define H10 program goals (product-specific next slice) and align goalPolicies H9->H10 with evidence gates.",
+      "targetHorizon": "H10",
+      "status": "planned",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h10-action-2",
+      "summary": "Optional: extend evidence-summary or closeout chain for H9→H10 when H10 scope is locked.",
+      "targetHorizon": "H10",
+      "status": "planned",
+      "tags": ["validation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -498,6 +512,21 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H9->H10": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.05,
+        "minPendingNextActions": 2,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -541,12 +570,16 @@
       "summary": "Observability/SLO evidence slice closed in-repo: docs/H7_PROGRAM.md; validate:h7-evidence-bundle + validate:h8-closeout (sloPosture) in validate:all; run:h7-closeout runs H7 evidence gate. h7-action-1..3 and h8-action-1..3 completed in-repo."
     },
     "H8": {
-      "status": "in_progress",
-      "summary": "Release posture / soak SLO active: validation-summary sloPosture (h8-slo-posture-v1, horizonProgram H8); validate:h8-evidence-bundle + validate:h9-closeout in validate:all; run:h8-closeout runs H8 evidence gate."
+      "status": "completed",
+      "summary": "Release posture / soak SLO slice closed in-repo: validation-summary sloPosture (h8-slo-posture-v1); validate:h8-evidence-bundle + validate:h9-closeout in validate:all; run:h8-closeout runs H8 evidence gate. h8-action-1..3 and h9-action-1..3 completed in-repo."
     },
     "H9": {
+      "status": "in_progress",
+      "summary": "Validate-all completion active: sloPosture horizonProgram H9; emit:validate-all-chain-posture (horizonProgram H10); validate:h9-evidence-bundle + validate:h10-closeout in validate:all; run:h9-closeout runs H9 evidence gate. See docs/H9_PROGRAM.md."
+    },
+    "H10": {
       "status": "planned",
-      "summary": "Validate-all completion posture: validate-all-chain-posture manifest (h9-validate-all-chain-v1) emitted at end of validate:all; h9-action-1..2 done; h9-action-3 optional promotion bump."
+      "summary": "Next program horizon placeholder; see docs/H10_PROGRAM.md and h10-action-* nextActions."
     }
   },
   "history": [
@@ -771,6 +804,12 @@
       "horizon": "H9",
       "status": "planned",
       "note": "Completed h9-action-1: docs/H9_PROGRAM.md defines H9 as validate-all completion posture (scale + SLO + h9-closeout + regression + cutover). Completed h9-action-2: scripts/emit-validate-all-chain-posture.mjs (schema h9-validate-all-chain-v1), npm run emit:validate-all-chain-posture at end of validate:all; h9-action-3 optional promotion bump."
+    },
+    {
+      "timestamp": "2026-05-06T00:00:00Z",
+      "horizon": "H10",
+      "status": "planned",
+      "note": "Completed h9-action-3: activeHorizon set to H9; H8 completed in horizonStates; H10 planned with h10-action-1..2; H9->H10 in docs/GOAL_POLICIES.json and goalPolicies; MAX_HORIZON_ID H10; validate-h9-evidence-bundle.mjs, validate-h10-closeout.mjs; summarize-evidence sloPosture horizonProgram H9; emit:validate-all-chain-posture --horizon-program H10; validate:all appends validate:h9-evidence-bundle and validate:h10-closeout; validate-horizon-closeout --require-h9-evidence-bundle; run-h2-closeout passes --require-h7-evidence-bundle for H7; npm run run:h9-closeout, run:h9-promotion, validate:h9-horizon-closeout; docs/H10_PROGRAM.md."
     }
   ]
 }

@@ -549,8 +549,14 @@ async function main() {
     if (sourceHorizon === "H6") {
       closeoutArgv.push("--require-h6-evidence-bundle");
     }
+    if (sourceHorizon === "H7") {
+      closeoutArgv.push("--require-h7-evidence-bundle");
+    }
     if (sourceHorizon === "H8") {
       closeoutArgv.push("--require-h8-evidence-bundle");
+    }
+    if (sourceHorizon === "H9") {
+      closeoutArgv.push("--require-h9-evidence-bundle");
     }
     if (options.requireActiveNextHorizon) {
       closeoutArgv.push("--require-active-next-horizon");

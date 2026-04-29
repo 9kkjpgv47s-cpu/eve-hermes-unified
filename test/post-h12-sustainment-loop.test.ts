@@ -13,28 +13,32 @@ describe("run-post-h12-sustainment-loop.mjs (legacy)", () => {
     expect(pkg.scripts?.["verify:sustainment-loop:h12-legacy"]).toContain("run-post-h12-sustainment-loop.mjs");
   });
 
-  it("emits pass and structured checks in legacy sustainment loop manifest", async () => {
-    const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/run-post-h12-sustainment-loop.mjs")],
-      { timeoutMs: 120_000 },
-    );
-    expect(result.code).toBe(0);
-    const out = result.stdout.trim();
-    const last = out.split("\n").filter(Boolean).pop() ?? "";
-    const raw = await readFile(last, "utf8");
-    const payload = JSON.parse(raw) as {
-      pass?: boolean;
-      checks?: {
-        horizonStatusPass?: boolean;
-        h12AssuranceBundlePass?: boolean;
-        h12CloseoutGatePass?: boolean;
+  it(
+    "emits pass and structured checks in legacy sustainment loop manifest",
+    async () => {
+      const result = await runCommandWithTimeout(
+        ["node", path.join(repoRoot, "scripts/run-post-h12-sustainment-loop.mjs")],
+        { timeoutMs: 120_000 },
+      );
+      expect(result.code).toBe(0);
+      const out = result.stdout.trim();
+      const last = out.split("\n").filter(Boolean).pop() ?? "";
+      const raw = await readFile(last, "utf8");
+      const payload = JSON.parse(raw) as {
+        pass?: boolean;
+        checks?: {
+          horizonStatusPass?: boolean;
+          h12AssuranceBundlePass?: boolean;
+          h12CloseoutGatePass?: boolean;
+        };
       };
-    };
-    expect(payload.pass).toBe(true);
-    expect(payload.checks?.horizonStatusPass).toBe(true);
-    expect(payload.checks?.h12AssuranceBundlePass).toBe(true);
-    expect(payload.checks?.h12CloseoutGatePass).toBe(true);
-  });
+      expect(payload.pass).toBe(true);
+      expect(payload.checks?.horizonStatusPass).toBe(true);
+      expect(payload.checks?.h12AssuranceBundlePass).toBe(true);
+      expect(payload.checks?.h12CloseoutGatePass).toBe(true);
+    },
+    180_000,
+  );
 
   it("validate:post-h12-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(

@@ -62,10 +62,11 @@ async function seedMergeBundleInputs() {
 }
 
 describe("run-post-h36-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop npm script (post-H36 terminal chain)", async () => {
+  it("exposes verify:sustainment-loop:h36-legacy npm script (post-H36 terminal chain)", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h36-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop:h36-legacy"]).toContain("run-post-h36-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h38-sustainment-loop.mjs");
   });
 
   it(

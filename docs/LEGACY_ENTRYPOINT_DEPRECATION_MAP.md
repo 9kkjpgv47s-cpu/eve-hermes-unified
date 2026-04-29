@@ -15,6 +15,7 @@ Canonical production ingress for Eve/Hermes unified routing is **`src/bin/unifie
 |---------|--------|-----------|
 | `new EveAdapter(` / `new HermesAdapter(` in any `src/**/*.ts` **except** `src/bin/unified-dispatch.ts` | **Disallowed** (CI: `npm run validate:unified-entrypoints`) | Import and run through the unified CLI or call dispatch helpers in tests with fake adapters |
 | Direct shell scripts that invoke Eve/Hermes binaries **without** going through unified dispatch env wiring | **Discouraged** | Prefer `npm run dispatch` with `UNIFIED_*` env vars or documented soak/smoke wrappers |
+| Shell scripts that invoke unified dispatch | **Must** resolve via `scripts/unified-dispatch-runner.sh` (`resolve_unified_dispatch` → `UNIFIED_DISPATCH_CMD`) so CI works without a prior `npm run build` when dist is absent (**H14**) |
 | Embedding router defaults only in ad-hoc scripts | **Discouraged** | Use `loadUnifiedRuntimeEnvConfig()` / `.env` keys documented in `.env.example` |
 
 ## Compatibility shims

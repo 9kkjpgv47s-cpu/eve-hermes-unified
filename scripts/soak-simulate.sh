@@ -5,24 +5,17 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${UNIFIED_EVIDENCE_DIR:-$ROOT_DIR/evidence}"
 mkdir -p "$OUT_DIR"
 
+# shellcheck source=scripts/unified-dispatch-runner.sh
+source "$ROOT_DIR/scripts/unified-dispatch-runner.sh"
+resolve_unified_dispatch || exit $?
+dispatch_cmd=("${UNIFIED_DISPATCH_CMD[@]}")
+
 iterations="${1:-20}"
 report="$OUT_DIR/soak-$(date +%Y%m%d-%H%M%S).jsonl"
 chat_id="${UNIFIED_SOAK_CHAT_ID:-777}"
 eve_dispatch_script="${UNIFIED_SOAK_EVE_DISPATCH_SCRIPT:-/bin/true}"
 hermes_launch_command="${UNIFIED_SOAK_HERMES_LAUNCH_COMMAND:-/bin/true}"
 eve_dispatch_result_path="${UNIFIED_SOAK_EVE_DISPATCH_RESULT_PATH:-$OUT_DIR/soak-eve-dispatch-state.json}"
-
-dispatch_bin="${UNIFIED_DISPATCH_BIN:-$ROOT_DIR/dist/src/bin/unified-dispatch.js}"
-dispatch_cmd=()
-if [[ -f "$dispatch_bin" ]]; then
-  dispatch_cmd=(node "$dispatch_bin")
-elif [[ -x "$ROOT_DIR/node_modules/.bin/tsx" && -f "$ROOT_DIR/src/bin/unified-dispatch.ts" ]]; then
-  dispatch_cmd=("$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/src/bin/unified-dispatch.ts")
-else
-  echo "Missing dispatch runner. Expected dist binary or local tsx install." >&2
-  echo "Run npm install and optionally npm run build before soak simulation." >&2
-  exit 70
-fi
 
 for i in $(seq 1 "$iterations"); do
   if (( i % 3 == 0 )); then

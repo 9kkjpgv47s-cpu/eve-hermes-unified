@@ -60,15 +60,15 @@ Every PR should include:
 - **Standby region routing**: `UNIFIED_ROUTER_STANDBY_REGION` — when it equals `envelope.regionId`, primary and fallback lanes swap for failover drills (skipped when fallback is `none`).
 - **Lane env passthrough**: Eve receives `EVE_TASK_DISPATCH_TENANT_ID` / `EVE_TASK_DISPATCH_REGION_ID`; Hermes receives `HERMES_UNIFIED_TENANT_ID` / `HERMES_UNIFIED_REGION_ID` when set.
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
-- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H13** (no downstream horizon).
+- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H14** (no downstream horizon).
 
-## Sustainment assurance (terminal H13)
+## Sustainment assurance (terminal H14)
 
-- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h12-assurance-bundle`**.
-- **H13 bundle** (current): `npm run run:h13-assurance-bundle` chains **`run-h12-assurance-bundle.mjs`** plus **`run-ci-soak-slo-gate.mjs`** (soak JSONL + **`summarize-soak-report.mjs`** with **`UNIFIED_SOAK_FAIL_ON_DRIFT=1`**).
-- **Closeout gate**: `npm run validate:h13-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
-- **Horizon index**: orchestration scripts include **H13** as the terminal horizon sequence entry.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H13** assurance bundle + `validate:h13-closeout` → `evidence/post-h13-sustainment-loop-*.json`. **`npm run validate:post-h13-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h12-legacy`** / **`validate:post-h12-sustainment-manifest`**; **`verify:sustainment-loop:h11-legacy`** … **`h6-legacy`**.
+- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h13-assurance-bundle`**.
+- **H14 bundle** (current): `npm run run:h14-assurance-bundle` chains **`run-h13-assurance-bundle.mjs`** plus **`validate-shell-unified-dispatch.sh`** (canonical **`scripts/unified-dispatch-runner.sh`** resolution).
+- **Closeout gate**: `npm run validate:h14-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
+- **Horizon index**: orchestration scripts include **H14** as the terminal horizon sequence entry.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H14** assurance bundle + `validate:h14-closeout` → `evidence/post-h14-sustainment-loop-*.json`. **`npm run validate:post-h14-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h13-legacy`** / **`validate:post-h13-sustainment-manifest`**; **`verify:sustainment-loop:h12-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 
@@ -103,7 +103,13 @@ Every PR should include:
 
 - **Scripts**: **`scripts/run-ci-soak-slo-gate.mjs`** runs **`soak-simulate.sh`** (iterations from **`UNIFIED_CI_SOAK_ITERATIONS`**, default **25**) then **`summarize-soak-report.mjs`** with **`UNIFIED_SOAK_FAIL_ON_DRIFT=1`** so trace rate, success rate, and P95 latency thresholds fail the process on drift.
 - **Evidence**: **`evidence/ci-soak-slo-gate-*.json`** records **`checks.ciSoakDriftPass`** and any **`driftAlarms`** from the summarizer.
-- **CI**: **`unified-ci`** runs **`npm run run:h13-assurance-bundle`** (includes this gate) before the full **`validate:all`** chain.
+- **CI**: **`unified-ci`** runs **`npm run run:h14-assurance-bundle`** (includes H13 sub-bundle + shell gate) before the full **`validate:all`** chain.
+
+## Shell unified dispatch ingress (H14)
+
+- **`scripts/unified-dispatch-runner.sh`**: **`resolve_unified_dispatch`** sets **`UNIFIED_DISPATCH_CMD`** to **`node dist/.../unified-dispatch.js`** when built, else **`tsx src/bin/unified-dispatch.ts`**. Honors **`UNIFIED_DISPATCH_BIN`** when pointing at an existing file.
+- **`scripts/validate-shell-unified-dispatch.sh`**: smoke-check that the resolver succeeds (used by **`run-h14-assurance-bundle.mjs`**).
+- **Refactors**: **`soak-simulate.sh`**, **`regression-eve-primary.sh`**, **`verify-cutover-readiness.sh`**, **`failure-injection-smoke.sh`** invoke dispatch only via the resolver so **`validate:all`** works **before** **`npm run build`** in clean checkouts.
 
 ## Cutover and Rollback Commands
 

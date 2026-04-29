@@ -286,7 +286,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h11-assurance-bundle`** passes and artifact matches **`evidence/h11-assurance-bundle-*.json`** (includes **`capabilityPolicyAuditRotationPass`**).
-- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H13**).
+- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H14**).
 
 Primary risks:
 
@@ -309,7 +309,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h12-assurance-bundle`** passes and artifact matches **`evidence/h12-assurance-bundle-*.json`**.
-- **`npm run validate:h12-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H13**).
+- **`npm run validate:h12-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H14**).
 
 Primary risks:
 
@@ -332,7 +332,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h13-assurance-bundle`** passes and artifact matches **`evidence/h13-assurance-bundle-*.json`**.
-- **`npm run validate:h13-closeout`** passes when evidence is present (**H13** is terminal: stage-promotion readiness skipped in closeout validator).
+- **`npm run validate:h13-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H14**).
 
 Primary risks:
 
@@ -342,9 +342,37 @@ Mitigations:
 
 - Keep soak iterations modest in CI; document env overrides for noisy hosts.
 
-### Post-H13 operations (terminal sustainment)
+### Post-H13 operations (sustainment; subsumed by H14 terminal chain)
 
-After **H13** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h13-closeout`**. Optionally **`npm run validate:post-h13-sustainment-manifest`** checks the latest **`evidence/post-h13-sustainment-loop-*.json`**. Legacy prior chains: **`verify:sustainment-loop:h12-legacy`** / **`validate:post-h12-sustainment-manifest`**, **`verify:sustainment-loop:h11-legacy`** … **`h6-legacy`**.
+After **H13** is marked completed, the **H13** assurance evidence remains part of **`npm run run:h14-assurance-bundle`**. For terminal sustainment, use **Post-H14** below. Legacy: **`verify:sustainment-loop:h12-legacy`** / **`validate:post-h12-sustainment-manifest`**, **`verify:sustainment-loop:h11-legacy`** … **`h6-legacy`**.
+
+### Horizon H14 - Shell unified dispatch ingress (operational convergence)
+
+Goal: ensure **all** main shell validation paths that invoke unified-dispatch use a **single resolver** (dist `node` binary when present, else **`tsx src/bin/unified-dispatch.ts`**) so `validate:all` and operator scripts work **without** a prior `npm run build`, matching the north-star on **self-priming** automation.
+
+Workstreams:
+
+- **`scripts/unified-dispatch-runner.sh`**: `resolve_unified_dispatch` → **`UNIFIED_DISPATCH_CMD`**.
+- **Refactor** **`soak-simulate.sh`**, **`regression-eve-primary.sh`**, **`verify-cutover-readiness.sh`**, **`failure-injection-smoke.sh`** to source the runner and use **`"${UNIFIED_DISPATCH_CMD[@]}"`**.
+- **`scripts/validate-shell-unified-dispatch.sh`**: fast smoke that the resolver works.
+- **`npm run run:h14-assurance-bundle`**: H13 sub-bundle + shell gate; artifact includes **`shellUnifiedDispatchScriptsPass`**.
+
+Exit evidence:
+
+- **`npm run run:h14-assurance-bundle`** passes and artifact matches **`evidence/h14-assurance-bundle-*.json`**.
+- **`npm run validate:h14-closeout`** passes when evidence is present (**H14** is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- Custom **`UNIFIED_DISPATCH_BIN`** must point at a real file if set.
+
+Mitigations:
+
+- Document behavior in **`docs/CLOUD_AGENT_HANDOFF.md`**; gate exercises default resolution on CI runners.
+
+### Post-H14 operations (terminal sustainment)
+
+After **H14** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8) for chained verification that refreshes assurance evidence and runs **`validate:h14-closeout`**. Optionally **`npm run validate:post-h14-sustainment-manifest`** checks the latest **`evidence/post-h14-sustainment-loop-*.json`**. Legacy prior chains: **`verify:sustainment-loop:h13-legacy`** / **`validate:post-h13-sustainment-manifest`**, **`verify:sustainment-loop:h12-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 
@@ -355,7 +383,7 @@ After **H13** is marked completed, use **`npm run verify:sustainment-loop`** (se
 
 ## Immediate Next Actions (archived H2 drill checklist)
 
-The roadmap horizons **H1–H13** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h13-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
+The roadmap horizons **H1–H14** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h14-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
 
 1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report.
 2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:

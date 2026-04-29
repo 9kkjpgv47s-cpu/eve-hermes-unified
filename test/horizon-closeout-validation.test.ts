@@ -373,6 +373,8 @@ async function seedHorizonStatus(statusPath: string, mode: "h1-in-progress" | "h
           H12: { status: "planned", summary: "H12 planned" },
 
           H13: { status: "planned", summary: "H13 planned" },
+
+          H14: { status: "planned", summary: "H14 planned" },
         },
         history: [
           {
@@ -855,6 +857,8 @@ describe("validate-horizon-closeout.mjs", () => {
               H12: { status: "planned", summary: "H12 planned" },
 
               H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
         },
             history: [
               {
@@ -1004,6 +1008,8 @@ describe("validate-horizon-closeout.mjs", () => {
               H12: { status: "planned", summary: "H12 planned" },
 
               H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
         },
             history: [
               {
@@ -1164,6 +1170,8 @@ describe("validate-horizon-closeout.mjs", () => {
               H12: { status: "planned", summary: "H12 planned" },
 
               H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
         },
             history: [
               {
@@ -1328,6 +1336,8 @@ describe("validate-horizon-closeout.mjs", () => {
               H12: { status: "planned", summary: "H12 planned" },
 
               H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
         },
             history: [
               {
@@ -1472,6 +1482,8 @@ describe("validate-horizon-closeout.mjs", () => {
               H12: { status: "planned", summary: "H12 planned" },
 
               H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
         },
             history: [
               {

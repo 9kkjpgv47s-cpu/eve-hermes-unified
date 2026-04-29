@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-02T00:00:00Z",
+  "updatedAtIso": "2026-05-03T00:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H7",
   "activeStatus": "in_progress",
-  "summary": "H7 observability/SLO evidence slice is active in-repo. validate:all chains through validate:h7-evidence-bundle and validate:h8-closeout for H7→H8 promotion pinning. H6 federation slice closed in status; H8 runway seeded (h8-action-1..2). Prior horizons H1–H5 remain closed with machine-verified validate:all evidence.",
+  "summary": "H7 observability/SLO evidence slice is active in-repo. validate:all chains through H7/H8 evidence closeouts; validation-summary includes sloPosture (h8-slo-posture-v1) from summarize-evidence for H8 gate. H8 program goals locked in docs/H8_PROGRAM.md; h8-action-1..2 completed in-repo.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -351,17 +351,24 @@
     },
     {
       "id": "h8-action-1",
-      "summary": "Define H8 program goals (product cutover hardening, federation ops, or scope-specific) and align goalPolicies H7->H8 with evidence gates.",
+      "summary": "H8 program: release posture and soak SLO evidence — validation-summary.sloPosture (h8-slo-posture-v1) captures success rate, trace completeness, p95 latency, and gate thresholds from summarize-evidence; validate:h8-closeout requires passing sloPosture alongside h7-closeout-evidence; docs/H8_PROGRAM.md.",
       "targetHorizon": "H8",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "operations"]
     },
     {
       "id": "h8-action-2",
-      "summary": "Optional: extend horizon-closeout or evidence-summary for H7→H8 when H8 scope is locked.",
+      "summary": "Wire H8 evidence gate: extend validate-h8-closeout to require newest validation-summary sloPosture; extend summarize-evidence.mjs to emit sloPosture; tests for evidence summary and h8-closeout.",
+      "targetHorizon": "H8",
+      "status": "completed",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h8-action-3",
+      "summary": "Optional: after promote:horizon marks H7 completed, set activeHorizon to H8 and seed H9 or product-specific nextActions when scope is ready.",
       "targetHorizon": "H8",
       "status": "planned",
-      "tags": ["validation", "operations"]
+      "tags": ["operations", "validation"]
     }
   ],
   "goalPolicies": {
@@ -495,11 +502,11 @@
     },
     "H7": {
       "status": "in_progress",
-      "summary": "Observability/SLO evidence active: docs/H7_PROGRAM.md; validate:h7-evidence-bundle + validate:h8-closeout in validate:all; run:h7-closeout runs H7 evidence gate. h7-action-1..3 completed in-repo."
+      "summary": "Observability/SLO evidence active: docs/H7_PROGRAM.md; validate:h7-evidence-bundle + validate:h8-closeout (requires validation-summary sloPosture) in validate:all; run:h7-closeout runs H7 evidence gate. h7-action-1..3 and h8-action-1..2 completed in-repo."
     },
     "H8": {
       "status": "planned",
-      "summary": "Next program horizon placeholder; see docs/H8_PROGRAM.md and h8-action-* nextActions."
+      "summary": "Release posture / soak SLO slice: validation-summary sloPosture (h8-slo-posture-v1) and validate:h8-closeout gate; see docs/H8_PROGRAM.md and h8-action-3."
     }
   },
   "history": [
@@ -706,6 +713,12 @@
       "horizon": "H7",
       "status": "in_progress",
       "note": "Completed h7-action-3: activeHorizon set to H7; H6 completed in horizonStates; H8 planned with h8-action-1..2; H7->H8 in docs/GOAL_POLICIES.json and goalPolicies; MAX_HORIZON_ID H8; validate-h7-evidence-bundle.mjs, validate-h8-closeout.mjs; validate:all appends validate:h7-evidence-bundle and validate:h8-closeout; validate-horizon-closeout --require-h7-evidence-bundle; run-h2-closeout passes --require-h7-evidence-bundle for H7; npm run run:h7-closeout, run:h7-promotion, validate:h7-horizon-closeout."
+    },
+    {
+      "timestamp": "2026-05-03T00:00:00Z",
+      "horizon": "H8",
+      "status": "planned",
+      "note": "Completed h8-action-1: docs/H8_PROGRAM.md defines H8 as release/soak SLO posture slice. Completed h8-action-2: summarize-evidence.mjs emits validation-summary.sloPosture (schemaVersion h8-slo-posture-v1); validate-h8-closeout.mjs requires newest validation-summary with passing sloPosture; tests in evidence-summary-script and h5-scripts."
     }
   ]
 }

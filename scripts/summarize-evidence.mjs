@@ -167,6 +167,33 @@ async function newestSoakDispatchJsonl(dir) {
   return matches[matches.length - 1];
 }
 
+function buildSloPostureFromGates(metrics, gateOptions, gatesPassed) {
+  return {
+    schemaVersion: "h8-slo-posture-v1",
+    generatedAtIso: new Date().toISOString(),
+    horizonProgram: "H7",
+    metrics: {
+      totalRecords: metrics.totalRecords,
+      successRate: metrics.successRate,
+      missingTraceRate: metrics.missingTraceRate,
+      unclassifiedFailures: metrics.unclassifiedFailures,
+      p95LatencyMs: metrics.p95LatencyMs,
+      latencySampleCount: metrics.latencySampleCount,
+      failureScenarioPassCount: metrics.failureScenarioPassCount,
+    },
+    evidenceGates: {
+      minSuccessRate: Number.isNaN(gateOptions.minSuccessRate) ? null : gateOptions.minSuccessRate,
+      maxMissingTraceRate: Number.isNaN(gateOptions.maxMissingTraceRate) ? null : gateOptions.maxMissingTraceRate,
+      maxUnclassifiedFailures: Number.isNaN(gateOptions.maxUnclassifiedFailures)
+        ? null
+        : gateOptions.maxUnclassifiedFailures,
+      maxP95LatencyMs: Number.isNaN(gateOptions.maxP95LatencyMs) ? null : gateOptions.maxP95LatencyMs,
+      requireFailureScenarios: gateOptions.requireFailureScenarios,
+    },
+    gatesPassed,
+  };
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const soakFile = (await newestSoakDispatchJsonl(options.evidenceDir)) ?? (await newestFileInDir(options.evidenceDir, "soak-"));
@@ -255,6 +282,26 @@ async function main() {
     },
   );
 
+  const sloPosture = buildSloPostureFromGates(
+    {
+      totalRecords: total,
+      successRate,
+      missingTraceRate,
+      unclassifiedFailures,
+      p95LatencyMs,
+      latencySampleCount: elapsedValues.length,
+      failureScenarioPassCount: scenarioCoverage.covered,
+    },
+    {
+      minSuccessRate: options.minSuccessRate,
+      maxMissingTraceRate: options.maxMissingTraceRate,
+      maxUnclassifiedFailures: options.maxUnclassifiedFailures,
+      maxP95LatencyMs: options.maxP95LatencyMs,
+      requireFailureScenarios: options.requireFailureScenarios,
+    },
+    gateEvaluation.passed,
+  );
+
   const summary = {
     generatedAtIso: new Date().toISOString(),
     files: {
@@ -295,6 +342,7 @@ async function main() {
       passed: gateEvaluation.passed,
       failures: gateEvaluation.failures,
     },
+    sloPosture,
     failureInjectionPreview: failureLines.slice(0, 80),
   };
 

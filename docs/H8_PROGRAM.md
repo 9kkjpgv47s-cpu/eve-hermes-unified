@@ -1,14 +1,19 @@
-# H8 program horizon (placeholder)
+# H8 program horizon (release posture and soak SLO evidence)
 
-H8 is the **next runway** after the H7 observability/SLO evidence slice. The repository seeds **`horizonStates.H8`**, **`h8-action-*`** next actions, and **`H7->H8`** in `docs/GOAL_POLICIES.json` / `docs/HORIZON_STATUS.json`.
+H8 is the **release posture and soak SLO evidence** slice: it ties **operator-visible promotion evidence** to the same soak + failure-injection signals `validate:all` already runs, without changing routing or tenant isolation.
 
-## Evidence chain from H7
+## Goals (machine- and operator-facing)
 
-- **`npm run validate:h7-evidence-bundle`** — same scale checks as H5/H6/H7 slice bundles; writes **`evidence/h7-closeout-evidence-*.json`** with `closeout.horizon: "H7"`.
-- **`npm run validate:h8-closeout`** — wraps the newest passing **`h7-closeout-evidence-*.json`** into **`evidence/h8-closeout-*.json`** (`schemaVersion: h8-closeout-v1`, **`closeout.horizon: H7`**, **`closeout.nextHorizon: H8`**) for **`promote:horizon … --goal-policy-key H7->H8`**.
-- **`npm run validate:h7-horizon-closeout`** — **`validate-horizon-closeout`** for **H7→H8** with **`--require-h7-evidence-bundle`**.
-- **`npm run run:h7-closeout`** / **`npm run run:h7-promotion`** — orchestration hooks for H7→H8 (same pattern as H6).
+1. **`sloPosture` on `validation-summary-*.json`** — `npm run validate:evidence-summary` (via `scripts/summarize-evidence.mjs`) adds **`sloPosture`** with:
+   - **`schemaVersion: "h8-slo-posture-v1"`**
+   - **`metrics`** — `successRate`, `missingTraceRate`, `unclassifiedFailures`, `p95LatencyMs`, `latencySampleCount`, `failureScenarioPassCount`, `totalRecords`
+   - **`evidenceGates`** — thresholds used for the run (`minSuccessRate`, `maxMissingTraceRate`, `maxUnclassifiedFailures`, `maxP95LatencyMs`, `requireFailureScenarios`)
+   - **`gatesPassed`** — boolean mirror of the existing top-level **`gates.passed`** (must be **true** for H8 closeout)
 
-Both **`validate:h7-evidence-bundle`** and **`validate:h8-closeout`** run at the end of **`npm run validate:all`** (after **`validate:h7-closeout`**).
+2. **`validate:h8-closeout` composition** — After a passing **`h7-closeout-evidence-*.json`**, **`npm run validate:h8-closeout`** also reads the **newest** **`validation-summary-*.json`** in `evidence/` and requires **`sloPosture`** with **`gatesPassed: true`**. This pins **H7→H8** promotion to both the scale bundle **and** the soak SLO snapshot from the same `validate:all` run.
 
-See **`docs/HORIZON_STATUS.json`** for **`h8-action-*`** and **`docs/H7_PROGRAM.md`** for the full H6/H7/H8 closeout ladder.
+3. **Horizon closeout** — **`npm run validate:h7-horizon-closeout`** still composes **H7→H8** with **`--require-h7-evidence-bundle`**. **`npm run run:h7-closeout`** passes **`--require-h7-evidence-bundle`** into `validate-horizon-closeout`.
+
+4. **Optional next step (h8-action-3)** — After **`promote:horizon`** marks H7 completed in your environment, set **`activeHorizon`** to **H8** and seed **H9** or product-specific **`nextActions`** when scope is ready.
+
+See **`docs/HORIZON_STATUS.json`** for **`h8-action-*`** and **`docs/GOAL_POLICIES.json`** for **`H7->H8`**.

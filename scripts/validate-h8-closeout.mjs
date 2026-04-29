@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * H8 closeout gate (h7-action-3): wraps the latest H7 evidence-bundle manifest
- * (`h7-closeout-evidence-*.json` from `npm run validate:h7-evidence-bundle`) and emits
- * `h8-closeout-*.json` for operators pinning `promote:horizon` H7→H8 with
+ * H8 closeout gate: wraps the latest H7 evidence-bundle manifest
+ * (`h7-closeout-evidence-*.json` from `npm run validate:h7-evidence-bundle`) and requires
+ * the newest `validation-summary-*.json` to include passing `sloPosture` (h8-slo-posture-v1).
+ * Emits `h8-closeout-*.json` for operators pinning `promote:horizon` H7→H8 with
  * `--closeout-file` alongside `H7->H8` goal policy checks in docs/GOAL_POLICIES.json.
  */
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
@@ -48,6 +49,45 @@ async function newestMatchingFile(dir, predicate) {
   return best;
 }
 
+/**
+ * @param {unknown} sp
+ * @returns {string[]}
+ */
+function validateSloPosture(sp) {
+  const failures = [];
+  if (!sp || typeof sp !== "object") {
+    failures.push("validation_summary_missing_sloPosture");
+    return failures;
+  }
+  const o = /** @type {Record<string, unknown>} */ (sp);
+  if (o.schemaVersion !== "h8-slo-posture-v1") {
+    failures.push(`slo_posture_schema_version:${String(o.schemaVersion)}`);
+  }
+  if (typeof o.generatedAtIso !== "string" || !o.generatedAtIso.trim()) {
+    failures.push("slo_posture_missing_generatedAtIso");
+  }
+  if (o.gatesPassed !== true) {
+    failures.push("slo_posture_gatesPassed_false");
+  }
+  const m = o.metrics;
+  if (!m || typeof m !== "object") {
+    failures.push("slo_posture_missing_metrics");
+  } else {
+    const metrics = /** @type {Record<string, unknown>} */ (m);
+    if (typeof metrics.successRate !== "number" || Number.isNaN(metrics.successRate)) {
+      failures.push("slo_posture_metrics_successRate_invalid");
+    }
+    if (typeof metrics.missingTraceRate !== "number" || Number.isNaN(metrics.missingTraceRate)) {
+      failures.push("slo_posture_metrics_missingTraceRate_invalid");
+    }
+  }
+  const eg = o.evidenceGates;
+  if (!eg || typeof eg !== "object") {
+    failures.push("slo_posture_missing_evidenceGates");
+  }
+  return failures;
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const evidenceDir = path.resolve(opts.evidenceDir || path.join(ROOT, "evidence"));
@@ -86,6 +126,23 @@ async function main() {
     }
   }
 
+  const validationSummaryPath = await newestMatchingFile(
+    evidenceDir,
+    (n) => n.startsWith("validation-summary-") && n.endsWith(".json"),
+  );
+  let validationPayload = null;
+  if (!validationSummaryPath) {
+    failures.push("missing_validation_summary_for_slo_posture");
+  } else {
+    try {
+      validationPayload = JSON.parse(await readFile(validationSummaryPath, "utf8"));
+    } catch (e) {
+      failures.push(`validation_summary_unreadable:${String(e?.message ?? e)}`);
+    }
+  }
+  const sloFailures = validateSloPosture(validationPayload?.sloPosture);
+  failures.push(...sloFailures);
+
   const pass = failures.length === 0;
   const outPath =
     opts.out ||
@@ -105,6 +162,7 @@ async function main() {
       evidenceDir,
       horizonStatusFile,
       h7EvidenceCloseoutPath: h7Path,
+      validationSummaryPath,
       outPath,
     },
     checks: {
@@ -113,6 +171,9 @@ async function main() {
       h7EvidenceBundlePresent: Boolean(h7Path),
       h7EvidenceBundlePass: h7Payload?.pass === true,
       h7HorizonCloseoutGatePass: h7Payload?.checks?.horizonCloseoutGatePass === true,
+      validationSummaryPresent: Boolean(validationSummaryPath),
+      sloPosturePresent: Boolean(validationPayload?.sloPosture),
+      sloPostureGatesPassed: validationPayload?.sloPosture?.gatesPassed === true,
     },
     upstream: h7Payload
       ? {

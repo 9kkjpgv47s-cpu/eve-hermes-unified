@@ -68,6 +68,8 @@ describe("summarize-evidence.mjs", () => {
       expect(raw).toContain("\"passed\": true");
       expect(raw).toContain("\"successRate\": 1");
       expect(raw).toContain("\"p95LatencyMs\": 0");
+      expect(raw).toContain("\"sloPosture\"");
+      expect(raw).toContain("\"h8-slo-posture-v1\"");
     });
   });
 

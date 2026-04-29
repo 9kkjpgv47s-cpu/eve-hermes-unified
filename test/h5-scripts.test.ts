@@ -545,6 +545,52 @@ describe("H5 operator scripts", () => {
     });
   });
 
+  it("validate-h8-closeout fails when no h7-closeout-evidence manifest exists", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const outPath = path.join(evidenceDir, "h8-closeout-fail.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h8-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as { pass?: boolean; failures?: string[] };
+      expect(parsed.pass).toBe(false);
+      expect(parsed.failures?.some((f) => f.includes("missing_h7_evidence_closeout_manifest"))).toBe(true);
+    });
+  });
+
+  it("validate-h8-closeout fails when validation-summary lacks sloPosture", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990108-100000";
+      await writeFile(
+        path.join(evidenceDir, `h7-closeout-evidence-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          pass: true,
+          closeout: { horizon: "H7", nextHorizon: null, canCloseHorizon: true, canStartNextHorizon: false },
+          checks: { horizonCloseoutGatePass: true },
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({ generatedAtIso: new Date().toISOString(), metrics: { totalRecords: 1 } }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h8-closeout-no-slo.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h8-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as { pass?: boolean; failures?: string[] };
+      expect(parsed.failures?.some((f) => f.includes("validation_summary_missing_sloPosture"))).toBe(true);
+    });
+  });
+
   it("validate-h8-closeout passes when latest h7-closeout-evidence bundle passed", async () => {
     await withTempEvidenceDir(async (evidenceDir) => {
       const stamp = "20990108-000000";
@@ -559,6 +605,22 @@ describe("H5 operator scripts", () => {
         }),
         "utf8",
       );
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          metrics: { totalRecords: 1 },
+          sloPosture: {
+            schemaVersion: "h8-slo-posture-v1",
+            generatedAtIso: new Date().toISOString(),
+            horizonProgram: "H7",
+            metrics: { successRate: 1, missingTraceRate: 0 },
+            evidenceGates: { minSuccessRate: 0.99 },
+            gatesPassed: true,
+          },
+        }),
+        "utf8",
+      );
       const outPath = path.join(evidenceDir, "h8-closeout-pass.json");
       const result = await runCommandWithTimeout(
         ["node", "scripts/validate-h8-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
@@ -570,7 +632,11 @@ describe("H5 operator scripts", () => {
         pass?: boolean;
         schemaVersion?: string;
         closeout?: { horizon?: string; nextHorizon?: string };
-        checks?: { h8HorizonCloseoutGatePass?: boolean; horizonCloseoutGatePass?: boolean };
+        checks?: {
+          h8HorizonCloseoutGatePass?: boolean;
+          horizonCloseoutGatePass?: boolean;
+          sloPostureGatesPassed?: boolean;
+        };
       };
       expect(parsed.pass).toBe(true);
       expect(parsed.schemaVersion).toBe("h8-closeout-v1");
@@ -578,6 +644,7 @@ describe("H5 operator scripts", () => {
       expect(parsed.closeout?.nextHorizon).toBe("H8");
       expect(parsed.checks?.h8HorizonCloseoutGatePass).toBe(true);
       expect(parsed.checks?.horizonCloseoutGatePass).toBe(true);
+      expect(parsed.checks?.sloPostureGatesPassed).toBe(true);
     });
   });
 

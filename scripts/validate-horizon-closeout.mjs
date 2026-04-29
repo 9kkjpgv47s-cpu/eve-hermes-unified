@@ -40,6 +40,8 @@ const HORIZON_SEQUENCE = [
   "H33",
   "H34",
   "H35",
+  "H36",
+  "H37",
 ];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
@@ -77,6 +79,8 @@ const HORIZON_STAGE_MAP = {
   H33: "full",
   H34: "full",
   H35: "full",
+  H36: "full",
+  H37: "full",
 };
 
 function isNonEmptyString(value) {
@@ -480,6 +484,12 @@ function commandVerificationType(command) {
   }
   if (command === "node ./scripts/run-h35-assurance-bundle.mjs") {
     return "h35-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h36-assurance-bundle.mjs") {
+    return "h36-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h37-assurance-bundle.mjs") {
+    return "h37-assurance-bundle";
   }
   if (command === "node ./scripts/run-post-h16-sustainment-loop.mjs") {
     return "post-h16-sustainment-loop";
@@ -1681,6 +1691,34 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "h36-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h36_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h35AssuranceBundlePass !== true) {
+      checks.push("h36_assurance_h35_bundle_not_passed");
+    }
+    if (signal.manifestSchemasPass !== true) {
+      checks.push("h36_assurance_manifest_schemas_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h37-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h37_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h36AssuranceBundlePass !== true) {
+      checks.push("h37_assurance_h36_bundle_not_passed");
+    }
+    if (signal.horizonStatusRecheckPass !== true) {
+      checks.push("h37_assurance_horizon_status_recheck_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   if (verificationType === "post-h6-sustainment-loop") {
     const checks = [];
     if (payload.pass !== true) {
@@ -1958,6 +1996,8 @@ async function main() {
       targetHorizon === "H33" ||
       targetHorizon === "H34" ||
       targetHorizon === "H35" ||
+      targetHorizon === "H36" ||
+      targetHorizon === "H37" ||
       Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
 
     if (!skipStagePromotionReadiness) {

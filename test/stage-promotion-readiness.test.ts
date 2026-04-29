@@ -224,8 +224,8 @@ async function seedEvidence(
 
 async function seedHorizonStatus(
   filePath: string,
-  targetStage: "canary" | "majority" | "full",
-  activeHorizon: "H1" | "H2",
+  targetStage: "canary" | "majority" | "full" = "canary",
+  activeHorizon: "H1" | "H2" = "H2",
 ): Promise<void> {
   const requiredEvidence = [
     {
@@ -674,6 +674,72 @@ describe("check-stage-promotion-readiness.mjs", () => {
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks.evidenceSelectionMode).toBe("latest-passing");
+    });
+  });
+
+  it("allows non-sequential current→target when --relax-stage-transition is set", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "stage-promotion-readiness.json");
+      await seedEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath, "majority", "H2");
+
+      const strict = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "majority",
+          "--current-stage",
+          "shadow",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outputPath,
+          "--allow-horizon-mismatch",
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(strict.code).toBe(2);
+      const strictPayload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        failures: string[];
+      };
+      expect(strictPayload.failures).toContain("non_sequential_stage_transition:shadow->majority");
+
+      const relaxedPath = path.join(evidenceDir, "stage-promotion-readiness-relaxed.json");
+      const relaxed = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "majority",
+          "--current-stage",
+          "shadow",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          relaxedPath,
+          "--allow-horizon-mismatch",
+          "--relax-stage-transition",
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(relaxed.code).toBe(0);
+      const relaxedPayload = JSON.parse(await readFile(relaxedPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        stage: { transitionAllowed: boolean };
+        checks: { relaxStageTransition: boolean };
+      };
+      expect(relaxedPayload.pass).toBe(true);
+      expect(relaxedPayload.failures).not.toContain("non_sequential_stage_transition:shadow->majority");
+      expect(relaxedPayload.stage.transitionAllowed).toBe(true);
+      expect(relaxedPayload.checks.relaxStageTransition).toBe(true);
     });
   });
 });

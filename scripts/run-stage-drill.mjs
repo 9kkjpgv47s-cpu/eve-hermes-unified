@@ -30,6 +30,7 @@ function parseArgs(argv) {
     rollbackMinFailureScenarioPassCount: Number.NaN,
     rollbackMaxP95LatencyMs: Number.NaN,
     evidenceSelectionMode: "",
+    relaxStageTransition: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -97,6 +98,8 @@ function parseArgs(argv) {
     } else if (arg === "--evidence-selection-mode") {
       options.evidenceSelectionMode = value ?? "";
       index += 1;
+    } else if (arg === "--relax-stage-transition") {
+      options.relaxStageTransition = true;
     }
   }
   return options;
@@ -291,6 +294,9 @@ async function runCommand(argv, options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  const relaxStageTransition =
+    options.relaxStageTransition === true
+    || (options.dryRun === true && !isNonEmptyString(options.currentStage));
   const targetStage = normalizeStage(options.stage);
   const evidenceDir = path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
   const horizonStatusFile = path.resolve(
@@ -355,6 +361,9 @@ async function main() {
   }
   if (Number.isFinite(options.timeoutMs)) {
     promoteArgs.push("--timeout-ms", String(options.timeoutMs));
+  }
+  if (relaxStageTransition) {
+    promoteArgs.push("--relax-stage-transition");
   }
 
   const promoteCommand = await runCommand(promoteArgs, {
@@ -602,6 +611,7 @@ async function main() {
       autoApplyRollbackRequested: options.autoApplyRollback,
       dryRun: options.dryRun,
       allowHorizonMismatch: options.allowHorizonMismatch,
+      relaxStageTransition,
       evidenceSnapshotPinned: [
         promotionEvidenceFiles.validationSummary,
         promotionEvidenceFiles.cutoverReadiness,

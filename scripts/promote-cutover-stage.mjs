@@ -21,6 +21,7 @@ function parseArgs(argv) {
     dryRun: false,
     allowHorizonMismatch: false,
     evidenceSelectionMode: "latest",
+    relaxStageTransition: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -62,6 +63,8 @@ function parseArgs(argv) {
     } else if (arg === "--evidence-selection-mode") {
       options.evidenceSelectionMode = value ?? "";
       index += 1;
+    } else if (arg === "--relax-stage-transition") {
+      options.relaxStageTransition = true;
     }
   }
   return options;
@@ -227,6 +230,9 @@ async function main() {
   if (options.allowHorizonMismatch) {
     readinessArgv.push("--allow-horizon-mismatch");
   }
+  if (options.relaxStageTransition) {
+    readinessArgv.push("--relax-stage-transition");
+  }
   const readinessCommand = await runCommand(readinessArgv, {
     timeoutMs: Number.isFinite(options.timeoutMs) ? options.timeoutMs : 120_000,
   });
@@ -326,6 +332,7 @@ async function main() {
           : readinessSchema.errors,
       stageApplied,
       allowHorizonMismatch: options.allowHorizonMismatch,
+      relaxStageTransition: options.relaxStageTransition === true,
       evidenceSelectionMode,
     },
     failures,

@@ -26,6 +26,8 @@ function parseArgs(argv) {
     rollbackForceMinSuccessRate: 1.01,
     rollbackForceMaxP95LatencyMs: Number.NaN,
     evidenceSelectionMode: "latest",
+    /** When true (default), majority dry-run omits `--current-stage` so gateway env drives current stage and stage-drill can auto-relax sequential transition. */
+    majorityDryRunInferCurrentFromEnv: true,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -87,6 +89,8 @@ function parseArgs(argv) {
     } else if (arg === "--evidence-selection-mode") {
       options.evidenceSelectionMode = value ?? "";
       index += 1;
+    } else if (arg === "--no-majority-dry-run-env-current") {
+      options.majorityDryRunInferCurrentFromEnv = false;
     }
   }
   return options;
@@ -398,7 +402,12 @@ async function main() {
     });
   }
   if (!options.skipMajority && VALID_STAGES.includes(majorityStage)) {
-    const majorityCurrentStage = steps.canary ? canaryStage : "shadow";
+    const majorityCurrentStage =
+      options.dryRun === true && options.majorityDryRunInferCurrentFromEnv
+        ? ""
+        : steps.canary
+          ? canaryStage
+          : "shadow";
     steps.majority = await runDrillStep({
       name: "majority",
       stage: majorityStage,
@@ -509,6 +518,7 @@ async function main() {
         forceMinSuccessRate: options.rollbackForceMinSuccessRate,
       },
       evidenceSelectionMode: options.evidenceSelectionMode,
+      majorityDryRunInferCurrentFromEnv: options.majorityDryRunInferCurrentFromEnv,
     },
     checks: {
       canaryHoldPass,

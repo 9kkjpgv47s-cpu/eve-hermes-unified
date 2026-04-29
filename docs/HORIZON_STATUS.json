@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-02T04:00:00Z",
+  "updatedAtIso": "2026-05-02T06:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H26",
+  "activeHorizon": "H27",
   "activeStatus": "completed",
-  "summary": "Horizon H26 closed: run:h26-assurance-bundle chains H25 plus validate:manifest-schemas; goal policy through H26; post-H16 sustainment runs run:h26-assurance-bundle + evidence volume; H25 predecessor completed.",
+  "summary": "Horizon H27 closed: run:h27-assurance-bundle chains H26 plus final horizon-status recheck; goal policy through H27; post-H16 sustainment runs run:h27-assurance-bundle + evidence volume; H26 predecessor completed.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -166,196 +166,217 @@
       "command": "node ./scripts/run-h17-assurance-bundle.mjs",
       "artifactPattern": "evidence/h17-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h18-assurance-bundle",
       "command": "node ./scripts/run-h18-assurance-bundle.mjs",
       "artifactPattern": "evidence/h18-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h18-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h18-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h19-assurance-bundle",
       "command": "node ./scripts/run-h19-assurance-bundle.mjs",
       "artifactPattern": "evidence/h19-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h19-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h19-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h20-assurance-bundle",
       "command": "node ./scripts/run-h20-assurance-bundle.mjs",
       "artifactPattern": "evidence/h20-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h20-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h20-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h21-assurance-bundle",
       "command": "node ./scripts/run-h21-assurance-bundle.mjs",
       "artifactPattern": "evidence/h21-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h21-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h21-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H21", "H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h22-assurance-bundle",
       "command": "node ./scripts/run-h22-assurance-bundle.mjs",
       "artifactPattern": "evidence/h22-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h22-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h22-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H22", "H23", "H24", "H25", "H26"]
+      "horizons": ["H22", "H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h23-assurance-bundle",
       "command": "node ./scripts/run-h23-assurance-bundle.mjs",
       "artifactPattern": "evidence/h23-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H23", "H24", "H25", "H26"]
+      "horizons": ["H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h23-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H23", "H24", "H25", "H26"]
+      "horizons": ["H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h23-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H23", "H24", "H25", "H26"]
+      "horizons": ["H23", "H24", "H25", "H26", "H27"]
     },
     {
       "id": "h24-assurance-bundle",
       "command": "node ./scripts/run-h24-assurance-bundle.mjs",
       "artifactPattern": "evidence/h24-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H24", "H25", "H26"]
+      "horizons": ["H24", "H25", "H26", "H27"]
     },
     {
       "id": "h24-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H24", "H25", "H26"]
+      "horizons": ["H24", "H25", "H26", "H27"]
     },
     {
       "id": "h24-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H24", "H25", "H26"]
+      "horizons": ["H24", "H25", "H26", "H27"]
     },
     {
       "id": "h25-assurance-bundle",
       "command": "node ./scripts/run-h25-assurance-bundle.mjs",
       "artifactPattern": "evidence/h25-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H25", "H26"]
+      "horizons": ["H25", "H26", "H27"]
     },
     {
       "id": "h25-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H25", "H26"]
+      "horizons": ["H25", "H26", "H27"]
     },
     {
       "id": "h25-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H25", "H26"]
+      "horizons": ["H25", "H26", "H27"]
     },
     {
       "id": "h26-assurance-bundle",
       "command": "node ./scripts/run-h26-assurance-bundle.mjs",
       "artifactPattern": "evidence/h26-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H26"]
+      "horizons": ["H26", "H27"]
     },
     {
       "id": "h26-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H26"]
+      "horizons": ["H26", "H27"]
     },
     {
       "id": "h26-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H26"]
+      "horizons": ["H26", "H27"]
+    },
+    {
+      "id": "h27-assurance-bundle",
+      "command": "node ./scripts/run-h27-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h27-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H27"]
+    },
+    {
+      "id": "h27-evidence-volume",
+      "command": "npm run validate:evidence-volume",
+      "artifactPattern": "evidence/evidence-volume-report-*.json",
+      "required": true,
+      "horizons": ["H27"]
+    },
+    {
+      "id": "h27-post-h16-sustainment",
+      "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
+      "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
+      "required": true,
+      "horizons": ["H27"]
     }
   ],
   "nextActions": [
@@ -849,14 +870,14 @@
     },
     {
       "id": "h20-action-2",
-      "summary": "Post-H16 sustainment runs run:h26-assurance-bundle + validate:evidence-volume; required evidence for H20/H21/H22/H23/H24/H25/H26 closeout.",
+      "summary": "Post-H16 sustainment runs run:h27-assurance-bundle + validate:evidence-volume; required evidence for H20/H21/H22/H23/H24/H25/H26/H27 closeout.",
       "targetHorizon": "H20",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h20-action-3",
-      "summary": "Goal policy H19→H20 transition; validate:goal-policy-file through H20; predecessor to H21 horizon-status recheck, H22/H24/H26 manifest-schema slices, H23/H25 horizon-status rechecks.",
+      "summary": "Goal policy H19→H20 transition; validate:goal-policy-file through H20; predecessor to H21 horizon-status recheck, H22/H24/H26 manifest-schema slices, H23/H25/H27 horizon-status rechecks.",
       "targetHorizon": "H20",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -870,14 +891,14 @@
     },
     {
       "id": "h21-action-2",
-      "summary": "Post-H16 sustainment runs run:h26-assurance-bundle + validate:evidence-volume; required evidence for H21/H22/H23/H24/H25/H26 closeout.",
+      "summary": "Post-H16 sustainment runs run:h27-assurance-bundle + validate:evidence-volume; required evidence for H21/H22/H23/H24/H25/H26/H27 closeout.",
       "targetHorizon": "H21",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h21-action-3",
-      "summary": "Goal policy H20→H21 transition; validate:goal-policy-file through H21; predecessor to H22 manifest-schema slice and H23/H24/H25/H26 terminal chain.",
+      "summary": "Goal policy H20→H21 transition; validate:goal-policy-file through H21; predecessor to H22 manifest-schema slice and H23/H24/H25/H26/H27 terminal chain.",
       "targetHorizon": "H21",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -891,14 +912,14 @@
     },
     {
       "id": "h22-action-2",
-      "summary": "Post-H16 sustainment runs run:h26-assurance-bundle + validate:evidence-volume; required evidence for H22/H23/H24/H25/H26 closeout.",
+      "summary": "Post-H16 sustainment runs run:h27-assurance-bundle + validate:evidence-volume; required evidence for H22/H23/H24/H25/H26/H27 closeout.",
       "targetHorizon": "H22",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h22-action-3",
-      "summary": "Goal policy H21→H22 transition; validate:goal-policy-file through H22; predecessor to H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, and H26 terminal manifest-schema slice.",
+      "summary": "Goal policy H21→H22 transition; validate:goal-policy-file through H22; predecessor to H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck.",
       "targetHorizon": "H22",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -912,14 +933,14 @@
     },
     {
       "id": "h23-action-2",
-      "summary": "Post-H16 sustainment runs run:h26-assurance-bundle + validate:evidence-volume; required evidence for H23/H24/H25/H26 closeout.",
+      "summary": "Post-H16 sustainment runs run:h27-assurance-bundle + validate:evidence-volume; required evidence for H23/H24/H25/H26/H27 closeout.",
       "targetHorizon": "H23",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h23-action-3",
-      "summary": "Goal policy H22→H23 transition; validate:goal-policy-file through H23; predecessor to H24 manifest-schema slice, H25 horizon-status recheck, and H26 terminal manifest-schema slice.",
+      "summary": "Goal policy H22→H23 transition; validate:goal-policy-file through H23; predecessor to H24 manifest-schema slice, H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck.",
       "targetHorizon": "H23",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -933,14 +954,14 @@
     },
     {
       "id": "h24-action-2",
-      "summary": "Post-H16 sustainment runs run:h26-assurance-bundle + validate:evidence-volume; required evidence for H24/H25/H26 closeout.",
+      "summary": "Post-H16 sustainment runs run:h27-assurance-bundle + validate:evidence-volume; required evidence for H24/H25/H26/H27 closeout.",
       "targetHorizon": "H24",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h24-action-3",
-      "summary": "Goal policy H23→H24 transition; validate:goal-policy-file through H24; predecessor to H25 horizon-status recheck and H26 manifest-schema terminal slice.",
+      "summary": "Goal policy H23→H24 transition; validate:goal-policy-file through H24; predecessor to H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck.",
       "targetHorizon": "H24",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -954,14 +975,14 @@
     },
     {
       "id": "h25-action-2",
-      "summary": "Post-H16 sustainment runs run:h26-assurance-bundle + validate:evidence-volume; required evidence for H25/H26 closeout.",
+      "summary": "Post-H16 sustainment runs run:h27-assurance-bundle + validate:evidence-volume; required evidence for H25/H26/H27 closeout.",
       "targetHorizon": "H25",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h25-action-3",
-      "summary": "Goal policy H24→H25 transition; validate:goal-policy-file through H25; predecessor to H26 manifest-schema terminal slice.",
+      "summary": "Goal policy H24→H25 transition; validate:goal-policy-file through H25; predecessor to H26 manifest-schema slice and H27 final horizon-status recheck.",
       "targetHorizon": "H25",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -975,15 +996,36 @@
     },
     {
       "id": "h26-action-2",
-      "summary": "Post-H16 sustainment runs run:h26-assurance-bundle + validate:evidence-volume; required evidence for H26 closeout.",
+      "summary": "Post-H16 sustainment runs run:h27-assurance-bundle + validate:evidence-volume; required evidence for H26/H27 closeout.",
       "targetHorizon": "H26",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h26-action-3",
-      "summary": "Goal policy H25→H26 transition; validate:goal-policy-file through H26; terminal progressive-goal skip at H26.",
+      "summary": "Goal policy H25→H26 transition; validate:goal-policy-file through H26; predecessor to H27 final horizon-status recheck slice.",
       "targetHorizon": "H26",
+      "status": "completed",
+      "tags": ["policy", "documentation", "validation"]
+    },
+    {
+      "id": "h27-action-1",
+      "summary": "H27 assurance bundle: chain run:h26-assurance-bundle + validate-horizon-status on docs/HORIZON_STATUS.json; artifact evidence/h27-assurance-bundle-*.json.",
+      "targetHorizon": "H27",
+      "status": "completed",
+      "tags": ["validation", "policy", "durability"]
+    },
+    {
+      "id": "h27-action-2",
+      "summary": "Post-H16 sustainment runs run:h27-assurance-bundle + validate:evidence-volume; required evidence for H27 closeout.",
+      "targetHorizon": "H27",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h27-action-3",
+      "summary": "Goal policy H26→H27 transition; validate:goal-policy-file through H27; terminal progressive-goal skip at H27.",
+      "targetHorizon": "H27",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
     }
@@ -1349,6 +1391,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H26->H27": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "sustainment": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -1425,7 +1482,7 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H26), manifest schema sweep, and evidence volume check; superseded in sustainment by run-h26-assurance-bundle terminal chain."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H27), manifest schema sweep, and evidence volume check; superseded in sustainment by run-h27-assurance-bundle terminal chain."
     },
     "H17": {
       "status": "completed",
@@ -1437,35 +1494,39 @@
     },
     "H19": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h19-assurance-bundle (H18 + horizon-status recheck); goal policy through H19; predecessor to H20 manifest-schema gate, H21 horizon-status recheck, H22 manifest-schema slice, H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, and H26 terminal manifest-schema slice."
+      "summary": "Terminal assurance: run:h19-assurance-bundle (H18 + horizon-status recheck); goal policy through H19; predecessor to H20 manifest-schema gate, H21 horizon-status recheck, H22 manifest-schema slice, H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck."
     },
     "H20": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h20-assurance-bundle (H19 + validate:manifest-schemas); goal policy through H20; predecessor to H21 horizon-status recheck, H22 manifest-schema slice, H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, and H26 terminal manifest-schema slice."
+      "summary": "Terminal assurance: run:h20-assurance-bundle (H19 + validate:manifest-schemas); goal policy through H20; predecessor to H21 horizon-status recheck, H22 manifest-schema slice, H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck."
     },
     "H21": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h21-assurance-bundle (H20 + horizon-status recheck); goal policy through H21; predecessor to H22 manifest-schema slice, H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, and H26 terminal manifest-schema slice."
+      "summary": "Terminal assurance: run:h21-assurance-bundle (H20 + horizon-status recheck); goal policy through H21; predecessor to H22 manifest-schema slice, H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck."
     },
     "H22": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h22-assurance-bundle (H21 + validate:manifest-schemas); goal policy through H22; predecessor to H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, and H26 terminal manifest-schema slice; post-H16 sustainment runs run:h26-assurance-bundle + evidence volume."
+      "summary": "Terminal assurance: run:h22-assurance-bundle (H21 + validate:manifest-schemas); goal policy through H22; predecessor to H23 horizon-status recheck, H24 manifest-schema slice, H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck; post-H16 sustainment runs run:h27-assurance-bundle + evidence volume."
     },
     "H23": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h23-assurance-bundle (H22 + horizon-status recheck); goal policy through H23; predecessor to H24 manifest-schema slice, H25 horizon-status recheck, and H26 terminal manifest-schema slice; post-H16 sustainment runs run:h26-assurance-bundle + evidence volume."
+      "summary": "Terminal assurance: run:h23-assurance-bundle (H22 + horizon-status recheck); goal policy through H23; predecessor to H24 manifest-schema slice, H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck; post-H16 sustainment runs run:h27-assurance-bundle + evidence volume."
     },
     "H24": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h24-assurance-bundle (H23 + validate:manifest-schemas); goal policy through H24; predecessor to H25 horizon-status recheck and H26 terminal manifest-schema slice; post-H16 sustainment runs run:h26-assurance-bundle + evidence volume."
+      "summary": "Terminal assurance: run:h24-assurance-bundle (H23 + validate:manifest-schemas); goal policy through H24; predecessor to H25 horizon-status recheck, H26 manifest-schema slice, and H27 final horizon-status recheck; post-H16 sustainment runs run:h27-assurance-bundle + evidence volume."
     },
     "H25": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h25-assurance-bundle (H24 + horizon-status recheck); goal policy through H25; predecessor to H26 manifest-schema terminal slice; post-H16 sustainment runs run:h26-assurance-bundle + evidence volume."
+      "summary": "Terminal assurance: run:h25-assurance-bundle (H24 + horizon-status recheck); goal policy through H25; predecessor to H26 manifest-schema slice and H27 final horizon-status recheck; post-H16 sustainment runs run:h27-assurance-bundle + evidence volume."
     },
     "H26": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h26-assurance-bundle (H25 + validate:manifest-schemas); goal policy through H26; post-H16 sustainment runs run:h26-assurance-bundle + evidence volume."
+      "summary": "Terminal assurance: run:h26-assurance-bundle (H25 + validate:manifest-schemas); goal policy through H26; predecessor to H27 final horizon-status recheck; post-H16 sustainment runs run:h27-assurance-bundle + evidence volume."
+    },
+    "H27": {
+      "status": "completed",
+      "summary": "Terminal assurance: run:h27-assurance-bundle (H26 + horizon-status recheck); goal policy through H27; post-H16 sustainment runs run:h27-assurance-bundle + evidence volume."
     }
   },
   "history": [
@@ -1738,6 +1799,12 @@
       "horizon": "H26",
       "status": "completed",
       "note": "H26 terminal: run-h26-assurance-bundle (H25 + validate:manifest-schemas), goal policy H25→H26, sustainment runs run:h26-assurance-bundle; closeout skip stage-promotion for H26."
+    },
+    {
+      "timestamp": "2026-05-02T06:00:00Z",
+      "horizon": "H27",
+      "status": "completed",
+      "note": "H27 terminal: run-h27-assurance-bundle (H26 + horizon-status recheck), goal policy H26→H27, sustainment runs run:h27-assurance-bundle; closeout skip stage-promotion for H27."
     }
   ]
 }

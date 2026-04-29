@@ -150,7 +150,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run check:stage-promotion-readiness -- --target-stage <canary|majority|full> --evidence-dir evidence`
 - `npm run promote:stage -- --target-stage <canary|majority|full> --dry-run`
 - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
-- `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence --dry-run`
+- `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence --dry-run` — dry-run **majority/full** forwards **`--relax-stage-transition`** to readiness when **`--current-stage`** is omitted (env may still show **shadow**). Explicit flags: **`check-stage-promotion-readiness`** / **`promote-cutover-stage`** accept **`--relax-stage-transition`**; env **`UNIFIED_RELAX_STAGE_TRANSITION=1`** also enables it. Drills still require merge-bundle + bundle-verification evidence aligned with the selected release-readiness manifest (**`latest-passing`** vs **`latest`**).
 - `npm run run:h2-drill-suite -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --dry-run`
 - `npm run calibrate:rollback-thresholds -- --stage <canary|majority|full> --evidence-dir evidence`
 - `npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`

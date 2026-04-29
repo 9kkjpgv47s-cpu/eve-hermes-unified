@@ -23,6 +23,7 @@ function parseArgs(argv) {
     timeoutMs: 180_000,
     dryRun: false,
     allowHorizonMismatch: false,
+    relaxStageTransition: false,
     autoApplyRollback: false,
     rollbackMinSuccessRate: Number.NaN,
     rollbackMaxMissingTraceRate: Number.NaN,
@@ -77,6 +78,8 @@ function parseArgs(argv) {
       options.dryRun = true;
     } else if (arg === "--allow-horizon-mismatch" || arg === "--ignore-horizon-target") {
       options.allowHorizonMismatch = true;
+    } else if (arg === "--relax-stage-transition") {
+      options.relaxStageTransition = true;
     } else if (arg === "--auto-apply-rollback") {
       options.autoApplyRollback = true;
     } else if (arg === "--rollback-min-success-rate") {
@@ -321,6 +324,10 @@ async function main() {
     failures.push(`invalid_target_stage:${options.stage || "<empty>"}`);
   }
 
+  const relaxStageTransition =
+    options.relaxStageTransition === true ||
+    (options.dryRun === true && !isNonEmptyString(options.currentStage));
+
   const promoteArgs = [
     "node",
     "scripts/promote-cutover-stage.mjs",
@@ -346,6 +353,9 @@ async function main() {
   }
   if (options.dryRun) {
     promoteArgs.push("--dry-run");
+  }
+  if (relaxStageTransition) {
+    promoteArgs.push("--relax-stage-transition");
   }
   if (options.allowHorizonMismatch) {
     promoteArgs.push("--allow-horizon-mismatch");

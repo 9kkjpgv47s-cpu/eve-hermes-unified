@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Horizon H17 assurance bundle: merge readiness verification — validate:merge-bundle,
- * validate:manifest-schemas on evidence/, and verify:merge-bundle against the latest bundle.
+ * Horizon H17 assurance bundle: merge readiness verification — validate:merge-bundle and
+ * verify:merge-bundle against the latest bundle.
+ *
+ * **`validate:manifest-schemas`** runs in **`run-h21-assurance-bundle.mjs`** (terminal chain) so CI does not duplicate schema sweeps after **`validate:all`**.
  *
  * Prerequisites (CI / operators): evidence/ contains outputs from validate:all,
  * validate:release-readiness, and validate:initial-scope so validate:merge-bundle can pack reports.
@@ -121,8 +123,6 @@ const mergeValidationPath = newestMatchingFile(evidenceDir, "merge-bundle-valida
 const mergeBundlePayloadPass = mergeValidationPath ? readJsonPass(mergeValidationPath) : false;
 const mergeBundleValidationPass = mergeBundleStep.pass && mergeBundlePayloadPass;
 
-const manifestSchemas = runStep("validate_manifest_schemas", ["npm", "run", "validate:manifest-schemas"]);
-
 const verifyMerge = runStep("verify_merge_bundle", [
   "npm",
   "run",
@@ -140,11 +140,10 @@ const mergeBundleVerificationPass = verifyMerge.pass && mergeBundleVerifyPayload
 const payload = {
   generatedAtIso: new Date().toISOString(),
   horizon: "H17",
-  pass: mergeBundleValidationPass && manifestSchemas.pass && mergeBundleVerificationPass,
+  pass: mergeBundleValidationPass && mergeBundleVerificationPass,
   checks: {
     mergeBundleValidationPass,
     mergeBundleValidationReportPass: mergeBundlePayloadPass,
-    manifestSchemasPass: manifestSchemas.pass,
     mergeBundleVerificationPass,
     mergeBundleVerificationPayloadPass: mergeBundleVerifyPayloadPass,
   },
@@ -152,7 +151,7 @@ const payload = {
     mergeBundleValidationPath: mergeValidationPath || null,
     bundleVerificationPath: bundleVerificationPath || null,
   },
-  steps: [mergeBundleStep, manifestSchemas, verifyMerge],
+  steps: [mergeBundleStep, verifyMerge],
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

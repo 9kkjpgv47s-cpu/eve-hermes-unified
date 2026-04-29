@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Legacy post-H20 sustainment loop (pre-H21). Prefer **`npm run verify:sustainment-loop`** (post-H21).
+ * Post-H21 sustainment loop: H21 assurance (manifest schemas + H20 chain) and H21 closeout gate.
  *
- * Chains H20 assurance + **`validate:h20-closeout`** (retroactive closeout when **H21** is terminal).
+ * Run **`npm run run:h16-assurance-bundle`** first when reproducing a full chain locally or after **`npm run validate:all`** when **`evidence/`** lacks goal-policy output through **H21**.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -11,7 +11,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const evidenceDir = process.env.POST_H20_SUSTAINMENT_EVIDENCE_DIR ?? path.join(root, "evidence");
+const evidenceDir = process.env.POST_H21_SUSTAINMENT_EVIDENCE_DIR ?? path.join(root, "evidence");
 mkdirSync(evidenceDir, { recursive: true });
 
 function runNpm(script) {
@@ -31,26 +31,26 @@ function runNpm(script) {
 
 const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
 const manifestPath =
-  process.env.POST_H20_SUSTAINMENT_LOOP_OUT ??
-  path.join(evidenceDir, `post-h20-sustainment-loop-${stamp}.json`);
+  process.env.POST_H21_SUSTAINMENT_LOOP_OUT ??
+  path.join(evidenceDir, `post-h21-sustainment-loop-${stamp}.json`);
 
-const assurance = runNpm("run:h20-assurance-bundle");
-const closeout = runNpm("validate:h20-closeout");
+const assurance = runNpm("run:h21-assurance-bundle");
+const closeout = runNpm("validate:h21-closeout");
 
-const h20AssuranceBundlePass = assurance.exitCode === 0;
-const h20CloseoutGatePass = closeout.exitCode === 0;
-const pass = h20AssuranceBundlePass && h20CloseoutGatePass;
+const h21AssuranceBundlePass = assurance.exitCode === 0;
+const h21CloseoutGatePass = closeout.exitCode === 0;
+const pass = h21AssuranceBundlePass && h21CloseoutGatePass;
 
 const manifest = {
   generatedAtIso: new Date().toISOString(),
   pass,
   checks: {
-    h20AssuranceBundlePass,
-    h20CloseoutGatePass,
+    h21AssuranceBundlePass,
+    h21CloseoutGatePass,
   },
   steps: [
-    { id: "run_h20_assurance_bundle", ...assurance },
-    { id: "validate_h20_closeout", ...closeout },
+    { id: "run_h21_assurance_bundle", ...assurance },
+    { id: "validate_h21_closeout", ...closeout },
   ],
 };
 

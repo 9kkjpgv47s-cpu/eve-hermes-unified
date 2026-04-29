@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Horizon H16 assurance bundle: H15 gates plus goal-policy file validation and evidence manifest schema sweep.
+ * Horizon H16 assurance bundle: H15 gates plus goal-policy file validation (**H2→H21** runway).
+ *
+ * Manifest schema sweep (**`validate:manifest-schemas`**) runs in **`run-h21-assurance-bundle.mjs`** after **`validate:all`** fills **`evidence/`**.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -62,7 +64,7 @@ const goalPolicyStep = runStep("validate_goal_policy_file", [
   "--source-horizon",
   "H2",
   "--until-horizon",
-  "H20",
+  "H21",
   "--require-tagged-requirements",
   "--require-positive-pending-min",
   "--out",
@@ -72,19 +74,16 @@ const goalPolicyStep = runStep("validate_goal_policy_file", [
 const goalPolicyPayloadPass = readGoalPolicyPass();
 const goalPolicyPass = goalPolicyStep.pass && goalPolicyPayloadPass;
 
-const manifestSchemas = runStep("validate_manifest_schemas", ["npm", "run", "validate:manifest-schemas"]);
-
 const payload = {
   generatedAtIso: new Date().toISOString(),
   horizon: "H16",
-  pass: h15Bundle.pass && goalPolicyPass && manifestSchemas.pass,
+  pass: h15Bundle.pass && goalPolicyPass,
   checks: {
     h15AssuranceBundlePass: h15Bundle.pass,
     goalPolicyFileValidationPass: goalPolicyPass,
     goalPolicyReportPayloadPass: goalPolicyPayloadPass,
-    manifestSchemasPass: manifestSchemas.pass,
   },
-  steps: [h15Bundle, goalPolicyStep, manifestSchemas],
+  steps: [h15Bundle, goalPolicyStep],
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

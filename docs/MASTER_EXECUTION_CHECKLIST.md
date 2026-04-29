@@ -85,9 +85,9 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H32 sustainment (continuous)
+## Phase 8 - Post-H34 sustainment (continuous)
 
-After horizon **H32** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H34** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
 - [x] `npm run validate:horizon-status` exits `0`.
 - [x] `npm run run:h17-assurance-bundle` exits `0` and emits `evidence/h17-assurance-bundle-*.json`.
@@ -96,18 +96,18 @@ After horizon **H32** is completed in `docs/HORIZON_STATUS.json`, operators and 
 - [x] `npm run run:unified-entrypoints-evidence` exits `0` and emits `evidence/unified-entrypoints-evidence-*.json`.
 - [x] `npm run run:shell-unified-dispatch-ci-evidence` exits `0` and emits `evidence/shell-unified-dispatch-ci-evidence-*.json`.
 - [x] `npm run run:tenant-isolation-evidence` exits `0` and emits `evidence/tenant-isolation-evidence-*.json`.
-- [x] `npm run run:h32-assurance-bundle` exits `0` and emits `evidence/h32-assurance-bundle-*.json`.
-- [x] `npm run validate:h32-closeout` exits `0` (uses evidence under `evidence/`).
+- [x] `npm run run:h34-assurance-bundle` exits `0` and emits `evidence/h34-assurance-bundle-*.json`.
+- [x] `npm run validate:h34-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains horizon status + H17 assurance + H18 rehearsal + CI soak SLO gate + unified entrypoints evidence + shell CI evidence + tenant isolation evidence + H32 terminal assurance + H32 closeout and writes `evidence/post-h32-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains horizon status + H17 assurance + H18 rehearsal + CI soak SLO gate + unified entrypoints evidence + shell CI evidence + tenant isolation evidence + H34 terminal assurance + H34 closeout and writes `evidence/post-h34-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [x] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [x] `npm run validate:post-h32-sustainment-manifest` exits `0`.
+- [x] `npm run validate:post-h34-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h31-legacy`** / **`validate:post-h31-sustainment-manifest`** (post-H31 chain without H32 terminal slice); **`npm run verify:sustainment-loop:h30-legacy`** / **`validate:post-h30-sustainment-manifest`**; **`npm run verify:sustainment-loop:h29-legacy`** / **`validate:post-h29-sustainment-manifest`** (post-H29 chain without H31/H32 terminal slices); **`npm run verify:sustainment-loop:h28-legacy`** / **`validate:post-h28-sustainment-manifest`**; **`npm run verify:sustainment-loop:h27-legacy`** / **`validate:post-h27-sustainment-manifest`**; **`npm run verify:sustainment-loop:h26-legacy`** / **`validate:post-h26-sustainment-manifest`**; **`npm run verify:sustainment-loop:h25-legacy`** / **`validate:post-h25-sustainment-manifest`**; **`npm run verify:sustainment-loop:h24-legacy`** / **`validate:post-h24-sustainment-manifest`**; **`npm run verify:sustainment-loop:h23-legacy`** / **`validate:post-h23-sustainment-manifest`**; **`verify:sustainment-loop:h22-legacy`** … **`h6-legacy`**.
+Historical sustainment: **`npm run verify:sustainment-loop:h33-legacy`** / **`validate:post-h33-sustainment-manifest`** (post-H33 chain without H34 terminal slice); **`npm run verify:sustainment-loop:h32-legacy`** / **`validate:post-h32-sustainment-manifest`**; **`npm run verify:sustainment-loop:h31-legacy`** / **`validate:post-h31-sustainment-manifest`** (post-H31 chain without H33/H34 terminal slices); **`npm run verify:sustainment-loop:h30-legacy`** / **`validate:post-h30-sustainment-manifest`**; **`npm run verify:sustainment-loop:h29-legacy`** / **`validate:post-h29-sustainment-manifest`**; **`npm run verify:sustainment-loop:h28-legacy`** / **`validate:post-h28-sustainment-manifest`**; **`npm run verify:sustainment-loop:h27-legacy`** / **`validate:post-h27-sustainment-manifest`**; **`npm run verify:sustainment-loop:h26-legacy`** / **`validate:post-h26-sustainment-manifest`**; **`npm run verify:sustainment-loop:h25-legacy`** / **`validate:post-h25-sustainment-manifest`**; **`npm run verify:sustainment-loop:h24-legacy`** / **`validate:post-h24-sustainment-manifest`**; **`npm run verify:sustainment-loop:h23-legacy`** / **`validate:post-h23-sustainment-manifest`**; **`verify:sustainment-loop:h22-legacy`** … **`h6-legacy`**.
 
 Exit criteria:
 

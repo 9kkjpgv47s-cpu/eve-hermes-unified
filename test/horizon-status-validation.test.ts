@@ -100,6 +100,8 @@ describe("validate-horizon-status.mjs", () => {
             H30: { status: "planned", summary: "H30 planned" },
             H31: { status: "planned", summary: "H31 planned" },
             H32: { status: "planned", summary: "H32 planned" },
+            H33: { status: "planned", summary: "H33 planned" },
+            H34: { status: "planned", summary: "H34 planned" },
             },
             history: [
               {
@@ -184,6 +186,8 @@ describe("validate-horizon-status.mjs", () => {
             H30: { status: "planned", summary: "H30 planned" },
             H31: { status: "planned", summary: "H31 planned" },
             H32: { status: "planned", summary: "H32 planned" },
+            H33: { status: "planned", summary: "H33 planned" },
+            H34: { status: "planned", summary: "H34 planned" },
             },
             history: [],
             promotionReadiness: {
@@ -277,6 +281,8 @@ describe("validate-horizon-status.mjs", () => {
             H30: { status: "planned", summary: "H30 planned" },
             H31: { status: "planned", summary: "H31 planned" },
             H32: { status: "planned", summary: "H32 planned" },
+            H33: { status: "planned", summary: "H33 planned" },
+            H34: { status: "planned", summary: "H34 planned" },
             },
             history: [
               {
@@ -375,6 +381,8 @@ describe("validate-horizon-status.mjs", () => {
             H30: { status: "planned", summary: "H30 planned" },
             H31: { status: "planned", summary: "H31 planned" },
             H32: { status: "planned", summary: "H32 planned" },
+            H33: { status: "planned", summary: "H33 planned" },
+            H34: { status: "planned", summary: "H34 planned" },
             },
             history: [
               {
@@ -522,6 +530,8 @@ describe("validate-horizon-status.mjs", () => {
             H30: { status: "planned", summary: "H30 planned" },
             H31: { status: "planned", summary: "H31 planned" },
             H32: { status: "planned", summary: "H32 planned" },
+            H33: { status: "planned", summary: "H33 planned" },
+            H34: { status: "planned", summary: "H34 planned" },
             },
             history: [
               {
@@ -657,6 +667,8 @@ describe("validate-horizon-status.mjs", () => {
             H30: { status: "planned", summary: "H30 planned" },
             H31: { status: "planned", summary: "H31 planned" },
             H32: { status: "planned", summary: "H32 planned" },
+            H33: { status: "planned", summary: "H33 planned" },
+            H34: { status: "planned", summary: "H34 planned" },
             },
             history: [
               {
@@ -766,7 +778,9 @@ describe("validate-horizon-status.mjs", () => {
   "H29": { "status": "planned", "summary": "H29 planned" },
   "H30": { "status": "planned", "summary": "H30 planned" },
   "H31": { "status": "planned", "summary": "H31 planned" },
-  "H32": { "status": "planned", "summary": "H32 planned" }
+  "H32": { "status": "planned", "summary": "H32 planned" },
+  "H33": { "status": "planned", "summary": "H33 planned" },
+  "H34": { "status": "planned", "summary": "H34 planned" }
   },
   "history": [
     {

@@ -39,7 +39,7 @@ jobs:
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: H16 sustainment assurance bundle (goal policy through H32 + manifest schemas + H15 gates)
+      - name: H16 sustainment assurance bundle (goal policy through H34 + manifest schemas + H15 gates)
         run: npm run run:h16-assurance-bundle
 
       - name: Build
@@ -87,13 +87,13 @@ jobs:
       - name: H18 progressive cutover rehearsal bundle
         run: npm run run:h18-assurance-bundle
 
-      - name: Post-H32 sustainment loop (terminal chain + H32 assurance + closeout gate)
+      - name: Post-H34 sustainment loop (terminal chain + H34 assurance + closeout gate)
         env:
           UNIFIED_CI_SOAK_ITERATIONS: "15"
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H32 sustainment manifest
-        run: npm run validate:post-h32-sustainment-manifest
+      - name: Validate post-H34 sustainment manifest
+        run: npm run validate:post-h34-sustainment-manifest
 
       - name: Stage promotion readiness gate
         run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch

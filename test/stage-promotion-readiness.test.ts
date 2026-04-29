@@ -386,6 +386,65 @@ describe("check-stage-promotion-readiness.mjs", () => {
     });
   });
 
+  it("allows non-adjacent current->target when --relax-stage-transition is set", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const outputPath = path.join(evidenceDir, "stage-promotion-readiness.json");
+      await seedEvidence(evidenceDir);
+      await seedHorizonStatus(horizonPath, "majority", "H2");
+
+      const failResult = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "majority",
+          "--current-stage",
+          "shadow",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(failResult.code).toBe(2);
+      const failPayload = JSON.parse(await readFile(outputPath, "utf8")) as { failures: string[] };
+      expect(failPayload.failures).toContain("non_sequential_stage_transition:shadow->majority");
+
+      const passResult = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-stage-promotion-readiness.mjs",
+          "--target-stage",
+          "majority",
+          "--current-stage",
+          "shadow",
+          "--relax-stage-transition",
+          "--horizon-status-file",
+          horizonPath,
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outputPath,
+        ],
+        { timeoutMs: 20_000 },
+      );
+      expect(passResult.code).toBe(0);
+      const passPayload = JSON.parse(await readFile(outputPath, "utf8")) as {
+        pass: boolean;
+        failures: string[];
+        checks: { relaxStageTransition?: boolean };
+      };
+      expect(passPayload.pass).toBe(true);
+      expect(passPayload.checks.relaxStageTransition).toBe(true);
+      expect(passPayload.failures).not.toContain("non_sequential_stage_transition:shadow->majority");
+    });
+  });
+
   it("fails when release readiness goal-policy validation is not passed", async () => {
     await withTempDir(async (dir) => {
       const evidenceDir = path.join(dir, "evidence");

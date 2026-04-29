@@ -412,7 +412,7 @@ After **H15** is marked completed, use **`npm run verify:sustainment-loop`** (se
 
 The roadmap horizons **H1–H15** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h15-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
 
-1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report.
+1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report. **Dry-run** auto-relaxes the sequential **current→target** check when **`--current-stage`** is omitted (gateway env may still read **shadow**). Align **merge-bundle** / **bundle-verification** / **release-readiness** artifacts (**`latest-passing`** vs **`latest`**) before expecting a green readiness gate.
 2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:
    - `npm run calibrate:rollback-thresholds -- --stage majority --evidence-dir evidence`
 3. Execute supervised rollback auto-apply simulation with calibrated thresholds in a controlled environment:

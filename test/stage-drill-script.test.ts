@@ -314,7 +314,7 @@ async function seedEvidence(
   };
 }
 
-async function seedHorizonStatus(filePath: string): Promise<void> {
+async function seedHorizonStatus(filePath: string, promotionTargetStage = "canary"): Promise<void> {
   await writeFile(
     filePath,
     JSON.stringify(
@@ -392,7 +392,7 @@ async function seedHorizonStatus(filePath: string): Promise<void> {
           H15: { status: "planned", summary: "H15 planned" },
         },
         promotionReadiness: {
-          targetStage: "canary",
+          targetStage: promotionTargetStage,
           gates: {
             releaseReadinessPass: true,
             mergeBundlePass: true,
@@ -564,6 +564,52 @@ describe("run-stage-drill.mjs", () => {
       expect(payload.dryRun).toBe(true);
       expect(payload.checks.promotionPassed).toBe(true);
       expect(payload.checks.rollbackPolicyPassed).toBe(true);
+    });
+  });
+
+  it("dry-run majority drill relaxes env shadow vs target mismatch", async () => {
+    await withTempDir(async (dir) => {
+      const evidenceDir = path.join(dir, "evidence");
+      const horizonPath = path.join(dir, "HORIZON_STATUS.json");
+      const envPath = path.join(dir, "gateway.env");
+      const outPath = path.join(evidenceDir, "stage-drill-majority.json");
+
+      await seedEvidence(evidenceDir, { successRate: 1 });
+      await seedHorizonStatus(horizonPath, "majority");
+      await seedEnvFile(envPath);
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/run-stage-drill.mjs",
+          "--target-stage",
+          "majority",
+          "--evidence-dir",
+          evidenceDir,
+          "--horizon-status-file",
+          horizonPath,
+          "--env-file",
+          envPath,
+          "--out",
+          outPath,
+          "--dry-run",
+          "--allow-horizon-mismatch",
+          "--evidence-selection-mode",
+          "latest-passing",
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        dryRun: boolean;
+        stage: string;
+        checks: { promotionPassed: boolean };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.dryRun).toBe(true);
+      expect(payload.stage).toBe("majority");
+      expect(payload.checks.promotionPassed).toBe(true);
     });
   });
 

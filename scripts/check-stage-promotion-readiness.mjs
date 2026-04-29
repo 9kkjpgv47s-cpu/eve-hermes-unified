@@ -44,6 +44,7 @@ function parseArgs(argv) {
     requireReleaseReadinessGoalPolicyValidation: true,
     requireReleaseReadinessGoalPolicySourceConsistency: true,
     requireBundleVerificationSelectionProof: true,
+    relaxStageTransition: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -108,6 +109,8 @@ function parseArgs(argv) {
       arg === "--allow-bundle-verification-selection-proof-missing"
     ) {
       options.requireBundleVerificationSelectionProof = false;
+    } else if (arg === "--relax-stage-transition") {
+      options.relaxStageTransition = true;
     }
   }
   return options;
@@ -433,6 +436,10 @@ async function main() {
     path.resolve(options.evidenceDir || path.join(process.cwd(), "evidence"));
   const targetStage = normalizeStage(options.targetStage);
   const currentStage = normalizeStage(options.currentStage, "shadow");
+  const relaxStageTransitionFromEnv =
+    String(process.env.UNIFIED_RELAX_STAGE_TRANSITION ?? "").trim().toLowerCase() === "1" ||
+    String(process.env.UNIFIED_RELAX_STAGE_TRANSITION ?? "").trim().toLowerCase() === "true";
+  const relaxStageTransition = options.relaxStageTransition === true || relaxStageTransitionFromEnv;
   const allowHorizonMismatch = options.allowHorizonMismatch === true;
   const evidenceSelectionMode = normalizeEvidenceSelection(options.evidenceSelection, "latest");
   const requireReleaseReadinessGoalPolicyValidation = parseBooleanOption(
@@ -466,6 +473,7 @@ async function main() {
     failures.push(`invalid_evidence_selection:${options.evidenceSelection}`);
   }
   if (
+    !relaxStageTransition &&
     VALID_STAGES.includes(targetStage) &&
     VALID_STAGES.includes(currentStage) &&
     !stageTransitionAllowed(currentStage, targetStage)
@@ -835,9 +843,10 @@ async function main() {
       current: currentStage || null,
       target: targetStage || null,
       transitionAllowed:
-        VALID_STAGES.includes(currentStage) &&
-        VALID_STAGES.includes(targetStage) &&
-        stageTransitionAllowed(currentStage, targetStage),
+        relaxStageTransition ||
+        (VALID_STAGES.includes(currentStage) &&
+          VALID_STAGES.includes(targetStage) &&
+          stageTransitionAllowed(currentStage, targetStage)),
     },
     files: {
       evidenceDir,
@@ -892,6 +901,7 @@ async function main() {
       bundleVerificationSelectionGateSatisfied,
       horizonValidationPass: horizonValidation.valid,
       allowHorizonMismatch,
+      relaxStageTransition,
       evidenceSelectionMode,
       activeHorizon: horizonStatus?.activeHorizon ?? null,
       activeStatus: horizonStatus?.activeStatus ?? null,

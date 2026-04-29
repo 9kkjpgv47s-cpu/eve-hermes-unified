@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-11T15:00:00Z",
+  "updatedAtIso": "2026-05-12T15:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H21",
+  "activeHorizon": "H22",
   "activeStatus": "completed",
-  "summary": "Horizon H21 (merge + tenant/cutover terminal assurance): run-h21-assurance-bundle chains run-h17-assurance-bundle + run-h20-assurance-bundle; verify:sustainment-loop post-H21; verify:sustainment-loop:h20-legacy for prior chain; goal-policy runway H2\u2192H21.",
+  "summary": "Horizon H22 (shell CI convergence terminal assurance): run-h22-assurance-bundle chains validate:shell-unified-dispatch-ci + run-h21-assurance-bundle; verify:sustainment-loop post-H22; verify:sustainment-loop:h21-legacy for prior chain; goal-policy runway H2\u2192H22; run-h15-assurance-bundle is H14-only (shell scan in H22).",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -221,7 +221,8 @@
         "H18",
         "H19",
         "H20",
-        "H21"
+        "H21",
+        "H22"
       ]
     },
     {
@@ -233,7 +234,8 @@
         "H18",
         "H19",
         "H20",
-        "H21"
+        "H21",
+        "H22"
       ]
     },
     {
@@ -244,7 +246,8 @@
       "horizons": [
         "H19",
         "H20",
-        "H21"
+        "H21",
+        "H22"
       ]
     },
     {
@@ -254,7 +257,8 @@
       "required": true,
       "horizons": [
         "H20",
-        "H21"
+        "H21",
+        "H22"
       ]
     },
     {
@@ -263,7 +267,17 @@
       "artifactPattern": "evidence/h21-assurance-bundle-*.json",
       "required": true,
       "horizons": [
-        "H21"
+        "H21",
+        "H22"
+      ]
+    },
+    {
+      "id": "h22-assurance-bundle",
+      "command": "node ./scripts/run-h22-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h22-assurance-bundle-*.json",
+      "required": true,
+      "horizons": [
+        "H22"
       ]
     }
   ],
@@ -992,7 +1006,7 @@
     },
     {
       "id": "h21-action-2",
-      "summary": "post-H21 sustainment loop; verify:sustainment-loop; validate:post-h21-sustainment-manifest; verify:sustainment-loop:h20-legacy for H20 chain.",
+      "summary": "Legacy post-H21 sustainment (verify:sustainment-loop:h21-legacy); terminal loop is post-H22.",
       "targetHorizon": "H21",
       "status": "completed",
       "tags": [
@@ -1010,6 +1024,39 @@
         "policy",
         "documentation",
         "validation"
+      ]
+    },
+    {
+      "id": "h22-action-1",
+      "summary": "run-h22-assurance-bundle: validate:shell-unified-dispatch-ci + run-h21-assurance-bundle; folds shell CI scan into terminal chain after build.",
+      "targetHorizon": "H22",
+      "status": "completed",
+      "tags": [
+        "ci",
+        "validation",
+        "shell"
+      ]
+    },
+    {
+      "id": "h22-action-2",
+      "summary": "post-H22 sustainment loop; verify:sustainment-loop; validate:post-h22-sustainment-manifest; verify:sustainment-loop:h21-legacy for H21 chain.",
+      "targetHorizon": "H22",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
+    },
+    {
+      "id": "h22-action-3",
+      "summary": "Goal policy H21\u2192H22 transition; run-h15-assurance-bundle slimmed to H14-only (shell scan moved to H22).",
+      "targetHorizon": "H22",
+      "status": "completed",
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
       ]
     }
   ],
@@ -1299,6 +1346,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H21->H22": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "ci": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -1371,7 +1433,7 @@
     },
     "H15": {
       "status": "completed",
-      "summary": "Shell dispatch CI convergence: validate-shell-unified-dispatch-ci.mjs; run-h15-assurance-bundle chains H14 + CI scan; superseded by post-H16 sustainment loop."
+      "summary": "Shell ingress + CI scan split: run-h15-assurance-bundle is H14-only; validate:shell-unified-dispatch-ci enforced in run-h22-assurance-bundle after build."
     },
     "H16": {
       "status": "completed",
@@ -1395,7 +1457,11 @@
     },
     "H21": {
       "status": "completed",
-      "summary": "Terminal assurance: run-h21-assurance-bundle (H17 + H20); post-H21 sustainment via verify:sustainment-loop + validate:h21-closeout."
+      "summary": "Merge + tenant/cutover chain (run-h21-assurance-bundle): chained inside run-h22-assurance-bundle; verify:sustainment-loop:h21-legacy."
+    },
+    "H22": {
+      "status": "completed",
+      "summary": "Terminal assurance: run-h22-assurance-bundle (shell CI scan + H21); post-H22 sustainment via verify:sustainment-loop + validate:h22-closeout."
     }
   },
   "history": [
@@ -1644,6 +1710,12 @@
       "horizon": "H21",
       "status": "completed",
       "note": "H21 merge + tenant/cutover terminal assurance: run-h21-assurance-bundle; verify:sustainment-loop post-H21; H20->H21 goal policy; unified-ci runs single H21 bundle instead of separate H17+H20 steps."
+    },
+    {
+      "timestamp": "2026-05-12T15:00:00Z",
+      "horizon": "H22",
+      "status": "completed",
+      "note": "H22 shell CI convergence terminal assurance: run-h22-assurance-bundle; verify:sustainment-loop post-H22; H21->H22 goal policy; run-h15-assurance-bundle H14-only."
     }
   ]
 }

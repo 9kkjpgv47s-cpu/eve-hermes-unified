@@ -85,24 +85,24 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H21 sustainment (continuous)
+## Phase 8 - Post-H22 sustainment (continuous)
 
-After horizon **H21** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H22** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
 - [x] `npm run validate:horizon-status` exits `0`.
-- [x] `npm run run:h21-assurance-bundle` exits `0` (H17 merge readiness + H20 tenant/region/unified entrypoints/cutover rehearsal) and emits `evidence/h21-assurance-bundle-*.json`.
+- [x] `npm run run:h22-assurance-bundle` exits `0` (shell CI scan + H21 merge/cutover chain) and emits `evidence/h22-assurance-bundle-*.json`.
 - [x] `npm run run:ci-soak-slo-gate` exits `0` and emits `evidence/ci-soak-slo-gate-*.json`.
-- [x] `npm run validate:h21-closeout` exits `0` (uses evidence under `evidence/`).
+- [x] `npm run validate:h22-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains horizon status + H21 bundle + CI soak SLO gate + H21 closeout and writes `evidence/post-h21-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains horizon status + H22 bundle + CI soak SLO gate + H22 closeout and writes `evidence/post-h22-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [x] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [x] `npm run validate:post-h21-sustainment-manifest` exits `0`.
+- [x] `npm run validate:post-h22-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h20-legacy`** / **`validate:post-h20-sustainment-manifest`** (H20 chain); **`verify:sustainment-loop:h19-legacy`** … **`h6-legacy`**.
+Historical sustainment: **`npm run verify:sustainment-loop:h21-legacy`** / **`validate:post-h21-sustainment-manifest`** (H21 chain); **`verify:sustainment-loop:h20-legacy`** … **`h6-legacy`**.
 
 Exit criteria:
 

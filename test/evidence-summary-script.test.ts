@@ -71,6 +71,65 @@ describe("summarize-evidence.mjs", () => {
     });
   });
 
+  it("prefers soak-*.jsonl over newer soak-* metrics JSON in the same evidence dir", async () => {
+    await withTempDir(async (dir) => {
+      const jsonlPath = path.join(dir, "soak-20260101-000000.jsonl");
+      const metricsJsonPath = path.join(dir, "soak-matrix-shadow-metrics.json");
+      const failurePath = path.join(dir, "failure-injection-20260101-000000.txt");
+      const summaryPath = path.join(dir, "summary.json");
+
+      await writeFile(
+        jsonlPath,
+        `${JSON.stringify({
+          envelope: { traceId: "t-jsonl" },
+          primaryState: { elapsedMs: 1 },
+          response: { failureClass: "none", traceId: "t-jsonl" },
+        })}\n`,
+        "utf8",
+      );
+      await writeFile(metricsJsonPath, JSON.stringify({ totalRecords: 0, note: "not a dispatch log" }), "utf8");
+      await writeFile(
+        failurePath,
+        [
+          "Failure injection smoke started",
+          "Case 1: Eve lane command timeout",
+          "eve_dispatch_timeout",
+          "Case 2: Hermes lane non-zero exit",
+          "hermes_dispatch_exit_1",
+          "Case 3: Synthetic provider-limit response mapping",
+          "provider_limit",
+          "Case 4: Dispatch-state read mismatch",
+          "state_mismatch",
+          "Case 5: Policy fail-closed path with no fallback",
+          "fail-closed fallback: none",
+          "Failure injection smoke ended",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/summarize-evidence.mjs",
+          "--evidence-dir",
+          dir,
+          "--out",
+          summaryPath,
+          "--min-success-rate",
+          "0.99",
+          "--max-p95-latency-ms",
+          "250",
+        ],
+        { timeoutMs: 5_000 },
+      );
+      expect(result.code).toBe(0);
+      const raw = await readFile(summaryPath, "utf8");
+      const payload = JSON.parse(raw) as { files?: { soak?: string } };
+      expect(payload.files?.soak).toContain(".jsonl");
+      expect(raw).toContain("\"totalRecords\": 1");
+    });
+  });
+
   it("parses multi-line pretty JSON emitted by dispatch CLI", async () => {
     await withTempDir(async (dir) => {
       const soakPath = path.join(dir, "soak-20260101-000000.jsonl");

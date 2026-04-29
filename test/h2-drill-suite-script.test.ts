@@ -427,6 +427,7 @@ describe("run-h2-drill-suite.mjs", () => {
           envPath,
           "--out",
           outPath,
+          "--dry-run",
           "--canary-chats",
           "100,200",
           "--majority-percent",

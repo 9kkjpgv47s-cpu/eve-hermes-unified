@@ -78,6 +78,18 @@ async function newestFileInDir(dir, prefix) {
   return matches[matches.length - 1];
 }
 
+async function newestSoakDispatchLogInDir(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const matches = entries
+    .filter((entry) => entry.isFile() && entry.name.startsWith("soak-") && entry.name.endsWith(".jsonl"))
+    .map((entry) => path.join(dir, entry.name));
+  if (matches.length === 0) {
+    return null;
+  }
+  matches.sort();
+  return matches[matches.length - 1];
+}
+
 async function newestFileWithPrefixes(dir, prefixes) {
   const entries = await readdir(dir, { withFileTypes: true });
   const matches = entries
@@ -185,7 +197,9 @@ async function main() {
   const regressionPath = await newestFileInDir(evidenceDir, "regression-eve-primary-");
   const cutoverPath = await newestFileInDir(evidenceDir, "cutover-readiness-");
   const failureInjectionPath = await newestFileInDir(evidenceDir, "failure-injection-");
-  const soakPath = await newestFileInDir(evidenceDir, "soak-");
+  const soakPath =
+    (await newestSoakDispatchLogInDir(evidenceDir))
+    ?? (await newestFileInDir(evidenceDir, "soak-"));
   const explicitGoalPolicyValidationPath = options.goalPolicyFileValidationReport
     ? path.resolve(options.goalPolicyFileValidationReport)
     : "";

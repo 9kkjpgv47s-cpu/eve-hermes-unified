@@ -85,22 +85,22 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H27 sustainment (continuous)
+## Phase 8 - Post-H28 sustainment (continuous)
 
-After horizon **H27** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H28** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
-- [x] `npm run run:h27-assurance-bundle` exits `0` and emits `evidence/h27-assurance-bundle-*.json` (**`validate:horizon-status`** + H26 chain).
-- [x] `npm run validate:h27-closeout` exits `0` (uses evidence under `evidence/`).
+- [x] `npm run run:h28-assurance-bundle` exits `0` and emits `evidence/h28-assurance-bundle-*.json` (**`validate:initial-scope`** + H27 chain).
+- [x] `npm run validate:h28-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains H27 assurance bundle + H27 closeout and writes `evidence/post-h27-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains H28 assurance bundle + H28 closeout and writes `evidence/post-h28-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [x] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [x] `npm run validate:post-h27-sustainment-manifest` exits `0`.
+- [x] `npm run validate:post-h28-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h26-legacy`** / **`validate:post-h26-sustainment-manifest`** (H26-only chain); **`npm run verify:sustainment-loop:h25-legacy`** … **`h6-legacy`**.
+Historical sustainment: **`npm run verify:sustainment-loop:h27-legacy`** / **`validate:post-h27-sustainment-manifest`** (H27-only chain); **`npm run verify:sustainment-loop:h26-legacy`** … **`h6-legacy`**.
 
 Exit criteria:
 

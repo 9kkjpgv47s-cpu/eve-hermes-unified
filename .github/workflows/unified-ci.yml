@@ -66,17 +66,14 @@ jobs:
           HERMES_LAUNCH_ARGS: ""
         run: npm run validate:release-readiness
 
-      - name: Initial scope gate
-        run: npm run validate:initial-scope
+      - name: H28 terminal assurance bundle (initial scope gate + H27 chain)
+        run: npm run run:h28-assurance-bundle
 
-      - name: H27 terminal assurance bundle (horizon status validation + H26 chain)
-        run: npm run run:h27-assurance-bundle
-
-      - name: Post-H27 sustainment loop (H27 bundle + closeout gate)
+      - name: Post-H28 sustainment loop (H28 bundle + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H27 sustainment manifest
-        run: npm run validate:post-h27-sustainment-manifest
+      - name: Validate post-H28 sustainment manifest
+        run: npm run validate:post-h28-sustainment-manifest
 
       - name: Upload evidence artifacts
         uses: actions/upload-artifact@v4

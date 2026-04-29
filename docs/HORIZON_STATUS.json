@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-01T00:00:00Z",
+  "updatedAtIso": "2026-05-01T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H19",
+  "activeHorizon": "H20",
   "activeStatus": "completed",
-  "summary": "Horizon H19 closed: run:h19-assurance-bundle chains H18 plus horizon-status recheck; goal policy through H19; post-H16 sustainment runs the H19 terminal bundle + evidence volume; H18 completed as predecessor.",
+  "summary": "Horizon H20 closed: run:h20-assurance-bundle chains H19 plus validate:manifest-schemas sweep; goal policy through H20; post-H16 sustainment runs run:h20-assurance-bundle + evidence volume; H19 predecessor completed.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -166,49 +166,70 @@
       "command": "node ./scripts/run-h17-assurance-bundle.mjs",
       "artifactPattern": "evidence/h17-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H18", "H19"]
+      "horizons": ["H18", "H19", "H20"]
     },
     {
       "id": "h18-assurance-bundle",
       "command": "node ./scripts/run-h18-assurance-bundle.mjs",
       "artifactPattern": "evidence/h18-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H18", "H19"]
+      "horizons": ["H18", "H19", "H20"]
     },
     {
       "id": "h18-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H18", "H19"]
+      "horizons": ["H18", "H19", "H20"]
     },
     {
       "id": "h18-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H18", "H19"]
+      "horizons": ["H18", "H19", "H20"]
     },
     {
       "id": "h19-assurance-bundle",
       "command": "node ./scripts/run-h19-assurance-bundle.mjs",
       "artifactPattern": "evidence/h19-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H19"]
+      "horizons": ["H19", "H20"]
     },
     {
       "id": "h19-evidence-volume",
       "command": "npm run validate:evidence-volume",
       "artifactPattern": "evidence/evidence-volume-report-*.json",
       "required": true,
-      "horizons": ["H19"]
+      "horizons": ["H19", "H20"]
     },
     {
       "id": "h19-post-h16-sustainment",
       "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
-      "horizons": ["H19"]
+      "horizons": ["H19", "H20"]
+    },
+    {
+      "id": "h20-assurance-bundle",
+      "command": "node ./scripts/run-h20-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h20-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H20"]
+    },
+    {
+      "id": "h20-evidence-volume",
+      "command": "npm run validate:evidence-volume",
+      "artifactPattern": "evidence/evidence-volume-report-*.json",
+      "required": true,
+      "horizons": ["H20"]
+    },
+    {
+      "id": "h20-post-h16-sustainment",
+      "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
+      "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
+      "required": true,
+      "horizons": ["H20"]
     }
   ],
   "nextActions": [
@@ -688,8 +709,29 @@
     },
     {
       "id": "h19-action-3",
-      "summary": "Goal policy H18→H19 transition; validate:goal-policy-file through H19; terminal progressive-goal skip at H19.",
+      "summary": "Goal policy H18→H19 transition; validate:goal-policy-file through H19; predecessor to H20 manifest-schema terminal slice.",
       "targetHorizon": "H19",
+      "status": "completed",
+      "tags": ["policy", "documentation", "validation"]
+    },
+    {
+      "id": "h20-action-1",
+      "summary": "H20 assurance bundle: chain run:h19-assurance-bundle + npm run validate:manifest-schemas; artifact evidence/h20-assurance-bundle-*.json.",
+      "targetHorizon": "H20",
+      "status": "completed",
+      "tags": ["validation", "tooling", "observability"]
+    },
+    {
+      "id": "h20-action-2",
+      "summary": "Post-H16 sustainment runs run:h20-assurance-bundle + validate:evidence-volume; required evidence for H20 closeout.",
+      "targetHorizon": "H20",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h20-action-3",
+      "summary": "Goal policy H19→H20 transition; validate:goal-policy-file through H20; terminal progressive-goal skip at H20.",
+      "targetHorizon": "H20",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
     }
@@ -950,6 +992,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H19->H20": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "observability": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -1026,7 +1083,7 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H19), manifest schema sweep, and evidence volume check; superseded in sustainment by run-h19-assurance-bundle terminal chain."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H20), manifest schema sweep, and evidence volume check; superseded in sustainment by run-h20-assurance-bundle terminal chain."
     },
     "H17": {
       "status": "completed",
@@ -1038,7 +1095,11 @@
     },
     "H19": {
       "status": "completed",
-      "summary": "Terminal assurance: run:h19-assurance-bundle (H18 + horizon-status recheck); goal policy through H19; post-H16 sustainment runs run:h19-assurance-bundle + evidence volume."
+      "summary": "Terminal assurance: run:h19-assurance-bundle (H18 + horizon-status recheck); goal policy through H19; predecessor to H20 manifest-schema gate."
+    },
+    "H20": {
+      "status": "completed",
+      "summary": "Terminal assurance: run:h20-assurance-bundle (H19 + validate:manifest-schemas); goal policy through H20; post-H16 sustainment runs run:h20-assurance-bundle + evidence volume."
     }
   },
   "history": [
@@ -1269,6 +1330,12 @@
       "horizon": "H19",
       "status": "completed",
       "note": "H19 terminal: run-h19-assurance-bundle (H18 + horizon-status recheck), goal policy H18→H19, sustainment runs run:h19-assurance-bundle; VALID_HORIZONS and closeout skip stage-promotion for H19."
+    },
+    {
+      "timestamp": "2026-05-01T12:00:00Z",
+      "horizon": "H20",
+      "status": "completed",
+      "note": "H20 terminal: run-h20-assurance-bundle (H19 + validate:manifest-schemas), goal policy H19→H20, sustainment runs run:h20-assurance-bundle; closeout skip stage-promotion for H20."
     }
   ]
 }

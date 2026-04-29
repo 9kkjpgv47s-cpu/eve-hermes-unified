@@ -9,8 +9,8 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 ## Current Program State
 
 - Horizon: **`H6`** active (`docs/HORIZON_STATUS.json`); **H7** planned with **`h7-action-*`** and **`docs/H7_PROGRAM.md`**
-- Completed in-repo through **h6-action-5** (status bump + H7 scaffold + **`H6->H7`** goal policy)
-- Primary focus: **h7-action-1** (lock H7 goals and evidence gates) per `docs/H7_PROGRAM.md`
+- Completed in-repo through **h7-action-2** (H7 program doc + H6 evidence bundle + H7 closeout wrapper in **`validate:all`**)
+- Primary focus: **h7-action-3** (post–H6→H7 promotion status bump / H8 seed) when operators run **`promote:horizon`**
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -64,7 +64,10 @@ npm run run:h5-region-misalignment-drill
 npm run run:h6-partition-drill
 npm run validate:h5-evidence-bundle
 npm run validate:h6-closeout
+npm run validate:h6-evidence-bundle
+npm run validate:h7-closeout
 npm run validate:h5-closeout
+npm run validate:h6-horizon-closeout
 ```
 
 ### Readiness / Evidence Gates

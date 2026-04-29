@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 /**
- * H5 evidence bundle gate (h5-action-9 + H6 partition drill): validates latest evidence from validate:all
- * (validation summary soak dimensions, region drill v2, H6 partition drill, rollback rehearsal, remediation dry-run).
- * Emits a horizon-closeout schema manifest for optional promote:horizon --closeout-file.
- * Full H5 horizon closeout (required evidence + this bundle) is `npm run validate:h5-closeout`.
- * After a passing bundle, `npm run validate:h6-closeout` wraps the latest `h5-closeout-*.json` for H5→H6 promotion pinning (h6-action-4).
- * H6 slice closeout uses `npm run validate:h6-evidence-bundle` (same checks, `h6-closeout-*.json` manifest).
+ * H6 evidence bundle gate (h7-action-2): same machine checks as validate-h5-evidence-bundle
+ * (soak tenant/region/partition dimensions, region drill, partition drill, rollback, remediation).
+ * Emits `h6-closeout-evidence-*.json` (horizon-closeout schema) so `validate-h7-closeout` can wrap
+ * the latest passing manifest for promote:horizon H6→H7 with `--goal-policy-key H6->H7`.
  */
 import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -49,13 +47,13 @@ async function main() {
   const pass = failures.length === 0;
   const outPath =
     opts.out ||
-    path.join(evidenceDir, `h5-closeout-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+    path.join(evidenceDir, `h6-closeout-evidence-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
 
   let manifest = {
     generatedAtIso: new Date().toISOString(),
     pass,
     closeout: {
-      horizon: "H5",
+      horizon: "H6",
       nextHorizon: null,
       canCloseHorizon: pass,
       canStartNextHorizon: false,
@@ -91,7 +89,7 @@ async function main() {
     `${JSON.stringify({ pass: manifest.pass, outPath, failureCount: manifest.failures.length })}\n`,
   );
   if (!manifest.pass) {
-    process.stderr.write(`H5 evidence bundle validation failed:\n- ${manifest.failures.join("\n- ")}\n`);
+    process.stderr.write(`H6 evidence bundle validation failed:\n- ${manifest.failures.join("\n- ")}\n`);
     process.exitCode = 2;
   }
 }

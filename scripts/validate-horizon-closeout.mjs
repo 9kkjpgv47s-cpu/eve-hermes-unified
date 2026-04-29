@@ -140,6 +140,20 @@ async function runH5EvidenceBundleGate(horizonStatusFile, evidenceDir) {
   }
 }
 
+async function runH6EvidenceBundleGate(horizonStatusFile, evidenceDir) {
+  const scriptPath = path.join(REPO_ROOT, "scripts", "validate-h6-evidence-bundle.mjs");
+  try {
+    await execFile(process.execPath, [scriptPath, "--horizon-status-file", horizonStatusFile, "--evidence-dir", evidenceDir], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    });
+    return { pass: true };
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : null;
+    return { pass: false, code };
+  }
+}
+
 function parseArgs(argv) {
   const options = {
     horizon: "",
@@ -151,6 +165,7 @@ function parseArgs(argv) {
     requireCompletedActions: false,
     allowHorizonMismatch: false,
     requireH5EvidenceBundle: false,
+    requireH6EvidenceBundle: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -178,6 +193,8 @@ function parseArgs(argv) {
       options.allowHorizonMismatch = true;
     } else if (arg === "--require-h5-evidence-bundle") {
       options.requireH5EvidenceBundle = true;
+    } else if (arg === "--require-h6-evidence-bundle") {
+      options.requireH6EvidenceBundle = true;
     }
   }
   return options;
@@ -1125,6 +1142,18 @@ async function main() {
     }
   }
 
+  let h6EvidenceBundleGate = null;
+  if (
+    targetHorizon === "H6"
+    && options.requireH6EvidenceBundle
+    && (await exists(evidenceDir))
+  ) {
+    h6EvidenceBundleGate = await runH6EvidenceBundleGate(horizonStatusFile, evidenceDir);
+    if (!h6EvidenceBundleGate.pass) {
+      failures.push("h6_evidence_bundle_gate_failed");
+    }
+  }
+
   const payload = {
     generatedAtIso: new Date().toISOString(),
     pass: failures.length === 0,
@@ -1231,6 +1260,7 @@ async function main() {
       requiredEvidence: requiredEvidenceResults,
       nextHorizon: nextHorizonChecks,
       h5EvidenceBundleGate,
+      h6EvidenceBundleGate,
     },
     failures,
   };

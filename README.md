@@ -35,6 +35,8 @@ npm run run:h5-region-misalignment-drill
 npm run run:h6-partition-drill
 npm run validate:h5-evidence-bundle
 npm run validate:h6-closeout
+npm run validate:h6-evidence-bundle
+npm run validate:h7-closeout
 npm run validate:h5-closeout
 npm run validate:regression-eve-primary
 npm run validate:cutover-readiness

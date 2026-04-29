@@ -68,6 +68,18 @@ npm run validate:h6-closeout
 
 This writes **`evidence/h6-closeout-*.json`** (`schemaVersion: h6-closeout-v1`) with **`closeout.horizon: H5`**, **`closeout.nextHorizon: H6`**, and an **`upstream`** snapshot of the latest H5 bundle — suitable for **`promote:horizon --closeout-file`** with **`--goal-policy-key H5->H6`**. See **`docs/H6_PROGRAM.md`** for the full promotion recipe.
 
+## H6 evidence bundle and H7 closeout (H7 program)
+
+The same scale checks as **`validate:h5-evidence-bundle`** apply to the H6 slice via:
+
+```bash
+npm run validate:h6-evidence-bundle
+```
+
+This writes **`evidence/h6-closeout-evidence-*.json`** with **`closeout.horizon: H6`** (distinct from the H5→H6 promotion wrapper **`h6-closeout-*.json`** above).
+
+After a passing H6 evidence manifest, **`npm run validate:h7-closeout`** wraps the newest **`h6-closeout-evidence-*.json`** into **`evidence/h7-closeout-*.json`** (`schemaVersion: h7-closeout-v1`, **`closeout.horizon: H6`**, **`closeout.nextHorizon: H7`**) for **`promote:horizon`** with **`--goal-policy-key H6->H7`**. Both steps run at the end of **`npm run validate:all`** after **`validate:h6-closeout`**. See **`docs/H7_PROGRAM.md`**.
+
 ## H6 partition operator drill (h6-action-3)
 
 ```bash

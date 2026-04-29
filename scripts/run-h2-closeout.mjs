@@ -543,6 +543,12 @@ async function main() {
     if (options.requireCompletedActions) {
       closeoutArgv.push("--require-completed-actions");
     }
+    if (sourceHorizon === "H5") {
+      closeoutArgv.push("--require-h5-evidence-bundle");
+    }
+    if (sourceHorizon === "H6") {
+      closeoutArgv.push("--require-h6-evidence-bundle");
+    }
     if (options.requireActiveNextHorizon) {
       closeoutArgv.push("--require-active-next-horizon");
     }

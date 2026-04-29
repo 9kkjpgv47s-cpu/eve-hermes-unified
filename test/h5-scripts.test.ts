@@ -329,6 +329,132 @@ describe("H5 operator scripts", () => {
     });
   });
 
+  it("validate-h6-evidence-bundle passes with synthetic scale evidence", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990105-000000";
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          soakDrillDimensions: {
+            tenants: { alpha: 5, beta: 5, _none: 2 },
+            regions: { "us-west": 5, "eu-central": 5, _none: 2 },
+            partitions: { "soak-part-a": 5, "soak-part-b": 5, _none: 2 },
+            regionAligned: { true: 10, false: 0, unknown: 0 },
+          },
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h5-region-misalignment-drill-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h5-region-misalignment-drill-v2",
+          pass: true,
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h6-partition-drill-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h6-partition-drill-v1",
+          pass: true,
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `emergency-rollback-rehearsal-${stamp}.json`),
+        JSON.stringify({
+          manifestVersion: "h3-emergency-rollback-rehearsal-v1",
+          dryRun: true,
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `remediation-playbook-dry-run-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h5-remediation-dry-run-v1",
+          policyBounds: { dryRunOnly: true },
+        }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h6-closeout-evidence-pass.json");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-h6-evidence-bundle.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(0);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as {
+        pass?: boolean;
+        closeout?: { horizon?: string };
+        checks?: { horizonCloseoutGatePass?: boolean };
+      };
+      expect(parsed.pass).toBe(true);
+      expect(parsed.closeout?.horizon).toBe("H6");
+      expect(parsed.checks?.horizonCloseoutGatePass).toBe(true);
+    });
+  });
+
+  it("validate-h7-closeout fails when no h6-closeout-evidence manifest exists", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const outPath = path.join(evidenceDir, "h7-closeout-fail.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h7-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as { pass?: boolean; failures?: string[] };
+      expect(parsed.pass).toBe(false);
+      expect(parsed.failures?.some((f) => f.includes("missing_h6_evidence_closeout_manifest"))).toBe(true);
+    });
+  });
+
+  it("validate-h7-closeout passes when latest h6-closeout-evidence bundle passed", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990106-000000";
+      await writeFile(
+        path.join(evidenceDir, `h6-closeout-evidence-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          pass: true,
+          closeout: { horizon: "H6", nextHorizon: null, canCloseHorizon: true, canStartNextHorizon: false },
+          checks: { horizonCloseoutGatePass: true },
+          failures: [],
+        }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h7-closeout-pass.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h7-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(0);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as {
+        pass?: boolean;
+        schemaVersion?: string;
+        closeout?: { horizon?: string; nextHorizon?: string };
+        checks?: { h7HorizonCloseoutGatePass?: boolean; horizonCloseoutGatePass?: boolean };
+      };
+      expect(parsed.pass).toBe(true);
+      expect(parsed.schemaVersion).toBe("h7-closeout-v1");
+      expect(parsed.closeout?.horizon).toBe("H6");
+      expect(parsed.closeout?.nextHorizon).toBe("H7");
+      expect(parsed.checks?.h7HorizonCloseoutGatePass).toBe(true);
+      expect(parsed.checks?.horizonCloseoutGatePass).toBe(true);
+    });
+  });
+
   it("validate-h5-tenant-isolation emits valid JSON", async () => {
     const result = await runCommandWithTimeout(["node", "scripts/validate-h5-tenant-isolation.mjs"], {
       timeoutMs: 10_000,

@@ -69,17 +69,14 @@ jobs:
       - name: Initial scope gate
         run: npm run validate:initial-scope
 
-      - name: H25 terminal assurance bundle (H6 + H16 replay + H24 chain)
-        run: npm run run:h25-assurance-bundle
+      - name: H26 terminal assurance bundle (H25 chain + stage promotion readiness gate)
+        run: npm run run:h26-assurance-bundle
 
-      - name: Post-H25 sustainment loop (horizon + H25 bundle + closeout gate)
+      - name: Post-H26 sustainment loop (horizon + H26 bundle + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H25 sustainment manifest
-        run: npm run validate:post-h25-sustainment-manifest
-
-      - name: Stage promotion readiness gate
-        run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch
+      - name: Validate post-H26 sustainment manifest
+        run: npm run validate:post-h26-sustainment-manifest
 
       - name: Validate horizon status metadata
         run: npm run validate:horizon-status

@@ -94,6 +94,7 @@ describe("validate-horizon-status.mjs", () => {
               H24: { status: "planned", summary: "H24 planned" },
           H25: { status: "planned", summary: "H25 planned" },
           H26: { status: "planned", summary: "H26 planned" },
+          H27: { status: "planned", summary: "H27 planned" },
             },
             history: [
               {
@@ -486,6 +487,7 @@ describe("validate-horizon-status.mjs", () => {
               H24: { status: "planned", summary: "H24 planned" },
               H25: { status: "planned", summary: "H25 planned" },
               H26: { status: "planned", summary: "H26 planned" },
+              H27: { status: "planned", summary: "H27 planned" },
             },
             history: [
               {
@@ -716,7 +718,8 @@ describe("validate-horizon-status.mjs", () => {
     "H23": { "status": "planned", "summary": "H23 planned" },
     "H24": { "status": "planned", "summary": "H24 planned" },
     "H25": { "status": "planned", "summary": "H25 planned" },
-    "H26": { "status": "planned", "summary": "H26 planned" }
+    "H26": { "status": "planned", "summary": "H26 planned" },
+    "H27": { "status": "planned", "summary": "H27 planned" }
   },
   "history": [
     {

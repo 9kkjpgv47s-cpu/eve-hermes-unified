@@ -69,17 +69,14 @@ jobs:
       - name: Initial scope gate
         run: npm run validate:initial-scope
 
-      - name: H26 terminal assurance bundle (H25 chain + stage promotion readiness gate)
-        run: npm run run:h26-assurance-bundle
+      - name: H27 terminal assurance bundle (horizon status validation + H26 chain)
+        run: npm run run:h27-assurance-bundle
 
-      - name: Post-H26 sustainment loop (horizon + H26 bundle + closeout gate)
+      - name: Post-H27 sustainment loop (H27 bundle + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H26 sustainment manifest
-        run: npm run validate:post-h26-sustainment-manifest
-
-      - name: Validate horizon status metadata
-        run: npm run validate:horizon-status
+      - name: Validate post-H27 sustainment manifest
+        run: npm run validate:post-h27-sustainment-manifest
 
       - name: Upload evidence artifacts
         uses: actions/upload-artifact@v4

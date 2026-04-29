@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-13T22:00:00Z",
+  "updatedAtIso": "2026-05-14T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H26",
+  "activeHorizon": "H27",
   "activeStatus": "completed",
-  "summary": "Horizon H26 (terminal assurance): run-h26-assurance-bundle chains run-h25-assurance-bundle + check:stage-promotion-readiness (canary, allow-horizon-mismatch); unified-ci folds standalone stage-promotion step into H26; verify:sustainment-loop post-H26; verify:sustainment-loop:h25-legacy.",
+  "summary": "Horizon H27 (terminal assurance): run-h27-assurance-bundle chains validate:horizon-status + run-h26-assurance-bundle; unified-ci removes duplicate horizon-status step; verify:sustainment-loop post-H27 (H27 bundle + closeout only); verify:sustainment-loop:h26-legacy.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -226,7 +226,8 @@
         "H23",
         "H24",
         "H25",
-        "H26"
+        "H26",
+        "H27"
       ]
     },
     {
@@ -243,7 +244,8 @@
         "H23",
         "H24",
         "H25",
-        "H26"
+        "H26",
+        "H27"
       ]
     },
     {
@@ -259,7 +261,8 @@
         "H23",
         "H24",
         "H25",
-        "H26"
+        "H26",
+        "H27"
       ]
     },
     {
@@ -274,7 +277,8 @@
         "H23",
         "H24",
         "H25",
-        "H26"
+        "H26",
+        "H27"
       ]
     },
     {
@@ -288,7 +292,8 @@
         "H23",
         "H24",
         "H25",
-        "H26"
+        "H26",
+        "H27"
       ]
     },
     {
@@ -309,7 +314,8 @@
         "H23",
         "H24",
         "H25",
-        "H26"
+        "H26",
+        "H27"
       ]
     },
     {
@@ -320,7 +326,8 @@
       "horizons": [
         "H24",
         "H25",
-        "H26"
+        "H26",
+        "H27"
       ]
     },
     {
@@ -330,7 +337,8 @@
       "required": true,
       "horizons": [
         "H25",
-        "H26"
+        "H26",
+        "H27"
       ]
     },
     {
@@ -339,7 +347,17 @@
       "artifactPattern": "evidence/h26-assurance-bundle-*.json",
       "required": true,
       "horizons": [
-        "H26"
+        "H26",
+        "H27"
+      ]
+    },
+    {
+      "id": "h27-assurance-bundle",
+      "command": "node ./scripts/run-h27-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h27-assurance-bundle-*.json",
+      "required": true,
+      "horizons": [
+        "H27"
       ]
     }
   ],
@@ -1232,7 +1250,7 @@
     },
     {
       "id": "h26-action-2",
-      "summary": "post-H26 sustainment loop; verify:sustainment-loop; validate:post-h26-sustainment-manifest; verify:sustainment-loop:h25-legacy.",
+      "summary": "Legacy post-H26 sustainment (verify:sustainment-loop:h26-legacy); terminal loop is post-H27 (run-post-h26-sustainment-loop-legacy.mjs).",
       "targetHorizon": "H26",
       "status": "completed",
       "tags": [
@@ -1245,6 +1263,39 @@
       "id": "h26-action-3",
       "summary": "Goal policy H25\u2192H26 transition; validate:goal-policy-file extends through H26 inside run-h23-assurance-bundle.",
       "targetHorizon": "H26",
+      "status": "completed",
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
+    },
+    {
+      "id": "h27-action-1",
+      "summary": "run-h27-assurance-bundle: horizon status schema gate + run-h26-assurance-bundle terminal chain.",
+      "targetHorizon": "H27",
+      "status": "completed",
+      "tags": [
+        "ci",
+        "validation",
+        "operations"
+      ]
+    },
+    {
+      "id": "h27-action-2",
+      "summary": "post-H27 sustainment loop; verify:sustainment-loop; validate:post-h27-sustainment-manifest; verify:sustainment-loop:h26-legacy.",
+      "targetHorizon": "H27",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
+    },
+    {
+      "id": "h27-action-3",
+      "summary": "Goal policy H26\u2192H27 transition; validate:goal-policy-file extends through H27 inside run-h23-assurance-bundle.",
+      "targetHorizon": "H27",
       "status": "completed",
       "tags": [
         "policy",
@@ -1622,6 +1673,25 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H26->H27": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          },
+          "ci": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -1738,7 +1808,11 @@
     },
     "H26": {
       "status": "completed",
-      "summary": "Terminal assurance: run-h26-assurance-bundle (H25 chain + stage promotion readiness); post-H26 sustainment via verify:sustainment-loop + validate:h26-closeout."
+      "summary": "Stage promotion + H25 sub-chain (non-terminal vs H27): run-h26-assurance-bundle (H25 + stage promotion readiness); consumed by run-h27-assurance-bundle."
+    },
+    "H27": {
+      "status": "completed",
+      "summary": "Terminal assurance: run-h27-assurance-bundle (validate:horizon-status + H26 chain); post-H27 sustainment via verify:sustainment-loop + validate:h27-closeout."
     }
   },
   "history": [
@@ -2017,6 +2091,12 @@
       "horizon": "H26",
       "status": "completed",
       "note": "H26 terminal assurance: run-h26-assurance-bundle chains run-h25-assurance-bundle + stage-promotion-readiness; unified-ci removes duplicate stage gate; verify:sustainment-loop post-H26; verify:sustainment-loop:h25-legacy; H25->H26 goal policy."
+    },
+    {
+      "timestamp": "2026-05-14T12:00:00Z",
+      "horizon": "H27",
+      "status": "completed",
+      "note": "H27 terminal assurance: run-h27-assurance-bundle chains validate:horizon-status + run-h26-assurance-bundle; unified-ci drops duplicate validate:horizon-status; verify:sustainment-loop post-H27; verify:sustainment-loop:h26-legacy; H26->H27 goal policy."
     }
   ]
 }

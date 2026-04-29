@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Horizon H26 terminal assurance bundle: **`run-h25-assurance-bundle`** then **`check:stage-promotion-readiness`**
+ * Horizon H26 assurance bundle (non-terminal vs **H27**): **`run-h25-assurance-bundle`** then **`check:stage-promotion-readiness`**
  * (canary target, horizon mismatch allowed — matches unified-ci).
  *
  * Prerequisites: same as **H25** — **`validate:initial-scope`** merge inputs and **`validate:all`** artifacts under **`evidence/`**.

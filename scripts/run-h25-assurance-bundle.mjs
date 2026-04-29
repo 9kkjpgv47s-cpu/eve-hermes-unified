@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Horizon H25 terminal assurance bundle: horizon-metadata replay (**`run-h6-assurance-bundle`** + **`run-h16-assurance-bundle`**)
- * then **H24** pre-build gates + policy chain (**`run-h24-assurance-bundle.mjs`**). Consumed by **`run-h26-assurance-bundle.mjs`** (terminal vs **H26**).
+ * then **H24** pre-build gates + policy chain (**`run-h24-assurance-bundle.mjs`**). Consumed by **`run-h26-assurance-bundle.mjs`** (then **`run-h27-assurance-bundle.mjs`** — terminal vs **H27**).
  *
  * Prerequisites: **`validate:initial-scope`** has populated merge inputs; **`validate:all`** has run so **H23** and **H22** inner chains can execute inside **H24**.
  */

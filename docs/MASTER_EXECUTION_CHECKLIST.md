@@ -85,23 +85,22 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H26 sustainment (continuous)
+## Phase 8 - Post-H27 sustainment (continuous)
 
-After horizon **H26** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H27** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
-- [x] `npm run validate:horizon-status` exits `0`.
-- [x] `npm run run:h26-assurance-bundle` exits `0` and emits `evidence/h26-assurance-bundle-*.json` (H25 chain + stage promotion readiness).
-- [x] `npm run validate:h26-closeout` exits `0` (uses evidence under `evidence/`).
+- [x] `npm run run:h27-assurance-bundle` exits `0` and emits `evidence/h27-assurance-bundle-*.json` (**`validate:horizon-status`** + H26 chain).
+- [x] `npm run validate:h27-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains horizon status + H26 assurance bundle + H26 closeout and writes `evidence/post-h26-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains H27 assurance bundle + H27 closeout and writes `evidence/post-h27-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [x] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [x] `npm run validate:post-h26-sustainment-manifest` exits `0`.
+- [x] `npm run validate:post-h27-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h25-legacy`** / **`validate:post-h25-sustainment-manifest`** (H25-only chain); **`npm run verify:sustainment-loop:h24-legacy`** … **`h6-legacy`**.
+Historical sustainment: **`npm run verify:sustainment-loop:h26-legacy`** / **`validate:post-h26-sustainment-manifest`** (H26-only chain); **`npm run verify:sustainment-loop:h25-legacy`** … **`h6-legacy`**.
 
 Exit criteria:
 

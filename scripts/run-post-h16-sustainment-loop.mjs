@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Post-H16 sustainment loop: horizon metadata, H16 assurance bundle, evidence volume.
- * H17 closeout (`validate:h17-closeout`) is validated separately; including it here would
- * recurse because H17 required evidence references this loop's manifest.
+ * Post-H16 sustainment loop: horizon metadata, terminal assurance bundle (H18 chains H17→H16),
+ * evidence volume. Horizon closeout gates that require this manifest must not nest the
+ * same closeout command inside this loop.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -35,25 +35,26 @@ const manifestPath =
   path.join(evidenceDir, `post-h16-sustainment-loop-${stamp}.json`);
 
 const horizonStatus = runNpm("validate:horizon-status");
-const assurance = runNpm("run:h16-assurance-bundle");
+const assurance = runNpm("run:h18-assurance-bundle");
 const evidenceVolume = runNpm("validate:evidence-volume");
 
 const horizonStatusPass = horizonStatus.exitCode === 0;
-const h16AssuranceBundlePass = assurance.exitCode === 0;
+const terminalAssuranceBundlePass = assurance.exitCode === 0;
 const evidenceVolumePass = evidenceVolume.exitCode === 0;
-const pass = horizonStatusPass && h16AssuranceBundlePass && evidenceVolumePass;
+const pass = horizonStatusPass && terminalAssuranceBundlePass && evidenceVolumePass;
 
 const manifest = {
   generatedAtIso: new Date().toISOString(),
   pass,
   checks: {
     horizonStatusPass,
-    h16AssuranceBundlePass,
+    h16AssuranceBundlePass: terminalAssuranceBundlePass,
+    terminalAssuranceBundlePass,
     evidenceVolumePass,
   },
   steps: [
     { id: "validate_horizon_status", ...horizonStatus },
-    { id: "run_h16_assurance_bundle", ...assurance },
+    { id: "run_h18_assurance_bundle", ...assurance },
     { id: "validate_evidence_volume", ...evidenceVolume },
   ],
 };

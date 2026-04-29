@@ -30,7 +30,9 @@ const checks = payload.checks && typeof payload.checks === "object" ? payload.ch
 const failures = [];
 if (payload.pass !== true) failures.push("pass_not_true");
 if (checks.horizonStatusPass !== true) failures.push("horizonStatusPass");
-if (checks.h16AssuranceBundlePass !== true) failures.push("h16AssuranceBundlePass");
+if (checks.h16AssuranceBundlePass !== true && checks.terminalAssuranceBundlePass !== true) {
+  failures.push("terminalAssuranceBundlePass");
+}
 if (checks.evidenceVolumePass !== true) failures.push("evidenceVolumePass");
 
 if (failures.length > 0) {

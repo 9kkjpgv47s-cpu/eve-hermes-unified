@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-30T22:00:00Z",
+  "updatedAtIso": "2026-04-30T23:45:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H17",
-  "activeStatus": "in_progress",
-  "summary": "Horizon H17 (evidence volume + sustainment): validate:evidence-volume gates flat evidence/ growth; post-H16 sustainment loop runs H16 bundle + volume (H17 closeout is validated separately via validate:h17-closeout); goal policy extends through H17.",
+  "activeHorizon": "H18",
+  "activeStatus": "completed",
+  "summary": "Horizon H18 closed: terminal assurance bundle (H17 + prune rehearsal), goal policy H2→H18, post-H16 sustainment runs run:h18-assurance-bundle + evidence volume; H17 completed with volume + sustainment evidence.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -160,6 +160,34 @@
       "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
       "required": true,
       "horizons": ["H17"]
+    },
+    {
+      "id": "h17-assurance-bundle",
+      "command": "node ./scripts/run-h17-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h17-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H18"]
+    },
+    {
+      "id": "h18-assurance-bundle",
+      "command": "node ./scripts/run-h18-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h18-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H18"]
+    },
+    {
+      "id": "h18-evidence-volume",
+      "command": "npm run validate:evidence-volume",
+      "artifactPattern": "evidence/evidence-volume-report-*.json",
+      "required": true,
+      "horizons": ["H18"]
+    },
+    {
+      "id": "h18-post-h16-sustainment",
+      "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
+      "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
+      "required": true,
+      "horizons": ["H18"]
     }
   ],
   "nextActions": [
@@ -590,7 +618,7 @@
     },
     {
       "id": "h17-action-2",
-      "summary": "Extend post-H16 sustainment loop with evidence volume step and validate:h17-closeout gate.",
+      "summary": "Extend post-H16 sustainment loop with evidence volume; validate:h17-closeout remains separate from the loop manifest.",
       "targetHorizon": "H17",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
@@ -599,6 +627,27 @@
       "id": "h17-action-3",
       "summary": "Goal policy H16→H17 transition; validate:goal-policy-file through H17; horizon sequences include H17.",
       "targetHorizon": "H17",
+      "status": "completed",
+      "tags": ["policy", "documentation", "validation"]
+    },
+    {
+      "id": "h18-action-1",
+      "summary": "H17 assurance bundle: chain run:h16-assurance-bundle + npm run verify:evidence-prune; artifact evidence/h17-assurance-bundle-*.json.",
+      "targetHorizon": "H18",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "durability"]
+    },
+    {
+      "id": "h18-action-2",
+      "summary": "H18 terminal assurance bundle: chain run:h17-assurance-bundle + prune-evidence rehearsal (long TTL dry-run path); artifact evidence/h18-assurance-bundle-*.json.",
+      "targetHorizon": "H18",
+      "status": "completed",
+      "tags": ["validation", "operations", "tooling"]
+    },
+    {
+      "id": "h18-action-3",
+      "summary": "Goal policy H17→H18 transition; validate:goal-policy-file through H18; extend VALID_HORIZONS/HORIZON_SEQUENCE; post-H16 sustainment runs run:h18-assurance-bundle.",
+      "targetHorizon": "H18",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
     }
@@ -829,6 +878,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H17->H18": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "sustainment": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -905,11 +969,15 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H16), manifest schema sweep, and evidence volume check; terminal sustainment extended by H17 volume gate."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H18), manifest schema sweep, and evidence volume check; superseded in sustainment by run-h18-assurance-bundle terminal chain."
     },
     "H17": {
-      "status": "in_progress",
-      "summary": "Evidence directory volume guardrails and post-H16 sustainment loop extension (volume report + H17 closeout)."
+      "status": "completed",
+      "summary": "Evidence volume gate + post-H16 sustainment (horizon + terminal chain predecessor + volume); H17 assurance bundle adds verify:evidence-prune to H16 stack; closed toward H18 terminal assurance."
+    },
+    "H18": {
+      "status": "completed",
+      "summary": "Terminal assurance chain: run:h18-assurance-bundle (H17 + prune rehearsal), goal policy through H18, sustainment loop runs terminal bundle + evidence volume; H18 actions completed."
     }
   },
   "history": [
@@ -1128,6 +1196,12 @@
       "horizon": "H16",
       "status": "completed",
       "note": "H16 merge readiness policy gates: run-h16-assurance-bundle chains H15 + validate:goal-policy-file (H2→H16) + validate:manifest-schemas; verify:sustainment-loop post-H16; verify:sustainment-loop:h15-legacy; H15->H16 goal policy; terminal closeout at H16."
+    },
+    {
+      "timestamp": "2026-04-30T23:30:00Z",
+      "horizon": "H18",
+      "status": "in_progress",
+      "note": "H18 scaffold and closeout: H17/H18 assurance bundles, goal policy H17→H18, sustainment runs run:h18-assurance-bundle; progressive-goal check skips terminal active horizon; H18 actions completed."
     }
   ]
 }

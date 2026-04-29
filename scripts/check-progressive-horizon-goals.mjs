@@ -4,7 +4,26 @@ import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17"];
+const HORIZON_SEQUENCE = [
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "H7",
+  "H8",
+  "H9",
+  "H10",
+  "H11",
+  "H12",
+  "H13",
+  "H14",
+  "H15",
+  "H16",
+  "H17",
+  "H18",
+];
 
 function parseArgs(argv) {
   const options = {
@@ -126,6 +145,8 @@ async function main() {
   const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
   const derivedNext = sourceIndex >= 0 ? HORIZON_SEQUENCE[sourceIndex + 1] ?? "" : "";
   const nextHorizon = normalizeHorizon(options.nextHorizon, derivedNext);
+  const terminalSource =
+    sourceIndex >= 0 && sourceIndex === HORIZON_SEQUENCE.length - 1 && !isNonEmptyString(options.nextHorizon);
   const outPath = path.resolve(
     options.out ||
       path.join(
@@ -145,7 +166,7 @@ async function main() {
   if (!sourceHorizon) {
     failures.push(`invalid_source_horizon:${String(options.sourceHorizon ?? "<empty>")}`);
   }
-  if (!nextHorizon) {
+  if (!nextHorizon && !terminalSource) {
     failures.push(`invalid_next_horizon:${String(options.nextHorizon ?? "<empty>")}`);
   }
   if (
@@ -237,6 +258,12 @@ async function main() {
     requiredTaggedActionCounts = normalizedTagCounts;
   }
 
+  const nextHorizonState = nextHorizon ? horizonStatus?.horizonStates?.[nextHorizon] : null;
+  const nextHorizonFullyCompleted =
+    nextHorizonState && typeof nextHorizonState === "object"
+      ? String(nextHorizonState.status ?? "").trim().toLowerCase() === "completed"
+      : false;
+
   const sourceActions = Array.isArray(horizonStatus?.nextActions)
     ? horizonStatus.nextActions.filter(
         (action) =>
@@ -278,34 +305,38 @@ async function main() {
     );
   }
 
-  if (goalDelta < options.minimumGoalIncrease) {
-    failures.push(
-      `insufficient_goal_increase:${String(goalDelta)}<${String(options.minimumGoalIncrease)}`,
-    );
-  }
-  if (nextActionCount < requiredNextActionCount) {
-    failures.push(
-      `next_action_count_below_growth_target:${String(nextActionCount)}<${String(requiredNextActionCount)}`,
-    );
-  }
-  if (nextPendingActionCount < options.minPendingNextActions) {
-    failures.push(
-      `next_pending_action_count_below_min:${String(nextPendingActionCount)}<${String(options.minPendingNextActions)}`,
-    );
-  }
-
-  const nextTagCounts = countRequiredTags(nextActions, requiredTaggedActionCounts);
-  for (const [tag, requirement] of Object.entries(requiredTaggedActionCounts)) {
-    const actual = nextTagCounts[tag] ?? { total: 0, pending: 0 };
-    if (Number(actual.total) < Number(requirement.minCount)) {
+  let nextTagCounts = {};
+  const skipNextHorizonGrowthChecks = terminalSource || nextHorizonFullyCompleted;
+  if (!skipNextHorizonGrowthChecks) {
+    if (goalDelta < options.minimumGoalIncrease) {
       failures.push(
-        `required_tag_count_below_min:${tag}:${String(actual.total)}<${String(requirement.minCount)}`,
+        `insufficient_goal_increase:${String(goalDelta)}<${String(options.minimumGoalIncrease)}`,
       );
     }
-    if (Number(actual.pending) < Number(requirement.minPendingCount)) {
+    if (nextActionCount < requiredNextActionCount) {
       failures.push(
-        `required_tag_pending_count_below_min:${tag}:${String(actual.pending)}<${String(requirement.minPendingCount)}`,
+        `next_action_count_below_growth_target:${String(nextActionCount)}<${String(requiredNextActionCount)}`,
       );
+    }
+    if (nextPendingActionCount < options.minPendingNextActions) {
+      failures.push(
+        `next_pending_action_count_below_min:${String(nextPendingActionCount)}<${String(options.minPendingNextActions)}`,
+      );
+    }
+
+    nextTagCounts = countRequiredTags(nextActions, requiredTaggedActionCounts);
+    for (const [tag, requirement] of Object.entries(requiredTaggedActionCounts)) {
+      const actual = nextTagCounts[tag] ?? { total: 0, pending: 0 };
+      if (Number(actual.total) < Number(requirement.minCount)) {
+        failures.push(
+          `required_tag_count_below_min:${tag}:${String(actual.total)}<${String(requirement.minCount)}`,
+        );
+      }
+      if (Number(actual.pending) < Number(requirement.minPendingCount)) {
+        failures.push(
+          `required_tag_pending_count_below_min:${tag}:${String(actual.pending)}<${String(requirement.minPendingCount)}`,
+        );
+      }
     }
   }
 

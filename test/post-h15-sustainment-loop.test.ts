@@ -6,19 +6,19 @@ import { runCommandWithTimeout } from "../src/process/exec.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-describe("run-post-h14-sustainment-loop.mjs (legacy)", () => {
-  it("exposes verify:sustainment-loop:h14-legacy npm script", async () => {
+describe("run-post-h15-sustainment-loop.mjs", () => {
+  it("exposes verify:sustainment-loop npm script", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop:h14-legacy"]).toContain("run-post-h14-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h15-sustainment-loop.mjs");
   });
 
   it(
-    "emits pass and structured checks in legacy sustainment loop manifest",
+    "emits pass and structured checks in sustainment loop manifest",
     async () => {
       const result = await runCommandWithTimeout(
-        ["node", path.join(repoRoot, "scripts/run-post-h14-sustainment-loop.mjs")],
-        { timeoutMs: 240_000 },
+        ["node", path.join(repoRoot, "scripts/run-post-h15-sustainment-loop.mjs")],
+        { timeoutMs: 300_000 },
       );
       expect(result.code).toBe(0);
       const out = result.stdout.trim();
@@ -28,21 +28,21 @@ describe("run-post-h14-sustainment-loop.mjs (legacy)", () => {
         pass?: boolean;
         checks?: {
           horizonStatusPass?: boolean;
-          h14AssuranceBundlePass?: boolean;
-          h14CloseoutGatePass?: boolean;
+          h15AssuranceBundlePass?: boolean;
+          h15CloseoutGatePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks?.horizonStatusPass).toBe(true);
-      expect(payload.checks?.h14AssuranceBundlePass).toBe(true);
-      expect(payload.checks?.h14CloseoutGatePass).toBe(true);
+      expect(payload.checks?.h15AssuranceBundlePass).toBe(true);
+      expect(payload.checks?.h15CloseoutGatePass).toBe(true);
     },
-    240_000,
+    300_000,
   );
 
-  it("validate:post-h14-sustainment-manifest passes on latest loop output", async () => {
+  it("validate:post-h15-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/validate-post-h14-sustainment-manifest.mjs")],
+      ["node", path.join(repoRoot, "scripts/validate-post-h15-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

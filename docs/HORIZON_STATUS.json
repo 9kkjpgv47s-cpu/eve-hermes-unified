@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-02T12:00:00Z",
+  "updatedAtIso": "2026-05-03T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H14",
+  "activeHorizon": "H15",
   "activeStatus": "completed",
-  "summary": "Horizon H14 (shell unified dispatch ingress): scripts/unified-dispatch-runner.sh + validate-shell-unified-dispatch.sh; soak/regression/cutover/failure-injection scripts use resolver (tsx without prior build); run-h14-assurance-bundle chains H13 + shell gate; terminal sustainment verify:sustainment-loop post-H14; legacy verify:sustainment-loop:h13-legacy.",
+  "summary": "Horizon H15 (shell dispatch CI convergence): validate-shell-unified-dispatch-ci.mjs scans scripts/*.sh (except unified-dispatch-runner.sh) to forbid dist-only or direct node/tsx unified-dispatch invocations; run-h15-assurance-bundle chains H14 + CI scan; verify:sustainment-loop post-H15; verify:sustainment-loop:h14-legacy for post-H14 loop.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -132,6 +132,13 @@
       "artifactPattern": "evidence/h14-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H14"]
+    },
+    {
+      "id": "h15-assurance-bundle",
+      "command": "node ./scripts/run-h15-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h15-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H15"]
     }
   ],
   "nextActions": [
@@ -503,6 +510,27 @@
       "targetHorizon": "H14",
       "status": "completed",
       "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h15-action-1",
+      "summary": "CI static scan validate-shell-unified-dispatch-ci.mjs forbids scripts/*.sh from embedding dist paths or direct node/tsx unified-dispatch invocations outside unified-dispatch-runner.sh.",
+      "targetHorizon": "H15",
+      "status": "completed",
+      "tags": ["validation", "ci", "convergence"]
+    },
+    {
+      "id": "h15-action-2",
+      "summary": "H15 assurance bundle extends H14 with shell CI scan; validate:h15-closeout and post-H15 sustainment loop manifest.",
+      "targetHorizon": "H15",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h15-action-3",
+      "summary": "Goal policy H14→H15 transition; verify:sustainment-loop post-H15; verify:sustainment-loop:h14-legacy for prior chain.",
+      "targetHorizon": "H15",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -686,6 +714,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H14->H15": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "ci": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -755,6 +798,10 @@
     "H14": {
       "status": "completed",
       "summary": "Shell ingress convergence: unified-dispatch-runner.sh for soak/regression/cutover/failure-injection; H14 assurance adds validate-shell-unified-dispatch gate on top of H13 bundle."
+    },
+    "H15": {
+      "status": "completed",
+      "summary": "Shell dispatch CI convergence: validate-shell-unified-dispatch-ci.mjs blocks bypass of unified-dispatch-runner.sh in scripts/*.sh; H15 assurance chains H14 + CI scan; terminal sustainment post-H15."
     }
   },
   "history": [
@@ -961,6 +1008,12 @@
       "horizon": "H14",
       "status": "completed",
       "note": "H14 shell unified dispatch ingress: unified-dispatch-runner.sh + validate-shell-unified-dispatch.sh; soak/regression/cutover/failure-injection refactored; run-h14-assurance-bundle + post-H14 sustainment; H13->H14 goal policy."
+    },
+    {
+      "timestamp": "2026-05-03T12:00:00Z",
+      "horizon": "H15",
+      "status": "completed",
+      "note": "H15 shell dispatch CI convergence: validate-shell-unified-dispatch-ci.mjs static scan; run-h15-assurance-bundle chains H14 + scan; verify:sustainment-loop post-H15; verify:sustainment-loop:h14-legacy; H14->H15 goal policy; terminal closeout at H15."
     }
   ]
 }

@@ -437,6 +437,7 @@ async function seedHorizonStatus(horizonPath: string): Promise<void> {
           H13: { status: "planned", summary: "H13 planned" },
 
           H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
         },
         history: [
           {

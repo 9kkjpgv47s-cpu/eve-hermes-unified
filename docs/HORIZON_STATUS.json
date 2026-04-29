@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-19T12:00:00Z",
+  "updatedAtIso": "2026-05-20T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H29",
+  "activeHorizon": "H30",
   "activeStatus": "completed",
-  "summary": "Horizon H29 (terminal sustainment + evidence-gates gate evidence): verify:sustainment-loop runs post-H29 chain (post-H28 sustainment + run:evidence-gates-evidence + validate:h29-closeout); verify:sustainment-loop:h28-legacy replays H28 chain without evidence-gates artifact; validate:post-h29-sustainment-manifest gates the newest loop manifest.",
+  "summary": "Horizon H30 (terminal sustainment + horizon-status gate evidence): verify:sustainment-loop runs post-H30 chain (post-H29 sustainment + run:horizon-status-evidence + validate:h30-closeout); verify:sustainment-loop:h29-legacy replays H29 chain without horizon-status artifact; validate:post-h30-sustainment-manifest gates the newest loop manifest.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -229,7 +229,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -249,7 +250,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -268,7 +270,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -286,7 +289,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -303,7 +307,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -319,7 +324,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -334,7 +340,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -348,7 +355,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -361,7 +369,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -373,7 +382,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -384,7 +394,8 @@
       "horizons": [
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -394,7 +405,8 @@
       "required": true,
       "horizons": [
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -403,7 +415,17 @@
       "artifactPattern": "evidence/evidence-gates-evidence-*.json",
       "required": true,
       "horizons": [
-        "H29"
+        "H29",
+        "H30"
+      ]
+    },
+    {
+      "id": "h30-horizon-status-evidence",
+      "command": "node ./scripts/run-horizon-status-evidence.mjs",
+      "artifactPattern": "evidence/horizon-status-evidence-*.json",
+      "required": true,
+      "horizons": [
+        "H30"
       ]
     }
   ],
@@ -967,7 +989,7 @@
     },
     {
       "id": "h16-action-2",
-      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H29.",
+      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H30.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": [
@@ -978,7 +1000,7 @@
     },
     {
       "id": "h16-action-3",
-      "summary": "Goal policy H15\u2192H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2\u2192H29 before validate:all in CI.",
+      "summary": "Goal policy H15\u2192H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2\u2192H30 before validate:all in CI.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": [
@@ -1396,7 +1418,7 @@
     },
     {
       "id": "h29-action-2",
-      "summary": "post-H29 sustainment loop; verify:sustainment-loop; validate:post-h29-sustainment-manifest; verify:sustainment-loop:h28-legacy for H28 chain without evidence-gates artifact.",
+      "summary": "post-H29 sustainment loop (legacy); verify:sustainment-loop:h29-legacy; validate:post-h29-sustainment-manifest; verify:sustainment-loop:h28-legacy for H28 chain without evidence-gates artifact.",
       "targetHorizon": "H29",
       "status": "completed",
       "tags": [
@@ -1409,6 +1431,39 @@
       "id": "h29-action-3",
       "summary": "Goal policy H28\u2192H29 transition; validate:goal-policy-file and run-h16-assurance-bundle extend through H29.",
       "targetHorizon": "H29",
+      "status": "completed",
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
+    },
+    {
+      "id": "h30-action-1",
+      "summary": "run:horizon-status-evidence after post-H29 inner chain in terminal sustainment: machine-readable validate:horizon-status gate for HORIZON_STATUS.json schema alignment.",
+      "targetHorizon": "H30",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "operations",
+        "metadata"
+      ]
+    },
+    {
+      "id": "h30-action-2",
+      "summary": "post-H30 sustainment loop; verify:sustainment-loop; validate:post-h30-sustainment-manifest; verify:sustainment-loop:h29-legacy for H29 chain without horizon-status artifact.",
+      "targetHorizon": "H30",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
+    },
+    {
+      "id": "h30-action-3",
+      "summary": "Goal policy H29\u2192H30 transition; validate:goal-policy-file and run-h16-assurance-bundle extend through H30.",
+      "targetHorizon": "H30",
       "status": "completed",
       "tags": [
         "policy",
@@ -1823,6 +1878,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H29->H30": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "sustainment": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -1899,59 +1969,63 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2\u2192H29 + manifest schemas + H15 chain; runs before validate:all in CI."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2\u2192H30 + manifest schemas + H15 chain; runs before validate:all in CI."
     },
     "H17": {
       "status": "completed",
-      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18\u2013H29 terminal sustainment chain."
+      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18\u2013H30 terminal sustainment chain."
     },
     "H18": {
       "status": "completed",
-      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; prerequisite for H19\u2013H29 sustainment."
+      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; prerequisite for H19\u2013H30 sustainment."
     },
     "H19": {
       "status": "completed",
-      "summary": "Terminal sustainment + CI soak SLO (legacy): post-H19 loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; superseded by H20\u2013H29."
+      "summary": "Terminal sustainment + CI soak SLO (legacy): post-H19 loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; superseded by H20\u2013H30."
     },
     "H20": {
       "status": "completed",
-      "summary": "Terminal sustainment + entrypoints evidence (legacy): post-H20 loop adds run:unified-entrypoints-evidence after CI soak; verify:sustainment-loop:h20-legacy; superseded by H21\u2013H29."
+      "summary": "Terminal sustainment + entrypoints evidence (legacy): post-H20 loop adds run:unified-entrypoints-evidence after CI soak; verify:sustainment-loop:h20-legacy; superseded by H21\u2013H30."
     },
     "H21": {
       "status": "completed",
-      "summary": "Terminal sustainment + shell dispatch CI evidence (legacy): post-H21 loop adds run:shell-unified-dispatch-ci-evidence after entrypoints; verify:sustainment-loop:h21-legacy; superseded by H22\u2013H29."
+      "summary": "Terminal sustainment + shell dispatch CI evidence (legacy): post-H21 loop adds run:shell-unified-dispatch-ci-evidence after entrypoints; verify:sustainment-loop:h21-legacy; superseded by H22\u2013H30."
     },
     "H22": {
       "status": "completed",
-      "summary": "Terminal sustainment + tenant isolation evidence (legacy inner chain): post-H22 loop adds run:tenant-isolation-evidence after shell CI; verify:sustainment-loop:h22-legacy; superseded as terminal pin by H23\u2013H29."
+      "summary": "Terminal sustainment + tenant isolation evidence (legacy inner chain): post-H22 loop adds run:tenant-isolation-evidence after shell CI; verify:sustainment-loop:h22-legacy; superseded as terminal pin by H23\u2013H30."
     },
     "H23": {
       "status": "completed",
-      "summary": "Terminal sustainment + region failover evidence (legacy inner chain): post-H23 loop chains post-H22 sustainment + run:region-failover-evidence + validate:h23-closeout; verify:sustainment-loop:h23-legacy; superseded as terminal pin by H24\u2013H29."
+      "summary": "Terminal sustainment + region failover evidence (legacy inner chain): post-H23 loop chains post-H22 sustainment + run:region-failover-evidence + validate:h23-closeout; verify:sustainment-loop:h23-legacy; superseded as terminal pin by H24\u2013H30."
     },
     "H24": {
       "status": "completed",
-      "summary": "Terminal sustainment + agent remediation evidence (legacy inner chain): post-H24 loop chains post-H23 sustainment + run:agent-remediation-evidence + validate:h24-closeout; verify:sustainment-loop:h24-legacy; superseded as terminal pin by H25/H26/H27/H28/H29/H29/H29."
+      "summary": "Terminal sustainment + agent remediation evidence (legacy inner chain): post-H24 loop chains post-H23 sustainment + run:agent-remediation-evidence + validate:h24-closeout; verify:sustainment-loop:h24-legacy; superseded as terminal pin by H25\u2013H30."
     },
     "H25": {
       "status": "completed",
-      "summary": "Terminal sustainment + emergency rollback evidence (legacy inner chain): post-H25 loop chains post-H24 sustainment + run:emergency-rollback-evidence + validate:h25-closeout; verify:sustainment-loop:h25-legacy; superseded as terminal pin by H26/H27/H28/H29/H29."
+      "summary": "Terminal sustainment + emergency rollback evidence (legacy inner chain): post-H25 loop chains post-H24 sustainment + run:emergency-rollback-evidence + validate:h25-closeout; verify:sustainment-loop:h25-legacy; superseded as terminal pin by H26\u2013H30."
     },
     "H26": {
       "status": "completed",
-      "summary": "Terminal sustainment + failure-injection evidence (legacy inner chain): post-H26 loop chains post-H25 sustainment + run:failure-injection-evidence + validate:h26-closeout; verify:sustainment-loop:h26-legacy; superseded as terminal pin by H27/H28/H29."
+      "summary": "Terminal sustainment + failure-injection evidence (legacy inner chain): post-H26 loop chains post-H25 sustainment + run:failure-injection-evidence + validate:h26-closeout; verify:sustainment-loop:h26-legacy; superseded as terminal pin by H27/H28/H29/H30."
     },
     "H27": {
       "status": "completed",
-      "summary": "Terminal sustainment + regression-Eve evidence (legacy inner chain): post-H27 loop chains post-H26 sustainment + run:regression-eve-evidence + validate:h27-closeout; verify:sustainment-loop:h27-legacy; superseded as terminal pin by H28/H29 (evidence-summary then evidence-gates gate evidence)."
+      "summary": "Terminal sustainment + regression-Eve evidence (legacy inner chain): post-H27 loop chains post-H26 sustainment + run:regression-eve-evidence + validate:h27-closeout; verify:sustainment-loop:h27-legacy; superseded as terminal pin by H28/H29/H30 (evidence-summary, evidence-gates, then horizon-status gate evidence)."
     },
     "H28": {
       "status": "completed",
-      "summary": "Terminal sustainment + evidence-summary gate evidence (legacy inner chain): post-H28 loop chains post-H27 sustainment + run:evidence-summary-evidence + validate:h28-closeout; verify:sustainment-loop:h28-legacy; superseded as terminal pin by H29 (evidence-gates gate evidence)."
+      "summary": "Terminal sustainment + evidence-summary gate evidence (legacy inner chain): post-H28 loop chains post-H27 sustainment + run:evidence-summary-evidence + validate:h28-closeout; verify:sustainment-loop:h28-legacy; superseded as terminal pin by H29/H30 (evidence-gates then horizon-status gate evidence)."
     },
     "H29": {
       "status": "completed",
-      "summary": "Terminal sustainment pin: post-H29 loop chains post-H28 sustainment + run:evidence-gates-evidence + validate:h29-closeout (requiredEvidence through evidence-gates gate, not the post-H29 manifest); verify:sustainment-loop; validate:post-h29-sustainment-manifest for the post-H29 loop artifact."
+      "summary": "Terminal sustainment + evidence-gates gate evidence (legacy inner chain): post-H29 loop chains post-H28 sustainment + run:evidence-gates-evidence + validate:h29-closeout; verify:sustainment-loop:h29-legacy; superseded as terminal pin by H30 (horizon-status gate evidence)."
+    },
+    "H30": {
+      "status": "completed",
+      "summary": "Terminal sustainment pin: post-H30 loop chains post-H29 sustainment + run:horizon-status-evidence + validate:h30-closeout (requiredEvidence through horizon-status gate, not the post-H30 manifest); verify:sustainment-loop; validate:post-h30-sustainment-manifest for the post-H30 loop artifact."
     }
   },
   "history": [
@@ -2248,6 +2322,12 @@
       "horizon": "H29",
       "status": "completed",
       "note": "H29 terminal sustainment + evidence-gates gate evidence: run-post-h29-sustainment-loop wraps post-H28 loop + run:evidence-gates-evidence + validate:h29-closeout; verify:sustainment-loop switched to H29 chain; verify:sustainment-loop:h28-legacy preserves H28 inner chain; validate:post-h29-sustainment-manifest; goalPolicies H28->H29; VALID_HORIZONS H29; H16 bundle goal-policy through H29."
+    },
+    {
+      "timestamp": "2026-05-20T12:00:00Z",
+      "horizon": "H30",
+      "status": "completed",
+      "note": "H30 terminal sustainment + horizon-status gate evidence: run-post-h30-sustainment-loop wraps post-H29 loop + run:horizon-status-evidence + validate:h30-closeout; verify:sustainment-loop switched to H30 chain; verify:sustainment-loop:h29-legacy preserves H29 inner chain; validate:post-h30-sustainment-manifest; goalPolicies H29->H30; VALID_HORIZONS H30; H16 bundle goal-policy through H30."
     }
   ]
 }

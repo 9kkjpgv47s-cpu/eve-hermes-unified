@@ -33,6 +33,8 @@ const HORIZON_SEQUENCE = [
   "H26",
   "H27",
   "H28",
+  "H29",
+  "H30",
 ];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
@@ -63,6 +65,8 @@ const HORIZON_STAGE_MAP = {
   H26: "full",
   H27: "full",
   H28: "full",
+  H29: "full",
+  H30: "full",
 };
 
 function isNonEmptyString(value) {
@@ -452,6 +456,12 @@ function commandVerificationType(command) {
   if (command === "node ./scripts/run-post-h28-sustainment-loop.mjs") {
     return "post-h28-sustainment-loop";
   }
+  if (command === "node ./scripts/run-post-h29-sustainment-loop.mjs") {
+    return "post-h29-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h30-sustainment-loop.mjs") {
+    return "post-h30-sustainment-loop";
+  }
   if (command === "node ./scripts/run-h23-assurance-bundle.mjs") {
     return "h23-assurance-bundle";
   }
@@ -469,6 +479,12 @@ function commandVerificationType(command) {
   }
   if (command === "node ./scripts/run-h28-assurance-bundle.mjs") {
     return "h28-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h29-assurance-bundle.mjs") {
+    return "h29-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h30-assurance-bundle.mjs") {
+    return "h30-assurance-bundle";
   }
   if (command === "node ./scripts/run-tenant-isolation-evidence.mjs") {
     return "tenant-isolation-evidence";
@@ -1497,6 +1513,34 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "h29-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h29_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH28SustainmentLoopPass !== true) {
+      checks.push("h29_assurance_post_h28_sustainment_not_passed");
+    }
+    if (signal.manifestSchemasPass !== true) {
+      checks.push("h29_assurance_manifest_schemas_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h30-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h30_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h29AssuranceBundlePass !== true) {
+      checks.push("h30_assurance_h29_bundle_not_passed");
+    }
+    if (signal.horizonStatusRecheckPass !== true) {
+      checks.push("h30_assurance_horizon_status_recheck_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   if (verificationType === "post-h6-sustainment-loop") {
     const checks = [];
     if (payload.pass !== true) {
@@ -2041,6 +2085,76 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "post-h29-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h29_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h29_horizon_status_not_passed");
+    }
+    if (signal.h17AssuranceBundlePass !== true) {
+      checks.push("post_h29_h17_assurance_bundle_not_passed");
+    }
+    if (signal.h18AssuranceBundlePass !== true) {
+      checks.push("post_h29_h18_assurance_bundle_not_passed");
+    }
+    if (signal.ciSoakSloGatePass !== true) {
+      checks.push("post_h29_ci_soak_slo_gate_not_passed");
+    }
+    if (signal.unifiedEntrypointsEvidencePass !== true) {
+      checks.push("post_h29_unified_entrypoints_evidence_not_passed");
+    }
+    if (signal.shellUnifiedDispatchCiEvidencePass !== true) {
+      checks.push("post_h29_shell_unified_dispatch_ci_evidence_not_passed");
+    }
+    if (signal.tenantIsolationEvidencePass !== true) {
+      checks.push("post_h29_tenant_isolation_evidence_not_passed");
+    }
+    if (signal.h29AssuranceBundlePass !== true) {
+      checks.push("post_h29_h29_assurance_bundle_not_passed");
+    }
+    if (signal.h29CloseoutGatePass !== true) {
+      checks.push("post_h29_h29_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h30-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h30_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h30_horizon_status_not_passed");
+    }
+    if (signal.h17AssuranceBundlePass !== true) {
+      checks.push("post_h30_h17_assurance_bundle_not_passed");
+    }
+    if (signal.h18AssuranceBundlePass !== true) {
+      checks.push("post_h30_h18_assurance_bundle_not_passed");
+    }
+    if (signal.ciSoakSloGatePass !== true) {
+      checks.push("post_h30_ci_soak_slo_gate_not_passed");
+    }
+    if (signal.unifiedEntrypointsEvidencePass !== true) {
+      checks.push("post_h30_unified_entrypoints_evidence_not_passed");
+    }
+    if (signal.shellUnifiedDispatchCiEvidencePass !== true) {
+      checks.push("post_h30_shell_unified_dispatch_ci_evidence_not_passed");
+    }
+    if (signal.tenantIsolationEvidencePass !== true) {
+      checks.push("post_h30_tenant_isolation_evidence_not_passed");
+    }
+    if (signal.h30AssuranceBundlePass !== true) {
+      checks.push("post_h30_h30_assurance_bundle_not_passed");
+    }
+    if (signal.h30CloseoutGatePass !== true) {
+      checks.push("post_h30_h30_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   const checks = payload.pass === true ? [] : ["artifact_not_passed"];
   return { pass: checks.length === 0, checks };
 }
@@ -2110,10 +2224,10 @@ async function main() {
       nextHorizon && horizonStatus?.horizonStates?.[nextHorizon]
         ? horizonStatus.horizonStates[nextHorizon]
         : null;
-    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H28, or next horizon already completed (retroactive closeout). */
+    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H30, or next horizon already completed (retroactive closeout). */
     const skipStagePromotionReadiness =
       derivedNext === "" ||
-      targetHorizon === "H28" ||
+      targetHorizon === "H30" ||
       Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
 
     if (!skipStagePromotionReadiness) {

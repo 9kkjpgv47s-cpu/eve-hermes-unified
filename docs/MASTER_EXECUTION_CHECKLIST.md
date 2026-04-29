@@ -91,9 +91,11 @@ After horizon **H16** is completed in `docs/HORIZON_STATUS.json`, operators and 
 
 - [ ] `npm run validate:horizon-status` exits `0`.
 - [ ] `npm run run:h16-assurance-bundle` exits `0` and emits `evidence/h16-assurance-bundle-*.json`.
-- [ ] `npm run validate:h16-closeout` exits `0` (uses evidence under `evidence/`).
+- [ ] `npm run validate:evidence-volume` exits `0` and emits `evidence/evidence-volume-report-*.json`.
 
-Single command (chains the three above and writes `evidence/post-h16-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+When **H17** is active, also run **`npm run validate:h17-closeout`** separately (it consumes the sustainment manifest and must not be nested inside `verify:sustainment-loop`).
+
+Single command (chains horizon status + H16 bundle + evidence volume; writes `evidence/post-h16-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [ ] `npm run verify:sustainment-loop` exits `0`.
 

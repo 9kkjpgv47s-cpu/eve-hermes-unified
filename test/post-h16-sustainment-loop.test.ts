@@ -29,13 +29,13 @@ describe("run-post-h16-sustainment-loop.mjs", () => {
         checks?: {
           horizonStatusPass?: boolean;
           h16AssuranceBundlePass?: boolean;
-          h16CloseoutGatePass?: boolean;
+          evidenceVolumePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks?.horizonStatusPass).toBe(true);
       expect(payload.checks?.h16AssuranceBundlePass).toBe(true);
-      expect(payload.checks?.h16CloseoutGatePass).toBe(true);
+      expect(payload.checks?.evidenceVolumePass).toBe(true);
     },
     360_000,
   );

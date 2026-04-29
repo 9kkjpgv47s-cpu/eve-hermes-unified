@@ -557,6 +557,65 @@ export function validateEvidencePruneRunManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
+export function validateEvidenceVolumeReportManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.schemaVersion === "v1", "schemaVersion must be exactly v1");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(errors, isNonEmptyString(payload.evidenceDir), "evidenceDir must be non-empty string");
+  const thresholds = payload.thresholds;
+  pushError(errors, thresholds && typeof thresholds === "object", "thresholds must be an object");
+  if (thresholds && typeof thresholds === "object") {
+    pushError(
+      errors,
+      typeof thresholds.maxBytes === "number" && Number.isFinite(thresholds.maxBytes) && thresholds.maxBytes > 0,
+      "thresholds.maxBytes must be a positive finite number",
+    );
+    pushError(
+      errors,
+      typeof thresholds.maxFiles === "number" && Number.isFinite(thresholds.maxFiles) && thresholds.maxFiles > 0,
+      "thresholds.maxFiles must be a positive finite number",
+    );
+  }
+  const metrics = payload.metrics;
+  pushError(errors, metrics && typeof metrics === "object", "metrics must be an object");
+  if (metrics && typeof metrics === "object") {
+    pushError(
+      errors,
+      typeof metrics.fileCount === "number" && Number.isFinite(metrics.fileCount) && metrics.fileCount >= 0,
+      "metrics.fileCount must be a non-negative finite number",
+    );
+    pushError(
+      errors,
+      typeof metrics.totalBytes === "number" && Number.isFinite(metrics.totalBytes) && metrics.totalBytes >= 0,
+      "metrics.totalBytes must be a non-negative finite number",
+    );
+  }
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(errors, typeof checks.withinBytes === "boolean", "checks.withinBytes must be boolean");
+    pushError(errors, typeof checks.withinFiles === "boolean", "checks.withinFiles must be boolean");
+  }
+  pushError(errors, Array.isArray(payload.errors), "errors must be an array");
+  if (payload.pass === true) {
+    if (!checks || typeof checks !== "object") {
+      pushError(errors, false, "checks required when pass is true");
+    } else {
+      pushError(errors, checks.withinBytes === true, "total bytes must be within maxBytes budget");
+      pushError(errors, checks.withinFiles === true, "file count must be within maxFiles budget");
+    }
+    if (Array.isArray(payload.errors) && payload.errors.length > 0) {
+      pushError(errors, false, "errors must be empty when pass is true");
+    }
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateMergeBundleManifest(payload) {
   const errors = [];
   pushError(errors, payload && typeof payload === "object", "payload must be an object");
@@ -1630,6 +1689,9 @@ export function validateManifestSchema(type, payload) {
   if (type === "evidence-prune-run") {
     return validateEvidencePruneRunManifest(payload);
   }
+  if (type === "evidence-volume-report") {
+    return validateEvidenceVolumeReportManifest(payload);
+  }
   if (type === "merge-bundle") {
     return validateMergeBundleManifest(payload);
   }
@@ -1785,6 +1847,7 @@ async function listAllManifestTargets(evidenceDir) {
   const h4CloseoutEvidenceTargets = [];
   const h5EvidenceBaselineTargets = [];
   const evidencePruneRunTargets = [];
+  const evidenceVolumeReportTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1890,6 +1953,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "evidence-prune-run",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("evidence-volume-report-") && entry.name.endsWith(".json")) {
+      evidenceVolumeReportTargets.push({
+        type: "evidence-volume-report",
+        file: path.join(evidenceDir, entry.name),
+      });
     } else if (entry.name.startsWith("unified-dispatch-audit-") && entry.name.endsWith(".jsonl")) {
       dispatchAuditJsonlTargets.push({
         type: "unified-dispatch-audit-jsonl",
@@ -1935,6 +2003,7 @@ async function listAllManifestTargets(evidenceDir) {
   h4CloseoutEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
   h5EvidenceBaselineTargets.sort((a, b) => a.file.localeCompare(b.file));
   evidencePruneRunTargets.sort((a, b) => a.file.localeCompare(b.file));
+  evidenceVolumeReportTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1959,6 +2028,7 @@ async function listAllManifestTargets(evidenceDir) {
     h4CloseoutEvidenceTargets,
     h5EvidenceBaselineTargets,
     evidencePruneRunTargets,
+    evidenceVolumeReportTargets,
   };
 }
 
@@ -1976,7 +2046,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|emergency-rollback-bundle|h4-closeout-evidence|h5-evidence-baseline|evidence-prune-run|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
+      "Missing --type (release-readiness|emergency-rollback-bundle|h4-closeout-evidence|h5-evidence-baseline|evidence-prune-run|evidence-volume-report|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
     );
   }
 
@@ -2117,6 +2187,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.evidenceVolumeReportTargets.length > 0
+            ? [
+                targetGroups.evidenceVolumeReportTargets[
+                  targetGroups.evidenceVolumeReportTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -2142,6 +2219,7 @@ async function main() {
           ...targetGroups.h4CloseoutEvidenceTargets,
           ...targetGroups.h5EvidenceBaselineTargets,
           ...targetGroups.evidencePruneRunTargets,
+          ...targetGroups.evidenceVolumeReportTargets,
         ];
     const results = [];
     for (const target of targets) {

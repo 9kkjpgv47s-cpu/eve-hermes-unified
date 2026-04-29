@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Post-H16 sustainment loop: horizon metadata, H16 assurance bundle, H16 closeout gate.
+ * Post-H16 sustainment loop: horizon metadata, H16 assurance bundle, evidence volume.
+ * H17 closeout (`validate:h17-closeout`) is validated separately; including it here would
+ * recurse because H17 required evidence references this loop's manifest.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -34,12 +36,12 @@ const manifestPath =
 
 const horizonStatus = runNpm("validate:horizon-status");
 const assurance = runNpm("run:h16-assurance-bundle");
-const closeout = runNpm("validate:h16-closeout");
+const evidenceVolume = runNpm("validate:evidence-volume");
 
 const horizonStatusPass = horizonStatus.exitCode === 0;
 const h16AssuranceBundlePass = assurance.exitCode === 0;
-const h16CloseoutGatePass = closeout.exitCode === 0;
-const pass = horizonStatusPass && h16AssuranceBundlePass && h16CloseoutGatePass;
+const evidenceVolumePass = evidenceVolume.exitCode === 0;
+const pass = horizonStatusPass && h16AssuranceBundlePass && evidenceVolumePass;
 
 const manifest = {
   generatedAtIso: new Date().toISOString(),
@@ -47,12 +49,12 @@ const manifest = {
   checks: {
     horizonStatusPass,
     h16AssuranceBundlePass,
-    h16CloseoutGatePass,
+    evidenceVolumePass,
   },
   steps: [
     { id: "validate_horizon_status", ...horizonStatus },
     { id: "run_h16_assurance_bundle", ...assurance },
-    { id: "validate_h16_closeout", ...closeout },
+    { id: "validate_evidence_volume", ...evidenceVolume },
   ],
 };
 

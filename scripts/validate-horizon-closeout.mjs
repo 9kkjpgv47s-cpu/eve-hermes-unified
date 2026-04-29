@@ -4,7 +4,7 @@ import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17"];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
@@ -22,6 +22,7 @@ const HORIZON_STAGE_MAP = {
   H14: "full",
   H15: "full",
   H16: "full",
+  H17: "full",
 };
 
 function isNonEmptyString(value) {
@@ -299,6 +300,9 @@ function commandVerificationType(command) {
   }
   if (command === "npm run verify:h5-evidence-baseline") {
     return "h5-evidence-baseline";
+  }
+  if (command === "npm run validate:evidence-volume") {
+    return "evidence-volume-report";
   }
   if (command === "npm run verify:evidence-prune") {
     return "evidence-prune-run";
@@ -1013,6 +1017,17 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "evidence-volume-report") {
+    const schema = validateManifestSchema("evidence-volume-report", payload);
+    const checks = [];
+    if (!schema.valid) {
+      checks.push(...schema.errors.map((error) => `evidence_volume_report_schema_invalid:${error}`));
+    }
+    if (payload.pass !== true) {
+      checks.push("evidence_volume_report_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   if (verificationType === "evidence-prune-run") {
     const schema = validateManifestSchema("evidence-prune-run", payload);
     const checks = [];
@@ -1284,6 +1299,9 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     if (signal.manifestSchemasPass !== true) {
       checks.push("h16_assurance_manifest_schemas_not_passed");
     }
+    if (signal.evidenceVolumePass !== true) {
+      checks.push("h16_assurance_evidence_volume_not_passed");
+    }
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "post-h6-sustainment-loop") {
@@ -1468,8 +1486,8 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     if (signal.h16AssuranceBundlePass !== true) {
       checks.push("post_h16_h16_assurance_bundle_not_passed");
     }
-    if (signal.h16CloseoutGatePass !== true) {
-      checks.push("post_h16_h16_closeout_gate_not_passed");
+    if (signal.evidenceVolumePass !== true) {
+      checks.push("post_h16_evidence_volume_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -1542,10 +1560,9 @@ async function main() {
       nextHorizon && horizonStatus?.horizonStates?.[nextHorizon]
         ? horizonStatus.horizonStates[nextHorizon]
         : null;
-    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H16, or next horizon already completed (retroactive closeout). */
     const skipStagePromotionReadiness =
       derivedNext === "" ||
-      targetHorizon === "H16" ||
+      targetHorizon === "H17" ||
       Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
 
     if (!skipStagePromotionReadiness) {

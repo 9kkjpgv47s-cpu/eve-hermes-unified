@@ -62,7 +62,7 @@ const goalPolicyStep = runStep("validate_goal_policy_file", [
   "--source-horizon",
   "H2",
   "--until-horizon",
-  "H16",
+  "H17",
   "--require-tagged-requirements",
   "--require-positive-pending-min",
   "--out",
@@ -74,17 +74,23 @@ const goalPolicyPass = goalPolicyStep.pass && goalPolicyPayloadPass;
 
 const manifestSchemas = runStep("validate_manifest_schemas", ["npm", "run", "validate:manifest-schemas"]);
 
+const evidenceVolume = runStep("validate_evidence_volume", [
+  process.execPath,
+  path.join(root, "scripts/validate-evidence-volume.mjs"),
+]);
+
 const payload = {
   generatedAtIso: new Date().toISOString(),
   horizon: "H16",
-  pass: h15Bundle.pass && goalPolicyPass && manifestSchemas.pass,
+  pass: h15Bundle.pass && goalPolicyPass && manifestSchemas.pass && evidenceVolume.pass,
   checks: {
     h15AssuranceBundlePass: h15Bundle.pass,
     goalPolicyFileValidationPass: goalPolicyPass,
     goalPolicyReportPayloadPass: goalPolicyPayloadPass,
     manifestSchemasPass: manifestSchemas.pass,
+    evidenceVolumePass: evidenceVolume.pass,
   },
-  steps: [h15Bundle, goalPolicyStep, manifestSchemas],
+  steps: [h15Bundle, goalPolicyStep, manifestSchemas, evidenceVolume],
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

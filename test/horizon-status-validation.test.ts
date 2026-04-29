@@ -84,6 +84,7 @@ describe("validate-horizon-status.mjs", () => {
               H14: { status: "planned", summary: "H14 planned" },
           H15: { status: "planned", summary: "H15 planned" },
           H16: { status: "planned", summary: "H16 planned" },
+          H17: { status: "planned", summary: "H17 planned" },
             },
             history: [
               {
@@ -152,6 +153,7 @@ describe("validate-horizon-status.mjs", () => {
               H14: { status: "planned", summary: "H14 planned" },
           H15: { status: "planned", summary: "H15 planned" },
           H16: { status: "planned", summary: "H16 planned" },
+          H17: { status: "planned", summary: "H17 planned" },
             },
             history: [],
             promotionReadiness: {
@@ -229,6 +231,7 @@ describe("validate-horizon-status.mjs", () => {
               H14: { status: "planned", summary: "H14 planned" },
           H15: { status: "planned", summary: "H15 planned" },
           H16: { status: "planned", summary: "H16 planned" },
+          H17: { status: "planned", summary: "H17 planned" },
             },
             history: [
               {
@@ -311,6 +314,7 @@ describe("validate-horizon-status.mjs", () => {
               H14: { status: "planned", summary: "H14 planned" },
           H15: { status: "planned", summary: "H15 planned" },
           H16: { status: "planned", summary: "H16 planned" },
+          H17: { status: "planned", summary: "H17 planned" },
             },
             history: [
               {
@@ -442,6 +446,7 @@ describe("validate-horizon-status.mjs", () => {
               H14: { status: "planned", summary: "H14 planned" },
           H15: { status: "planned", summary: "H15 planned" },
           H16: { status: "planned", summary: "H16 planned" },
+          H17: { status: "planned", summary: "H17 planned" },
             },
             history: [
               {
@@ -561,6 +566,7 @@ describe("validate-horizon-status.mjs", () => {
               H14: { status: "planned", summary: "H14 planned" },
           H15: { status: "planned", summary: "H15 planned" },
           H16: { status: "planned", summary: "H16 planned" },
+          H17: { status: "planned", summary: "H17 planned" },
             },
             history: [
               {
@@ -654,7 +660,8 @@ describe("validate-horizon-status.mjs", () => {
     "H13": { "status": "planned", "summary": "H13 planned" },
     "H14": { "status": "planned", "summary": "H14 planned" },
     "H15": { "status": "planned", "summary": "H15 planned" },
-    "H16": { "status": "planned", "summary": "H16 planned" }
+    "H16": { "status": "planned", "summary": "H16 planned" },
+    "H17": { "status": "planned", "summary": "H17 planned" }
   },
   "history": [
     {

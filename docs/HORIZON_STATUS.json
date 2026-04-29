@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-30T18:00:00Z",
+  "updatedAtIso": "2026-04-30T22:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H16",
-  "activeStatus": "completed",
-  "summary": "Horizon H16 (merge readiness policy gates): run-h16-assurance-bundle chains H15 + validate:goal-policy-file (H2→H16) + validate:manifest-schemas; verify:sustainment-loop post-H16; verify:sustainment-loop:h15-legacy for post-H15 loop.",
+  "activeHorizon": "H17",
+  "activeStatus": "in_progress",
+  "summary": "Horizon H17 (evidence volume + sustainment): validate:evidence-volume gates flat evidence/ growth; post-H16 sustainment loop runs H16 bundle + volume (H17 closeout is validated separately via validate:h17-closeout); goal policy extends through H17.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -146,6 +146,20 @@
       "artifactPattern": "evidence/h16-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H16"]
+    },
+    {
+      "id": "h17-evidence-volume",
+      "command": "npm run validate:evidence-volume",
+      "artifactPattern": "evidence/evidence-volume-report-*.json",
+      "required": true,
+      "horizons": ["H17"]
+    },
+    {
+      "id": "h17-post-h16-sustainment",
+      "command": "node ./scripts/run-post-h16-sustainment-loop.mjs",
+      "artifactPattern": "evidence/post-h16-sustainment-loop-*.json",
+      "required": true,
+      "horizons": ["H17"]
     }
   ],
   "nextActions": [
@@ -566,6 +580,27 @@
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["policy", "documentation", "ci"]
+    },
+    {
+      "id": "h17-action-1",
+      "summary": "Evidence volume guard: validate-evidence-volume.mjs + evidence-volume-report manifest + validate:manifest-schemas integration.",
+      "targetHorizon": "H17",
+      "status": "completed",
+      "tags": ["validation", "operations", "durability"]
+    },
+    {
+      "id": "h17-action-2",
+      "summary": "Extend post-H16 sustainment loop with evidence volume step and validate:h17-closeout gate.",
+      "targetHorizon": "H17",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h17-action-3",
+      "summary": "Goal policy H16→H17 transition; validate:goal-policy-file through H17; horizon sequences include H17.",
+      "targetHorizon": "H17",
+      "status": "completed",
+      "tags": ["policy", "documentation", "validation"]
     }
   ],
   "goalPolicies": {
@@ -779,6 +814,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H16->H17": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -855,7 +905,11 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H16) and validate:manifest-schemas on evidence; terminal sustainment post-H16."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H16), manifest schema sweep, and evidence volume check; terminal sustainment extended by H17 volume gate."
+    },
+    "H17": {
+      "status": "in_progress",
+      "summary": "Evidence directory volume guardrails and post-H16 sustainment loop extension (volume report + H17 closeout)."
     }
   },
   "history": [

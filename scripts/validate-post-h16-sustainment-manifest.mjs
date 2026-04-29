@@ -31,7 +31,7 @@ const failures = [];
 if (payload.pass !== true) failures.push("pass_not_true");
 if (checks.horizonStatusPass !== true) failures.push("horizonStatusPass");
 if (checks.h16AssuranceBundlePass !== true) failures.push("h16AssuranceBundlePass");
-if (checks.h16CloseoutGatePass !== true) failures.push("h16CloseoutGatePass");
+if (checks.evidenceVolumePass !== true) failures.push("evidenceVolumePass");
 
 if (failures.length > 0) {
   process.stderr.write(`Invalid post-H16 sustainment manifest ${manifestPath}: ${failures.join(", ")}\n`);

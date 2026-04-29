@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-16T12:00:00Z",
+  "updatedAtIso": "2026-05-17T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H26",
+  "activeHorizon": "H27",
   "activeStatus": "completed",
-  "summary": "Horizon H26 (terminal sustainment + failure-injection evidence): verify:sustainment-loop runs post-H26 chain (post-H25 sustainment + run:failure-injection-evidence + validate:h26-closeout); verify:sustainment-loop:h25-legacy replays H25 chain without failure-injection artifact; validate:post-h26-sustainment-manifest gates the newest loop manifest.",
+  "summary": "Horizon H27 (terminal sustainment + regression-Eve evidence): verify:sustainment-loop runs post-H27 chain (post-H26 sustainment + run:regression-eve-evidence + validate:h27-closeout); verify:sustainment-loop:h26-legacy replays H26 chain without regression-Eve artifact; validate:post-h27-sustainment-manifest gates the newest loop manifest.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -12,210 +12,358 @@
       "command": "npm run validate:all",
       "artifactPattern": "evidence/validation-summary-*.json",
       "required": true,
-      "horizons": ["H1", "H2", "H3", "H4"]
+      "horizons": [
+        "H1",
+        "H2",
+        "H3",
+        "H4"
+      ]
     },
     {
       "id": "h1-release-readiness",
       "command": "npm run validate:release-readiness",
       "artifactPattern": "evidence/release-readiness-*.json",
       "required": true,
-      "horizons": ["H1", "H2", "H3", "H4"]
+      "horizons": [
+        "H1",
+        "H2",
+        "H3",
+        "H4"
+      ]
     },
     {
       "id": "h1-initial-scope",
       "command": "npm run validate:initial-scope",
       "artifactPattern": "evidence/initial-scope-validation-*.json",
       "required": true,
-      "horizons": ["H1", "H2", "H3", "H4"]
+      "horizons": [
+        "H1",
+        "H2",
+        "H3",
+        "H4"
+      ]
     },
     {
       "id": "h1-merge-bundle",
       "command": "npm run validate:merge-bundle",
       "artifactPattern": "evidence/merge-bundle-validation-*.json",
       "required": true,
-      "horizons": ["H1", "H2", "H3", "H4"]
+      "horizons": [
+        "H1",
+        "H2",
+        "H3",
+        "H4"
+      ]
     },
     {
       "id": "h1-manifest-schemas",
       "command": "npm run validate:manifest-schemas",
       "artifactPattern": "evidence/release-readiness-*.json",
       "required": true,
-      "horizons": ["H1", "H2", "H3", "H4"]
+      "horizons": [
+        "H1",
+        "H2",
+        "H3",
+        "H4"
+      ]
     },
     {
       "id": "h1-bundle-verification",
       "command": "npm run verify:merge-bundle",
       "artifactPattern": "evidence/bundle-verification-*.json",
       "required": true,
-      "horizons": ["H1", "H2", "H3", "H4"]
+      "horizons": [
+        "H1",
+        "H2",
+        "H3",
+        "H4"
+      ]
     },
     {
       "id": "h1-cutover-readiness",
       "command": "npm run validate:cutover-readiness",
       "artifactPattern": "evidence/cutover-readiness-*.json",
       "required": true,
-      "horizons": ["H1", "H2", "H3", "H4"]
+      "horizons": [
+        "H1",
+        "H2",
+        "H3",
+        "H4"
+      ]
     },
     {
       "id": "h1-evidence-summary",
       "command": "npm run validate:evidence-summary",
       "artifactPattern": "evidence/validation-summary-*.json",
       "required": true,
-      "horizons": ["H1", "H2", "H3", "H4"]
+      "horizons": [
+        "H1",
+        "H2",
+        "H3",
+        "H4"
+      ]
     },
     {
       "id": "h5-closeout-evidence",
       "command": "node ./scripts/run-h5-closeout-evidence.mjs",
       "artifactPattern": "evidence/h5-closeout-evidence-*.json",
       "required": true,
-      "horizons": ["H5"]
+      "horizons": [
+        "H5"
+      ]
     },
     {
       "id": "h6-assurance-bundle",
       "command": "node ./scripts/run-h6-assurance-bundle.mjs",
       "artifactPattern": "evidence/h6-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H6"]
+      "horizons": [
+        "H6"
+      ]
     },
     {
       "id": "h7-assurance-bundle",
       "command": "node ./scripts/run-h7-assurance-bundle.mjs",
       "artifactPattern": "evidence/h7-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H7"]
+      "horizons": [
+        "H7"
+      ]
     },
     {
       "id": "h8-assurance-bundle",
       "command": "node ./scripts/run-h8-assurance-bundle.mjs",
       "artifactPattern": "evidence/h8-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H8"]
+      "horizons": [
+        "H8"
+      ]
     },
     {
       "id": "h9-assurance-bundle",
       "command": "node ./scripts/run-h9-assurance-bundle.mjs",
       "artifactPattern": "evidence/h9-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H9"]
+      "horizons": [
+        "H9"
+      ]
     },
     {
       "id": "h10-assurance-bundle",
       "command": "node ./scripts/run-h10-assurance-bundle.mjs",
       "artifactPattern": "evidence/h10-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H10"]
+      "horizons": [
+        "H10"
+      ]
     },
     {
       "id": "h11-assurance-bundle",
       "command": "node ./scripts/run-h11-assurance-bundle.mjs",
       "artifactPattern": "evidence/h11-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H11"]
+      "horizons": [
+        "H11"
+      ]
     },
     {
       "id": "h12-assurance-bundle",
       "command": "node ./scripts/run-h12-assurance-bundle.mjs",
       "artifactPattern": "evidence/h12-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H12"]
+      "horizons": [
+        "H12"
+      ]
     },
     {
       "id": "h13-assurance-bundle",
       "command": "node ./scripts/run-h13-assurance-bundle.mjs",
       "artifactPattern": "evidence/h13-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H13"]
+      "horizons": [
+        "H13"
+      ]
     },
     {
       "id": "h14-assurance-bundle",
       "command": "node ./scripts/run-h14-assurance-bundle.mjs",
       "artifactPattern": "evidence/h14-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H14"]
+      "horizons": [
+        "H14"
+      ]
     },
     {
       "id": "h15-assurance-bundle",
       "command": "node ./scripts/run-h15-assurance-bundle.mjs",
       "artifactPattern": "evidence/h15-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H15"]
+      "horizons": [
+        "H15"
+      ]
     },
     {
       "id": "h16-assurance-bundle",
       "command": "node ./scripts/run-h16-assurance-bundle.mjs",
       "artifactPattern": "evidence/h16-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H16"]
+      "horizons": [
+        "H16"
+      ]
     },
     {
       "id": "h17-assurance-bundle",
       "command": "node ./scripts/run-h17-assurance-bundle.mjs",
       "artifactPattern": "evidence/h17-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H17", "H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": [
+        "H17",
+        "H18",
+        "H19",
+        "H20",
+        "H21",
+        "H22",
+        "H23",
+        "H24",
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h18-assurance-bundle",
       "command": "node ./scripts/run-h18-assurance-bundle.mjs",
       "artifactPattern": "evidence/h18-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": [
+        "H18",
+        "H19",
+        "H20",
+        "H21",
+        "H22",
+        "H23",
+        "H24",
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h19-ci-soak-slo-gate",
       "command": "node ./scripts/run-ci-soak-slo-gate.mjs",
       "artifactPattern": "evidence/ci-soak-slo-gate-*.json",
       "required": true,
-      "horizons": ["H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": [
+        "H19",
+        "H20",
+        "H21",
+        "H22",
+        "H23",
+        "H24",
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h20-unified-entrypoints-evidence",
       "command": "node ./scripts/run-unified-entrypoints-evidence.mjs",
       "artifactPattern": "evidence/unified-entrypoints-evidence-*.json",
       "required": true,
-      "horizons": ["H20", "H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": [
+        "H20",
+        "H21",
+        "H22",
+        "H23",
+        "H24",
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h21-shell-unified-dispatch-ci-evidence",
       "command": "node ./scripts/run-shell-unified-dispatch-ci-evidence.mjs",
       "artifactPattern": "evidence/shell-unified-dispatch-ci-evidence-*.json",
       "required": true,
-      "horizons": ["H21", "H22", "H23", "H24", "H25", "H26"]
+      "horizons": [
+        "H21",
+        "H22",
+        "H23",
+        "H24",
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h22-tenant-isolation-evidence",
       "command": "node ./scripts/run-tenant-isolation-evidence.mjs",
       "artifactPattern": "evidence/tenant-isolation-evidence-*.json",
       "required": true,
-      "horizons": ["H22", "H23", "H24", "H25", "H26"]
+      "horizons": [
+        "H22",
+        "H23",
+        "H24",
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h23-region-failover-evidence",
       "command": "node ./scripts/run-region-failover-evidence.mjs",
       "artifactPattern": "evidence/region-failover-evidence-*.json",
       "required": true,
-      "horizons": ["H23", "H24", "H25", "H26"]
+      "horizons": [
+        "H23",
+        "H24",
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h24-agent-remediation-evidence",
       "command": "node ./scripts/run-agent-remediation-evidence.mjs",
       "artifactPattern": "evidence/agent-remediation-evidence-*.json",
       "required": true,
-      "horizons": ["H24", "H25", "H26"]
+      "horizons": [
+        "H24",
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h25-emergency-rollback-evidence",
       "command": "node ./scripts/run-emergency-rollback-evidence.mjs",
       "artifactPattern": "evidence/emergency-rollback-evidence-*.json",
       "required": true,
-      "horizons": ["H25", "H26"]
+      "horizons": [
+        "H25",
+        "H26",
+        "H27"
+      ]
     },
     {
       "id": "h26-failure-injection-evidence",
       "command": "node ./scripts/run-failure-injection-evidence.mjs",
       "artifactPattern": "evidence/failure-injection-evidence-*.json",
       "required": true,
-      "horizons": ["H26"]
+      "horizons": [
+        "H26",
+        "H27"
+      ]
+    },
+    {
+      "id": "h27-regression-eve-evidence",
+      "command": "node ./scripts/run-regression-eve-evidence.mjs",
+      "artifactPattern": "evidence/regression-eve-evidence-*.json",
+      "required": true,
+      "horizons": [
+        "H27"
+      ]
     }
   ],
   "nextActions": [
@@ -320,525 +468,846 @@
       "summary": "Harden runtime durability boundaries with persistent queue/replay semantics for cross-lane dispatch recovery.",
       "targetHorizon": "H3",
       "status": "completed",
-      "tags": ["durability", "runtime"]
+      "tags": [
+        "durability",
+        "runtime"
+      ]
     },
     {
       "id": "h3-action-2",
       "summary": "Expand policy-router guardrails with stricter failure-class-to-action mappings and deterministic fallback contracts.",
       "targetHorizon": "H3",
       "status": "completed",
-      "tags": ["policy-hardening", "runtime"]
+      "tags": [
+        "policy-hardening",
+        "runtime"
+      ]
     },
     {
       "id": "h3-action-3",
       "summary": "Implement capability execution safety envelopes with explicit timeout/resource budgets and auditable denials.",
       "targetHorizon": "H3",
       "status": "completed",
-      "tags": ["capability", "policy-hardening"]
+      "tags": [
+        "capability",
+        "policy-hardening"
+      ]
     },
     {
       "id": "h3-action-4",
       "summary": "Add memory durability verification suite for crash/restart recovery and cross-lane consistency checks.",
       "targetHorizon": "H3",
       "status": "completed",
-      "tags": ["durability", "memory"]
+      "tags": [
+        "durability",
+        "memory"
+      ]
     },
     {
       "id": "h3-action-5",
       "summary": "Create long-window soak validation for H3 policy and durability changes with explicit SLO drift alarms.",
       "targetHorizon": "H3",
       "status": "completed",
-      "tags": ["validation", "durability"]
+      "tags": [
+        "validation",
+        "durability"
+      ]
     },
     {
       "id": "h3-action-6",
       "summary": "Introduce staged emergency rollback rehearsals for H3 changes with operator-ready evidence bundles.",
       "targetHorizon": "H3",
       "status": "completed",
-      "tags": ["rollback", "operations"]
+      "tags": [
+        "rollback",
+        "operations"
+      ]
     },
     {
       "id": "h4-action-1",
       "summary": "Identify and deprecate direct Eve/Hermes invocation paths outside unified dispatch.",
       "targetHorizon": "H4",
       "status": "completed",
-      "tags": ["legacy", "runtime"]
+      "tags": [
+        "legacy",
+        "runtime"
+      ]
     },
     {
       "id": "h4-action-2",
       "summary": "Remove compatibility shims that are no longer required by production integrations.",
       "targetHorizon": "H4",
       "status": "completed",
-      "tags": ["legacy", "config"]
+      "tags": [
+        "legacy",
+        "config"
+      ]
     },
     {
       "id": "h4-action-3",
       "summary": "Freeze a versioned unified dispatch contract and publish upgrade notes.",
       "targetHorizon": "H4",
       "status": "completed",
-      "tags": ["contract", "validation"]
+      "tags": [
+        "contract",
+        "validation"
+      ]
     },
     {
       "id": "h5-action-1",
       "summary": "Tenant isolation for routing ingress, capability policy, and memory namespaces with executable leak checks.",
       "targetHorizon": "H5",
       "status": "completed",
-      "tags": ["tenant", "policy", "validation"]
+      "tags": [
+        "tenant",
+        "policy",
+        "validation"
+      ]
     },
     {
       "id": "h5-action-2",
       "summary": "Region-aware standby routing swap with replay-safe envelopes and failover rehearsal manifest.",
       "targetHorizon": "H5",
       "status": "completed",
-      "tags": ["region", "routing", "rollback"]
+      "tags": [
+        "region",
+        "routing",
+        "rollback"
+      ]
     },
     {
       "id": "h5-action-3",
       "summary": "Bounded agent remediation playbook dry-run chaining tenant validation and region rehearsal artifacts.",
       "targetHorizon": "H5",
       "status": "completed",
-      "tags": ["operations", "automation"]
+      "tags": [
+        "operations",
+        "automation"
+      ]
     },
     {
       "id": "h6-action-1",
       "summary": "Executable sustainment assurance bundle chaining horizon metadata validation, tenant isolation, region failover rehearsal, and unified entrypoint scan.",
       "targetHorizon": "H6",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h6-action-2",
       "summary": "Extend horizon orchestration sequences and goal-policy defaults through H6 for promotion and audit tooling parity.",
       "targetHorizon": "H6",
       "status": "completed",
-      "tags": ["tooling", "policy"]
+      "tags": [
+        "tooling",
+        "policy"
+      ]
     },
     {
       "id": "h6-action-3",
       "summary": "Document H6 sustainment expectations and CI evidence path for continuous assurance after full cutover.",
       "targetHorizon": "H6",
       "status": "completed",
-      "tags": ["documentation", "operations"]
+      "tags": [
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h7-action-1",
       "summary": "Dispatch audit log size-based rotation with generation retention (UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES / RETAIN_COUNT) applied before append in unified-dispatch.",
       "targetHorizon": "H7",
       "status": "completed",
-      "tags": ["audit", "observability", "runtime"]
+      "tags": [
+        "audit",
+        "observability",
+        "runtime"
+      ]
     },
     {
       "id": "h7-action-2",
       "summary": "H7 assurance bundle extends H6 gates with audit-log rotation unit proof; horizon orchestration extended through H7 with validate:h7-closeout and post-H7 sustainment loop manifest.",
       "targetHorizon": "H7",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h7-action-3",
       "summary": "Goal policy and documentation parity for H6→H7 transition and terminal sustainment commands (verify:sustainment-loop).",
       "targetHorizon": "H7",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h8-action-1",
       "summary": "Append-only capability policy authorization audit JSONL (traceId, capabilityId, allowed, policyReason) wired through UnifiedCapabilityEngine and unified-dispatch preflight.",
       "targetHorizon": "H8",
       "status": "completed",
-      "tags": ["policy", "audit", "runtime"]
+      "tags": [
+        "policy",
+        "audit",
+        "runtime"
+      ]
     },
     {
       "id": "h8-action-2",
       "summary": "H8 assurance bundle extends H7 with capability-policy-audit vitest; validate:h8-closeout and post-H8 sustainment loop manifest.",
       "targetHorizon": "H8",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h8-action-3",
       "summary": "Goal policy H7→H8 transition and documentation for capability policy audit path and legacy sustainment npm aliases.",
       "targetHorizon": "H8",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h9-action-1",
       "summary": "Atomic replace persistence for file-backed UnifiedMemoryStore (write temp JSON then rename) for crash-safe JSON snapshots.",
       "targetHorizon": "H9",
       "status": "completed",
-      "tags": ["durability", "memory", "runtime"]
+      "tags": [
+        "durability",
+        "memory",
+        "runtime"
+      ]
     },
     {
       "id": "h9-action-2",
       "summary": "H9 assurance bundle extends H8 with unified-memory-atomic-persistence vitest; validate:h9-closeout and post-H9 sustainment loop manifest.",
       "targetHorizon": "H9",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h9-action-3",
       "summary": "Goal policy H8→H9 transition and documentation for atomic memory persistence and legacy sustainment npm aliases.",
       "targetHorizon": "H9",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h10-action-1",
       "summary": "Configurable retention cap for dispatched/failed FileDispatchDurabilityQueue entries (default 5000; 0 = unlimited); pruning runs after each queue mutation.",
       "targetHorizon": "H10",
       "status": "completed",
-      "tags": ["durability", "operations", "runtime"]
+      "tags": [
+        "durability",
+        "operations",
+        "runtime"
+      ]
     },
     {
       "id": "h10-action-2",
       "summary": "H10 assurance bundle extends H9 with dispatch-durability-queue-retention vitest; validate:h10-closeout and post-H10 sustainment loop manifest.",
       "targetHorizon": "H10",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h10-action-3",
       "summary": "Goal policy H9→H10 transition and documentation; verify:sustainment-loop now runs post-H10; verify:sustainment-loop:h9-legacy for prior chain.",
       "targetHorizon": "H10",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h11-action-1",
       "summary": "Optional size-triggered rotation for capability policy audit JSONL (same archive naming as dispatch audit); wired through appendCapabilityPolicyAuditLog + UnifiedCapabilityEngine when max-bytes > 0.",
       "targetHorizon": "H11",
       "status": "completed",
-      "tags": ["audit", "policy", "runtime"]
+      "tags": [
+        "audit",
+        "policy",
+        "runtime"
+      ]
     },
     {
       "id": "h11-action-2",
       "summary": "H11 assurance bundle extends H10 with capability-policy-audit-rotation vitest; validate:h11-closeout and post-H11 sustainment loop manifest.",
       "targetHorizon": "H11",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h11-action-3",
       "summary": "Goal policy H10→H11 transition and documentation; verify:sustainment-loop post-H11; verify:sustainment-loop:h10-legacy for prior chain.",
       "targetHorizon": "H11",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h12-action-1",
       "summary": "Configurable max replay attempts per pending durability queue entry (default 0 unlimited); replayPendingDispatches fails stuck rows with replay_max_attempts_exceeded when attempts >= cap.",
       "targetHorizon": "H12",
       "status": "completed",
-      "tags": ["durability", "operations", "runtime"]
+      "tags": [
+        "durability",
+        "operations",
+        "runtime"
+      ]
     },
     {
       "id": "h12-action-2",
       "summary": "H12 assurance bundle extends H11 with dispatch-durability-queue-replay-limit vitest; validate:h12-closeout and post-H12 sustainment loop manifest.",
       "targetHorizon": "H12",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h12-action-3",
       "summary": "Goal policy H11→H12 transition and documentation; verify:sustainment-loop post-H12; verify:sustainment-loop:h11-legacy for prior chain.",
       "targetHorizon": "H12",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h13-action-1",
       "summary": "CI soak SLO drift gate: scripts/run-ci-soak-slo-gate.mjs runs soak-simulate then summarize-soak-report with UNIFIED_SOAK_FAIL_ON_DRIFT=1; writes evidence/ci-soak-slo-gate-*.json.",
       "targetHorizon": "H13",
       "status": "completed",
-      "tags": ["observability", "validation", "ci"]
+      "tags": [
+        "observability",
+        "validation",
+        "ci"
+      ]
     },
     {
       "id": "h13-action-2",
       "summary": "H13 assurance bundle chains run-h12-assurance-bundle + ci soak gate; validate:h13-closeout and post-H13 sustainment loop manifest.",
       "targetHorizon": "H13",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h13-action-3",
       "summary": "Goal policy H12→H13 transition; unified-ci soak SLO step; verify:sustainment-loop post-H13; verify:sustainment-loop:h12-legacy for prior chain.",
       "targetHorizon": "H13",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h14-action-1",
       "summary": "Canonical shell resolver unified-dispatch-runner.sh + validate-shell-unified-dispatch.sh; refactor soak/regression/cutover-readiness/failure-injection to use UNIFIED_DISPATCH_CMD.",
       "targetHorizon": "H14",
       "status": "completed",
-      "tags": ["validation", "convergence", "runtime"]
+      "tags": [
+        "validation",
+        "convergence",
+        "runtime"
+      ]
     },
     {
       "id": "h14-action-2",
       "summary": "H14 assurance bundle extends H13 with shell ingress gate; validate:h14-closeout and post-H14 sustainment loop manifest.",
       "targetHorizon": "H14",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h14-action-3",
       "summary": "Goal policy H13→H14 transition; verify:sustainment-loop post-H14; verify:sustainment-loop:h13-legacy for prior chain.",
       "targetHorizon": "H14",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h15-action-1",
       "summary": "CI static scan validate-shell-unified-dispatch-ci.mjs forbids scripts/*.sh from embedding dist paths or direct node/tsx unified-dispatch invocations outside unified-dispatch-runner.sh.",
       "targetHorizon": "H15",
       "status": "completed",
-      "tags": ["validation", "ci", "convergence"]
+      "tags": [
+        "validation",
+        "ci",
+        "convergence"
+      ]
     },
     {
       "id": "h15-action-2",
       "summary": "H15 assurance bundle extends H14 with shell CI scan; validate:h15-closeout and post-H15 sustainment loop manifest.",
       "targetHorizon": "H15",
       "status": "completed",
-      "tags": ["validation", "sustainment", "tooling"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "tooling"
+      ]
     },
     {
       "id": "h15-action-3",
       "summary": "Goal policy H14→H15 transition; verify:sustainment-loop post-H15; verify:sustainment-loop:h14-legacy for prior chain.",
       "targetHorizon": "H15",
       "status": "completed",
-      "tags": ["policy", "documentation", "operations"]
+      "tags": [
+        "policy",
+        "documentation",
+        "operations"
+      ]
     },
     {
       "id": "h16-action-1",
       "summary": "H16 assurance bundle: H15 sub-bundle plus validate:goal-policy-file (H2→H18) and validate:manifest-schemas evidence sweep.",
       "targetHorizon": "H16",
       "status": "completed",
-      "tags": ["validation", "policy", "tooling"]
+      "tags": [
+        "validation",
+        "policy",
+        "tooling"
+      ]
     },
     {
       "id": "h16-action-2",
-      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H26.",
+      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H27.",
       "targetHorizon": "H16",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h16-action-3",
-      "summary": "Goal policy H15→H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2→H26 before validate:all in CI.",
+      "summary": "Goal policy H15→H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2→H27 before validate:all in CI.",
       "targetHorizon": "H16",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h17-action-1",
       "summary": "run-h17-assurance-bundle: validate:merge-bundle + validate:manifest-schemas + verify:merge-bundle --latest --no-require-archive; supersedes duplicate CI merge steps.",
       "targetHorizon": "H17",
       "status": "completed",
-      "tags": ["validation", "operations", "tooling"]
+      "tags": [
+        "validation",
+        "operations",
+        "tooling"
+      ]
     },
     {
       "id": "h17-action-2",
       "summary": "Legacy post-H17 sustainment replay; verify:sustainment-loop:h17-legacy; verify:sustainment-loop:h16-legacy for H16 chain.",
       "targetHorizon": "H17",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h17-action-3",
       "summary": "Goal policy H16→H17 transition; unified-ci runs H17 bundle after initial-scope and before stage-promotion.",
       "targetHorizon": "H17",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h18-action-1",
       "summary": "run-h18-assurance-bundle: dry-run H2 drill suite (canary + majority + rollback simulation) with merge-bundle evidence present.",
       "targetHorizon": "H18",
       "status": "completed",
-      "tags": ["operations", "validation", "cutover"]
+      "tags": [
+        "operations",
+        "validation",
+        "cutover"
+      ]
     },
     {
       "id": "h18-action-2",
       "summary": "post-H18 sustainment loop (legacy); verify:sustainment-loop:h18-legacy; verify:sustainment-loop:h17-legacy for H17-only chain.",
       "targetHorizon": "H18",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h18-action-3",
       "summary": "Goal policy H17→H18 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H18.",
       "targetHorizon": "H18",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h19-action-1",
       "summary": "run:ci-soak-slo-gate in terminal sustainment: soak-simulate + summarize-soak-report with UNIFIED_SOAK_FAIL_ON_DRIFT=1 after H18 rehearsal.",
       "targetHorizon": "H19",
       "status": "completed",
-      "tags": ["validation", "operations", "slo"]
+      "tags": [
+        "validation",
+        "operations",
+        "slo"
+      ]
     },
     {
       "id": "h19-action-2",
       "summary": "post-H19 sustainment loop (legacy); verify:sustainment-loop:h19-legacy; validate:post-h19-sustainment-manifest; verify:sustainment-loop:h18-legacy for H18-only chain.",
       "targetHorizon": "H19",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h19-action-3",
       "summary": "Goal policy H18→H19 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H19.",
       "targetHorizon": "H19",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h20-action-1",
       "summary": "run:unified-entrypoints-evidence after CI soak in terminal sustainment: machine-readable validate:unified-entrypoints gate for H4 closeout alignment.",
       "targetHorizon": "H20",
       "status": "completed",
-      "tags": ["validation", "operations", "capability"]
+      "tags": [
+        "validation",
+        "operations",
+        "capability"
+      ]
     },
     {
       "id": "h20-action-2",
       "summary": "post-H20 sustainment loop (legacy); verify:sustainment-loop:h20-legacy; validate:post-h20-sustainment-manifest; verify:sustainment-loop:h19-legacy for H19 chain without entrypoints artifact.",
       "targetHorizon": "H20",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h20-action-3",
       "summary": "Goal policy H19→H20 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H20.",
       "targetHorizon": "H20",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h21-action-1",
       "summary": "run:shell-unified-dispatch-ci-evidence after entrypoints in terminal sustainment: machine-readable validate:shell-unified-dispatch-ci gate for H15 shell ingress alignment.",
       "targetHorizon": "H21",
       "status": "completed",
-      "tags": ["validation", "operations", "ci"]
+      "tags": [
+        "validation",
+        "operations",
+        "ci"
+      ]
     },
     {
       "id": "h21-action-2",
       "summary": "post-H21 sustainment loop (legacy); verify:sustainment-loop:h21-legacy; validate:post-h21-sustainment-manifest; verify:sustainment-loop:h20-legacy for H20 chain without shell CI artifact.",
       "targetHorizon": "H21",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h21-action-3",
       "summary": "Goal policy H20→H21 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H21.",
       "targetHorizon": "H21",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h22-action-1",
       "summary": "run:tenant-isolation-evidence after shell CI in terminal sustainment: machine-readable validate:tenant-isolation gate for H5 tenant alignment.",
       "targetHorizon": "H22",
       "status": "completed",
-      "tags": ["validation", "operations", "policy"]
+      "tags": [
+        "validation",
+        "operations",
+        "policy"
+      ]
     },
     {
       "id": "h22-action-2",
       "summary": "post-H22 sustainment loop (legacy); verify:sustainment-loop:h22-legacy; validate:post-h22-sustainment-manifest; verify:sustainment-loop:h21-legacy for H21 chain without tenant isolation artifact.",
       "targetHorizon": "H22",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h22-action-3",
       "summary": "Goal policy H21→H22 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H22.",
       "targetHorizon": "H22",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h23-action-1",
       "summary": "run:region-failover-evidence after post-H22 inner chain in terminal sustainment: machine-readable rehearse:region-failover gate for H5 region alignment.",
       "targetHorizon": "H23",
       "status": "completed",
-      "tags": ["validation", "operations", "region"]
+      "tags": [
+        "validation",
+        "operations",
+        "region"
+      ]
     },
     {
       "id": "h23-action-2",
       "summary": "post-H23 sustainment loop (legacy); verify:sustainment-loop:h23-legacy; validate:post-h23-sustainment-manifest; verify:sustainment-loop:h22-legacy for H22 chain without region failover artifact.",
       "targetHorizon": "H23",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h23-action-3",
       "summary": "Goal policy H22→H23 transition; validate:goal-policy-file and run-h16-assurance-bundle extend through H23.",
       "targetHorizon": "H23",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h24-action-1",
       "summary": "run:agent-remediation-evidence after post-H23 inner chain in terminal sustainment: machine-readable rehearse:agent-remediation gate for H5 remediation alignment.",
       "targetHorizon": "H24",
       "status": "completed",
-      "tags": ["validation", "operations", "automation"]
+      "tags": [
+        "validation",
+        "operations",
+        "automation"
+      ]
     },
     {
       "id": "h24-action-2",
       "summary": "post-H24 sustainment loop (legacy); verify:sustainment-loop:h24-legacy; validate:post-h24-sustainment-manifest; verify:sustainment-loop:h23-legacy for H23 chain without agent remediation artifact.",
       "targetHorizon": "H24",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h24-action-3",
       "summary": "Goal policy H23→H24 transition; validate:goal-policy-file and run-h16-assurance-bundle extend through H24.",
       "targetHorizon": "H24",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h25-action-1",
       "summary": "run:emergency-rollback-evidence after post-H24 inner chain in terminal sustainment: machine-readable rehearse:emergency-rollback gate for H3 rollback alignment.",
       "targetHorizon": "H25",
       "status": "completed",
-      "tags": ["validation", "operations", "rollback"]
+      "tags": [
+        "validation",
+        "operations",
+        "rollback"
+      ]
     },
     {
       "id": "h25-action-2",
       "summary": "post-H25 sustainment loop (legacy); verify:sustainment-loop:h25-legacy; validate:post-h25-sustainment-manifest; verify:sustainment-loop:h24-legacy for H24 chain without emergency rollback artifact.",
       "targetHorizon": "H25",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h25-action-3",
       "summary": "Goal policy H24→H25 transition; validate:goal-policy-file and run-h16-assurance-bundle extend through H25.",
       "targetHorizon": "H25",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     },
     {
       "id": "h26-action-1",
       "summary": "run:failure-injection-evidence after post-H25 inner chain in terminal sustainment: machine-readable validate:failure-injection gate for resilience alignment.",
       "targetHorizon": "H26",
       "status": "completed",
-      "tags": ["validation", "operations", "resilience"]
+      "tags": [
+        "validation",
+        "operations",
+        "resilience"
+      ]
     },
     {
       "id": "h26-action-2",
-      "summary": "post-H26 sustainment loop; verify:sustainment-loop; validate:post-h26-sustainment-manifest; verify:sustainment-loop:h25-legacy for H25 chain without failure-injection artifact.",
+      "summary": "post-H26 sustainment loop (legacy); verify:sustainment-loop:h26-legacy; validate:post-h26-sustainment-manifest; verify:sustainment-loop:h25-legacy for H25 chain without failure-injection artifact.",
       "targetHorizon": "H26",
       "status": "completed",
-      "tags": ["validation", "sustainment", "operations"]
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
     },
     {
       "id": "h26-action-3",
       "summary": "Goal policy H25→H26 transition; validate:goal-policy-file and run-h16-assurance-bundle extend through H26.",
       "targetHorizon": "H26",
       "status": "completed",
-      "tags": ["policy", "documentation", "ci"]
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
+    },
+    {
+      "id": "h27-action-1",
+      "summary": "run:regression-eve-evidence after post-H26 inner chain in terminal sustainment: machine-readable validate:regression-eve gate for H1 Eve-primary routing alignment.",
+      "targetHorizon": "H27",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "operations",
+        "routing"
+      ]
+    },
+    {
+      "id": "h27-action-2",
+      "summary": "post-H27 sustainment loop; verify:sustainment-loop; validate:post-h27-sustainment-manifest; verify:sustainment-loop:h26-legacy for H26 chain without regression-Eve artifact.",
+      "targetHorizon": "H27",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
+    },
+    {
+      "id": "h27-action-3",
+      "summary": "Goal policy H26→H27 transition; validate:goal-policy-file and run-h16-assurance-bundle extend through H27.",
+      "targetHorizon": "H27",
+      "status": "completed",
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
     }
   ],
   "goalPolicies": {
@@ -1202,6 +1671,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H26->H27": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "sustainment": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -1278,47 +1762,51 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H26 + manifest schemas + H15 chain; runs before validate:all in CI."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H27 + manifest schemas + H15 chain; runs before validate:all in CI."
     },
     "H17": {
       "status": "completed",
-      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18–H26 terminal sustainment chain."
+      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18–H27 terminal sustainment chain."
     },
     "H18": {
       "status": "completed",
-      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; prerequisite for H19–H26 sustainment."
+      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; prerequisite for H19–H27 sustainment."
     },
     "H19": {
       "status": "completed",
-      "summary": "Terminal sustainment + CI soak SLO (legacy): post-H19 loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; superseded by H20–H26."
+      "summary": "Terminal sustainment + CI soak SLO (legacy): post-H19 loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; superseded by H20–H27."
     },
     "H20": {
       "status": "completed",
-      "summary": "Terminal sustainment + entrypoints evidence (legacy): post-H20 loop adds run:unified-entrypoints-evidence after CI soak; verify:sustainment-loop:h20-legacy; superseded by H21–H26."
+      "summary": "Terminal sustainment + entrypoints evidence (legacy): post-H20 loop adds run:unified-entrypoints-evidence after CI soak; verify:sustainment-loop:h20-legacy; superseded by H21–H27."
     },
     "H21": {
       "status": "completed",
-      "summary": "Terminal sustainment + shell dispatch CI evidence (legacy): post-H21 loop adds run:shell-unified-dispatch-ci-evidence after entrypoints; verify:sustainment-loop:h21-legacy; superseded by H22–H26."
+      "summary": "Terminal sustainment + shell dispatch CI evidence (legacy): post-H21 loop adds run:shell-unified-dispatch-ci-evidence after entrypoints; verify:sustainment-loop:h21-legacy; superseded by H22–H27."
     },
     "H22": {
       "status": "completed",
-      "summary": "Terminal sustainment + tenant isolation evidence (legacy inner chain): post-H22 loop adds run:tenant-isolation-evidence after shell CI; verify:sustainment-loop:h22-legacy; superseded as terminal pin by H23–H26."
+      "summary": "Terminal sustainment + tenant isolation evidence (legacy inner chain): post-H22 loop adds run:tenant-isolation-evidence after shell CI; verify:sustainment-loop:h22-legacy; superseded as terminal pin by H23–H27."
     },
     "H23": {
       "status": "completed",
-      "summary": "Terminal sustainment + region failover evidence (legacy inner chain): post-H23 loop chains post-H22 sustainment + run:region-failover-evidence + validate:h23-closeout; verify:sustainment-loop:h23-legacy; superseded as terminal pin by H24–H26."
+      "summary": "Terminal sustainment + region failover evidence (legacy inner chain): post-H23 loop chains post-H22 sustainment + run:region-failover-evidence + validate:h23-closeout; verify:sustainment-loop:h23-legacy; superseded as terminal pin by H24–H27."
     },
     "H24": {
       "status": "completed",
-      "summary": "Terminal sustainment + agent remediation evidence (legacy inner chain): post-H24 loop chains post-H23 sustainment + run:agent-remediation-evidence + validate:h24-closeout; verify:sustainment-loop:h24-legacy; superseded as terminal pin by H25/H26."
+      "summary": "Terminal sustainment + agent remediation evidence (legacy inner chain): post-H24 loop chains post-H23 sustainment + run:agent-remediation-evidence + validate:h24-closeout; verify:sustainment-loop:h24-legacy; superseded as terminal pin by H25/H26/H27."
     },
     "H25": {
       "status": "completed",
-      "summary": "Terminal sustainment + emergency rollback evidence (legacy inner chain): post-H25 loop chains post-H24 sustainment + run:emergency-rollback-evidence + validate:h25-closeout; verify:sustainment-loop:h25-legacy; superseded as terminal pin by H26 (failure-injection evidence)."
+      "summary": "Terminal sustainment + emergency rollback evidence (legacy inner chain): post-H25 loop chains post-H24 sustainment + run:emergency-rollback-evidence + validate:h25-closeout; verify:sustainment-loop:h25-legacy; superseded as terminal pin by H27 (failure-injection evidence)."
     },
     "H26": {
       "status": "completed",
-      "summary": "Terminal sustainment pin: post-H26 loop chains post-H25 sustainment + run:failure-injection-evidence + validate:h26-closeout (requiredEvidence through failure-injection, not the post-H26 manifest); verify:sustainment-loop; validate:post-h26-sustainment-manifest for the post-H26 loop artifact."
+      "summary": "Terminal sustainment + failure-injection evidence (legacy inner chain): post-H26 loop chains post-H25 sustainment + run:failure-injection-evidence + validate:h26-closeout; verify:sustainment-loop:h26-legacy; superseded as terminal pin by H27 (regression-Eve evidence)."
+    },
+    "H27": {
+      "status": "completed",
+      "summary": "Terminal sustainment pin: post-H27 loop chains post-H26 sustainment + run:regression-eve-evidence + validate:h27-closeout (requiredEvidence through regression-Eve, not the post-H27 manifest); verify:sustainment-loop; validate:post-h27-sustainment-manifest for the post-H27 loop artifact."
     }
   },
   "history": [
@@ -1597,6 +2085,12 @@
       "horizon": "H26",
       "status": "completed",
       "note": "H26 terminal sustainment + failure-injection evidence: run-post-h26-sustainment-loop wraps post-H25 loop + run:failure-injection-evidence + validate:h26-closeout; verify:sustainment-loop switched to H26 chain; verify:sustainment-loop:h25-legacy preserves H25 inner chain; validate:post-h26-sustainment-manifest; goalPolicies H25->H26; VALID_HORIZONS H26; H16 bundle goal-policy through H26."
+    },
+    {
+      "timestamp": "2026-05-17T12:00:00Z",
+      "horizon": "H27",
+      "status": "completed",
+      "note": "H27 terminal sustainment + regression-Eve evidence: run-post-h27-sustainment-loop wraps post-H26 loop + run:regression-eve-evidence + validate:h27-closeout; verify:sustainment-loop switched to H27 chain; verify:sustainment-loop:h26-legacy preserves H26 inner chain; validate:post-h27-sustainment-manifest; goalPolicies H26->H27; VALID_HORIZONS H27; H16 bundle goal-policy through H27."
     }
   ]
 }

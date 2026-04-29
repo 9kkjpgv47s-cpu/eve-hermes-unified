@@ -56,6 +56,11 @@ jobs:
       - name: Validate manifest schemas
         run: npm run validate:manifest-schemas
 
+      - name: Evidence prune dry-run (advisory)
+        env:
+          UNIFIED_EVIDENCE_PRUNE_TTL_DAYS: "0"
+        run: npm run verify:evidence-prune
+
       - name: H4 closeout evidence bundle
         run: npm run bundle:h4-closeout-evidence
 

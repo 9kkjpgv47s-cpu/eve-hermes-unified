@@ -4,7 +4,7 @@ import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
@@ -296,6 +296,9 @@ function commandVerificationType(command) {
   }
   if (command === "npm run verify:h5-evidence-baseline") {
     return "h5-evidence-baseline";
+  }
+  if (command === "npm run verify:evidence-prune") {
+    return "evidence-prune-run";
   }
   if (command === "npm run run:h2-drill-suite") {
     return "h2-drill-suite";
@@ -934,6 +937,20 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     if (payload?.checks?.h4CloseoutEvidencePass === false) {
       checks.push("h5_evidence_baseline_h4_closeout_not_passed");
+    }
+    if (payload?.checks?.evidencePruneDryRunPass !== true) {
+      checks.push("h5_evidence_baseline_evidence_prune_dry_run_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "evidence-prune-run") {
+    const schema = validateManifestSchema("evidence-prune-run", payload);
+    const checks = [];
+    if (!schema.valid) {
+      checks.push(...schema.errors.map((error) => `evidence_prune_run_schema_invalid:${error}`));
+    }
+    if (payload.pass !== true) {
+      checks.push("evidence_prune_run_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }

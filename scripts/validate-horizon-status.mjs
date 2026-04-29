@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectDuplicateTransitionKeysFromRawJson } from "./goal-policy-source.mjs";
 
-const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5"];
+const VALID_HORIZONS = ["H1", "H2", "H3", "H4", "H5", "H6"];
 const VALID_STATUSES = ["planned", "in_progress", "blocked", "completed"];
 const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
 const VALID_STAGES = ["shadow", "canary", "majority", "full"];

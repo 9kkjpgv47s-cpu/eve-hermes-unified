@@ -114,6 +114,46 @@ async function main() {
   const emergencyPath = await newestMatching(evidenceDir, "emergency-rollback-bundle-", ".json");
   const h4CloseoutPath = await newestMatching(evidenceDir, "h4-closeout-evidence-", ".json");
 
+  const h4CloseoutPath = await newestMatching(evidenceDir, "h4-closeout-evidence-", ".json");
+
+  const pruneDryPath = path.join(evidenceDir, `evidence-prune-dry-run-${stamp}.json`);
+  const pruneTtlRaw = Number(process.env.UNIFIED_EVIDENCE_PRUNE_TTL_DAYS ?? "");
+  const pruneTtl = Number.isFinite(pruneTtlRaw) && pruneTtlRaw >= 0 ? Math.trunc(pruneTtlRaw) : 30;
+  const skipPruneDry = String(process.env.UNIFIED_H5_BASELINE_SKIP_EVIDENCE_PRUNE_DRY_RUN ?? "").trim() === "1";
+  let evidencePruneDryRunPass = true;
+  let pruneDryRun = { status: -1, stderr: "" };
+  let evidencePruneDryRunPayload = null;
+  if (!skipPruneDry) {
+    pruneDryRun = run(process.execPath, [
+      path.join(ROOT, "scripts/prune-evidence.mjs"),
+      "--evidence-dir",
+      evidenceDir,
+      "--ttl-days",
+      String(pruneTtl),
+      "--dry-run",
+      "--out",
+      pruneDryPath,
+    ]);
+    evidencePruneDryRunPayload = parseJsonFlexible(pruneDryRun.stdout);
+    if (!evidencePruneDryRunPayload) {
+      try {
+        evidencePruneDryRunPayload = JSON.parse(await readFile(pruneDryPath, "utf8"));
+      } catch {
+        evidencePruneDryRunPayload = null;
+      }
+    }
+    const vPrune = evidencePruneDryRunPayload
+      ? validateManifestSchema("evidence-prune-run", evidencePruneDryRunPayload)
+      : { valid: false };
+    evidencePruneDryRunPass =
+      Boolean(
+        pruneDryRun.ok
+        && vPrune.valid
+        && evidencePruneDryRunPayload?.pass === true
+        && evidencePruneDryRunPayload?.dryRun === true,
+      );
+  }
+
   let soakLineCount = 0;
   if (soakPath) {
     const soakRaw = await readFile(soakPath, "utf8");
@@ -196,13 +236,14 @@ async function main() {
     && evidenceLineBudgetPass
     && p95BudgetPass !== false
     && (emergencyPath === null || emergencySchemaPass === true)
-    && (h4CloseoutPath === null || h4CloseoutPass === true);
+    && (h4CloseoutPath === null || h4CloseoutPass === true)
+    && evidencePruneDryRunPass;
 
   const payload = {
     schemaVersion: "v1",
     generatedAtIso: new Date().toISOString(),
     horizon: "H5",
-    summary: "H5 evidence baseline: soak SLO, validation-summary gates, P95 budget, core artifact paths.",
+    summary: "H5 evidence baseline: soak SLO, validation-summary gates, P95 budget, core artifact paths, evidence prune dry-run.",
     pass,
     thresholds: {
       maxSoakLines,
@@ -217,6 +258,7 @@ async function main() {
       regressionEvePrimaryPath: regressionPath,
       emergencyRollbackBundlePath: emergencyPath,
       h4CloseoutEvidencePath: h4CloseoutPath,
+      evidencePruneDryRunPath: skipPruneDry ? null : pruneDryPath,
     },
     commands: {
       soakSlo: {
@@ -224,6 +266,13 @@ async function main() {
         exitCode: soakPath ? soakSloRun.status : -1,
         pass: soakSloPass,
         ...(soakPath && !soakSloPass ? { stderrTail: soakSloRun.stderr.slice(-4000) } : {}),
+      },
+      evidencePruneDryRun: {
+        command: `node scripts/prune-evidence.mjs --evidence-dir <evidence> --ttl-days ${pruneTtl} --dry-run --out evidence-prune-dry-run-*.json`,
+        exitCode: skipPruneDry ? -1 : pruneDryRun.status,
+        pass: evidencePruneDryRunPass,
+        ...(skipPruneDry ? { skipped: true } : {}),
+        ...(!skipPruneDry && !evidencePruneDryRunPass ? { stderrTail: pruneDryRun.stderr.slice(-4000) } : {}),
       },
     },
     checks: {
@@ -236,6 +285,7 @@ async function main() {
       p95BudgetPass,
       emergencyRollbackBundleSchemaPass: emergencyPath === null ? null : emergencySchemaPass === true,
       h4CloseoutEvidencePass: h4CloseoutPath === null ? null : h4CloseoutPass === true,
+      evidencePruneDryRunPass,
     },
   };
 

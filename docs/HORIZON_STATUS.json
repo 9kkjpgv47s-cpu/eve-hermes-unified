@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T22:00:00Z",
+  "updatedAtIso": "2026-04-30T12:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -59,6 +59,13 @@
       "id": "h5-evidence-baseline",
       "command": "npm run verify:h5-evidence-baseline",
       "artifactPattern": "evidence/h5-evidence-baseline-*.json",
+      "required": true,
+      "horizons": ["H5"]
+    },
+    {
+      "id": "h5-evidence-prune-dry-run",
+      "command": "npm run verify:evidence-prune",
+      "artifactPattern": "evidence/evidence-prune-run-*.json",
       "required": true,
       "horizons": ["H5"]
     }
@@ -311,8 +318,29 @@
       "id": "h5-action-10",
       "summary": "Wire H5 baseline + soak SLO into operator promotion checklist and evidence retention policy (artifact TTL / pruning).",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "operations", "rollback"]
+    },
+    {
+      "id": "h6-action-1",
+      "summary": "Define H6 production cutover evidence pack: pinned release-readiness + H5 baseline + prune report for each promotion window.",
+      "targetHorizon": "H6",
+      "status": "planned",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h6-action-2",
+      "summary": "Automate evidence directory size guardrails (max bytes / max file count) with operator override and CI advisory mode.",
+      "targetHorizon": "H6",
+      "status": "planned",
+      "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h6-action-3",
+      "summary": "Document artifact retention for scheduled long-window soak (GitHub retention vs local prune) and rehearsal rollback using pruned evidence snapshots.",
+      "targetHorizon": "H6",
+      "status": "planned",
+      "tags": ["rollback", "operations"]
     }
   ],
   "goalPolicies": {
@@ -361,6 +389,21 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H5->H6": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.08,
+        "minPendingNextActions": 2,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 2,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -394,6 +437,10 @@
     "H5": {
       "status": "planned",
       "summary": "Autonomous operations and scale envelope."
+    },
+    "H6": {
+      "status": "planned",
+      "summary": "Production cutover consolidation, evidence volume guardrails, and operator-facing retention documentation."
     }
   },
   "history": [
@@ -552,6 +599,12 @@
       "horizon": "H5",
       "status": "planned",
       "note": "Completed h5-action-8: .github/workflows/soak-long-window-scheduled.yml + scripts/run-long-window-soak.sh + npm run validate:soak-long-window (soak-slo-scheduled-*.json). Completed h5-action-9: validate-release-readiness.sh runs bundle:h5-evidence-baseline when UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1; unified-ci enables gate and reorders release-readiness after baseline. Added h5-action-10 for retention/TTL follow-up."
+    },
+    {
+      "timestamp": "2026-04-30T12:00:00Z",
+      "horizon": "H5",
+      "status": "planned",
+      "note": "Completed h5-action-10: scripts/prune-evidence.mjs + npm run prune:evidence / verify:evidence-prune, evidence-prune-run manifest schema, H5 baseline embeds prune dry-run, requiredEvidence h5-evidence-prune-dry-run, CI advisory prune (TTL 0). Added H6 horizon states, H5->H6 goal policy, and h6-action-1..3 runway."
     }
   ]
 }

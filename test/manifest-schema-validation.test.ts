@@ -936,9 +936,11 @@ describe("validate-manifest-schema.mjs", () => {
               regressionEvePrimaryPath: path.join(dir, "re.json"),
               emergencyRollbackBundlePath: null,
               h4CloseoutEvidencePath: null,
+              evidencePruneDryRunPath: null,
             },
             commands: {
               soakSlo: { command: "node scripts/validate-soak-slo.mjs", exitCode: 0, pass: true },
+              evidencePruneDryRun: { command: "node scripts/prune-evidence.mjs", exitCode: 0, pass: true },
             },
             checks: {
               coreArtifactPathsPresent: true,
@@ -950,6 +952,7 @@ describe("validate-manifest-schema.mjs", () => {
               p95BudgetPass: true,
               emergencyRollbackBundleSchemaPass: null,
               h4CloseoutEvidencePass: null,
+              evidencePruneDryRunPass: true,
             },
           },
           null,
@@ -959,6 +962,40 @@ describe("validate-manifest-schema.mjs", () => {
       );
       const result = await runCommandWithTimeout(
         ["node", "scripts/validate-manifest-schema.mjs", "--type", "h5-evidence-baseline", "--file", manifestPath],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
+  it("passes for valid evidence-prune-run manifest", async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, "evidence-prune-run-20260430-000000.json");
+      await writeFile(
+        manifestPath,
+        JSON.stringify(
+          {
+            schemaVersion: "v1",
+            generatedAtIso: new Date().toISOString(),
+            evidenceDir: dir,
+            ttlDays: 30,
+            dryRun: true,
+            pass: true,
+            prefixCount: 5,
+            examined: 2,
+            eligible: 1,
+            deleted: 0,
+            skipped: 1,
+            errors: [],
+            deletedPaths: [path.join(dir, "soak-old.jsonl")],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-manifest-schema.mjs", "--type", "evidence-prune-run", "--file", manifestPath],
         { timeoutMs: 10_000 },
       );
       expect(result.code).toBe(0);

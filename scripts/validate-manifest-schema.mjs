@@ -409,6 +409,7 @@ export function validateH5EvidenceBaselineManifest(payload) {
       "regressionEvePrimaryPath",
       "emergencyRollbackBundlePath",
       "h4CloseoutEvidencePath",
+      "evidencePruneDryRunPath",
     ]) {
       pushError(
         errors,
@@ -468,6 +469,13 @@ export function validateH5EvidenceBaselineManifest(payload) {
         || typeof checks.h4CloseoutEvidencePass === "boolean",
       "checks.h4CloseoutEvidencePass must be boolean, null, or undefined",
     );
+    pushError(
+      errors,
+      checks.evidencePruneDryRunPass === undefined
+        || checks.evidencePruneDryRunPass === null
+        || typeof checks.evidencePruneDryRunPass === "boolean",
+      "checks.evidencePruneDryRunPass must be boolean, null, or undefined",
+    );
   }
   if (payload.pass === true) {
     if (!checks || typeof checks !== "object") {
@@ -486,7 +494,65 @@ export function validateH5EvidenceBaselineManifest(payload) {
       if (checks.h4CloseoutEvidencePass === false) {
         pushError(errors, false, "h4 closeout evidence must pass when path is set");
       }
+      pushError(errors, checks.evidencePruneDryRunPass === true, "evidence prune dry-run must pass");
     }
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateEvidencePruneRunManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.schemaVersion === "v1", "schemaVersion must be exactly v1");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(errors, isNonEmptyString(payload.evidenceDir), "evidenceDir must be non-empty string");
+  pushError(
+    errors,
+    typeof payload.ttlDays === "number" && Number.isFinite(payload.ttlDays) && payload.ttlDays >= 0,
+    "ttlDays must be a non-negative finite number",
+  );
+  pushError(errors, typeof payload.dryRun === "boolean", "dryRun must be boolean");
+  if (payload.ttlDays !== 0) {
+    pushError(
+      errors,
+      typeof payload.prefixCount === "number" && Number.isFinite(payload.prefixCount) && payload.prefixCount >= 0,
+      "prefixCount must be a non-negative finite number",
+    );
+  } else if (payload.prefixCount !== undefined && payload.prefixCount !== null) {
+    pushError(
+      errors,
+      typeof payload.prefixCount === "number" && Number.isFinite(payload.prefixCount) && payload.prefixCount >= 0,
+      "prefixCount must be a non-negative finite number when set",
+    );
+  }
+  pushError(
+    errors,
+    typeof payload.examined === "number" && Number.isFinite(payload.examined) && payload.examined >= 0,
+    "examined must be a non-negative finite number",
+  );
+  pushError(
+    errors,
+    typeof payload.eligible === "number" && Number.isFinite(payload.eligible) && payload.eligible >= 0,
+    "eligible must be a non-negative finite number",
+  );
+  pushError(
+    errors,
+    typeof payload.deleted === "number" && Number.isFinite(payload.deleted) && payload.deleted >= 0,
+    "deleted must be a non-negative finite number",
+  );
+  pushError(
+    errors,
+    typeof payload.skipped === "number" && Number.isFinite(payload.skipped) && payload.skipped >= 0,
+    "skipped must be a non-negative finite number",
+  );
+  pushError(errors, Array.isArray(payload.errors), "errors must be an array");
+  pushError(errors, Array.isArray(payload.deletedPaths), "deletedPaths must be an array");
+  if (payload.note !== undefined && payload.note !== null) {
+    pushError(errors, typeof payload.note === "string", "note must be string or undefined/null");
   }
   return { valid: errors.length === 0, errors };
 }
@@ -1561,6 +1627,9 @@ export function validateManifestSchema(type, payload) {
   if (type === "h5-evidence-baseline") {
     return validateH5EvidenceBaselineManifest(payload);
   }
+  if (type === "evidence-prune-run") {
+    return validateEvidencePruneRunManifest(payload);
+  }
   if (type === "merge-bundle") {
     return validateMergeBundleManifest(payload);
   }
@@ -1715,6 +1784,7 @@ async function listAllManifestTargets(evidenceDir) {
   const emergencyRollbackBundleTargets = [];
   const h4CloseoutEvidenceTargets = [];
   const h5EvidenceBaselineTargets = [];
+  const evidencePruneRunTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1815,6 +1885,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "h5-evidence-baseline",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("evidence-prune-run-") && entry.name.endsWith(".json")) {
+      evidencePruneRunTargets.push({
+        type: "evidence-prune-run",
+        file: path.join(evidenceDir, entry.name),
+      });
     } else if (entry.name.startsWith("unified-dispatch-audit-") && entry.name.endsWith(".jsonl")) {
       dispatchAuditJsonlTargets.push({
         type: "unified-dispatch-audit-jsonl",
@@ -1859,6 +1934,7 @@ async function listAllManifestTargets(evidenceDir) {
   emergencyRollbackBundleTargets.sort((a, b) => a.file.localeCompare(b.file));
   h4CloseoutEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
   h5EvidenceBaselineTargets.sort((a, b) => a.file.localeCompare(b.file));
+  evidencePruneRunTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1882,6 +1958,7 @@ async function listAllManifestTargets(evidenceDir) {
     emergencyRollbackBundleTargets,
     h4CloseoutEvidenceTargets,
     h5EvidenceBaselineTargets,
+    evidencePruneRunTargets,
   };
 }
 
@@ -1899,7 +1976,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|emergency-rollback-bundle|h4-closeout-evidence|h5-evidence-baseline|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
+      "Missing --type (release-readiness|emergency-rollback-bundle|h4-closeout-evidence|h5-evidence-baseline|evidence-prune-run|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
     );
   }
 
@@ -2033,6 +2110,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.evidencePruneRunTargets.length > 0
+            ? [
+                targetGroups.evidencePruneRunTargets[
+                  targetGroups.evidencePruneRunTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -2057,6 +2141,7 @@ async function main() {
           ...targetGroups.emergencyRollbackBundleTargets,
           ...targetGroups.h4CloseoutEvidenceTargets,
           ...targetGroups.h5EvidenceBaselineTargets,
+          ...targetGroups.evidencePruneRunTargets,
         ];
     const results = [];
     for (const target of targets) {

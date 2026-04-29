@@ -4,7 +4,7 @@ This document expands **h5-action-1** … **h5-action-10** into an operator-faci
 
 ## Implemented automation (repo)
 
-- **`npm run bundle:h5-evidence-baseline`** — writes **`evidence/h5-evidence-baseline-*.json`** after **`validate:all`**-style evidence exists (soak, validation-summary, failure-injection, cutover, regression). Validates soak SLO, summary **`gates.passed`**, optional **`emergency-rollback-bundle`** schema, optional **`h4-closeout-evidence`** pass, line-count and P95 budgets (`UNIFIED_H5_BASELINE_*`).
+- **`npm run bundle:h5-evidence-baseline`** — writes **`evidence/h5-evidence-baseline-*.json`** after **`validate:all`**-style evidence exists (soak, validation-summary, failure-injection, cutover, regression). Validates soak SLO, summary **`gates.passed`**, optional **`emergency-rollback-bundle`** schema, optional **`h4-closeout-evidence`** pass, line-count and P95 budgets (`UNIFIED_H5_BASELINE_*`), and **`evidencePruneDryRunPass`** via embedded **`prune-evidence.mjs --dry-run`** (writes **`evidence/evidence-prune-dry-run-*.json`**).
 - **`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1`** — **`scripts/validate-release-readiness.sh`** runs **`bundle:h5-evidence-baseline`** before **`release-readiness.mjs`**; the manifest requires a passing **`h5-evidence-baseline-*.json`** (checks **`h5BaselineRequired`**, **`h5BaselinePassed`**, **`h5BaselinePath`**). **`unified-ci`** enables this gate and runs **release-readiness** after the baseline bundle step.
 - **Long-window soak (h5-action-8)** — **`npm run validate:soak-long-window`** → **`bash scripts/run-long-window-soak.sh`** (optional first arg = iterations, else **`UNIFIED_SOAK_LONG_ITERATIONS`**, max **2000**). Produces **`evidence/soak-*.jsonl`** and **`evidence/soak-slo-scheduled-<stamp>.json`** for archival / dashboards. Scheduled workflow: **`.github/workflows/soak-long-window-scheduled.yml`** (weekly + **`workflow_dispatch`**); uploads **`soak-long-window-evidence`** and **`soak-slo-scheduled`** artifacts.
 
@@ -21,7 +21,7 @@ This document expands **h5-action-1** … **h5-action-10** into an operator-faci
 ## Scale envelope (h5-action-2, h5-action-7, h5-action-10)
 
 - **`UNIFIED_H5_BASELINE_MAX_SOAK_LINES`** caps soak log size in the baseline gate.
-- **h5-action-10 (planned):** evidence retention / pruning (artifact TTL, scheduled cleanup).
+- **h5-action-10:** **`npm run prune:evidence`** / **`npm run verify:evidence-prune`** — age-based pruning for known evidence filename prefixes (`UNIFIED_EVIDENCE_PRUNE_TTL_DAYS`, optional **`UNIFIED_EVIDENCE_PRUNE_PREFIXES`**); machine-readable **`evidence-prune-run-*.json`** (`validate-manifest-schema.mjs --type evidence-prune-run`).
 
 ## Load-test harness (h5-action-4)
 
@@ -44,4 +44,4 @@ This document expands **h5-action-1** … **h5-action-10** into an operator-faci
 | h5-action-7 | Evidence automation / regression baselines |
 | h5-action-8 | Long-window soak scheduling + **`soak-slo-scheduled-*.json`** |
 | h5-action-9 | Release-readiness baseline gate (`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE`) |
-| h5-action-10 | Evidence retention / TTL (planned) |
+| h5-action-10 | Evidence retention / TTL (**`prune-evidence.mjs`**, baseline dry-run) |

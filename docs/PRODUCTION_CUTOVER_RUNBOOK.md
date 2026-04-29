@@ -92,6 +92,20 @@ npm run bundle:h5-evidence-baseline -- --evidence-dir ./evidence
 - Volume and latency budgets: `UNIFIED_H5_BASELINE_MAX_SOAK_LINES` (default `50000`), `UNIFIED_H5_BASELINE_MAX_P95_LATENCY_MS` (default `10000`; compared to `metrics.p95LatencyMs` when validation-summary `gates.passed` is true).
 - Optional **release-readiness** enforcement: set `UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1` so `scripts/validate-release-readiness.sh` runs `npm run bundle:h5-evidence-baseline` and `scripts/release-readiness.mjs` requires a latest passing `h5-evidence-baseline-*.json` (CI **unified-ci** enables this). Set alongside optional `UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO` when you want both gates.
 - Rollback rehearsal: keep `npm run bundle:emergency-rollback` in the incident path; when an `emergency-rollback-bundle-*.json` is present under `evidence/`, the H5 baseline gate also validates its manifest schema.
+- **Evidence prune dry-run:** the baseline bundle runs `scripts/prune-evidence.mjs` in `--dry-run` mode (writes `evidence/evidence-prune-dry-run-<timestamp>.json`) and requires `checks.evidencePruneDryRunPass`. Set `UNIFIED_H5_BASELINE_SKIP_EVIDENCE_PRUNE_DRY_RUN=1` only for local debugging.
+
+### Evidence retention (TTL pruning)
+
+Operators and scheduled runners can cap growth of timestamped files under `evidence/`:
+
+```bash
+npm run verify:evidence-prune
+# destructive prune (default TTL 30 days from mtime; set UNIFIED_EVIDENCE_PRUNE_TTL_DAYS=0 to disable deletes)
+npm run prune:evidence
+```
+
+- **Manifest:** `evidence/evidence-prune-run-<timestamp>.json` (schema `evidence-prune-run` via `validate-manifest-schema.mjs`).
+- **Configuration:** `UNIFIED_EVIDENCE_PRUNE_TTL_DAYS` (default `30`; `0` disables deletes), optional `UNIFIED_EVIDENCE_PRUNE_PREFIXES` (comma-separated basename prefixes).
 
 ### Long-window soak (scheduled SLO archival)
 
@@ -104,7 +118,7 @@ npm run validate:soak-long-window -- 200
 
 - Default iterations when omitted: **`UNIFIED_SOAK_LONG_ITERATIONS`** (default `200`, hard cap `2000` in the script).
 - Writes **`evidence/soak-*.jsonl`** plus **`evidence/soak-slo-scheduled-<utc-stamp>.json`** (same schema as **`validate-soak-slo`** output).
-- **CI:** workflow **`soak-long-window`** (`.github/workflows/soak-long-window-scheduled.yml`) runs weekly and on **`workflow_dispatch`**; download artifacts **`soak-long-window-evidence`** and **`soak-slo-scheduled`** for dashboards.
+- **CI:** workflow **`soak-long-window`** (`.github/workflows/soak-long-window-scheduled.yml`) runs weekly and on **`workflow_dispatch`**; download artifacts **`soak-long-window-evidence`** and **`soak-slo-scheduled`** for dashboards. GitHub artifact retention is separate from local `npm run prune:evidence`; archive anything you need beyond the platform retention window.
 
 ## Merge Bundle Retrieval and Verification (Operator Procedure)
 

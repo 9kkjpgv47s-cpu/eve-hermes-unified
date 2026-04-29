@@ -4,7 +4,7 @@ import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 import { loadGoalPolicyTransitions } from "./goal-policy-source.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
 
 function parseArgs(argv) {
   const options = {

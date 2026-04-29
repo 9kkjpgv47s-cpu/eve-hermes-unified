@@ -21,6 +21,7 @@ async function seedHorizonStatus(
     withH5H6?: boolean;
     withH6H7?: boolean;
     withH7H8?: boolean;
+    withH8H9?: boolean;
     includeTaggedCounts?: boolean;
   },
 ): Promise<void> {
@@ -29,6 +30,7 @@ async function seedHorizonStatus(
   const withH5H6 = options?.withH5H6 ?? false;
   const withH6H7 = options?.withH6H7 ?? false;
   const withH7H8 = options?.withH7H8 ?? false;
+  const withH8H9 = options?.withH8H9 ?? false;
   const includeTaggedCounts = options?.includeTaggedCounts ?? true;
 
   const transitions: Record<string, unknown> = {
@@ -106,6 +108,19 @@ async function seedHorizonStatus(
         : undefined,
     };
   }
+  if (withH8H9) {
+    transitions["H8->H9"] = {
+      minimumGoalIncrease: 1,
+      minActionGrowthFactor: 1.05,
+      minPendingNextActions: 2,
+      requiredTaggedActionCounts: includeTaggedCounts
+        ? {
+            validation: { minCount: 1, minPendingCount: 1 },
+            durability: { minCount: 1, minPendingCount: 1 },
+          }
+        : undefined,
+    };
+  }
 
   const nextActions: Array<Record<string, unknown>> = [
     { id: "h2-action-1", summary: "seed", targetHorizon: "H2", status: "completed", tags: ["durability"] },
@@ -129,6 +144,12 @@ async function seedHorizonStatus(
     nextActions.push(
       { id: "h8-action-1", summary: "seed", targetHorizon: "H8", status: "planned", tags: ["validation"] },
       { id: "h8-action-2", summary: "seed", targetHorizon: "H8", status: "planned", tags: ["operations"] },
+    );
+  }
+  if (withH8H9) {
+    nextActions.push(
+      { id: "h9-action-1", summary: "seed", targetHorizon: "H9", status: "planned", tags: ["validation"] },
+      { id: "h9-action-2", summary: "seed", targetHorizon: "H9", status: "planned", tags: ["durability"] },
     );
   }
 
@@ -196,6 +217,7 @@ async function seedHorizonStatus(
           H6: { status: "planned", summary: "H6 planned" },
           H7: { status: "planned", summary: "H7 planned" },
           H8: { status: "planned", summary: "H8 planned" },
+          H9: { status: "planned", summary: "H9 planned" },
         },
         history: [
           {
@@ -221,6 +243,7 @@ async function seedGoalPolicyFile(
     includeH5H6?: boolean;
     includeH6H7?: boolean;
     includeH7H8?: boolean;
+    includeH8H9?: boolean;
     includeTaggedCounts?: boolean;
   },
 ): Promise<void> {
@@ -229,6 +252,7 @@ async function seedGoalPolicyFile(
   const includeH5H6 = options?.includeH5H6 ?? false;
   const includeH6H7 = options?.includeH6H7 ?? false;
   const includeH7H8 = options?.includeH7H8 ?? false;
+  const includeH8H9 = options?.includeH8H9 ?? false;
   const includeTaggedCounts = options?.includeTaggedCounts ?? true;
   const transitions: Record<string, unknown> = {
     "H2->H3": {
@@ -278,6 +302,14 @@ async function seedGoalPolicyFile(
       minActionGrowthFactor: 1.05,
       minPendingNextActions: 2,
       requiredTaggedActionCounts: includeTaggedCounts ? { validation: 1, operations: 1 } : {},
+    };
+  }
+  if (includeH8H9) {
+    transitions["H8->H9"] = {
+      minimumGoalIncrease: 1,
+      minActionGrowthFactor: 1.05,
+      minPendingNextActions: 2,
+      requiredTaggedActionCounts: includeTaggedCounts ? { validation: 1, durability: 1 } : {},
     };
   }
   await writeFile(policyPath, JSON.stringify({ transitions }, null, 2), "utf8");
@@ -369,6 +401,7 @@ async function seedAutoGoalPolicyFile(
     includeH5H6?: boolean;
     includeH6H7?: boolean;
     includeH7H8?: boolean;
+    includeH8H9?: boolean;
     includeTaggedCounts?: boolean;
   },
 ): Promise<string> {
@@ -545,6 +578,58 @@ describe("check-goal-policy-coverage.mjs", () => {
         "H5->H6",
         "H6->H7",
         "H7->H8",
+      ]);
+    });
+  });
+
+  it("passes when H8->H9 transition is included in coverage window", async () => {
+    await withTempDir(async (dir) => {
+      const statusPath = path.join(dir, "HORIZON_STATUS.json");
+      const outPath = path.join(dir, "goal-policy-coverage-h9.json");
+      await seedHorizonStatus(statusPath, {
+        withH3H4: true,
+        withH4H5: true,
+        withH5H6: true,
+        withH6H7: true,
+        withH7H8: true,
+        withH8H9: true,
+        includeTaggedCounts: true,
+      });
+
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/check-goal-policy-coverage.mjs",
+          "--horizon-status-file",
+          statusPath,
+          "--source-horizon",
+          "H2",
+          "--max-target-horizon",
+          "H9",
+          "--require-tagged-requirements",
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 30_000 },
+      );
+      expect(result.code).toBe(0);
+      const payload = JSON.parse(await readFile(outPath, "utf8")) as {
+        pass: boolean;
+        checks: {
+          transitionCount: number;
+          transitionKeys: string[];
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks.transitionCount).toBe(7);
+      expect(payload.checks.transitionKeys).toEqual([
+        "H2->H3",
+        "H3->H4",
+        "H4->H5",
+        "H5->H6",
+        "H6->H7",
+        "H7->H8",
+        "H8->H9",
       ]);
     });
   });

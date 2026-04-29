@@ -57,7 +57,7 @@ function readCommandOptionValue(tokens, optionNames) {
 
 function parseHorizonRunnerCommand(command) {
   const normalized = normalizeCommand(command);
-  const match = normalized.match(/^npm run run:h([1-8])-(closeout|promotion)(?:\s+.*)?$/);
+  const match = normalized.match(/^npm run run:h([1-9])-(closeout|promotion)(?:\s+.*)?$/);
   if (match) {
     const source = normalizeHorizon(`H${String(match[1])}`);
     const kind = String(match[2]);
@@ -168,6 +168,20 @@ async function runH7EvidenceBundleGate(horizonStatusFile, evidenceDir) {
   }
 }
 
+async function runH8EvidenceBundleGate(horizonStatusFile, evidenceDir) {
+  const scriptPath = path.join(REPO_ROOT, "scripts", "validate-h8-evidence-bundle.mjs");
+  try {
+    await execFile(process.execPath, [scriptPath, "--horizon-status-file", horizonStatusFile, "--evidence-dir", evidenceDir], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    });
+    return { pass: true };
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? error.code : null;
+    return { pass: false, code };
+  }
+}
+
 function parseArgs(argv) {
   const options = {
     horizon: "",
@@ -181,6 +195,7 @@ function parseArgs(argv) {
     requireH5EvidenceBundle: false,
     requireH6EvidenceBundle: false,
     requireH7EvidenceBundle: false,
+    requireH8EvidenceBundle: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -212,6 +227,8 @@ function parseArgs(argv) {
       options.requireH6EvidenceBundle = true;
     } else if (arg === "--require-h7-evidence-bundle") {
       options.requireH7EvidenceBundle = true;
+    } else if (arg === "--require-h8-evidence-bundle") {
+      options.requireH8EvidenceBundle = true;
     }
   }
   return options;
@@ -1183,6 +1200,18 @@ async function main() {
     }
   }
 
+  let h8EvidenceBundleGate = null;
+  if (
+    targetHorizon === "H8"
+    && options.requireH8EvidenceBundle
+    && (await exists(evidenceDir))
+  ) {
+    h8EvidenceBundleGate = await runH8EvidenceBundleGate(horizonStatusFile, evidenceDir);
+    if (!h8EvidenceBundleGate.pass) {
+      failures.push("h8_evidence_bundle_gate_failed");
+    }
+  }
+
   const payload = {
     generatedAtIso: new Date().toISOString(),
     pass: failures.length === 0,
@@ -1291,6 +1320,7 @@ async function main() {
       h5EvidenceBundleGate,
       h6EvidenceBundleGate,
       h7EvidenceBundleGate,
+      h8EvidenceBundleGate,
     },
     failures,
   };

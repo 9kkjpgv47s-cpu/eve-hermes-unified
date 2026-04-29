@@ -8,8 +8,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: **`H7`** (`docs/HORIZON_STATUS.json`, in progress); **H8** program — see **`docs/H8_PROGRAM.md`** (`sloPosture` on validation-summary, **`validate:h8-closeout`**)
-- Latest in-repo slice: tenant/region/partition on envelopes and WAL, tenant-scoped memory keys, `UNIFIED_ROUTER_REGION_ID` failover swap, per-tenant capability chat env maps, `validate:h5-tenant-isolation`, `run:remediation-playbook-dry-run`, `run:h5-region-misalignment-drill`, `run:h6-partition-drill`, `validate:h5-evidence-bundle`, `validate:h6-closeout`, `validate:h6-evidence-bundle`, `validate:h7-closeout`, `validate:h7-evidence-bundle`, and `validate:h8-closeout` in `validate:all`
+- Active horizon: **`H8`** (`docs/HORIZON_STATUS.json`, in progress); **H9** — see **`docs/H9_PROGRAM.md`**
+- Latest in-repo slice: tenant/region/partition on envelopes and WAL, tenant-scoped memory keys, `UNIFIED_ROUTER_REGION_ID` failover swap, per-tenant capability chat env maps, `validate:h5-tenant-isolation`, `run:remediation-playbook-dry-run`, `run:h5-region-misalignment-drill`, `run:h6-partition-drill`, `validate:h5-evidence-bundle`, `validate:h6-closeout`, `validate:h6-evidence-bundle`, `validate:h7-closeout`, `validate:h7-evidence-bundle`, `validate:h8-closeout`, `validate:h8-evidence-bundle`, and `validate:h9-closeout` in `validate:all`
 - See `docs/H5_MULTI_TENANT_REGION.md` for env and CLI details
 
 ## What Was Just Completed

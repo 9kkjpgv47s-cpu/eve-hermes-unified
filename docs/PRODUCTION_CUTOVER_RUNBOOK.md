@@ -501,19 +501,19 @@ Useful flags:
   - run `npm run validate:goal-policy-file` to enforce dedicated file validity before promotion
   - `--require-goal-policy-file-validation` to run this validation gate inline during promotion
   - `--goal-policy-file-validation-out <path>` to pin the validation artifact path
-  - `--goal-policy-file-validation-until-horizon <H3|H4|H5|H6|H7|H8>` to set validation transition scope
+  - `--goal-policy-file-validation-until-horizon <H3|H4|H5|H6|H7|H8|H9>` to set validation transition scope
   - `--allow-goal-policy-file-validation-fallback` only for compatibility replays that intentionally allow horizon-status fallback
   - run `npm run validate:goal-policy-file` to enforce dedicated file validity before promotion
   - if no co-located file exists, it falls back to `goalPolicies` inside `docs/HORIZON_STATUS.json`
 - `--require-goal-policy-coverage` to require machine-checkable transition policy coverage before promotion
-  - default scope checks from source horizon through `--goal-policy-coverage-until-horizon` (default `H8`)
-  - set `--goal-policy-coverage-until-horizon H8` to require policy coverage through remaining horizons (e.g., H2->H3->H4->H5->H6->H7->H8)
-  - add `--required-policy-transitions "H2->H3,H3->H4,H4->H5,H5->H6,H6->H7,H7->H8"` for explicit transition sets
+  - default scope checks from source horizon through `--goal-policy-coverage-until-horizon` (default `H9`)
+  - set `--goal-policy-coverage-until-horizon H9` to require policy coverage through remaining horizons (e.g., H2->H3->H4->H5->H6->H7->H8->H9)
+  - add `--required-policy-transitions "H2->H3,H3->H4,H4->H5,H5->H6,H6->H7,H7->H8,H8->H9"` for explicit transition sets
   - add `--require-policy-tagged-targets` to require tagged target requirements per transition policy
   - add `--require-positive-pending-policy-min` to require each covered transition policy to declare a positive pending action minimum
 - `--require-goal-policy-readiness-audit` to run `audit:goal-policy-readiness` as an explicit promotion gate
   - writes/reads `goal-policy-readiness-audit-*.json` and requires audit `"pass": true`
   - use `--goal-policy-readiness-audit-out <path>` for pinned audit artifact paths in deterministic replays
-  - add `--goal-policy-readiness-audit-max-target-horizon <H3|H4|H5|H6|H7|H8>` (alias of `--goal-policy-readiness-audit-until-horizon`) to define readiness-audit transition window
+  - add `--goal-policy-readiness-audit-max-target-horizon <H3|H4|H5|H6|H7|H8|H9>` (alias of `--goal-policy-readiness-audit-until-horizon`) to define readiness-audit transition window
   - add `--require-goal-policy-readiness-tagged-targets` to require tagged requirements in each covered transition policy
   - add `--require-goal-policy-readiness-positive-pending-min` to require each covered transition policy to declare a positive `minPendingNextActions`

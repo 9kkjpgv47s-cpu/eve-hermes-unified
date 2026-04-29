@@ -14,6 +14,6 @@ H8 is the **release posture and soak SLO evidence** slice: it ties **operator-vi
 
 3. **Horizon closeout** — **`npm run validate:h7-horizon-closeout`** still composes **H7→H8** with **`--require-h7-evidence-bundle`**. **`npm run run:h7-closeout`** passes **`--require-h7-evidence-bundle`** into `validate-horizon-closeout`.
 
-4. **Optional next step (h8-action-3)** — After **`promote:horizon`** marks H7 completed in your environment, set **`activeHorizon`** to **H8** and seed **H9** or product-specific **`nextActions`** when scope is ready.
+4. **Optional next step (h8-action-3)** — After **`promote:horizon`** marks H7 completed in your environment, set **`activeHorizon`** to **H8** and seed **H9** or product-specific **`nextActions`** when scope is ready. In-repo: **`validate:h8-evidence-bundle`**, **`validate:h9-closeout`**, **`H8->H9`** policy, **`docs/H9_PROGRAM.md`**.
 
-See **`docs/HORIZON_STATUS.json`** for **`h8-action-*`** and **`docs/GOAL_POLICIES.json`** for **`H7->H8`**.
+See **`docs/HORIZON_STATUS.json`** for **`h8-action-*`** and **`docs/GOAL_POLICIES.json`** for **`H7->H8`** and **`H8->H9`**.

@@ -156,6 +156,13 @@ async function seedHorizonStatus(
           H20: { status: "planned", summary: "H20 planned" },
           H21: { status: "planned", summary: "H21 planned" },
           H22: { status: "planned", summary: "H22 planned" },
+          H23: { status: "planned", summary: "H23 planned" },
+          H24: { status: "planned", summary: "H24 planned" },
+          H25: { status: "planned", summary: "H25 planned" },
+          H26: { status: "planned", summary: "H26 planned" },
+          H27: { status: "planned", summary: "H27 planned" },
+          H28: { status: "planned", summary: "H28 planned" },
+          H29: { status: "planned", summary: "H29 planned" },
         },
         history: [
           {

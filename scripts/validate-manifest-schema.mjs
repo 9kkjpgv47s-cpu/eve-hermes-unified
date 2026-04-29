@@ -815,6 +815,134 @@ export function validateStageDrillManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
+function validateSustainmentLoopManifestWithChecks(payload, requiredBoolKeys) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    for (const key of requiredBoolKeys) {
+      pushError(errors, typeof checks[key] === "boolean", `checks.${key} must be boolean`);
+    }
+  }
+  pushError(errors, Array.isArray(payload.steps), "steps must be an array");
+  if (Array.isArray(payload.steps)) {
+    payload.steps.forEach((step, index) => {
+      const prefix = `steps[${String(index)}]`;
+      pushError(errors, step && typeof step === "object", `${prefix} must be an object`);
+      if (!step || typeof step !== "object") {
+        return;
+      }
+      pushError(errors, isNonEmptyString(step.script), `${prefix}.script must be non-empty string`);
+      pushError(errors, Number.isFinite(step.exitCode), `${prefix}.exitCode must be a finite number`);
+    });
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validatePostH22SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "horizonStatusPass",
+    "h17AssuranceBundlePass",
+    "h18AssuranceBundlePass",
+    "ciSoakSloGatePass",
+    "unifiedEntrypointsEvidencePass",
+    "shellUnifiedDispatchCiEvidencePass",
+    "tenantIsolationEvidencePass",
+    "h22CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH23SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH22SustainmentChainPass",
+    "evidenceGatesEvidencePass",
+    "h23CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH24SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH23SustainmentChainPass",
+    "regionFailoverEvidencePass",
+    "h24CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH25SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH24SustainmentChainPass",
+    "agentRemediationEvidencePass",
+    "h25CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH26SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH25SustainmentChainPass",
+    "emergencyRollbackEvidencePass",
+    "h26CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH27SustainmentLoopManifest(payload) {
+  const checks = payload && typeof payload === "object" ? payload.checks : null;
+  if (checks && typeof checks === "object" && typeof checks.postH26SustainmentChainPass === "boolean") {
+    return validateSustainmentLoopManifestWithChecks(payload, [
+      "postH26SustainmentChainPass",
+      "manifestSchemasTerminalEvidencePass",
+      "h27CloseoutGatePass",
+    ]);
+  }
+  /** Pre-H27-chain manifests used the same flat checks shape as the terminal post-H22 loop. */
+  if (checks && typeof checks === "object" && typeof checks.horizonStatusPass === "boolean") {
+    return validateSustainmentLoopManifestWithChecks(payload, [
+      "horizonStatusPass",
+      "h17AssuranceBundlePass",
+      "h18AssuranceBundlePass",
+      "ciSoakSloGatePass",
+      "unifiedEntrypointsEvidencePass",
+      "shellUnifiedDispatchCiEvidencePass",
+      "evidenceGatesEvidencePass",
+      "tenantIsolationEvidencePass",
+      "regionFailoverEvidencePass",
+      "agentRemediationEvidencePass",
+      "emergencyRollbackEvidencePass",
+      "manifestSchemasTerminalEvidencePass",
+      "h27CloseoutGatePass",
+    ]);
+  }
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH26SustainmentChainPass",
+    "manifestSchemasTerminalEvidencePass",
+    "h27CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH28SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH27SustainmentChainPass",
+    "manifestSchemasPostH27LoopEvidencePass",
+    "stagePromotionSustainmentEvidencePass",
+    "h28CloseoutGatePass",
+  ]);
+}
+
+export function validatePostH29SustainmentLoopManifest(payload) {
+  return validateSustainmentLoopManifestWithChecks(payload, [
+    "postH28SustainmentChainPass",
+    "manifestSchemasPostH28LoopEvidencePass",
+    "dispatchContractFixturesEvidencePass",
+    "h29CloseoutGatePass",
+  ]);
+}
+
 export function validateManifestSchema(type, payload) {
   if (type === "release-readiness") {
     return validateReleaseReadinessManifest(payload);
@@ -863,6 +991,30 @@ export function validateManifestSchema(type, payload) {
   }
   if (type === "stage-drill") {
     return validateStageDrillManifest(payload);
+  }
+  if (type === "post-h22-sustainment-loop") {
+    return validatePostH22SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h23-sustainment-loop") {
+    return validatePostH23SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h24-sustainment-loop") {
+    return validatePostH24SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h25-sustainment-loop") {
+    return validatePostH25SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h26-sustainment-loop") {
+    return validatePostH26SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h27-sustainment-loop") {
+    return validatePostH27SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h28-sustainment-loop") {
+    return validatePostH28SustainmentLoopManifest(payload);
+  }
+  if (type === "post-h29-sustainment-loop") {
+    return validatePostH29SustainmentLoopManifest(payload);
   }
   return { valid: false, errors: [`Unsupported manifest type: ${type}`] };
 }
@@ -922,6 +1074,14 @@ async function listAllManifestTargets(evidenceDir) {
   const stagePromotionExecutionTargets = [];
   const autoRollbackPolicyTargets = [];
   const stageDrillTargets = [];
+  const postH22SustainmentLoopTargets = [];
+  const postH23SustainmentLoopTargets = [];
+  const postH24SustainmentLoopTargets = [];
+  const postH25SustainmentLoopTargets = [];
+  const postH26SustainmentLoopTargets = [];
+  const postH27SustainmentLoopTargets = [];
+  const postH28SustainmentLoopTargets = [];
+  const postH29SustainmentLoopTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1007,6 +1167,46 @@ async function listAllManifestTargets(evidenceDir) {
         type: "stage-drill",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("post-h22-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH22SustainmentLoopTargets.push({
+        type: "post-h22-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h23-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH23SustainmentLoopTargets.push({
+        type: "post-h23-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h24-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH24SustainmentLoopTargets.push({
+        type: "post-h24-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h25-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH25SustainmentLoopTargets.push({
+        type: "post-h25-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h26-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH26SustainmentLoopTargets.push({
+        type: "post-h26-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h27-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH27SustainmentLoopTargets.push({
+        type: "post-h27-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h28-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH28SustainmentLoopTargets.push({
+        type: "post-h28-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
+    } else if (entry.name.startsWith("post-h29-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH29SustainmentLoopTargets.push({
+        type: "post-h29-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -1024,6 +1224,14 @@ async function listAllManifestTargets(evidenceDir) {
   stagePromotionExecutionTargets.sort((a, b) => a.file.localeCompare(b.file));
   autoRollbackPolicyTargets.sort((a, b) => a.file.localeCompare(b.file));
   stageDrillTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH22SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH23SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH24SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH25SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH26SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH27SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH28SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH29SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1040,6 +1248,14 @@ async function listAllManifestTargets(evidenceDir) {
     stagePromotionExecutionTargets,
     autoRollbackPolicyTargets,
     stageDrillTargets,
+    postH22SustainmentLoopTargets,
+    postH23SustainmentLoopTargets,
+    postH24SustainmentLoopTargets,
+    postH25SustainmentLoopTargets,
+    postH26SustainmentLoopTargets,
+    postH27SustainmentLoopTargets,
+    postH28SustainmentLoopTargets,
+    postH29SustainmentLoopTargets,
   };
 }
 
@@ -1057,7 +1273,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|all)",
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|post-h22-sustainment-loop|post-h23-sustainment-loop|post-h24-sustainment-loop|post-h25-sustainment-loop|post-h26-sustainment-loop|post-h27-sustainment-loop|post-h28-sustainment-loop|post-h29-sustainment-loop|all)",
     );
   }
 
@@ -1142,6 +1358,62 @@ async function main() {
           ...(targetGroups.stageDrillTargets.length > 0
             ? [targetGroups.stageDrillTargets[targetGroups.stageDrillTargets.length - 1]]
             : []),
+          ...(targetGroups.postH22SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH22SustainmentLoopTargets[
+                  targetGroups.postH22SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH23SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH23SustainmentLoopTargets[
+                  targetGroups.postH23SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH24SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH24SustainmentLoopTargets[
+                  targetGroups.postH24SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH25SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH25SustainmentLoopTargets[
+                  targetGroups.postH25SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH26SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH26SustainmentLoopTargets[
+                  targetGroups.postH26SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH27SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH27SustainmentLoopTargets[
+                  targetGroups.postH27SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH28SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH28SustainmentLoopTargets[
+                  targetGroups.postH28SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
+          ...(targetGroups.postH29SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH29SustainmentLoopTargets[
+                  targetGroups.postH29SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1159,6 +1431,14 @@ async function main() {
           ...targetGroups.stagePromotionExecutionTargets,
           ...targetGroups.autoRollbackPolicyTargets,
           ...targetGroups.stageDrillTargets,
+          ...targetGroups.postH22SustainmentLoopTargets,
+          ...targetGroups.postH23SustainmentLoopTargets,
+          ...targetGroups.postH24SustainmentLoopTargets,
+          ...targetGroups.postH25SustainmentLoopTargets,
+          ...targetGroups.postH26SustainmentLoopTargets,
+          ...targetGroups.postH27SustainmentLoopTargets,
+          ...targetGroups.postH28SustainmentLoopTargets,
+          ...targetGroups.postH29SustainmentLoopTargets,
         ];
     const results = [];
     for (const target of targets) {

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Horizon H6 sustainment bundle: reruns critical gates in one evidence artifact
- * (horizon metadata, tenant isolation, region rehearsal, unified entrypoints).
+ * Horizon H6 sustainment bundle: horizon metadata validation only.
+ *
+ * Tenant isolation (**`validate:tenant-isolation`**), region failover rehearsal (**`rehearse:region-failover`**),
+ * and unified entrypoints (**`validate:unified-entrypoints`**) run earlier in unified-ci standalone gates before **`npm run build`**.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -37,34 +39,15 @@ const horizonStatus = runStep("validate_horizon_status", [
   "--file",
   path.join(root, "docs/HORIZON_STATUS.json"),
 ]);
-const tenantIsolation = runStep("validate_tenant_isolation", [
-  process.execPath,
-  path.join(root, "scripts/validate-tenant-isolation.mjs"),
-]);
-const regionFailover = runStep("rehearse_region_failover", [
-  "bash",
-  path.join(root, "scripts/region-failover-rehearsal.sh"),
-]);
-const unifiedEntrypoints = runStep("validate_unified_entrypoints", [
-  process.execPath,
-  path.join(root, "scripts/validate-unified-entrypoints.mjs"),
-]);
 
 const payload = {
   generatedAtIso: new Date().toISOString(),
   horizon: "H6",
-  pass:
-    horizonStatus.pass
-    && tenantIsolation.pass
-    && regionFailover.pass
-    && unifiedEntrypoints.pass,
+  pass: horizonStatus.pass,
   checks: {
     horizonStatusPass: horizonStatus.pass,
-    tenantIsolationPass: tenantIsolation.pass,
-    regionFailoverPass: regionFailover.pass,
-    unifiedEntrypointsPass: unifiedEntrypoints.pass,
   },
-  steps: [horizonStatus, tenantIsolation, regionFailover, unifiedEntrypoints],
+  steps: [horizonStatus],
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

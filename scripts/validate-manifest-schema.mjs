@@ -213,6 +213,23 @@ export function validateReleaseReadinessManifest(payload) {
         || typeof checks.soakSloPath === "string",
       "checks.soakSloPath must be string, null, or undefined",
     );
+    pushError(
+      errors,
+      checks.h5BaselineRequired === undefined || typeof checks.h5BaselineRequired === "boolean",
+      "checks.h5BaselineRequired must be boolean or undefined",
+    );
+    pushError(
+      errors,
+      checks.h5BaselinePassed === undefined || typeof checks.h5BaselinePassed === "boolean",
+      "checks.h5BaselinePassed must be boolean or undefined",
+    );
+    pushError(
+      errors,
+      checks.h5BaselinePath === undefined
+        || checks.h5BaselinePath === null
+        || typeof checks.h5BaselinePath === "string",
+      "checks.h5BaselinePath must be string, null, or undefined",
+    );
   }
 
   pushError(errors, Array.isArray(payload.failures), "failures must be an array");
@@ -347,6 +364,127 @@ export function validateH4CloseoutEvidenceManifest(payload) {
       pushError(errors, checks.memoryAuditReportPass === true, "memory audit report must pass");
       if (checks.emergencyRollbackBundleSchemaPass === false) {
         pushError(errors, false, "emergency rollback bundle schema must pass when present");
+      }
+    }
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateH5EvidenceBaselineManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+  pushError(errors, payload.schemaVersion === "v1", "schemaVersion must be exactly v1");
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  pushError(errors, payload.horizon === "H5", "horizon must be exactly H5");
+  pushError(errors, isNonEmptyString(payload.summary), "summary must be non-empty string");
+  const thresholds = payload.thresholds;
+  pushError(errors, thresholds && typeof thresholds === "object", "thresholds must be an object");
+  if (thresholds && typeof thresholds === "object") {
+    pushError(
+      errors,
+      typeof thresholds.maxSoakLines === "number" && Number.isFinite(thresholds.maxSoakLines) && thresholds.maxSoakLines > 0,
+      "thresholds.maxSoakLines must be a positive finite number",
+    );
+    pushError(
+      errors,
+      typeof thresholds.maxP95LatencyMs === "number"
+        && Number.isFinite(thresholds.maxP95LatencyMs)
+        && thresholds.maxP95LatencyMs > 0,
+      "thresholds.maxP95LatencyMs must be a positive finite number",
+    );
+  }
+  const files = payload.files;
+  pushError(errors, files && typeof files === "object", "files must be an object");
+  if (files && typeof files === "object") {
+    for (const key of [
+      "soakPath",
+      "soakSloReportPath",
+      "validationSummaryPath",
+      "failureInjectionPath",
+      "cutoverReadinessPath",
+      "regressionEvePrimaryPath",
+      "emergencyRollbackBundlePath",
+      "h4CloseoutEvidencePath",
+    ]) {
+      pushError(
+        errors,
+        files[key] === null || typeof files[key] === "string",
+        `files.${key} must be string or null`,
+      );
+    }
+  }
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    pushError(
+      errors,
+      typeof checks.coreArtifactPathsPresent === "boolean",
+      "checks.coreArtifactPathsPresent must be boolean",
+    );
+    pushError(errors, typeof checks.soakSloPass === "boolean", "checks.soakSloPass must be boolean");
+    pushError(
+      errors,
+      typeof checks.validationSummaryGatePass === "boolean",
+      "checks.validationSummaryGatePass must be boolean",
+    );
+    pushError(
+      errors,
+      typeof checks.evidenceLineBudgetPass === "boolean",
+      "checks.evidenceLineBudgetPass must be boolean",
+    );
+    pushError(
+      errors,
+      typeof checks.soakLineCount === "number" && Number.isFinite(checks.soakLineCount) && checks.soakLineCount >= 0,
+      "checks.soakLineCount must be a non-negative finite number",
+    );
+    pushError(
+      errors,
+      checks.p95LatencyMs === null
+        || (typeof checks.p95LatencyMs === "number" && Number.isFinite(checks.p95LatencyMs)),
+      "checks.p95LatencyMs must be number or null",
+    );
+    pushError(
+      errors,
+      checks.p95BudgetPass === undefined
+        || checks.p95BudgetPass === null
+        || typeof checks.p95BudgetPass === "boolean",
+      "checks.p95BudgetPass must be boolean, null, or undefined",
+    );
+    pushError(
+      errors,
+      checks.emergencyRollbackBundleSchemaPass === undefined
+        || checks.emergencyRollbackBundleSchemaPass === null
+        || typeof checks.emergencyRollbackBundleSchemaPass === "boolean",
+      "checks.emergencyRollbackBundleSchemaPass must be boolean, null, or undefined",
+    );
+    pushError(
+      errors,
+      checks.h4CloseoutEvidencePass === undefined
+        || checks.h4CloseoutEvidencePass === null
+        || typeof checks.h4CloseoutEvidencePass === "boolean",
+      "checks.h4CloseoutEvidencePass must be boolean, null, or undefined",
+    );
+  }
+  if (payload.pass === true) {
+    if (!checks || typeof checks !== "object") {
+      pushError(errors, false, "checks required when pass is true");
+    } else {
+      pushError(errors, checks.coreArtifactPathsPresent === true, "core artifact paths must be present");
+      pushError(errors, checks.soakSloPass === true, "soak SLO must pass");
+      pushError(errors, checks.validationSummaryGatePass === true, "validation summary gate must pass");
+      pushError(errors, checks.evidenceLineBudgetPass === true, "soak line budget must pass");
+      if (checks.p95BudgetPass === false) {
+        pushError(errors, false, "p95 latency must satisfy budget when reported");
+      }
+      if (checks.emergencyRollbackBundleSchemaPass === false) {
+        pushError(errors, false, "emergency rollback bundle schema must pass when bundle path is set");
+      }
+      if (checks.h4CloseoutEvidencePass === false) {
+        pushError(errors, false, "h4 closeout evidence must pass when path is set");
       }
     }
   }
@@ -1420,6 +1558,9 @@ export function validateManifestSchema(type, payload) {
   if (type === "h4-closeout-evidence") {
     return validateH4CloseoutEvidenceManifest(payload);
   }
+  if (type === "h5-evidence-baseline") {
+    return validateH5EvidenceBaselineManifest(payload);
+  }
   if (type === "merge-bundle") {
     return validateMergeBundleManifest(payload);
   }
@@ -1573,6 +1714,7 @@ async function listAllManifestTargets(evidenceDir) {
   const dispatchQueueJournalJsonlTargets = [];
   const emergencyRollbackBundleTargets = [];
   const h4CloseoutEvidenceTargets = [];
+  const h5EvidenceBaselineTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1668,6 +1810,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "h4-closeout-evidence",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("h5-evidence-baseline-") && entry.name.endsWith(".json")) {
+      h5EvidenceBaselineTargets.push({
+        type: "h5-evidence-baseline",
+        file: path.join(evidenceDir, entry.name),
+      });
     } else if (entry.name.startsWith("unified-dispatch-audit-") && entry.name.endsWith(".jsonl")) {
       dispatchAuditJsonlTargets.push({
         type: "unified-dispatch-audit-jsonl",
@@ -1711,6 +1858,7 @@ async function listAllManifestTargets(evidenceDir) {
   dispatchQueueJournalJsonlTargets.sort((a, b) => a.file.localeCompare(b.file));
   emergencyRollbackBundleTargets.sort((a, b) => a.file.localeCompare(b.file));
   h4CloseoutEvidenceTargets.sort((a, b) => a.file.localeCompare(b.file));
+  h5EvidenceBaselineTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1733,6 +1881,7 @@ async function listAllManifestTargets(evidenceDir) {
     dispatchQueueJournalJsonlTargets,
     emergencyRollbackBundleTargets,
     h4CloseoutEvidenceTargets,
+    h5EvidenceBaselineTargets,
   };
 }
 
@@ -1750,7 +1899,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|emergency-rollback-bundle|h4-closeout-evidence|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
+      "Missing --type (release-readiness|emergency-rollback-bundle|h4-closeout-evidence|h5-evidence-baseline|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|unified-dispatch-audit-jsonl|capability-policy-audit-jsonl|router-telemetry-jsonl|dispatch-queue-journal-jsonl|all)",
     );
   }
 
@@ -1877,6 +2026,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.h5EvidenceBaselineTargets.length > 0
+            ? [
+                targetGroups.h5EvidenceBaselineTargets[
+                  targetGroups.h5EvidenceBaselineTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1900,6 +2056,7 @@ async function main() {
           ...targetGroups.dispatchQueueJournalJsonlTargets,
           ...targetGroups.emergencyRollbackBundleTargets,
           ...targetGroups.h4CloseoutEvidenceTargets,
+          ...targetGroups.h5EvidenceBaselineTargets,
         ];
     const results = [];
     for (const target of targets) {

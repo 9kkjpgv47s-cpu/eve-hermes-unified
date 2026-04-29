@@ -17,6 +17,8 @@
     "bundle:emergency-rollback": "node ./scripts/build-emergency-rollback-bundle.mjs --evidence-dir ./evidence",
     "bundle:h4-closeout-evidence": "node ./scripts/h4-closeout-evidence.mjs --evidence-dir ./evidence",
     "verify:h4-closeout-evidence": "node ./scripts/h4-closeout-evidence.mjs --evidence-dir ./evidence",
+    "bundle:h5-evidence-baseline": "node ./scripts/h5-evidence-baseline.mjs --evidence-dir ./evidence",
+    "verify:h5-evidence-baseline": "node ./scripts/h5-evidence-baseline.mjs --evidence-dir ./evidence",
     "validate:evidence-summary": "bash ./scripts/validate-evidence-summary.sh",
     "validate:evidence-gates": "node ./scripts/evidence-gates.mjs",
     "validate:horizon-status": "node ./scripts/validate-horizon-status.mjs --file ./docs/HORIZON_STATUS.json",

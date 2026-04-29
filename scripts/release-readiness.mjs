@@ -276,6 +276,22 @@ async function main() {
       }
     }
   }
+  let h5BaselineSummary = null;
+  let h5BaselinePath = null;
+  const requireH5BaselineFromEnv = process.env.UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE;
+  const requireH5Baseline =
+    typeof requireH5BaselineFromEnv === "string" && requireH5BaselineFromEnv.trim() !== "0";
+  if (requireH5Baseline) {
+    h5BaselinePath = await newestFileWithPrefixes(evidenceDir, ["h5-evidence-baseline-"]);
+    if (!h5BaselinePath) {
+      failures.push("missing_h5_evidence_baseline_report");
+    } else {
+      h5BaselineSummary = await readJson(h5BaselinePath);
+      if (h5BaselineSummary?.pass !== true) {
+        failures.push("h5_evidence_baseline_gate_failed");
+      }
+    }
+  }
   if (goalPolicyValidationPath) {
     goalPolicyValidationSummary = await readJson(goalPolicyValidationPath);
     if (goalPolicyValidationSummary?.pass !== true) {
@@ -420,6 +436,10 @@ async function main() {
       soakSloPassed:
         !requireSoakSlo || (Boolean(soakSloPath) && soakSloSummary?.pass === true),
       soakSloPath: soakSloPath || null,
+      h5BaselineRequired: requireH5Baseline,
+      h5BaselinePassed:
+        !requireH5Baseline || (Boolean(h5BaselinePath) && h5BaselineSummary?.pass === true),
+      h5BaselinePath: h5BaselinePath || null,
     },
     failures,
   };

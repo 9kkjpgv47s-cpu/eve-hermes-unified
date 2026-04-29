@@ -43,6 +43,60 @@ function latencyMs(record) {
   return 0;
 }
 
+/** Extract top-level JSON objects from text (supports multi-line pretty-printed values). */
+function extractJsonObjects(text) {
+  const out = [];
+  const s = String(text ?? "");
+  let i = 0;
+  while (i < s.length) {
+    while (i < s.length && s[i] !== "{") {
+      i += 1;
+    }
+    if (i >= s.length) {
+      break;
+    }
+    const start = i;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    let j = start;
+    for (; j < s.length; j += 1) {
+      const c = s[j];
+      if (inStr) {
+        if (esc) {
+          esc = false;
+        } else if (c === "\\") {
+          esc = true;
+        } else if (c === '"') {
+          inStr = false;
+        }
+        continue;
+      }
+      if (c === '"') {
+        inStr = true;
+      } else if (c === "{") {
+        depth += 1;
+      } else if (c === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          const slice = s.slice(start, j + 1);
+          try {
+            out.push(JSON.parse(slice));
+          } catch {
+            /* skip non-JSON brace regions */
+          }
+          i = j + 1;
+          break;
+        }
+      }
+    }
+    if (j >= s.length || depth !== 0) {
+      i = start + 1;
+    }
+  }
+  return out;
+}
+
 async function main() {
   const opt = parseArgs(process.argv.slice(2));
   if (!opt.file.trim()) {
@@ -60,6 +114,14 @@ async function main() {
   const raw = await readFile(resolved, "utf8");
   const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
   const records = [];
+  for (const row of extractJsonObjects(raw)) {
+    if (row?.soakMeta === true) {
+      continue;
+    }
+    if (isDispatchRecord(row)) {
+      records.push(row);
+    }
+  }
   for (const line of lines) {
     let row;
     try {
@@ -74,11 +136,23 @@ async function main() {
       records.push(row);
     }
   }
-  const total = records.length;
+  const deduped = [];
+  const seen = new Set();
+  for (const r of records) {
+    const tid = r?.envelope?.traceId;
+    const mid = r?.envelope?.messageId;
+    const key = typeof tid === "string" && tid.length > 0 ? tid : `${String(mid)}:${JSON.stringify(r?.response)}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(r);
+  }
+  const total = deduped.length;
   let success = 0;
   let policyFailures = 0;
   const elapsed = [];
-  for (const r of records) {
+  for (const r of deduped) {
     if (r?.response?.failureClass === "none") {
       success += 1;
     }

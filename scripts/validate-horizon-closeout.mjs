@@ -294,6 +294,9 @@ function commandVerificationType(command) {
   if (command === "npm run verify:h4-closeout-evidence") {
     return "h4-closeout-evidence";
   }
+  if (command === "npm run verify:h5-evidence-baseline") {
+    return "h5-evidence-baseline";
+  }
   if (command === "npm run run:h2-drill-suite") {
     return "h2-drill-suite";
   }
@@ -899,6 +902,38 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     if (payload?.checks?.emergencyRollbackBundleSchemaPass === false) {
       checks.push("h4_closeout_emergency_rollback_bundle_schema_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h5-evidence-baseline") {
+    const schema = validateManifestSchema("h5-evidence-baseline", payload);
+    const checks = [];
+    if (!schema.valid) {
+      checks.push(...schema.errors.map((error) => `h5_evidence_baseline_schema_invalid:${error}`));
+    }
+    if (payload.pass !== true) {
+      checks.push("h5_evidence_baseline_not_passed");
+    }
+    if (payload?.checks?.coreArtifactPathsPresent !== true) {
+      checks.push("h5_evidence_baseline_core_paths_missing");
+    }
+    if (payload?.checks?.soakSloPass !== true) {
+      checks.push("h5_evidence_baseline_soak_slo_not_passed");
+    }
+    if (payload?.checks?.validationSummaryGatePass !== true) {
+      checks.push("h5_evidence_baseline_validation_summary_not_passed");
+    }
+    if (payload?.checks?.evidenceLineBudgetPass !== true) {
+      checks.push("h5_evidence_baseline_soak_line_budget_not_passed");
+    }
+    if (payload?.checks?.p95BudgetPass === false) {
+      checks.push("h5_evidence_baseline_p95_budget_not_passed");
+    }
+    if (payload?.checks?.emergencyRollbackBundleSchemaPass === false) {
+      checks.push("h5_evidence_baseline_emergency_bundle_schema_not_passed");
+    }
+    if (payload?.checks?.h4CloseoutEvidencePass === false) {
+      checks.push("h5_evidence_baseline_h4_closeout_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }

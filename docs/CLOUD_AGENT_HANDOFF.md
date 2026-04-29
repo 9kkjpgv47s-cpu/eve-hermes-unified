@@ -95,7 +95,7 @@ Optional crash recovery for file-backed unified memory:
 ## Soak simulation and SLO drift (H3)
 
 - **`npm run validate:soak`** — `scripts/soak-simulate.sh` writes `evidence/soak-*.jsonl`: each iteration appends the **dispatch JSON** (stdout) then an optional **`soakMeta`** line (iteration, exit code, stderr excerpt, trace summary) so `summarize-evidence.mjs` still parses dispatch records. **`scripts/soak-append-meta.mjs`** is plain Node ESM (no TypeScript-only syntax).
-- **`npm run validate:soak-slo`** — `scripts/validate-soak-slo.mjs --file <soak.jsonl>` writes **`evidence/soak-slo-*.json`** with success rate / policy-failure rate / P95 latency. Thresholds: **`UNIFIED_SOAK_SLO_MIN_SUCCESS_RATE`** (default `0.5`), **`UNIFIED_SOAK_SLO_MAX_POLICY_FAILURE_RATE`** (default `0.45`); CLI overrides **`--min-success-rate`** / **`--max-policy-failure-rate`**.
+- **`npm run validate:soak-slo`** — `scripts/validate-soak-slo.mjs --file <soak.jsonl>` writes **`evidence/soak-slo-*.json`** with success rate / policy-failure rate / P95 latency. Thresholds: **`UNIFIED_SOAK_SLO_MIN_SUCCESS_RATE`** (default `0.5`), **`UNIFIED_SOAK_SLO_MAX_POLICY_FAILURE_RATE`** (default `0.45`); CLI overrides **`--min-success-rate`** / **`--max-policy-failure-rate`**. Soak logs may contain **pretty-printed multi-line dispatch JSON** per iteration (from `soak-simulate.sh`); the validator scans **top-level JSON objects** in the file (not only single-line records).
 - **Release readiness gate:** set **`UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO=1`** so `scripts/release-readiness.mjs` requires a passing **`soak-slo-*.json`** in the evidence dir.
 
 ## Emergency rollback rehearsal bundle (H3)
@@ -109,6 +109,13 @@ Optional crash recovery for file-backed unified memory:
 - **Conformance:** `fixtures/dispatch/*.json` use **`dispatchFixtureSchemaVersion`** (align with **`DISPATCH_FIXTURE_SCHEMA_VERSION`** in `src/contracts/dispatch-fixture-version.ts`). **`test/dispatch-conformance-fixtures.test.ts`** runs **`dispatchUnifiedMessage`** against fixtures.
 - **Memory audit:** `docs/H4_UNIFIED_MEMORY_AUDIT.md`; probe **`npx tsx src/bin/memory-audit-report.ts`** (JSON with **`checks.crossLaneInvariantPass`** / **`checks.walReplayInvariantPass`**).
 - **Closeout evidence bundle:** **`npm run bundle:h4-closeout-evidence`** (alias **`npm run verify:h4-closeout-evidence`**) writes **`evidence/h4-closeout-evidence-*.json`** (dispatch fixture Vitest run + memory audit; if **`evidence/emergency-rollback-bundle-*.json`** exists, its schema must validate). Validate: **`node scripts/validate-manifest-schema.mjs --type h4-closeout-evidence --file <path>`**. **`validate-horizon-closeout.mjs`** recognizes **`npm run verify:h4-closeout-evidence`** for **`requiredEvidence`** row **`h4-closeout-evidence`** (see **`docs/HORIZON_STATUS.json`**, **`horizons: ["H4"]`**).
+
+## H5 evidence baseline + soak/evidence-summary correctness
+
+- **`npm run bundle:h5-evidence-baseline`** (alias **`verify:h5-evidence-baseline`**) — after **`validate:all`**-style artifacts exist, writes **`evidence/h5-evidence-baseline-*.json`** (soak SLO on latest **`soak-*.jsonl`**, validation-summary **`gates.passed`**, P95 + soak line budgets via **`UNIFIED_H5_BASELINE_*`**; optional **`h4-closeout-evidence`** and **`emergency-rollback-bundle`** checks). Schema: **`validate-manifest-schema.mjs --type h5-evidence-baseline`**. **`validate-horizon-closeout`** maps **`npm run verify:h5-evidence-baseline`** for **`requiredEvidence`** scoped to **H5** in **`docs/HORIZON_STATUS.json`**.
+- **`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1`** — **`scripts/release-readiness.mjs`** requires a newest **`h5-evidence-baseline-*.json`** with **`pass: true`** (manifest checks **`h5BaselineRequired`**, **`h5BaselinePassed`**, **`h5BaselinePath`**).
+- **`scripts/validate-soak-slo.mjs`** — parses **multi-line** pretty-printed dispatch JSON in soak logs (brace-balanced scan + dedupe by **`traceId`**).
+- **`scripts/summarize-evidence.mjs`** — selects the latest **`soak-*.jsonl`** dispatch log only (so **`soak-slo-baseline-*.json`** / **`soak-slo-*.json`** files in **`evidence/`** cannot be mistaken for soak input).
 
 ## Horizon-neutral failure id inventory (orchestration scripts)
 

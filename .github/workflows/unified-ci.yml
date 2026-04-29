@@ -78,6 +78,9 @@ jobs:
       - name: H4 closeout evidence bundle
         run: npm run bundle:h4-closeout-evidence
 
+      - name: H5 evidence baseline bundle
+        run: npm run bundle:h5-evidence-baseline
+
       - name: Verify merge bundle package
         run: npm run verify:merge-bundle
 

@@ -55,6 +55,9 @@ describe("validate-manifest-schema.mjs", () => {
               soakSloRequired: false,
               soakSloPassed: true,
               soakSloPath: null,
+              h5BaselineRequired: false,
+              h5BaselinePassed: true,
+              h5BaselinePath: null,
             },
             failures: [],
           },
@@ -905,6 +908,57 @@ describe("validate-manifest-schema.mjs", () => {
       );
       const result = await runCommandWithTimeout(
         ["node", "scripts/validate-manifest-schema.mjs", "--type", "h4-closeout-evidence", "--file", manifestPath],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+    });
+  });
+
+  it("passes for valid h5-evidence-baseline manifest", async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = path.join(dir, "h5-evidence-baseline-20260429-000000.json");
+      await writeFile(
+        manifestPath,
+        JSON.stringify(
+          {
+            schemaVersion: "v1",
+            generatedAtIso: new Date().toISOString(),
+            horizon: "H5",
+            summary: "fixture",
+            pass: true,
+            thresholds: { maxSoakLines: 50000, maxP95LatencyMs: 10000 },
+            files: {
+              soakPath: path.join(dir, "soak.jsonl"),
+              soakSloReportPath: path.join(dir, "slo.json"),
+              validationSummaryPath: path.join(dir, "vs.json"),
+              failureInjectionPath: path.join(dir, "fi.txt"),
+              cutoverReadinessPath: path.join(dir, "co.json"),
+              regressionEvePrimaryPath: path.join(dir, "re.json"),
+              emergencyRollbackBundlePath: null,
+              h4CloseoutEvidencePath: null,
+            },
+            commands: {
+              soakSlo: { command: "node scripts/validate-soak-slo.mjs", exitCode: 0, pass: true },
+            },
+            checks: {
+              coreArtifactPathsPresent: true,
+              soakSloPass: true,
+              validationSummaryGatePass: true,
+              evidenceLineBudgetPass: true,
+              soakLineCount: 1,
+              p95LatencyMs: 5,
+              p95BudgetPass: true,
+              emergencyRollbackBundleSchemaPass: null,
+              h4CloseoutEvidencePass: null,
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-manifest-schema.mjs", "--type", "h5-evidence-baseline", "--file", manifestPath],
         { timeoutMs: 10_000 },
       );
       expect(result.code).toBe(0);

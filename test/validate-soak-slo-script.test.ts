@@ -37,4 +37,28 @@ describe("validate-soak-slo.mjs", () => {
       expect(out.pass).toBe(true);
     });
   });
+
+  it("parses pretty-printed multi-line dispatch JSON in soak jsonl", async () => {
+    await withTempDir(async (dir) => {
+      const soakPath = path.join(dir, "soak-multiline.jsonl");
+      const dispatch = {
+        envelope: { traceId: "trace-a", chatId: "1", messageId: "1" },
+        response: { failureClass: "none", traceId: "trace-a" },
+        primaryState: { elapsedMs: 3 },
+      };
+      const pretty = `${JSON.stringify(dispatch, null, 2)}\n${JSON.stringify({ soakMeta: true, iteration: 1 }, null, 2)}\n`;
+      await writeFile(soakPath, pretty, "utf8");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-soak-slo.mjs", "--file", soakPath, "--out", path.join(dir, "slo.json")],
+        { timeoutMs: 10_000 },
+      );
+      expect(result.code).toBe(0);
+      const out = JSON.parse(await readFile(path.join(dir, "slo.json"), "utf8")) as {
+        pass: boolean;
+        checks: { dispatchRecordCount: number };
+      };
+      expect(out.pass).toBe(true);
+      expect(out.checks.dispatchRecordCount).toBe(1);
+    });
+  });
 });

@@ -79,6 +79,20 @@ npm run validate:cutover-readiness
 - `npm run validate:regression-eve-primary` validates Eve-primary/no-fallback safe-lane behavior.
 - `npm run validate:cutover-readiness` executes staged cutover checks for shadow/canary/majority/full and confirms rollback returns to Eve-safe configuration.
 
+### H5 autonomous operations baseline (evidence bundle)
+
+After a full `npm run validate:all` (or CI `unified-evidence` artifact), operators can emit a single **H5 evidence baseline** manifest that ties together soak SLO, validation-summary gates, and core evidence paths:
+
+```bash
+npm run bundle:h5-evidence-baseline -- --evidence-dir ./evidence
+```
+
+- Output: `evidence/h5-evidence-baseline-<timestamp>.json` (and `evidence/soak-slo-baseline-<timestamp>.json` from the embedded soak SLO run).
+- Schema: `node scripts/validate-manifest-schema.mjs --type h5-evidence-baseline --file <path>`.
+- Volume and latency budgets: `UNIFIED_H5_BASELINE_MAX_SOAK_LINES` (default `50000`), `UNIFIED_H5_BASELINE_MAX_P95_LATENCY_MS` (default `10000`; compared to `metrics.p95LatencyMs` when validation-summary `gates.passed` is true).
+- Optional **release-readiness** enforcement: set `UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1` so `scripts/release-readiness.mjs` requires a latest passing `h5-evidence-baseline-*.json` in the evidence directory (alongside optional `UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO`).
+- Rollback rehearsal: keep `npm run bundle:emergency-rollback` in the incident path; when an `emergency-rollback-bundle-*.json` is present under `evidence/`, the H5 baseline gate also validates its manifest schema.
+
 ## Merge Bundle Retrieval and Verification (Operator Procedure)
 
 Use this flow before stage promotion when consuming CI artifacts.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-29T12:00:00Z",
+  "updatedAtIso": "2026-04-29T18:00:00Z",
   "owner": "cloud-agent",
   "activeHorizon": "H2",
   "activeStatus": "in_progress",
@@ -56,11 +56,11 @@
       "required": true
     },
     {
-      "id": "h4-closeout-evidence",
-      "command": "npm run verify:h4-closeout-evidence",
-      "artifactPattern": "evidence/h4-closeout-evidence-*.json",
+      "id": "h5-evidence-baseline",
+      "command": "npm run verify:h5-evidence-baseline",
+      "artifactPattern": "evidence/h5-evidence-baseline-*.json",
       "required": true,
-      "horizons": ["H4"]
+      "horizons": ["H5"]
     }
   ],
   "nextActions": [
@@ -248,50 +248,64 @@
       "id": "h5-action-1",
       "summary": "Define autonomous operations envelope (SLOs, alerting hooks, operator escalation paths) for H5.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "operations"]
     },
     {
       "id": "h5-action-2",
       "summary": "Define scale envelope targets (throughput, fan-out, evidence volume) and measurement harness for H5.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
     },
     {
       "id": "h5-action-3",
       "summary": "Add H5 emergency rollback drill requirements tied to unified dispatch evidence bundles.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["rollback", "validation"]
     },
     {
       "id": "h5-action-4",
       "summary": "Define H5 load-test harness integration with soak SLO gates and evidence retention policy.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
     },
     {
       "id": "h5-action-5",
       "summary": "Document H5 operator runbook updates for full-stage unified dispatch and incident response.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "rollback"]
     },
     {
       "id": "h5-action-6",
       "summary": "Define H6 runway: post-scale autonomous verification gates and deprecation of shadow-only paths.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "planning"]
     },
     {
       "id": "h5-action-7",
       "summary": "Add evidence automation for H5 SLO regression baselines against soak and failure-injection artifacts.",
       "targetHorizon": "H5",
-      "status": "planned",
+      "status": "completed",
       "tags": ["validation", "durability"]
+    },
+    {
+      "id": "h5-action-8",
+      "summary": "Schedule long-window soak in CI or dedicated runner and archive soak-slo manifests for regression dashboards.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "durability", "rollback"]
+    },
+    {
+      "id": "h5-action-9",
+      "summary": "Optional release-readiness gate: require latest h5-evidence-baseline pass when UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1.",
+      "targetHorizon": "H5",
+      "status": "planned",
+      "tags": ["validation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -519,6 +533,12 @@
       "horizon": "H4",
       "status": "planned",
       "note": "Completed h4-action-3..6: H5 runway rows (h5-action-6/7), h4-closeout-evidence bundle + validate:h4-closeout wiring, memory-audit-report.ts, tenant-metadata contract test, docs/H4_UNIFIED_MEMORY_AUDIT.md and docs/H5_AUTONOMOUS_OPS_ENVELOPE.md."
+    },
+    {
+      "timestamp": "2026-04-29T18:00:00Z",
+      "horizon": "H5",
+      "status": "planned",
+      "note": "Completed h5-action-1..7: h5-evidence-baseline.mjs + manifest schema + horizon-closeout mapping, runbook H5 section, env thresholds, CI bundle:h5-evidence-baseline. Added h5-action-8/9 for soak scheduling and optional release-readiness baseline gate."
     }
   ]
 }

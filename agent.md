@@ -8,25 +8,20 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: `H2` (`docs/HORIZON_STATUS.json`). H3 **h3-action-1** … **h3-action-6** completed. H4 **h4-action-1** … **h4-action-6** completed (inventory, dispatch fixtures, H4 closeout evidence bundle + gates, memory audit doc, tenant-metadata contract test, H5 planning doc + runway actions **h5-action-1** … **h5-action-7**).
-- Branch: **`cursor/h4-inventory-fixtures-cc15`** (or successor) — merge after CI green.
+- Active horizon: `H2` (`docs/HORIZON_STATUS.json`). **H5** actions **h5-action-1** … **h5-action-7** are **completed** (baseline bundle, release-readiness optional gate, runbook, soak/SLO + evidence-summary fixes). **h5-action-8** and **h5-action-9** remain **planned**.
+- **Required evidence:** H4-scoped **`h4-closeout-evidence`**; H5-scoped **`h5-evidence-baseline`** (`npm run verify:h5-evidence-baseline`).
+- Branch: **`cursor/h5-evidence-baseline-cc15`** (or merge from it) — H5 baseline + soak/SLO + summarize-evidence fixes.
 
 ## What Was Just Completed (large chunk)
 
-### H4 closeout + H5 runway
-
-1. **`scripts/h4-closeout-evidence.mjs`** + **`npm run bundle:h4-closeout-evidence`** / **`verify:h4-closeout-evidence`** — bundles **dispatch fixture Vitest** + **`memory-audit-report`** JSON; optional **`emergency-rollback-bundle`** schema check when present.
-2. **`src/bin/memory-audit-report.ts`** — cross-lane + WAL replay invariant JSON for H4 memory audit.
-3. **`validate-manifest-schema.mjs`** — new type **`h4-closeout-evidence`**; **`--type all`** includes latest **`h4-closeout-evidence-*.json`**.
-4. **`validate-horizon-closeout.mjs`** — evaluates **`npm run verify:h4-closeout-evidence`** artifacts.
-5. **`docs/HORIZON_STATUS.json`** — **`requiredEvidence`** entry **`h4-closeout-evidence`** scoped to **H4**; progressive **H4→H5** still passes with new H5 actions.
-6. **Docs:** `docs/H4_UNIFIED_MEMORY_AUDIT.md`, `docs/H5_AUTONOMOUS_OPS_ENVELOPE.md`.
-7. **Tests:** `test/h4-closeout-evidence-script.test.ts`, manifest schema test, **`unified-dispatch`** tenant metadata test.
-8. **CI:** `.github/workflows/unified-ci.yml` runs **`bundle:h4-closeout-evidence`** after **`validate:manifest-schemas`**.
-
-### Carry-forward
-
-- H3 durability, soak SLO, emergency rollback bundle, capability budgets — see `docs/CLOUD_AGENT_HANDOFF.md`.
+1. **`scripts/h5-evidence-baseline.mjs`** — **`npm run bundle:h5-evidence-baseline`** / **`verify:h5-evidence-baseline`**: soak SLO on latest **`soak-*.jsonl`**, validation-summary **`gates.passed`**, P95 + line-count budgets, optional **`h4-closeout-evidence`** + **`emergency-rollback-bundle`** schema checks.
+2. **`validate-manifest-schema.mjs`** — type **`h5-evidence-baseline`**; **`--type all`** includes latest baseline manifest.
+3. **`validate-horizon-closeout.mjs`** — evaluates **`npm run verify:h5-evidence-baseline`**.
+4. **`scripts/release-readiness.mjs`** — **`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1`** requires latest **`h5-evidence-baseline-*.json`** with **`pass: true`** (checks **`h5BaselineRequired`**, **`h5BaselinePassed`**, **`h5BaselinePath`**).
+5. **`scripts/validate-soak-slo.mjs`** — parses **multi-line** pretty-printed dispatch JSON in soak logs (brace scanner + dedupe by **`traceId`**).
+6. **`scripts/summarize-evidence.mjs`** — picks **`soak-*.jsonl`** only so **`soak-slo-baseline-*.json`** does not shadow real soak logs.
+7. **`docs/HORIZON_STATUS.json`**, **`docs/H5_AUTONOMOUS_OPS_ENVELOPE.md`**, **`docs/PRODUCTION_CUTOVER_RUNBOOK.md`**, **`docs/CLOUD_AGENT_HANDOFF.md`**, **`.env.example`**, **CI** (`bundle:h5-evidence-baseline`).
+8. **Tests:** `h5-evidence-baseline-script`, manifest schema, **`validate-soak-slo`** multi-line case, **`release-readiness`** H5 baseline missing case.
 
 ## Read Order (Zero-Context Startup)
 
@@ -34,17 +29,14 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 2. `AGENTS.md`
 3. `AGENT.md`
 4. `docs/CLOUD_AGENT_HANDOFF.md`
-5. `docs/H4_DIRECT_LANE_INVOCATION_INVENTORY.md`
-6. `docs/H4_UNIFIED_MEMORY_AUDIT.md`
-7. `docs/H5_AUTONOMOUS_OPS_ENVELOPE.md`
-8. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
-9. `docs/HORIZON_STATUS.json`
+5. `docs/H5_AUTONOMOUS_OPS_ENVELOPE.md`
+6. `docs/HORIZON_STATUS.json`
 
 ## Immediate Next High-Output Targets
 
-1. **Execute H5 actions** — implement SLO automation, soak job integration, and runbook updates per `docs/H5_AUTONOMOUS_OPS_ENVELOPE.md` (status rows **h5-action-1** … **h5-action-7** are still **planned**).
-2. **Real H4 closeout run** — when promoting H4, run full **`npm run validate:h4-closeout`** with complete **`evidence/`** (release-readiness, merge-bundle, stage promotion, **`promotionReadiness.targetStage: full`** for H5) plus **`bundle:h4-closeout-evidence`**.
-3. Keep **`npm run check && npm test && npm run validate:all`** green.
+1. **`h5-action-8`** — scheduled long-window soak + archived **`soak-slo-*.json`** for dashboards.
+2. **`h5-action-9`** — wire **`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE`** into promotion/CI where appropriate.
+3. Keep **`npm run validate:all`** green.
 
 ## Validation Pack
 
@@ -52,13 +44,13 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 npm run check
 npm test
 npm run validate:all
-npm run bundle:h4-closeout-evidence
+npm run bundle:h5-evidence-baseline
 ```
 
 ## Guardrails
 
-- Bump **`DISPATCH_FIXTURE_SCHEMA_VERSION`** when changing `fixtures/dispatch` contract shape.
-- Bump **`UNIFIED_DISPATCH_AUDIT_SCHEMA_VERSION`** when changing dispatch audit record shape.
+- Evidence summary must use **`soak-*.jsonl`** dispatch logs (not SLO JSON manifests).
+- Bump manifest **`schemaVersion`** only when contract shape changes (follow existing patterns).
 
 ## Delivery Checklist Per Iteration
 

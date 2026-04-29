@@ -1,8 +1,11 @@
 # H5 autonomous operations envelope (draft)
 
-This document expands **h5-action-1** … **h5-action-7** into an operator-facing envelope before H5 execution work lands in code.
+This document expands **h5-action-1** … **h5-action-9** into an operator-facing envelope before deeper H5 execution work lands in code.
 
-## SLO and alerting
+## Implemented automation (repo)
+
+- **`npm run bundle:h5-evidence-baseline`** — writes **`evidence/h5-evidence-baseline-*.json`** after **`validate:all`**-style evidence exists (soak, validation-summary, failure-injection, cutover, regression). Validates soak SLO, summary **`gates.passed`**, optional **`emergency-rollback-bundle`** schema, optional **`h4-closeout-evidence`** pass, line-count and P95 budgets (`UNIFIED_H5_BASELINE_*`).
+- **`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1`** — **`scripts/release-readiness.mjs`** requires latest **`h5-evidence-baseline-*.json`** with **`pass: true`** (checks surfaced as **`h5BaselineRequired`**, **`h5BaselinePassed`**, **`h5BaselinePath`**).
 
 - **Dispatch success / policy failure rates** — reuse **`npm run validate:soak-slo`** thresholds (`UNIFIED_SOAK_SLO_*`) as baseline SLOs; wire alerts when the latest **`evidence/soak-slo-*.json`** reports `pass: false` while **`UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO=1`** is enabled in promotion environments.
 - **P95 latency** — soak SLO manifest already tracks **`p95LatencyMs`**; treat sustained regression vs the last **N** passing manifests as an alert input (implementation TBD in H5).
@@ -35,3 +38,5 @@ This document expands **h5-action-1** … **h5-action-7** into an operator-facin
 | h5-action-5 | Runbook updates (pointer) |
 | h5-action-6 | Planning runway (post-H4 closeout) |
 | h5-action-7 | Evidence automation / regression baselines |
+| h5-action-8 | Long-window soak scheduling (planned) |
+| h5-action-9 | Optional release-readiness baseline gate (`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE`) |

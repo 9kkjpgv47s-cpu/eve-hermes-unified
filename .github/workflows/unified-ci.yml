@@ -39,7 +39,7 @@ jobs:
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: H16 sustainment assurance bundle (goal policy through H22 + manifest schemas + H15 gates)
+      - name: H16 sustainment assurance bundle (goal policy through H23 + manifest schemas + H15 gates)
         run: npm run run:h16-assurance-bundle
 
       - name: Build
@@ -87,11 +87,11 @@ jobs:
       - name: H18 progressive cutover rehearsal bundle
         run: npm run run:h18-assurance-bundle
 
-      - name: Post-H22 sustainment loop (horizon + CI soak + entrypoints + shell CI + tenant isolation + closeout gate)
+      - name: Post-H23 sustainment loop (post-H22 chain + region failover evidence + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H22 sustainment manifest
-        run: npm run validate:post-h22-sustainment-manifest
+      - name: Validate post-H23 sustainment manifest
+        run: npm run validate:post-h23-sustainment-manifest
 
       - name: Stage promotion readiness gate
         run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch

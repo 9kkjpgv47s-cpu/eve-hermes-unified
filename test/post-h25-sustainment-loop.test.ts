@@ -61,19 +61,19 @@ async function seedMergeBundleInputs() {
   expect(init.code).toBe(0);
 }
 
-describe("run-post-h24-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop:h24-legacy npm script", async () => {
+describe("run-post-h25-sustainment-loop.mjs", () => {
+  it("exposes verify:sustainment-loop npm script (post-H25 terminal chain)", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop:h24-legacy"]).toContain("run-post-h24-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h25-sustainment-loop.mjs");
   });
 
   it(
-    "emits pass and structured checks in post-H24 sustainment loop manifest",
+    "emits pass and structured checks in post-H25 sustainment loop manifest",
     async () => {
       await seedMergeBundleInputs();
       const result = await runCommandWithTimeout(
-        ["node", path.join(repoRoot, "scripts/run-post-h24-sustainment-loop.mjs")],
+        ["node", path.join(repoRoot, "scripts/run-post-h25-sustainment-loop.mjs")],
         {
           timeoutMs: 540_000,
           env: mergeEnv({ UNIFIED_CI_SOAK_ITERATIONS: "15" }),
@@ -95,7 +95,8 @@ describe("run-post-h24-sustainment-loop.mjs", () => {
           evidenceGatesEvidencePass?: boolean;
           tenantIsolationEvidencePass?: boolean;
           regionFailoverEvidencePass?: boolean;
-          h24CloseoutGatePass?: boolean;
+          agentRemediationEvidencePass?: boolean;
+          h25CloseoutGatePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
@@ -108,14 +109,15 @@ describe("run-post-h24-sustainment-loop.mjs", () => {
       expect(payload.checks?.evidenceGatesEvidencePass).toBe(true);
       expect(payload.checks?.tenantIsolationEvidencePass).toBe(true);
       expect(payload.checks?.regionFailoverEvidencePass).toBe(true);
-      expect(payload.checks?.h24CloseoutGatePass).toBe(true);
+      expect(payload.checks?.agentRemediationEvidencePass).toBe(true);
+      expect(payload.checks?.h25CloseoutGatePass).toBe(true);
     },
     900_000,
   );
 
-  it("validate:post-h24-sustainment-manifest passes on latest loop output", async () => {
+  it("validate:post-h25-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/validate-post-h24-sustainment-manifest.mjs")],
+      ["node", path.join(repoRoot, "scripts/validate-post-h25-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

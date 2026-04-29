@@ -85,23 +85,25 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H19 sustainment (continuous)
+## Phase 8 - Post-H20 sustainment (continuous)
 
-After horizon **H19** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H20** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
-- [x] `npm run validate:horizon-status` exits `0`.
-- [x] `npm run run:h17-assurance-bundle` exits `0` and emits `evidence/h17-assurance-bundle-*.json`.
-- [x] `npm run run:h18-assurance-bundle` exits `0` and emits `evidence/h18-assurance-bundle-*.json`.
-- [x] `npm run run:ci-soak-slo-gate` exits `0` and emits `evidence/ci-soak-slo-gate-*.json`.
-- [x] `npm run validate:h19-closeout` exits `0` (uses evidence under `evidence/`).
+- [x] Inner **post-H19** chain still passes inside **`npm run verify:sustainment-loop`** (horizon status + H17 assurance + H18 rehearsal + CI soak SLO gate + **`validate:h19-closeout`**, producing `evidence/post-h19-sustainment-loop-*.json`).
+- [x] **`npm run validate:h20-closeout`** exits `0` (pins newest passing **`post-h19-sustainment-loop-*.json`**).
 
-Single command (chains horizon status + H17 assurance + H18 rehearsal + CI soak SLO gate + H19 closeout and writes `evidence/post-h19-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (writes `evidence/post-h20-sustainment-loop-*.json` with `checks.postH19SustainmentLoopPass` and `checks.h20CloseoutGatePass`):
 
 - [x] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [x] `npm run validate:post-h19-sustainment-manifest` exits `0`.
+- [x] `npm run validate:post-h20-sustainment-manifest` exits `0`.
+
+Legacy **H19-only** inner chain replay (no **H20** closeout pin):
+
+- [x] `npm run verify:sustainment-loop:h19-legacy` exits `0`.
+- [x] `npm run validate:post-h19-sustainment-manifest` exits `0` (after **`verify:sustainment-loop:h19-legacy`**).
 
 Historical sustainment: **`npm run verify:sustainment-loop:h18-legacy`** / **`validate:post-h18-sustainment-manifest`** (H18-only chain); **`verify:sustainment-loop:h17-legacy`** / **`validate:post-h17-sustainment-manifest`** (H17 chain); **`verify:sustainment-loop:h16-legacy`** / **`validate:post-h16-sustainment-manifest`**; **`verify:sustainment-loop:h15-legacy`** … **`h6-legacy`**.
 

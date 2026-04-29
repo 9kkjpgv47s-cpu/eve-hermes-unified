@@ -60,17 +60,17 @@ Every PR should include:
 - **Standby region routing**: `UNIFIED_ROUTER_STANDBY_REGION` — when it equals `envelope.regionId`, primary and fallback lanes swap for failover drills (skipped when fallback is `none`).
 - **Lane env passthrough**: Eve receives `EVE_TASK_DISPATCH_TENANT_ID` / `EVE_TASK_DISPATCH_REGION_ID`; Hermes receives `HERMES_UNIFIED_TENANT_ID` / `HERMES_UNIFIED_REGION_ID` when set.
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
-- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H19** (no downstream horizon).
+- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H20** (no downstream horizon).
 
-## Sustainment assurance (terminal H19)
+## Sustainment assurance (terminal H20)
 
 - **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h16-assurance-bundle`**.
-- **H16 bundle**: `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H19**) and **`validate:manifest-schemas`** (runs before **`validate:all`** in CI).
+- **H16 bundle**: `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H20**) and **`validate:manifest-schemas`** (runs before **`validate:all`** in CI).
 - **H17 bundle** (merge readiness verification): `npm run run:h17-assurance-bundle` runs **`validate:merge-bundle`**, **`validate:manifest-schemas`**, and **`verify:merge-bundle --latest --no-require-archive`** after **`validate:release-readiness`** + **`validate:initial-scope`** populate **`evidence/`**.
 - **H18 bundle** (progressive cutover rehearsal): `npm run run:h18-assurance-bundle` runs **`npm run run:h2-drill-suite`** in **dry-run** mode (canary + majority + rollback simulation) so merge-gated evidence exercises stage drills end-to-end.
 - **CI soak SLO gate**: `npm run run:ci-soak-slo-gate` runs **`soak-simulate.sh`** then **`summarize-soak-report.mjs`** with **`UNIFIED_SOAK_FAIL_ON_DRIFT=1`**; writes **`evidence/ci-soak-slo-gate-*.json`**.
-- **Closeout gates**: `npm run validate:h19-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`); **`npm run validate:h18-closeout`** / **`npm run validate:h17-closeout`** remain for replay when pinned to earlier horizons.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H17** assurance + **H18** rehearsal + **`run:ci-soak-slo-gate`** + **`validate:h19-closeout`** → **`evidence/post-h19-sustainment-loop-*.json`**. **`npm run validate:post-h19-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h18-legacy`** / **`validate:post-h18-sustainment-manifest`**; **`verify:sustainment-loop:h17-legacy`** / **`validate:post-h17-sustainment-manifest`**; **`verify:sustainment-loop:h16-legacy`** … **`h6-legacy`**.
+- **Closeout gates**: `npm run validate:h19-closeout` (inner post-H19 sustainment chain); **`npm run validate:h20-closeout`** pins newest passing **`post-h19-sustainment-loop-*.json`**; **`npm run validate:h18-closeout`** / **`npm run validate:h17-closeout`** remain for replay when pinned to earlier horizons.
+- **Periodic verification**: `npm run verify:sustainment-loop` runs **`run-post-h20-sustainment-loop.mjs`** (inner **`run-post-h19-sustainment-loop.mjs`** + **`validate:h20-closeout`**) → **`evidence/post-h20-sustainment-loop-*.json`**. **`npm run validate:post-h20-sustainment-manifest`** validates the latest **H20** loop manifest. Legacy **H19-only** inner chain: **`verify:sustainment-loop:h19-legacy`** + **`validate:post-h19-sustainment-manifest`**. Older: **`verify:sustainment-loop:h18-legacy`** / **`validate:post-h18-sustainment-manifest`**; **`verify:sustainment-loop:h17-legacy`** / **`validate:post-h17-sustainment-manifest`**; **`verify:sustainment-loop:h16-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 

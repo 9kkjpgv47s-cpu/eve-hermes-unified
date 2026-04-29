@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-05T22:00:00Z",
+  "updatedAtIso": "2026-05-06T00:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H19",
+  "activeHorizon": "H20",
   "activeStatus": "completed",
-  "summary": "Horizon H19 (horizon-status metadata assurance): run-h19-assurance-bundle chains validate:horizon-status + run-h18-assurance-bundle; verify:sustainment-loop post-H19; verify:sustainment-loop:h18-legacy for post-H18 chain; goal-policy runway H2→H19; unified-ci drops duplicate validate:horizon-status step.",
+  "summary": "Horizon H20 (evidence-gates assurance): run-h20-assurance-bundle chains validate:evidence-gates (validation-summary + failure-injection) + run-h19-assurance-bundle; verify:sustainment-loop post-H20; verify:sustainment-loop:h19-legacy for post-H19 chain; goal-policy runway H2→H20.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -167,6 +167,13 @@
       "artifactPattern": "evidence/h19-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H19"]
+    },
+    {
+      "id": "h20-assurance-bundle",
+      "command": "node ./scripts/run-h20-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h20-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H20"]
     }
   ],
   "nextActions": [
@@ -618,7 +625,7 @@
     },
     {
       "id": "h18-action-3",
-      "summary": "Goal policy H17→H18 transition; validate:goal-policy-file H2→H19; terminal closeout skips stage-promotion at H19.",
+      "summary": "Goal policy H17→H18 transition; validate:goal-policy-file H2→H20; terminal closeout skips stage-promotion at H20.",
       "targetHorizon": "H18",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
@@ -632,15 +639,36 @@
     },
     {
       "id": "h19-action-2",
-      "summary": "post-H19 sustainment loop; verify:sustainment-loop; verify:sustainment-loop:h18-legacy for H18 chain.",
+      "summary": "Legacy post-H19 sustainment (verify:sustainment-loop:h19-legacy); terminal loop is post-H20.",
       "targetHorizon": "H19",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h19-action-3",
-      "summary": "Goal policy H18→H19 transition; terminal closeout skips stage-promotion at H19.",
+      "summary": "Goal policy H18→H19 transition; terminal closeout skips stage-promotion at H20.",
       "targetHorizon": "H19",
+      "status": "completed",
+      "tags": ["policy", "documentation", "validation"]
+    },
+    {
+      "id": "h20-action-1",
+      "summary": "run-h20-assurance-bundle: validate:evidence-gates + run-h19-assurance-bundle; ties validation-summary to failure-injection coverage.",
+      "targetHorizon": "H20",
+      "status": "completed",
+      "tags": ["validation", "durability", "tooling"]
+    },
+    {
+      "id": "h20-action-2",
+      "summary": "post-H20 sustainment loop; verify:sustainment-loop; verify:sustainment-loop:h19-legacy for H19 chain.",
+      "targetHorizon": "H20",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h20-action-3",
+      "summary": "Goal policy H19→H20 transition; terminal closeout skips stage-promotion at H20.",
+      "targetHorizon": "H20",
       "status": "completed",
       "tags": ["policy", "documentation", "validation"]
     }
@@ -901,6 +929,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H19->H20": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -977,7 +1020,7 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H19 + manifest schemas + H15 chain; runs before validate:all in CI."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H20 + manifest schemas + H15 chain; runs before validate:all in CI."
     },
     "H17": {
       "status": "completed",
@@ -989,7 +1032,11 @@
     },
     "H19": {
       "status": "completed",
-      "summary": "Horizon metadata assurance: run-h19-assurance-bundle adds validate:horizon-status before H18 bundle; terminal sustainment post-H19 via verify:sustainment-loop."
+      "summary": "Horizon metadata assurance: run-h19-assurance-bundle adds validate:horizon-status before H18 bundle; superseded as terminal chain by H20 which adds validate:evidence-gates."
+    },
+    "H20": {
+      "status": "completed",
+      "summary": "Evidence-gates assurance: run-h20-assurance-bundle chains evidence-gates.mjs + H19 bundle; terminal sustainment post-H20 via verify:sustainment-loop."
     }
   },
   "history": [
@@ -1226,6 +1273,12 @@
       "horizon": "H19",
       "status": "completed",
       "note": "H19 horizon-status metadata assurance: run-h19-assurance-bundle chains validate:horizon-status + run-h18-assurance-bundle; verify:sustainment-loop post-H19; verify:sustainment-loop:h18-legacy; validate:goal-policy-file H2→H19; H18->H19 goal policy; terminal closeout at H19; unified-ci removes standalone validate:horizon-status."
+    },
+    {
+      "timestamp": "2026-05-06T00:00:00Z",
+      "horizon": "H20",
+      "status": "completed",
+      "note": "H20 evidence-gates assurance: run-h20-assurance-bundle chains validate:evidence-gates + run-h19-assurance-bundle; verify:sustainment-loop post-H20; verify:sustainment-loop:h19-legacy; validate:goal-policy-file H2→H20; H19->H20 goal policy; terminal closeout at H20."
     }
   ]
 }

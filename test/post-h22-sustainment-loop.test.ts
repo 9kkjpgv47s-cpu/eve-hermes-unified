@@ -62,10 +62,16 @@ async function seedMergeBundleInputs() {
 }
 
 describe("sustainment loop npm scripts", () => {
-  it("maps verify:sustainment-loop to post-H27 terminal chain", async () => {
+  it("maps verify:sustainment-loop to post-H28 terminal chain", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h27-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h28-sustainment-loop.mjs");
+  });
+
+  it("exposes verify:sustainment-loop:h27-legacy for the prior post-H27-only chain", async () => {
+    const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
+    const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
+    expect(pkg.scripts?.["verify:sustainment-loop:h27-legacy"]).toContain("run-post-h27-sustainment-loop.mjs");
   });
 
   it("exposes verify:sustainment-loop:h26-legacy for the prior post-H26-only chain", async () => {
@@ -349,6 +355,47 @@ describe("run-post-h27-sustainment-loop.mjs", () => {
   it("validate:post-h27-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
       ["node", path.join(repoRoot, "scripts/validate-post-h27-sustainment-manifest.mjs")],
+      { timeoutMs: 15_000 },
+    );
+    expect(result.code).toBe(0);
+  });
+});
+
+describe("run-post-h28-sustainment-loop.mjs", () => {
+  it(
+    "emits pass and structured checks (post-H27 chain + evidence-summary + H28 closeout gate)",
+    async () => {
+      await seedMergeBundleInputs();
+      const result = await runCommandWithTimeout(
+        ["node", path.join(repoRoot, "scripts/run-post-h28-sustainment-loop.mjs")],
+        {
+          timeoutMs: 900_000,
+          env: mergeEnv({ UNIFIED_CI_SOAK_ITERATIONS: "15" }),
+        },
+      );
+      expect(result.code).toBe(0);
+      const out = result.stdout.trim();
+      const last = out.split("\n").filter(Boolean).pop() ?? "";
+      const raw = await readFile(last, "utf8");
+      const payload = JSON.parse(raw) as {
+        pass?: boolean;
+        checks?: {
+          postH27SustainmentLoopPass?: boolean;
+          evidenceSummaryEvidencePass?: boolean;
+          h28CloseoutGatePass?: boolean;
+        };
+      };
+      expect(payload.pass).toBe(true);
+      expect(payload.checks?.postH27SustainmentLoopPass).toBe(true);
+      expect(payload.checks?.evidenceSummaryEvidencePass).toBe(true);
+      expect(payload.checks?.h28CloseoutGatePass).toBe(true);
+    },
+    900_000,
+  );
+
+  it("validate:post-h28-sustainment-manifest passes on latest loop output", async () => {
+    const result = await runCommandWithTimeout(
+      ["node", path.join(repoRoot, "scripts/validate-post-h28-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

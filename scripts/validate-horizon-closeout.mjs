@@ -4,7 +4,7 @@ import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27", "H28"];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
@@ -33,6 +33,7 @@ const HORIZON_STAGE_MAP = {
   H25: "full",
   H26: "full",
   H27: "full",
+  H28: "full",
 };
 
 function isNonEmptyString(value) {
@@ -419,6 +420,9 @@ function commandVerificationType(command) {
   if (command === "node ./scripts/run-post-h27-sustainment-loop.mjs") {
     return "post-h27-sustainment-loop";
   }
+  if (command === "node ./scripts/run-post-h28-sustainment-loop.mjs") {
+    return "post-h28-sustainment-loop";
+  }
   if (command === "node ./scripts/run-tenant-isolation-evidence.mjs") {
     return "tenant-isolation-evidence";
   }
@@ -436,6 +440,9 @@ function commandVerificationType(command) {
   }
   if (command === "node ./scripts/run-regression-eve-evidence.mjs") {
     return "regression-eve-evidence";
+  }
+  if (command === "node ./scripts/run-evidence-summary-evidence.mjs") {
+    return "evidence-summary-evidence";
   }
   if (command === "node ./scripts/run-post-h17-sustainment-loop.mjs") {
     return "post-h17-sustainment-loop";
@@ -1432,6 +1439,17 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "evidence-summary-evidence") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("evidence_summary_evidence_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.evidenceSummaryGatePass !== true) {
+      checks.push("evidence_summary_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   if (verificationType === "post-h6-sustainment-loop") {
     const checks = [];
     if (payload.pass !== true) {
@@ -1851,6 +1869,23 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "post-h28-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h28_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH27SustainmentLoopPass !== true) {
+      checks.push("post_h28_post_h27_sustainment_loop_not_passed");
+    }
+    if (signal.evidenceSummaryEvidencePass !== true) {
+      checks.push("post_h28_evidence_summary_evidence_not_passed");
+    }
+    if (signal.h28CloseoutGatePass !== true) {
+      checks.push("post_h28_h28_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   const checks = payload.pass === true ? [] : ["artifact_not_passed"];
   return { pass: checks.length === 0, checks };
 }
@@ -1920,10 +1955,10 @@ async function main() {
       nextHorizon && horizonStatus?.horizonStates?.[nextHorizon]
         ? horizonStatus.horizonStates[nextHorizon]
         : null;
-    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H27, or next horizon already completed (retroactive closeout). */
+    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H28, or next horizon already completed (retroactive closeout). */
     const skipStagePromotionReadiness =
       derivedNext === "" ||
-      targetHorizon === "H27" ||
+      targetHorizon === "H28" ||
       Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
 
     if (!skipStagePromotionReadiness) {
@@ -2031,6 +2066,11 @@ async function main() {
               targetHorizon === "H27" &&
               (String(entry.id ?? "") === "h27-post-sustainment-loop" ||
                 String(entry.command ?? "").includes("run-post-h27-sustainment-loop"))
+            ) &&
+            !(
+              targetHorizon === "H28" &&
+              (String(entry.id ?? "") === "h28-post-sustainment-loop" ||
+                String(entry.command ?? "").includes("run-post-h28-sustainment-loop"))
             ),
         )
       : [];

@@ -62,7 +62,7 @@ const goalPolicyStep = runStep("validate_goal_policy_file", [
   "--source-horizon",
   "H2",
   "--until-horizon",
-  "H27",
+  "H28",
   "--require-tagged-requirements",
   "--require-positive-pending-min",
   "--out",

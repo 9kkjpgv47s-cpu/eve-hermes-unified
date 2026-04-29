@@ -4,7 +4,7 @@ import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19", "H20", "H21"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19", "H20", "H21", "H22"];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
@@ -27,6 +27,7 @@ const HORIZON_STAGE_MAP = {
   H19: "full",
   H20: "full",
   H21: "full",
+  H22: "full",
 };
 
 function isNonEmptyString(value) {
@@ -394,6 +395,9 @@ function commandVerificationType(command) {
   }
   if (command === "node ./scripts/run-post-h21-sustainment-loop.mjs") {
     return "post-h21-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h22-sustainment-loop.mjs") {
+    return "post-h22-sustainment-loop";
   }
   if (command === "node ./scripts/run-post-h17-sustainment-loop.mjs") {
     return "post-h17-sustainment-loop";
@@ -1626,6 +1630,20 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "post-h22-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h22_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.postH21SustainmentLoopPass !== true) {
+      checks.push("post_h22_post_h21_sustainment_loop_not_passed");
+    }
+    if (signal.h22CloseoutGatePass !== true) {
+      checks.push("post_h22_h22_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   const checks = payload.pass === true ? [] : ["artifact_not_passed"];
   return { pass: checks.length === 0, checks };
 }
@@ -1695,10 +1713,10 @@ async function main() {
       nextHorizon && horizonStatus?.horizonStates?.[nextHorizon]
         ? horizonStatus.horizonStates[nextHorizon]
         : null;
-    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H21, or next horizon already completed (retroactive closeout). */
+    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H22, or next horizon already completed (retroactive closeout). */
     const skipStagePromotionReadiness =
       derivedNext === "" ||
-      targetHorizon === "H21" ||
+      targetHorizon === "H22" ||
       Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
 
     if (!skipStagePromotionReadiness) {
@@ -1781,7 +1799,12 @@ async function main() {
             entry &&
             typeof entry === "object" &&
             entry.required === true &&
-            evidenceEntryAppliesToHorizon(entry, targetHorizon),
+            evidenceEntryAppliesToHorizon(entry, targetHorizon) &&
+            !(
+              targetHorizon === "H22" &&
+              (String(entry.id ?? "") === "h22-post-sustainment-loop" ||
+                String(entry.command ?? "").includes("run-post-h22-sustainment-loop"))
+            ),
         )
       : [];
     requiredEvidenceResults = [];

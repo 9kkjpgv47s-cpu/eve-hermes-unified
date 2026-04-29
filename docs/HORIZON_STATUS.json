@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-07T12:00:00Z",
+  "updatedAtIso": "2026-05-08T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H19",
+  "activeHorizon": "H20",
   "activeStatus": "completed",
-  "summary": "Horizon H19 (terminal sustainment + CI soak SLO): verify:sustainment-loop runs post-H19 chain (H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout); verify:sustainment-loop:h18-legacy replays H18-only chain; validate:post-h19-sustainment-manifest gates the newest loop manifest.",
+  "summary": "Horizon H20 (terminal sustainment + unified entrypoints evidence): verify:sustainment-loop runs post-H20 chain (H17 + H18 + CI soak + run:unified-entrypoints-evidence + validate:h20-closeout); verify:sustainment-loop:h19-legacy replays H19 chain without entrypoints artifact; validate:post-h20-sustainment-manifest gates the newest loop manifest.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -152,21 +152,28 @@
       "command": "node ./scripts/run-h17-assurance-bundle.mjs",
       "artifactPattern": "evidence/h17-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H17", "H18", "H19"]
+      "horizons": ["H17", "H18", "H19", "H20"]
     },
     {
       "id": "h18-assurance-bundle",
       "command": "node ./scripts/run-h18-assurance-bundle.mjs",
       "artifactPattern": "evidence/h18-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H18", "H19"]
+      "horizons": ["H18", "H19", "H20"]
     },
     {
       "id": "h19-ci-soak-slo-gate",
       "command": "node ./scripts/run-ci-soak-slo-gate.mjs",
       "artifactPattern": "evidence/ci-soak-slo-gate-*.json",
       "required": true,
-      "horizons": ["H19"]
+      "horizons": ["H19", "H20"]
+    },
+    {
+      "id": "h20-unified-entrypoints-evidence",
+      "command": "node ./scripts/run-unified-entrypoints-evidence.mjs",
+      "artifactPattern": "evidence/unified-entrypoints-evidence-*.json",
+      "required": true,
+      "horizons": ["H20"]
     }
   ],
   "nextActions": [
@@ -569,14 +576,14 @@
     },
     {
       "id": "h16-action-2",
-      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H19.",
+      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H20.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h16-action-3",
-      "summary": "Goal policy H15→H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2→H19 before validate:all in CI.",
+      "summary": "Goal policy H15→H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2→H20 before validate:all in CI.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["policy", "documentation", "ci"]
@@ -632,7 +639,7 @@
     },
     {
       "id": "h19-action-2",
-      "summary": "post-H19 sustainment loop; verify:sustainment-loop; validate:post-h19-sustainment-manifest; verify:sustainment-loop:h18-legacy for H18-only chain.",
+      "summary": "post-H19 sustainment loop (legacy); verify:sustainment-loop:h19-legacy; validate:post-h19-sustainment-manifest; verify:sustainment-loop:h18-legacy for H18-only chain.",
       "targetHorizon": "H19",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
@@ -641,6 +648,27 @@
       "id": "h19-action-3",
       "summary": "Goal policy H18→H19 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H19.",
       "targetHorizon": "H19",
+      "status": "completed",
+      "tags": ["policy", "documentation", "ci"]
+    },
+    {
+      "id": "h20-action-1",
+      "summary": "run:unified-entrypoints-evidence after CI soak in terminal sustainment: machine-readable validate:unified-entrypoints gate for H4 closeout alignment.",
+      "targetHorizon": "H20",
+      "status": "completed",
+      "tags": ["validation", "operations", "capability"]
+    },
+    {
+      "id": "h20-action-2",
+      "summary": "post-H20 sustainment loop; verify:sustainment-loop; validate:post-h20-sustainment-manifest; verify:sustainment-loop:h19-legacy for H19 chain without entrypoints artifact.",
+      "targetHorizon": "H20",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h20-action-3",
+      "summary": "Goal policy H19→H20 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H20.",
+      "targetHorizon": "H20",
       "status": "completed",
       "tags": ["policy", "documentation", "ci"]
     }
@@ -901,6 +929,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H19->H20": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "capability": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -977,19 +1020,23 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H19 + manifest schemas + H15 chain; runs before validate:all in CI."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H20 + manifest schemas + H15 chain; runs before validate:all in CI."
     },
     "H17": {
       "status": "completed",
-      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18 progressive cutover rehearsal and H19 sustainment."
+      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18–H20 terminal sustainment chain."
     },
     "H18": {
       "status": "completed",
-      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; superseded as terminal by H19 (CI soak in sustainment loop)."
+      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; prerequisite for H19/H20 sustainment."
     },
     "H19": {
       "status": "completed",
-      "summary": "Terminal sustainment + CI soak SLO: post-H19 loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; verify:sustainment-loop:h18-legacy for H18-only replay."
+      "summary": "Terminal sustainment + CI soak SLO (legacy): post-H19 loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; superseded by H20 (entrypoints evidence)."
+    },
+    "H20": {
+      "status": "completed",
+      "summary": "Terminal sustainment + entrypoints evidence: post-H20 loop adds run:unified-entrypoints-evidence after CI soak; verify:sustainment-loop:h19-legacy for prior chain."
     }
   },
   "history": [
@@ -1225,7 +1272,13 @@
       "timestamp": "2026-05-07T12:00:00Z",
       "horizon": "H19",
       "status": "completed",
-      "note": "H19 terminal sustainment + CI soak SLO: run-post-h19-sustainment-loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; verify:sustainment-loop; validate:post-h19-sustainment-manifest; verify:sustainment-loop:h18-legacy; H18->H19 goal policy."
+      "note": "H19 terminal sustainment + CI soak SLO: run-post-h19-sustainment-loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; verify:sustainment-loop:h19-legacy + validate:post-h19-sustainment-manifest after H20; verify:sustainment-loop:h18-legacy; H18->H19 goal policy; superseded as terminal by H20."
+    },
+    {
+      "timestamp": "2026-05-08T12:00:00Z",
+      "horizon": "H20",
+      "status": "completed",
+      "note": "H20 terminal sustainment + unified entrypoints evidence: run-post-h20-sustainment-loop adds run:unified-entrypoints-evidence after CI soak; verify:sustainment-loop; validate:post-h20-sustainment-manifest; verify:sustainment-loop:h19-legacy; H19->H20 goal policy."
     }
   ]
 }

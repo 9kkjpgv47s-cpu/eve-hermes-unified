@@ -142,6 +142,7 @@ Before marking a phase complete, include artifacts from:
   - they set lane/runtime defaults internally so host-specific Eve/Hermes paths do not block evidence generation
   - override only when needed via `UNIFIED_SOAK_EVE_DISPATCH_SCRIPT`, `UNIFIED_SOAK_HERMES_LAUNCH_COMMAND`, and `UNIFIED_SOAK_EVE_DISPATCH_RESULT_PATH`
 - `UNIFIED_EVIDENCE_REQUIRE_FAILURE_SCENARIOS=1 npm run validate:evidence-summary`
+  - **`summarize-evidence.mjs`** picks the newest **`soak-*.jsonl`** compact dispatch log when several **`soak-*`** files exist under **`evidence/`** (for example matrix runs may also emit **`soak-*`** metrics JSON that must not replace the JSONL log).
 - `npm run validate:regression-eve-primary`
 - `npm run validate:cutover-readiness`
 - `npm run validate:release-readiness`

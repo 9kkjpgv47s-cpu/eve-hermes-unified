@@ -78,7 +78,9 @@ npm run validate:h6-evidence-bundle
 
 This writes **`evidence/h6-closeout-evidence-*.json`** with **`closeout.horizon: H6`** (distinct from the H5→H6 promotion wrapper **`h6-closeout-*.json`** above).
 
-After a passing H6 evidence manifest, **`npm run validate:h7-closeout`** wraps the newest **`h6-closeout-evidence-*.json`** into **`evidence/h7-closeout-*.json`** (`schemaVersion: h7-closeout-v1`, **`closeout.horizon: H6`**, **`closeout.nextHorizon: H7`**) for **`promote:horizon`** with **`--goal-policy-key H6->H7`**. Both steps run at the end of **`npm run validate:all`** after **`validate:h6-closeout`**. See **`docs/H7_PROGRAM.md`**.
+After a passing H6 evidence manifest, **`npm run validate:h7-closeout`** wraps the newest **`h6-closeout-evidence-*.json`** into **`evidence/h7-closeout-*.json`** (`schemaVersion: h7-closeout-v1`, **`closeout.horizon: H6`**, **`closeout.nextHorizon: H7`**) for **`promote:horizon`** with **`--goal-policy-key H6->H7`**.
+
+After **`validate:h7-closeout`**, **`npm run validate:all`** runs **`validate:h7-evidence-bundle`** then **`validate:h8-closeout`** for the **H7→H8** promotion pin (`h7-closeout-evidence-*.json` → **`h8-closeout-*.json`**, **`--goal-policy-key H7->H8`**). See **`docs/H7_PROGRAM.md`** and **`docs/H8_PROGRAM.md`**.
 
 ## H6 partition operator drill (h6-action-3)
 

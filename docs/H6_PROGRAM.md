@@ -10,7 +10,8 @@ H6 extends the unified dispatch program beyond tenant and region slices: **optio
 
 ## H7 chain (h7-action-1..2)
 
-After **`validate:h6-closeout`** (H5→H6 pin), **`validate:all`** runs **`validate:h6-evidence-bundle`** then **`validate:h7-closeout`** so the repo continuously proves the **H6→H7** promotion path. See **`docs/H7_PROGRAM.md`**.
+After **`validate:h6-closeout`** (H5→H6 pin), **`validate:all`** runs **`validate:h6-evidence-bundle`** then **`validate:h7-closeout`**, then **`validate:h7-evidence-bundle`** and **`validate:h8-closeout`** (H7→H8 runway). See **`docs/H7_PROGRAM.md`** and **`docs/H8_PROGRAM.md`**.
+
 4. **Fail-closed defaults** — Any new fields remain optional; strict modes are env-gated and covered by preflight and tests like prior horizons.
 
 ## H6 closeout manifest (h6-action-4)

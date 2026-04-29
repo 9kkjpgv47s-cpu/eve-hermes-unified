@@ -8,9 +8,9 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 
 ## Current Program State
 
-- Horizon: **`H6`** active (`docs/HORIZON_STATUS.json`); **H7** planned with **`h7-action-*`** and **`docs/H7_PROGRAM.md`**
-- Completed in-repo through **h7-action-2** (H7 program doc + H6 evidence bundle + H7 closeout wrapper in **`validate:all`**)
-- Primary focus: **h7-action-3** (post–H6→H7 promotion status bump / H8 seed) when operators run **`promote:horizon`**
+- Horizon: **`H7`** active (`docs/HORIZON_STATUS.json`); **H8** planned with **`h8-action-*`** and **`docs/H8_PROGRAM.md`**
+- Completed in-repo through **h7-action-3** (status bump + H8 scaffold + **`H7->H8`** goal policy + validate gates)
+- Primary focus: **h8-action-1** (lock H8 goals and evidence gates) per `docs/H8_PROGRAM.md`
 - New orchestration path is implemented:
   - `npm run run:stage-drill -- --target-stage <canary|majority|full> ...`
 - Current branch/PR may change; always confirm at startup:
@@ -26,7 +26,7 @@ Drive the Eve/Hermes convergence work forward aggressively while preserving roll
 4. `docs/NEXT_LONG_HORIZON_ACTION_PLAN.md`
 5. `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
 6. `docs/HORIZON_STATUS.json`
-7. `docs/H7_PROGRAM.md` (when working H7 runway)
+7. `docs/H7_PROGRAM.md` / `docs/H8_PROGRAM.md` (when working H7/H8 runway)
 
 ## High-Output Execution Loop
 
@@ -66,8 +66,11 @@ npm run validate:h5-evidence-bundle
 npm run validate:h6-closeout
 npm run validate:h6-evidence-bundle
 npm run validate:h7-closeout
+npm run validate:h7-evidence-bundle
+npm run validate:h8-closeout
 npm run validate:h5-closeout
 npm run validate:h6-horizon-closeout
+npm run validate:h7-horizon-closeout
 ```
 
 ### Readiness / Evidence Gates

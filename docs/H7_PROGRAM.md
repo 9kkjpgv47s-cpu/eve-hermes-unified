@@ -5,7 +5,7 @@ H7 is the **observability and SLO evidence** runway after the H6 federation/part
 ## Goals (machine- and operator-facing)
 
 1. **Evidence contracts** — Treat these artifacts as the canonical H7 posture surface (all emitted under `evidence/` when running `npm run validate:all`):
-   - `validation-summary-*.json` — must include `soakDrillDimensions` with at least two non-`_none` keys each for **tenants**, **regions**, and **partitions** (same gate as `validate:h5-evidence-bundle` / `validate:h6-evidence-bundle`).
+   - `validation-summary-*.json` — must include `soakDrillDimensions` with at least two non-`_none` keys each for **tenants**, **regions**, and **partitions** (same gate as `validate:h5-evidence-bundle` / `validate:h6-evidence-bundle` / `validate:h7-evidence-bundle`).
    - `h5-region-misalignment-drill-*.json` — `schemaVersion: h5-region-misalignment-drill-v2`, `pass: true`.
    - `h6-partition-drill-*.json` — `schemaVersion: h6-partition-drill-v1`, `pass: true`.
    - `emergency-rollback-rehearsal-*.json` — `dryRun: true`.
@@ -17,6 +17,6 @@ H7 is the **observability and SLO evidence** runway after the H6 federation/part
 
 4. **Horizon closeout composition** — `npm run validate:h6-horizon-closeout` runs `validate-horizon-closeout.mjs` for **H6→H7** with **`--require-h6-evidence-bundle`** so required evidence and the H6 bundle gate compose in one manifest. **`npm run run:h6-closeout`** passes **`--require-h6-evidence-bundle`** to that script (and **`run:h5-closeout`** passes **`--require-h5-evidence-bundle`**).
 
-5. **Optional next step (h7-action-3)** — After **`promote:horizon`** marks H6 completed in your environment, set **`activeHorizon`** to **H7** and seed **H8** or product-specific **`nextActions`** when scope is ready.
+5. **H7 slice evidence and H7→H8 (h7-action-3)** — **`npm run validate:h7-evidence-bundle`** writes **`h7-closeout-evidence-*.json`** (`closeout.horizon: "H7"`). **`npm run validate:h8-closeout`** wraps it into **`h8-closeout-*.json`** for **`promote:horizon … --goal-policy-key H7->H8`**. **`npm run validate:h7-horizon-closeout`** composes **H7→H8** with **`--require-h7-evidence-bundle`**. **`npm run run:h7-closeout`** passes **`--require-h7-evidence-bundle`**.
 
-See **`docs/HORIZON_STATUS.json`** for **`h7-action-*`** status and **`docs/GOAL_POLICIES.json`** for **`H6->H7`** transition policy.
+See **`docs/HORIZON_STATUS.json`** for **`h7-action-*`** status, **`docs/H8_PROGRAM.md`** for the H8 placeholder, and **`docs/GOAL_POLICIES.json`** for **`H6->H7`** and **`H7->H8`** transition policies.

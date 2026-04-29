@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-01T00:00:00Z",
+  "updatedAtIso": "2026-05-02T00:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H6",
+  "activeHorizon": "H7",
   "activeStatus": "in_progress",
-  "summary": "H6 federation/partition slice is active in-repo. validate:all chains H5 bundle, H5→H6 closeout wrapper, H6 evidence bundle, and H7 closeout wrapper for H6→H7 promotion pinning. H7 program goals are documented in docs/H7_PROGRAM.md (observability/SLO evidence contracts). H5 closed in status; H7 runway actions h7-action-1..2 completed in-repo.",
+  "summary": "H7 observability/SLO evidence slice is active in-repo. validate:all chains through validate:h7-evidence-bundle and validate:h8-closeout for H7→H8 promotion pinning. H6 federation slice closed in status; H8 runway seeded (h8-action-1..2). Prior horizons H1–H5 remain closed with machine-verified validate:all evidence.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -346,8 +346,22 @@
       "id": "h7-action-3",
       "summary": "Optional: after promote:horizon marks H6 completed, set activeHorizon to H7 and seed H8 or product-specific nextActions when scope is ready.",
       "targetHorizon": "H7",
-      "status": "planned",
+      "status": "completed",
       "tags": ["operations", "validation"]
+    },
+    {
+      "id": "h8-action-1",
+      "summary": "Define H8 program goals (product cutover hardening, federation ops, or scope-specific) and align goalPolicies H7->H8 with evidence gates.",
+      "targetHorizon": "H8",
+      "status": "planned",
+      "tags": ["validation", "operations"]
+    },
+    {
+      "id": "h8-action-2",
+      "summary": "Optional: extend horizon-closeout or evidence-summary for H7→H8 when H8 scope is locked.",
+      "targetHorizon": "H8",
+      "status": "planned",
+      "tags": ["validation", "operations"]
     }
   ],
   "goalPolicies": {
@@ -426,6 +440,21 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H7->H8": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.05,
+        "minPendingNextActions": 2,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -461,12 +490,16 @@
       "summary": "Multi-tenant and multi-region scale slice closed: tenant-scoped memory and capability policy, region-aware routing, WAL replay parity, remediation dry-run, region drill v2, partition drill, validate:h5-evidence-bundle and validate:h6-closeout in validate:all; validate:h6-evidence-bundle and validate:h7-closeout continue the chain for H6→H7."
     },
     "H6": {
-      "status": "in_progress",
-      "summary": "Federation/partition evidence active: partitionId, soak partition dimensions, h6-partition-drill, validate:h6-closeout (H5→H6 pin), validate:h6-evidence-bundle + validate:h7-closeout in validate:all; run:h6-closeout runs H6 evidence gate. h6-action-1..5 and h7-action-1..2 completed in-repo."
+      "status": "completed",
+      "summary": "Federation/partition slice closed in-repo: partitionId, soak partition dimensions, h6-partition-drill, validate:h6-closeout (H5→H6 pin), validate:h6-evidence-bundle + validate:h7-closeout; run:h6-closeout runs H6 evidence gate."
     },
     "H7": {
+      "status": "in_progress",
+      "summary": "Observability/SLO evidence active: docs/H7_PROGRAM.md; validate:h7-evidence-bundle + validate:h8-closeout in validate:all; run:h7-closeout runs H7 evidence gate. h7-action-1..3 completed in-repo."
+    },
+    "H8": {
       "status": "planned",
-      "summary": "Observability/SLO evidence horizon: docs/H7_PROGRAM.md defines contracts; h7-action-3 optional status bump after H6→H7 promotion."
+      "summary": "Next program horizon placeholder; see docs/H8_PROGRAM.md and h8-action-* nextActions."
     }
   },
   "history": [
@@ -667,6 +700,12 @@
       "horizon": "H7",
       "status": "planned",
       "note": "Completed h7-action-1: docs/H7_PROGRAM.md defines observability/SLO evidence contracts aligned with validate:all artifacts. Completed h7-action-2: validate-h6-evidence-bundle.mjs (h6-closeout-evidence-*.json), validate-h7-closeout.mjs (h7-closeout-*.json), validate-scale-evidence-bundle.mjs shared checks; validate:all runs validate:h6-evidence-bundle then validate:h7-closeout; validate-horizon-closeout --require-h6-evidence-bundle; run-h2-closeout passes --require-h5-evidence-bundle for H5 and --require-h6-evidence-bundle for H6; npm scripts validate:h6-evidence-bundle, validate:h7-closeout, validate:h6-horizon-closeout."
+    },
+    {
+      "timestamp": "2026-05-02T00:00:00Z",
+      "horizon": "H7",
+      "status": "in_progress",
+      "note": "Completed h7-action-3: activeHorizon set to H7; H6 completed in horizonStates; H8 planned with h8-action-1..2; H7->H8 in docs/GOAL_POLICIES.json and goalPolicies; MAX_HORIZON_ID H8; validate-h7-evidence-bundle.mjs, validate-h8-closeout.mjs; validate:all appends validate:h7-evidence-bundle and validate:h8-closeout; validate-horizon-closeout --require-h7-evidence-bundle; run-h2-closeout passes --require-h7-evidence-bundle for H7; npm run run:h7-closeout, run:h7-promotion, validate:h7-horizon-closeout."
     }
   ]
 }

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-06T12:00:00Z",
+  "updatedAtIso": "2026-05-07T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H18",
+  "activeHorizon": "H19",
   "activeStatus": "completed",
-  "summary": "Horizon H18 (progressive cutover rehearsal): run-h18-assurance-bundle runs dry-run H2 drill suite after merge-bundle gates; verify:sustainment-loop post-H18 chains H17 bundle + H18 rehearsal + validate:h18-closeout; verify:sustainment-loop:h17-legacy for prior chain.",
+  "summary": "Horizon H19 (terminal sustainment + CI soak SLO): verify:sustainment-loop runs post-H19 chain (H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout); verify:sustainment-loop:h18-legacy replays H18-only chain; validate:post-h19-sustainment-manifest gates the newest loop manifest.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -152,14 +152,21 @@
       "command": "node ./scripts/run-h17-assurance-bundle.mjs",
       "artifactPattern": "evidence/h17-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H17", "H18"]
+      "horizons": ["H17", "H18", "H19"]
     },
     {
       "id": "h18-assurance-bundle",
       "command": "node ./scripts/run-h18-assurance-bundle.mjs",
       "artifactPattern": "evidence/h18-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H18"]
+      "horizons": ["H18", "H19"]
+    },
+    {
+      "id": "h19-ci-soak-slo-gate",
+      "command": "node ./scripts/run-ci-soak-slo-gate.mjs",
+      "artifactPattern": "evidence/ci-soak-slo-gate-*.json",
+      "required": true,
+      "horizons": ["H19"]
     }
   ],
   "nextActions": [
@@ -562,14 +569,14 @@
     },
     {
       "id": "h16-action-2",
-      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H18.",
+      "summary": "validate:h16-closeout; post-H16 sustainment is legacy (verify:sustainment-loop:h16-legacy); terminal loop advances to post-H19.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h16-action-3",
-      "summary": "Goal policy H15→H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2→H18 before validate:all in CI.",
+      "summary": "Goal policy H15→H16 transition; run-h16-assurance-bundle uses validate:goal-policy-file H2→H19 before validate:all in CI.",
       "targetHorizon": "H16",
       "status": "completed",
       "tags": ["policy", "documentation", "ci"]
@@ -604,7 +611,7 @@
     },
     {
       "id": "h18-action-2",
-      "summary": "post-H18 sustainment loop; verify:sustainment-loop; verify:sustainment-loop:h17-legacy for H17-only chain.",
+      "summary": "post-H18 sustainment loop (legacy); verify:sustainment-loop:h18-legacy; verify:sustainment-loop:h17-legacy for H17-only chain.",
       "targetHorizon": "H18",
       "status": "completed",
       "tags": ["validation", "sustainment", "operations"]
@@ -613,6 +620,27 @@
       "id": "h18-action-3",
       "summary": "Goal policy H17→H18 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H18.",
       "targetHorizon": "H18",
+      "status": "completed",
+      "tags": ["policy", "documentation", "ci"]
+    },
+    {
+      "id": "h19-action-1",
+      "summary": "run:ci-soak-slo-gate in terminal sustainment: soak-simulate + summarize-soak-report with UNIFIED_SOAK_FAIL_ON_DRIFT=1 after H18 rehearsal.",
+      "targetHorizon": "H19",
+      "status": "completed",
+      "tags": ["validation", "operations", "slo"]
+    },
+    {
+      "id": "h19-action-2",
+      "summary": "post-H19 sustainment loop; verify:sustainment-loop; validate:post-h19-sustainment-manifest; verify:sustainment-loop:h18-legacy for H18-only chain.",
+      "targetHorizon": "H19",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h19-action-3",
+      "summary": "Goal policy H18→H19 transition; run-h16-assurance-bundle validate:goal-policy-file extends through H19.",
+      "targetHorizon": "H19",
       "status": "completed",
       "tags": ["policy", "documentation", "ci"]
     }
@@ -858,6 +886,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H18->H19": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 2,
+            "minPendingCount": 1
+          },
+          "sustainment": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -934,15 +977,19 @@
     },
     "H16": {
       "status": "completed",
-      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H18 + manifest schemas + H15 chain; runs before validate:all in CI."
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation H2→H19 + manifest schemas + H15 chain; runs before validate:all in CI."
     },
     "H17": {
       "status": "completed",
-      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18 progressive cutover rehearsal."
+      "summary": "Merge bundle assurance: run-h17-assurance-bundle after release artifacts; prerequisite for H18 progressive cutover rehearsal and H19 sustainment."
     },
     "H18": {
       "status": "completed",
-      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; terminal sustainment post-H18 via verify:sustainment-loop."
+      "summary": "Progressive cutover rehearsal: run-h18-assurance-bundle (dry-run H2 drill suite) after merge gates; superseded as terminal by H19 (CI soak in sustainment loop)."
+    },
+    "H19": {
+      "status": "completed",
+      "summary": "Terminal sustainment + CI soak SLO: post-H19 loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; verify:sustainment-loop:h18-legacy for H18-only replay."
     }
   },
   "history": [
@@ -1160,7 +1207,7 @@
       "timestamp": "2026-05-04T12:00:00Z",
       "horizon": "H16",
       "status": "completed",
-      "note": "H16 merge readiness policy gates: run-h16-assurance-bundle chains H15 + validate:goal-policy-file (H2→H18) + validate:manifest-schemas; verify:sustainment-loop:h16-legacy for replay; H15->H16 goal policy."
+      "note": "H16 merge readiness policy gates: run-h16-assurance-bundle chains H15 + validate:goal-policy-file (H2→H19) + validate:manifest-schemas; verify:sustainment-loop:h16-legacy for replay; H15->H16 goal policy."
     },
     {
       "timestamp": "2026-05-05T12:00:00Z",
@@ -1172,7 +1219,13 @@
       "timestamp": "2026-05-06T12:00:00Z",
       "horizon": "H18",
       "status": "completed",
-      "note": "H18 progressive cutover rehearsal: run-h18-assurance-bundle (npm run run:h2-drill-suite --dry-run) after H17 merge gates; verify:sustainment-loop post-H18; validate:post-h18-sustainment-manifest; H17->H18 goal policy; terminal closeout at H18."
+      "note": "H18 progressive cutover rehearsal: run-h18-assurance-bundle (npm run run:h2-drill-suite --dry-run) after H17 merge gates; verify:sustainment-loop:h18-legacy; validate:post-h18-sustainment-manifest; H17->H18 goal policy; superseded as terminal by H19."
+    },
+    {
+      "timestamp": "2026-05-07T12:00:00Z",
+      "horizon": "H19",
+      "status": "completed",
+      "note": "H19 terminal sustainment + CI soak SLO: run-post-h19-sustainment-loop chains H17 + H18 + run:ci-soak-slo-gate + validate:h19-closeout; verify:sustainment-loop; validate:post-h19-sustainment-manifest; verify:sustainment-loop:h18-legacy; H18->H19 goal policy."
     }
   ]
 }

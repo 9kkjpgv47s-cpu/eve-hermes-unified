@@ -4,7 +4,7 @@ import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19"];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
@@ -24,6 +24,7 @@ const HORIZON_STAGE_MAP = {
   H16: "full",
   H17: "full",
   H18: "full",
+  H19: "full",
 };
 
 function isNonEmptyString(value) {
@@ -376,6 +377,12 @@ function commandVerificationType(command) {
   }
   if (command === "node ./scripts/run-post-h18-sustainment-loop.mjs") {
     return "post-h18-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-h19-assurance-bundle.mjs") {
+    return "h19-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-post-h19-sustainment-loop.mjs") {
+    return "post-h19-sustainment-loop";
   }
   return "existence-only";
 }
@@ -1273,6 +1280,20 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "h19-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h19_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusMetadataPass !== true) {
+      checks.push("h19_assurance_horizon_status_metadata_not_passed");
+    }
+    if (signal.h18AssuranceBundlePass !== true) {
+      checks.push("h19_assurance_h18_bundle_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   if (verificationType === "post-h6-sustainment-loop") {
     const checks = [];
     if (payload.pass !== true) {
@@ -1494,6 +1515,20 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "post-h19-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h19_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h19AssuranceBundlePass !== true) {
+      checks.push("post_h19_h19_assurance_bundle_not_passed");
+    }
+    if (signal.h19CloseoutGatePass !== true) {
+      checks.push("post_h19_h19_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   const checks = payload.pass === true ? [] : ["artifact_not_passed"];
   return { pass: checks.length === 0, checks };
 }
@@ -1563,10 +1598,10 @@ async function main() {
       nextHorizon && horizonStatus?.horizonStates?.[nextHorizon]
         ? horizonStatus.horizonStates[nextHorizon]
         : null;
-    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H18, or next horizon already completed (retroactive closeout). */
+    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H19, or next horizon already completed (retroactive closeout). */
     const skipStagePromotionReadiness =
       derivedNext === "" ||
-      targetHorizon === "H18" ||
+      targetHorizon === "H19" ||
       Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
 
     if (!skipStagePromotionReadiness) {

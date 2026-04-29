@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 /**
+ * Legacy post-H18 sustainment loop (pre-H19). Prefer **`npm run verify:sustainment-loop`** (post-H19).
+ *
  * Post-H18 sustainment loop: horizon metadata, H18 assurance (H17 merge gates + stage-promotion readiness), H18 closeout gate.
  *
  * Run **`npm run run:h16-assurance-bundle`** first when reproducing a full chain locally or after **`npm run validate:all`** when **`evidence/`** lacks goal-policy output through **H18**.

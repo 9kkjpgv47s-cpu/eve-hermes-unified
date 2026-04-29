@@ -11,7 +11,22 @@ EVIDENCE_PATH="${UNIFIED_RELEASE_READINESS_PATH:-}"
 require_goal_policy_validation_report="${UNIFIED_INITIAL_SCOPE_REQUIRE_GOAL_POLICY_FILE_VALIDATION_REPORT:-1}"
 
 if [[ -z "$EVIDENCE_PATH" ]]; then
-  EVIDENCE_PATH="$(ls -1 "$OUT_DIR"/release-readiness-*.json 2>/dev/null | sort | tail -n 1 || true)"
+  newest=""
+  latest_mtime=-1
+  for candidate in "$OUT_DIR"/release-readiness-*.json; do
+    [[ -e "$candidate" ]] || continue
+    mtime=-1
+    if mtime=$(stat -c %Y "$candidate" 2>/dev/null); then
+      :
+    elif mtime=$(stat -f %m "$candidate" 2>/dev/null); then
+      :
+    fi
+    if [[ "$mtime" =~ ^[0-9]+$ ]] && [[ "$mtime" -gt "$latest_mtime" ]]; then
+      latest_mtime=$mtime
+      newest=$candidate
+    fi
+  done
+  EVIDENCE_PATH="${newest:-}"
 fi
 
 if [[ -z "$EVIDENCE_PATH" ]]; then

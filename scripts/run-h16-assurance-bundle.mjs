@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Horizon H16 assurance bundle: H15 gates plus goal-policy file validation (**H2→H22** runway).
+ * Horizon H16 assurance bundle: H15 gates plus goal-policy file validation (**H2→H23** runway).
  *
  * Manifest schema sweep (**`validate:manifest-schemas`**) runs in **`run-h21-assurance-bundle.mjs`** after **`validate:all`** fills **`evidence/`**.
  */
@@ -64,7 +64,7 @@ const goalPolicyStep = runStep("validate_goal_policy_file", [
   "--source-horizon",
   "H2",
   "--until-horizon",
-  "H22",
+  "H23",
   "--require-tagged-requirements",
   "--require-positive-pending-min",
   "--out",

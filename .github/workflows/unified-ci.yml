@@ -36,7 +36,7 @@ jobs:
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: H16 sustainment assurance bundle (goal policy through H22 + H15 gates)
+      - name: H16 sustainment assurance bundle (goal policy through H23 + H15 gates)
         run: npm run run:h16-assurance-bundle
 
       - name: Build
@@ -78,14 +78,14 @@ jobs:
       - name: Initial scope gate
         run: npm run validate:initial-scope
 
-      - name: H22 unified-entrypoints + H21 manifest + H20 evidence-gates assurance bundle
-        run: npm run run:h22-assurance-bundle
+      - name: H23 shell CI scan + H22 unified-entrypoints + H21 manifest assurance bundle
+        run: npm run run:h23-assurance-bundle
 
-      - name: Post-H22 sustainment loop (closeout gate)
+      - name: Post-H23 sustainment loop (closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H22 sustainment manifest
-        run: npm run validate:post-h22-sustainment-manifest
+      - name: Validate post-H23 sustainment manifest
+        run: npm run validate:post-h23-sustainment-manifest
 
       - name: Upload evidence artifacts
         uses: actions/upload-artifact@v4

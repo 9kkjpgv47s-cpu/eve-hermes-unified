@@ -85,22 +85,22 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H22 sustainment (continuous)
+## Phase 8 - Post-H23 sustainment (continuous)
 
-After horizon **H22** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H23** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
-- [x] `npm run run:h22-assurance-bundle` exits `0` (includes **`validate:unified-entrypoints`** + **`run:h21-assurance-bundle`**) and emits `evidence/h22-assurance-bundle-*.json`.
-- [x] `npm run validate:h22-closeout` exits `0` (uses evidence under `evidence/`).
+- [x] `npm run run:h23-assurance-bundle` exits `0` (includes **`validate:shell-unified-dispatch-ci`** + **`run:h22-assurance-bundle`**) and emits `evidence/h23-assurance-bundle-*.json`.
+- [x] `npm run validate:h23-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains **H22** assurance + closeout and writes `evidence/post-h22-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains **H23** assurance + closeout and writes `evidence/post-h23-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [x] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [x] `npm run validate:post-h22-sustainment-manifest` exits `0`.
+- [x] `npm run validate:post-h23-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h21-legacy`** / **`validate:post-h21-sustainment-manifest`** (H21 chain); **`verify:sustainment-loop:h20-legacy`** … **`h6-legacy`**.
+Historical sustainment: **`npm run verify:sustainment-loop:h22-legacy`** / **`validate:post-h22-sustainment-manifest`** (H22 chain); **`verify:sustainment-loop:h21-legacy`** … **`h6-legacy`**.
 
 Exit criteria:
 

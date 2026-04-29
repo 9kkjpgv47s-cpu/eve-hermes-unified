@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
  * Horizon H10 assurance bundle: H9 gates plus dispatch durability queue retention proof.
+ *
+ * Unified adapter entrypoints (**`validate:unified-entrypoints`**) are enforced in **`run-h22-assurance-bundle.mjs`** after **`validate:all`** + **`npm run build`**.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -44,10 +46,6 @@ const regionFailover = runStep("rehearse_region_failover", [
   "bash",
   path.join(root, "scripts/region-failover-rehearsal.sh"),
 ]);
-const unifiedEntrypoints = runStep("validate_unified_entrypoints", [
-  process.execPath,
-  path.join(root, "scripts/validate-unified-entrypoints.mjs"),
-]);
 const auditRotation = runStep("audit_log_rotation_tests", [
   process.execPath,
   path.join(root, "node_modules/vitest/vitest.mjs"),
@@ -80,7 +78,6 @@ const payload = {
     horizonStatus.pass
     && tenantIsolation.pass
     && regionFailover.pass
-    && unifiedEntrypoints.pass
     && auditRotation.pass
     && capabilityPolicyAudit.pass
     && memoryAtomic.pass
@@ -89,7 +86,6 @@ const payload = {
     horizonStatusPass: horizonStatus.pass,
     tenantIsolationPass: tenantIsolation.pass,
     regionFailoverPass: regionFailover.pass,
-    unifiedEntrypointsPass: unifiedEntrypoints.pass,
     auditRotationPass: auditRotation.pass,
     capabilityPolicyAuditPass: capabilityPolicyAudit.pass,
     memoryAtomicPersistencePass: memoryAtomic.pass,
@@ -99,7 +95,6 @@ const payload = {
     horizonStatus,
     tenantIsolation,
     regionFailover,
-    unifiedEntrypoints,
     auditRotation,
     capabilityPolicyAudit,
     memoryAtomic,

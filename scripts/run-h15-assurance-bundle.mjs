@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Horizon H15 assurance bundle: H14 gates plus CI shell unified-dispatch convergence scan (no bypass of unified-dispatch-runner.sh).
+ * Horizon H15 assurance bundle: H14 shell ingress gates only.
+ *
+ * **`validate:shell-unified-dispatch-ci`** runs in **`run-h23-assurance-bundle.mjs`** after **`validate:all`** + **`npm run build`** so repo **`scripts/*.sh`** can align with built **`dist/`** paths without failing early CI.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -31,20 +33,15 @@ function runStep(id, argv) {
 }
 
 const h14Bundle = runStep("run_h14_assurance_bundle", [process.execPath, path.join(root, "scripts/run-h14-assurance-bundle.mjs")]);
-const shellCiScan = runStep("validate_shell_unified_dispatch_ci", [
-  process.execPath,
-  path.join(root, "scripts/validate-shell-unified-dispatch-ci.mjs"),
-]);
 
 const payload = {
   generatedAtIso: new Date().toISOString(),
   horizon: "H15",
-  pass: h14Bundle.pass && shellCiScan.pass,
+  pass: h14Bundle.pass,
   checks: {
     h14AssuranceBundlePass: h14Bundle.pass,
-    shellUnifiedDispatchCiScanPass: shellCiScan.pass,
   },
-  steps: [h14Bundle, shellCiScan],
+  steps: [h14Bundle],
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

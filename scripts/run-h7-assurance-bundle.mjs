@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
  * Horizon H7 assurance bundle: sustainment gates plus dispatch audit log rotation unit proof.
+ *
+ * Unified adapter entrypoints (**`validate:unified-entrypoints`**) are enforced in **`run-h22-assurance-bundle.mjs`** after **`validate:all`** + **`npm run build`**.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -44,10 +46,6 @@ const regionFailover = runStep("rehearse_region_failover", [
   "bash",
   path.join(root, "scripts/region-failover-rehearsal.sh"),
 ]);
-const unifiedEntrypoints = runStep("validate_unified_entrypoints", [
-  process.execPath,
-  path.join(root, "scripts/validate-unified-entrypoints.mjs"),
-]);
 const auditRotation = runStep("audit_log_rotation_tests", [
   process.execPath,
   path.join(root, "node_modules/vitest/vitest.mjs"),
@@ -62,16 +60,14 @@ const payload = {
     horizonStatus.pass
     && tenantIsolation.pass
     && regionFailover.pass
-    && unifiedEntrypoints.pass
     && auditRotation.pass,
   checks: {
     horizonStatusPass: horizonStatus.pass,
     tenantIsolationPass: tenantIsolation.pass,
     regionFailoverPass: regionFailover.pass,
-    unifiedEntrypointsPass: unifiedEntrypoints.pass,
     auditRotationPass: auditRotation.pass,
   },
-  steps: [horizonStatus, tenantIsolation, regionFailover, unifiedEntrypoints, auditRotation],
+  steps: [horizonStatus, tenantIsolation, regionFailover, auditRotation],
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

@@ -8,8 +8,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- Active horizon: **`H9`** (`docs/HORIZON_STATUS.json`, in progress); **H10** — see **`docs/H10_PROGRAM.md`**
-- Latest in-repo slice: … `validate:h9-closeout`, `validate:regression-eve`, `validate:cutover-readiness`, `emit:validate-all-chain-posture`, `validate:h9-evidence-bundle`, and `validate:h10-closeout` in `validate:all`
+- Active horizon: **`H10`** (`docs/HORIZON_STATUS.json`, in progress); **H11** — see **`docs/H11_PROGRAM.md`**
+- Latest in-repo slice: … `validate:h10-closeout`, `emit:validate-all-chain-posture-h11`, `validate:h10-evidence-bundle`, and `validate:h11-closeout` in `validate:all`
 - See `docs/H5_MULTI_TENANT_REGION.md` for env and CLI details
 
 ## What Was Just Completed

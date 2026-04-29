@@ -2,8 +2,9 @@
 /**
  * H9 (h9-action-2): after validate:h9-closeout, regression, and cutover readiness,
  * emit a single machine-readable posture proving the tail of `validate:all` passed.
- * Writes `validate-all-chain-posture-*.json` (schema h9-validate-all-chain-v1).
- * `--horizon-program` defaults to H9; use H10 when the active program horizon is H10.
+ * Writes `<filePrefix>*.json` (default `validate-all-chain-posture-`, schema h9-validate-all-chain-v1).
+ * `--horizon-program` defaults to H9; use H10 for the first validate:all tail, H11 for the second emit.
+ * `--file-prefix` sets the output filename prefix (e.g. `validate-all-chain-posture-h11-` for H11 closeout).
  */
 import { access, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -13,7 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA_VERSION = "h9-validate-all-chain-v1";
 
 function parseArgs(argv) {
-  const opts = { evidenceDir: "", out: "", horizonProgram: "H9" };
+  const opts = { evidenceDir: "", out: "", horizonProgram: "H9", filePrefix: "validate-all-chain-posture-" };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--evidence-dir" && argv[i + 1]) {
@@ -24,6 +25,9 @@ function parseArgs(argv) {
       i += 1;
     } else if (a === "--horizon-program" && argv[i + 1]) {
       opts.horizonProgram = argv[i + 1];
+      i += 1;
+    } else if (a === "--file-prefix" && argv[i + 1]) {
+      opts.filePrefix = argv[i + 1];
       i += 1;
     }
   }
@@ -72,6 +76,8 @@ async function main() {
 
   const horizonProgram =
     typeof opts.horizonProgram === "string" && opts.horizonProgram.trim() ? opts.horizonProgram.trim() : "H9";
+  const filePrefix =
+    typeof opts.filePrefix === "string" && opts.filePrefix.trim() ? opts.filePrefix.trim() : "validate-all-chain-posture-";
 
   const failures = [];
 
@@ -143,7 +149,7 @@ async function main() {
   const gatesPassed = failures.length === 0;
   const outPath =
     opts.out ||
-    path.join(evidenceDir, `validate-all-chain-posture-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+    path.join(evidenceDir, `${filePrefix}${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
 
   const manifest = {
     schemaVersion: SCHEMA_VERSION,

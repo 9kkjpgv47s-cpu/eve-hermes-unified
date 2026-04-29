@@ -85,6 +85,9 @@ function validateSloPosture(sp) {
   if (!eg || typeof eg !== "object") {
     failures.push("slo_posture_missing_evidenceGates");
   }
+  if (o.horizonProgram !== "H10") {
+    failures.push(`slo_posture_horizonProgram_expected_H10:${String(o.horizonProgram)}`);
+  }
   return failures;
 }
 
@@ -174,6 +177,7 @@ async function main() {
       validationSummaryPresent: Boolean(validationSummaryPath),
       sloPosturePresent: Boolean(validationPayload?.sloPosture),
       sloPostureGatesPassed: validationPayload?.sloPosture?.gatesPassed === true,
+      sloPostureHorizonProgramH10: validationPayload?.sloPosture?.horizonProgram === "H10",
     },
     upstream: h8Payload
       ? {

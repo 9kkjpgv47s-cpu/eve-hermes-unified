@@ -613,7 +613,7 @@ describe("H5 operator scripts", () => {
           sloPosture: {
             schemaVersion: "h8-slo-posture-v1",
             generatedAtIso: new Date().toISOString(),
-            horizonProgram: "H9",
+            horizonProgram: "H8",
             metrics: { successRate: 1, missingTraceRate: 0 },
             evidenceGates: { minSuccessRate: 0.99 },
             gatesPassed: true,
@@ -790,7 +790,7 @@ describe("H5 operator scripts", () => {
           sloPosture: {
             schemaVersion: "h8-slo-posture-v1",
             generatedAtIso: new Date().toISOString(),
-            horizonProgram: "H9",
+            horizonProgram: "H10",
             metrics: { successRate: 1, missingTraceRate: 0 },
             evidenceGates: { minSuccessRate: 0.99 },
             gatesPassed: true,
@@ -1023,6 +1023,21 @@ describe("H5 operator scripts", () => {
         }),
         "utf8",
       );
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          sloPosture: {
+            schemaVersion: "h8-slo-posture-v1",
+            generatedAtIso: new Date().toISOString(),
+            horizonProgram: "H10",
+            metrics: { successRate: 1, missingTraceRate: 0 },
+            evidenceGates: {},
+            gatesPassed: true,
+          },
+        }),
+        "utf8",
+      );
       const outPath = path.join(evidenceDir, "h10-closeout-fail.json");
       const result = await runCommandWithTimeout(
         ["node", "scripts/validate-h10-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
@@ -1058,6 +1073,21 @@ describe("H5 operator scripts", () => {
         }),
         "utf8",
       );
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          sloPosture: {
+            schemaVersion: "h8-slo-posture-v1",
+            generatedAtIso: new Date().toISOString(),
+            horizonProgram: "H10",
+            metrics: { successRate: 1, missingTraceRate: 0 },
+            evidenceGates: {},
+            gatesPassed: true,
+          },
+        }),
+        "utf8",
+      );
       const outPath = path.join(evidenceDir, "h10-closeout-pass.json");
       const result = await runCommandWithTimeout(
         ["node", "scripts/validate-h10-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
@@ -1080,6 +1110,201 @@ describe("H5 operator scripts", () => {
       expect(parsed.closeout?.nextHorizon).toBe("H10");
       expect(parsed.checks?.h10HorizonCloseoutGatePass).toBe(true);
       expect(parsed.checks?.validateAllChainPostureGatesPassed).toBe(true);
+    });
+  });
+
+  it("validate-h10-evidence-bundle fails when h10 promotion closeout manifest is missing", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990109-430000";
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          soakDrillDimensions: {
+            tenants: { alpha: 5, beta: 5, _none: 2 },
+            regions: { "us-west": 5, "eu-central": 5, _none: 2 },
+            partitions: { "soak-part-a": 5, "soak-part-b": 5, _none: 2 },
+            regionAligned: { true: 10, false: 0, unknown: 0 },
+          },
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h5-region-misalignment-drill-${stamp}.json`),
+        JSON.stringify({ schemaVersion: "h5-region-misalignment-drill-v2", pass: true, failures: [] }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h6-partition-drill-${stamp}.json`),
+        JSON.stringify({ schemaVersion: "h6-partition-drill-v1", pass: true, failures: [] }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `emergency-rollback-rehearsal-${stamp}.json`),
+        JSON.stringify({ manifestVersion: "h3-emergency-rollback-rehearsal-v1", dryRun: true }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `remediation-playbook-dry-run-${stamp}.json`),
+        JSON.stringify({ schemaVersion: "h5-remediation-dry-run-v1", policyBounds: { dryRunOnly: true } }),
+        "utf8",
+      );
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h10-evidence-bundle.mjs", "--evidence-dir", evidenceDir],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+    });
+  });
+
+  it("validate-h10-evidence-bundle passes with scale evidence and h10 promotion closeout", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990109-440000";
+      await writeFile(
+        path.join(evidenceDir, `validation-summary-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          soakDrillDimensions: {
+            tenants: { alpha: 5, beta: 5, _none: 2 },
+            regions: { "us-west": 5, "eu-central": 5, _none: 2 },
+            partitions: { "soak-part-a": 5, "soak-part-b": 5, _none: 2 },
+            regionAligned: { true: 10, false: 0, unknown: 0 },
+          },
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h5-region-misalignment-drill-${stamp}.json`),
+        JSON.stringify({ schemaVersion: "h5-region-misalignment-drill-v2", pass: true, failures: [] }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h6-partition-drill-${stamp}.json`),
+        JSON.stringify({ schemaVersion: "h6-partition-drill-v1", pass: true, failures: [] }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `emergency-rollback-rehearsal-${stamp}.json`),
+        JSON.stringify({ manifestVersion: "h3-emergency-rollback-rehearsal-v1", dryRun: true }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `remediation-playbook-dry-run-${stamp}.json`),
+        JSON.stringify({ schemaVersion: "h5-remediation-dry-run-v1", policyBounds: { dryRunOnly: true } }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `h10-closeout-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h10-closeout-v1",
+          pass: true,
+          closeout: { horizon: "H9", nextHorizon: "H10" },
+          checks: { h10HorizonCloseoutGatePass: true },
+          failures: [],
+        }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h10-closeout-evidence-pass.json");
+      const result = await runCommandWithTimeout(
+        [
+          "node",
+          "scripts/validate-h10-evidence-bundle.mjs",
+          "--evidence-dir",
+          evidenceDir,
+          "--out",
+          outPath,
+        ],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(0);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as {
+        pass?: boolean;
+        closeout?: { horizon?: string };
+        checks?: { h10PromotionCloseoutPass?: boolean };
+      };
+      expect(parsed.pass).toBe(true);
+      expect(parsed.closeout?.horizon).toBe("H10");
+      expect(parsed.checks?.h10PromotionCloseoutPass).toBe(true);
+    });
+  });
+
+  it("validate-h11-closeout fails when chain posture h11 has wrong horizonProgram", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990109-450000";
+      await writeFile(
+        path.join(evidenceDir, `h10-closeout-evidence-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          pass: true,
+          closeout: { horizon: "H10", nextHorizon: null, canCloseHorizon: true, canStartNextHorizon: false },
+          checks: { horizonCloseoutGatePass: true },
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `validate-all-chain-posture-h11-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h9-validate-all-chain-v1",
+          gatesPassed: true,
+          horizonProgram: "H10",
+        }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h11-closeout-fail.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h11-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(2);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as { pass?: boolean; failures?: string[] };
+      expect(parsed.failures?.some((f) => f.includes("chain_posture_h11_horizonProgram_expected_H11"))).toBe(true);
+    });
+  });
+
+  it("validate-h11-closeout passes with h10 evidence and chain posture H11", async () => {
+    await withTempEvidenceDir(async (evidenceDir) => {
+      const stamp = "20990109-460000";
+      await writeFile(
+        path.join(evidenceDir, `h10-closeout-evidence-${stamp}.json`),
+        JSON.stringify({
+          generatedAtIso: new Date().toISOString(),
+          pass: true,
+          closeout: { horizon: "H10", nextHorizon: null, canCloseHorizon: true, canStartNextHorizon: false },
+          checks: { horizonCloseoutGatePass: true },
+          failures: [],
+        }),
+        "utf8",
+      );
+      await writeFile(
+        path.join(evidenceDir, `validate-all-chain-posture-h11-${stamp}.json`),
+        JSON.stringify({
+          schemaVersion: "h9-validate-all-chain-v1",
+          gatesPassed: true,
+          horizonProgram: "H11",
+        }),
+        "utf8",
+      );
+      const outPath = path.join(evidenceDir, "h11-closeout-pass.json");
+      const result = await runCommandWithTimeout(
+        ["node", "scripts/validate-h11-closeout.mjs", "--evidence-dir", evidenceDir, "--out", outPath],
+        { timeoutMs: 15_000 },
+      );
+      expect(result.code).toBe(0);
+      const raw = await readFile(outPath, "utf8");
+      const parsed = JSON.parse(raw) as {
+        pass?: boolean;
+        schemaVersion?: string;
+        closeout?: { horizon?: string; nextHorizon?: string };
+        checks?: { h11HorizonCloseoutGatePass?: boolean };
+      };
+      expect(parsed.pass).toBe(true);
+      expect(parsed.schemaVersion).toBe("h11-closeout-v1");
+      expect(parsed.closeout?.horizon).toBe("H10");
+      expect(parsed.closeout?.nextHorizon).toBe("H11");
+      expect(parsed.checks?.h11HorizonCloseoutGatePass).toBe(true);
     });
   });
 

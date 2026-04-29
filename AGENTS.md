@@ -62,9 +62,9 @@ npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/H
 #   --require-progressive-goals --minimum-goal-increase 1
 #   --goal-policy-key H2->H3
 # optionally require multi-transition policy coverage before promotion:
-#   --require-goal-policy-coverage --goal-policy-coverage-until-horizon H10 --require-policy-tagged-targets
+#   --require-goal-policy-coverage --goal-policy-coverage-until-horizon H11 --require-policy-tagged-targets
 # optionally require the readiness-audit gate before promotion:
-#   --require-goal-policy-readiness-audit --goal-policy-readiness-audit-max-target-horizon H10 --require-goal-policy-readiness-tagged-targets
+#   --require-goal-policy-readiness-audit --goal-policy-readiness-audit-max-target-horizon H11 --require-goal-policy-readiness-tagged-targets
 # strict one-flag policy hardening mode (progressive + coverage + readiness audit + tagged + positive pending mins):
 #   --strict-goal-policy-gates --goal-policy-key H2->H3
 # optional: require dedicated goal-policy file validation during promotion:
@@ -75,7 +75,7 @@ npm run run:h2-promotion -- --evidence-dir evidence --horizon-status-file docs/H
 # policy-file schema/coverage gate (explicit file mode):
 #   npm run validate:goal-policy-file -- --goal-policy-file docs/GOAL_POLICIES.json
 npm run validate:h2-closeout -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json
-npm run audit:goal-policy-readiness -- --horizon-status-file docs/HORIZON_STATUS.json --source-horizon H2 --until-horizon H10 --require-tagged-requirements
+npm run audit:goal-policy-readiness -- --horizon-status-file docs/HORIZON_STATUS.json --source-horizon H2 --until-horizon H11 --require-tagged-requirements
 # optional deterministic evidence mode override:
 #   --evidence-selection-mode latest-passing
 npm run evaluate:auto-rollback-policy -- --stage canary --evidence-dir evidence

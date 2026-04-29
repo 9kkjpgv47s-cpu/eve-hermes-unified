@@ -72,6 +72,34 @@ function validateChainPosture(chain) {
   return failures;
 }
 
+/**
+ * @param {unknown} vs
+ * @returns {string[]}
+ */
+function validateValidationSummarySloForH10(vs) {
+  const failures = [];
+  if (!vs || typeof vs !== "object") {
+    failures.push("validation_summary_missing_for_h10_slo");
+    return failures;
+  }
+  const sp = /** @type {Record<string, unknown>} */ (vs).sloPosture;
+  if (!sp || typeof sp !== "object") {
+    failures.push("validation_summary_missing_sloPosture_h10");
+    return failures;
+  }
+  const o = /** @type {Record<string, unknown>} */ (sp);
+  if (o.schemaVersion !== "h8-slo-posture-v1") {
+    failures.push(`h10_slo_posture_schema_version:${String(o.schemaVersion)}`);
+  }
+  if (o.gatesPassed !== true) {
+    failures.push("h10_slo_posture_gatesPassed_false");
+  }
+  if (o.horizonProgram !== "H10") {
+    failures.push(`h10_slo_posture_horizonProgram_expected_H10:${String(o.horizonProgram)}`);
+  }
+  return failures;
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const evidenceDir = path.resolve(opts.evidenceDir || path.join(ROOT, "evidence"));
@@ -110,6 +138,22 @@ async function main() {
     }
   }
 
+  const validationSummaryPath = await newestMatchingFile(
+    evidenceDir,
+    (n) => n.startsWith("validation-summary-") && n.endsWith(".json"),
+  );
+  let validationPayload = null;
+  if (!validationSummaryPath) {
+    failures.push("missing_validation_summary_for_h10_closeout");
+  } else {
+    try {
+      validationPayload = JSON.parse(await readFile(validationSummaryPath, "utf8"));
+    } catch (e) {
+      failures.push(`validation_summary_unreadable:${String(e?.message ?? e)}`);
+    }
+  }
+  failures.push(...validateValidationSummarySloForH10(validationPayload));
+
   const chainPath = await newestMatchingFile(
     evidenceDir,
     (n) => n.startsWith("validate-all-chain-posture-") && n.endsWith(".json"),
@@ -145,6 +189,7 @@ async function main() {
       evidenceDir,
       horizonStatusFile,
       h9EvidenceCloseoutPath: h9Path,
+      validationSummaryPath,
       validateAllChainPosturePath: chainPath,
       outPath,
     },
@@ -154,6 +199,9 @@ async function main() {
       h9EvidenceBundlePresent: Boolean(h9Path),
       h9EvidenceBundlePass: h9Payload?.pass === true,
       h9HorizonCloseoutGatePass: h9Payload?.checks?.horizonCloseoutGatePass === true,
+      validationSummaryPresent: Boolean(validationSummaryPath),
+      sloPostureHorizonProgramH10: validationPayload?.sloPosture?.horizonProgram === "H10",
+      sloPostureGatesPassed: validationPayload?.sloPosture?.gatesPassed === true,
       validateAllChainPosturePresent: Boolean(chainPath),
       validateAllChainPostureGatesPassed: chainPayload?.gatesPassed === true,
     },

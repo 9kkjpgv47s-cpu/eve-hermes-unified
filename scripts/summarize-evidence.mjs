@@ -171,7 +171,7 @@ function buildSloPostureFromGates(metrics, gateOptions, gatesPassed) {
   return {
     schemaVersion: "h8-slo-posture-v1",
     generatedAtIso: new Date().toISOString(),
-    horizonProgram: "H9",
+    horizonProgram: "H10",
     metrics: {
       totalRecords: metrics.totalRecords,
       successRate: metrics.successRate,

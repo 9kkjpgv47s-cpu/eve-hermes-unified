@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Horizon H16 assurance bundle: H15 gates plus goal-policy file validation (H2→H37) and evidence manifest schema sweep.
+ * Horizon H16 assurance bundle: H15 gates plus goal-policy file validation (H2→H39) and evidence manifest schema sweep.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -62,7 +62,7 @@ const goalPolicyStep = runStep("validate_goal_policy_file", [
   "--source-horizon",
   "H2",
   "--until-horizon",
-  "H37",
+  "H39",
   "--require-tagged-requirements",
   "--require-positive-pending-min",
   "--out",

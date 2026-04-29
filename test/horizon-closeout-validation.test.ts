@@ -398,6 +398,8 @@ async function seedHorizonStatus(statusPath: string, mode: "h1-in-progress" | "h
           H35: { status: "planned", summary: "H35 planned" },
           H36: { status: "planned", summary: "H36 planned" },
           H37: { status: "planned", summary: "H37 planned" },
+          H38: { status: "planned", summary: "H38 planned" },
+          H39: { status: "planned", summary: "H39 planned" },
         },
         history: [
           {
@@ -905,6 +907,8 @@ describe("validate-horizon-closeout.mjs", () => {
           H35: { status: "planned", summary: "H35 planned" },
           H36: { status: "planned", summary: "H36 planned" },
           H37: { status: "planned", summary: "H37 planned" },
+          H38: { status: "planned", summary: "H38 planned" },
+          H39: { status: "planned", summary: "H39 planned" },
         },
             history: [
               {
@@ -1079,6 +1083,8 @@ describe("validate-horizon-closeout.mjs", () => {
           H35: { status: "planned", summary: "H35 planned" },
           H36: { status: "planned", summary: "H36 planned" },
           H37: { status: "planned", summary: "H37 planned" },
+          H38: { status: "planned", summary: "H38 planned" },
+          H39: { status: "planned", summary: "H39 planned" },
         },
             history: [
               {
@@ -1264,6 +1270,8 @@ describe("validate-horizon-closeout.mjs", () => {
           H35: { status: "planned", summary: "H35 planned" },
           H36: { status: "planned", summary: "H36 planned" },
           H37: { status: "planned", summary: "H37 planned" },
+          H38: { status: "planned", summary: "H38 planned" },
+          H39: { status: "planned", summary: "H39 planned" },
         },
             history: [
               {
@@ -1453,6 +1461,8 @@ describe("validate-horizon-closeout.mjs", () => {
           H35: { status: "planned", summary: "H35 planned" },
           H36: { status: "planned", summary: "H36 planned" },
           H37: { status: "planned", summary: "H37 planned" },
+          H38: { status: "planned", summary: "H38 planned" },
+          H39: { status: "planned", summary: "H39 planned" },
         },
             history: [
               {
@@ -1622,6 +1632,8 @@ describe("validate-horizon-closeout.mjs", () => {
           H35: { status: "planned", summary: "H35 planned" },
           H36: { status: "planned", summary: "H36 planned" },
           H37: { status: "planned", summary: "H37 planned" },
+          H38: { status: "planned", summary: "H38 planned" },
+          H39: { status: "planned", summary: "H39 planned" },
         },
             history: [
               {

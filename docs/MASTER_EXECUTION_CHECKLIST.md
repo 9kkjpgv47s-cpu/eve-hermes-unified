@@ -90,12 +90,12 @@ Exit criteria:
 After terminal merge-readiness horizons (**H16+**) are completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
 - [ ] `npm run validate:horizon-status` exits `0`.
-- [ ] `npm run run:h37-assurance-bundle` exits `0` and emits `evidence/h37-assurance-bundle-*.json` (includes H16–H36 sub-bundles + final **`validate-horizon-status`** recheck on `docs/HORIZON_STATUS.json`).
+- [ ] `npm run run:h39-assurance-bundle` exits `0` and emits `evidence/h39-assurance-bundle-*.json` (includes H16–H38 sub-bundles + final **`validate-horizon-status`** recheck on `docs/HORIZON_STATUS.json`).
 - [ ] `npm run validate:evidence-volume` exits `0` and emits `evidence/evidence-volume-report-*.json`.
 
-When **H17**–**H37** closeout is required, run **`npm run validate:h17-closeout`** … **`npm run validate:h37-closeout`** separately (those gates consume the sustainment manifest and must not be nested inside `verify:sustainment-loop`).
+When **H17**–**H39** closeout is required, run **`npm run validate:h17-closeout`** … **`npm run validate:h39-closeout`** separately (those gates consume the sustainment manifest and must not be nested inside `verify:sustainment-loop`).
 
-Single command (chains horizon status + **terminal** `run:h37-assurance-bundle` + evidence volume; writes `evidence/post-h16-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains horizon status + **terminal** `run:h39-assurance-bundle` + evidence volume; writes `evidence/post-h16-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [ ] `npm run verify:sustainment-loop` exits `0`.
 

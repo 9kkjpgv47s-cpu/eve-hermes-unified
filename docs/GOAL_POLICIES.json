@@ -273,6 +273,21 @@
           "minPendingCount": 0
         }
       }
+    },
+    "H20->H21": {
+      "minimumGoalIncrease": 1,
+      "minActionGrowthFactor": 1.01,
+      "minPendingNextActions": 1,
+      "requiredTaggedActionCounts": {
+        "ci": {
+          "minCount": 1,
+          "minPendingCount": 1
+        },
+        "validation": {
+          "minCount": 1,
+          "minPendingCount": 0
+        }
+      }
     }
   }
 }

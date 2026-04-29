@@ -29,6 +29,8 @@ const VALID_HORIZONS = [
   "H22",
   "H23",
   "H24",
+  "H25",
+  "H26",
 ];
 const VALID_STATUSES = ["planned", "in_progress", "blocked", "completed"];
 const VALID_SEVERITIES = ["low", "medium", "high", "critical"];
@@ -259,8 +261,8 @@ export function validateHorizonStatus(payload) {
         if (policyKey === "transitions" && policyContainer === payload.goalPolicies) {
           continue;
         }
-        if (!/^H(1[0-9]|2[0-4]|[1-9])->H(1[0-9]|2[0-4]|[1-9])$/.test(policyKey)) {
-          errors.push(`${basePrefix} key must match pattern H<1-24>->H<1-24>`);
+        if (!/^H(1[0-9]|2[0-6]|[1-9])->H(1[0-9]|2[0-6]|[1-9])$/.test(policyKey)) {
+          errors.push(`${basePrefix} key must match pattern H<1-26>->H<1-26>`);
         }
         if (!policyValue || typeof policyValue !== "object" || Array.isArray(policyValue)) {
           errors.push(`${basePrefix} must be an object`);

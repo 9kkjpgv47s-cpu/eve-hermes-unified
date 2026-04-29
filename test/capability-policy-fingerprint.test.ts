@@ -10,6 +10,8 @@ describe("capabilityPolicyFingerprintSha256", () => {
       denyCapabilities: ["z"],
       allowedChatIds: ["2", "1"],
       deniedChatIds: [],
+      allowedTenantIds: [],
+      deniedTenantIds: [],
       allowCapabilityChats: { cap1: ["y", "x"] },
       denyCapabilityChats: {},
     };
@@ -19,6 +21,8 @@ describe("capabilityPolicyFingerprintSha256", () => {
       denyCapabilities: ["z"],
       allowedChatIds: ["1", "2"],
       deniedChatIds: [],
+      allowedTenantIds: [],
+      deniedTenantIds: [],
       allowCapabilityChats: { cap1: ["x", "y"] },
       denyCapabilityChats: {},
     };
@@ -33,6 +37,8 @@ describe("capabilityPolicyFingerprintSha256", () => {
       denyCapabilities: [],
       allowedChatIds: [],
       deniedChatIds: [],
+      allowedTenantIds: [],
+      deniedTenantIds: [],
       allowCapabilityChats: {},
       denyCapabilityChats: {},
     };

@@ -3,13 +3,9 @@ import { runCommandWithTimeout } from "../process/exec.js";
 import type { DispatchState } from "../contracts/types.js";
 import { validateDispatchState } from "../contracts/validate.js";
 import type { LaneAdapter, LaneDispatchInput } from "./lane-adapter.js";
-import { resolveEnvelopeTenantId } from "../runtime/tenant-scope.js";
 
 function classifyHermesFailure(reason: string): DispatchState["failureClass"] {
   const lower = reason.toLowerCase();
-  if (lower.includes("aborted")) {
-    return "dispatch_failure";
-  }
   const exitMatch = lower.match(/hermes_dispatch_exit_(\d+)/);
   const exitCode = exitMatch ? Number(exitMatch[1]) : Number.NaN;
   if (Number.isFinite(exitCode) && exitCode >= 128) {
@@ -48,7 +44,6 @@ export class HermesAdapter implements LaneAdapter {
   async dispatch(input: LaneDispatchInput): Promise<DispatchState> {
     const runId = `unified-hermes-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
     const started = Date.now();
-    const tenantId = resolveEnvelopeTenantId(input.envelope);
     let result;
     try {
       result = await runCommandWithTimeout(
@@ -60,9 +55,13 @@ export class HermesAdapter implements LaneAdapter {
             HERMES_UNIFIED_CHAT_ID: input.envelope.chatId,
             HERMES_UNIFIED_MESSAGE_ID: input.envelope.messageId,
             HERMES_UNIFIED_INTENT_ROUTE: input.intentRoute,
-            ...(tenantId ? { HERMES_UNIFIED_TENANT_ID: tenantId } : {}),
+            ...(input.envelope.tenantId?.trim()
+              ? { HERMES_UNIFIED_TENANT_ID: input.envelope.tenantId.trim() }
+              : {}),
+            ...(input.envelope.regionId?.trim()
+              ? { HERMES_UNIFIED_REGION_ID: input.envelope.regionId.trim() }
+              : {}),
           },
-          signal: input.signal,
         },
       );
     } catch {
@@ -91,20 +90,17 @@ export class HermesAdapter implements LaneAdapter {
             : null;
     const reason = result.termination === "timeout"
       ? "hermes_dispatch_timeout"
-      : result.termination === "signal"
-        ? "hermes_dispatch_aborted"
-        : result.code === 0
+      : result.code === 0
         ? "hermes_dispatch_success"
         : inferredFailureReason
           ?? (result.code === null ? "hermes_dispatch_state_unavailable" : `hermes_dispatch_exit_${result.code}`);
     const state: DispatchState = {
-      status: result.code === 0 && result.termination === "exit" ? "pass" : "failed",
+      status: result.code === 0 ? "pass" : "failed",
       reason,
       runtimeUsed: "hermes",
       runId,
       elapsedMs: Math.max(0, Date.now() - started),
-      failureClass:
-        result.code === 0 && result.termination === "exit" ? "none" : classifyHermesFailure(reason),
+      failureClass: result.code === 0 ? "none" : classifyHermesFailure(reason),
       sourceLane: "hermes",
       sourceChatId: input.envelope.chatId,
       sourceMessageId: input.envelope.messageId,

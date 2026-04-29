@@ -4,47 +4,45 @@ import type {
   UnifiedMemoryListQuery,
   UnifiedMemoryStore,
 } from "./unified-memory-store.js";
+import { normalizeMemoryKey } from "./unified-memory-store.js";
 
-function prefixNamespace(tenantId: string, namespace: string): string {
-  const t = tenantId.trim();
-  if (!t) {
-    return namespace;
+function prefixNamespace(tenantId: string, target: UnifiedMemoryKey): UnifiedMemoryKey {
+  const normalized = normalizeMemoryKey(target);
+  const prefix = tenantId.trim();
+  if (!prefix) {
+    return normalized;
   }
-  return `tenant:${t}:${namespace}`;
+  return {
+    ...normalized,
+    namespace: `${prefix}::${normalized.namespace}`,
+  };
+}
+
+function prefixQuery(tenantId: string, query?: UnifiedMemoryListQuery): UnifiedMemoryListQuery | undefined {
+  const prefix = tenantId.trim();
+  if (!prefix) {
+    return query;
+  }
+  if (!query?.namespace?.trim()) {
+    return undefined;
+  }
+  return {
+    ...query,
+    namespace: `${prefix}::${query.namespace.trim()}`,
+  };
 }
 
 /**
- * Prefixes memory namespaces with a tenant segment when tenantId is non-empty.
- * Empty tenantId preserves legacy flat namespaces.
+ * Wraps a backing store so keys are partitioned by tenant (namespace prefix).
  */
-export class TenantScopedMemoryStore implements UnifiedMemoryStore {
+export class TenantScopedUnifiedMemoryStore implements UnifiedMemoryStore {
   constructor(
     private readonly inner: UnifiedMemoryStore,
     private readonly tenantId: string,
   ) {}
 
-  private mapKey(target: UnifiedMemoryKey): UnifiedMemoryKey {
-    return {
-      ...target,
-      namespace: prefixNamespace(this.tenantId, target.namespace),
-    };
-  }
-
-  private mapQuery(query?: UnifiedMemoryListQuery): UnifiedMemoryListQuery | undefined {
-    if (!query) {
-      return query;
-    }
-    if (!query.namespace) {
-      return query;
-    }
-    return {
-      ...query,
-      namespace: prefixNamespace(this.tenantId, query.namespace),
-    };
-  }
-
   async get(target: UnifiedMemoryKey): Promise<UnifiedMemoryEntry | undefined> {
-    return this.inner.get(this.mapKey(target));
+    return this.inner.get(prefixNamespace(this.tenantId, target));
   }
 
   async set(
@@ -52,14 +50,18 @@ export class TenantScopedMemoryStore implements UnifiedMemoryStore {
     value: string,
     metadata?: Record<string, string>,
   ): Promise<UnifiedMemoryEntry> {
-    return this.inner.set(this.mapKey(target), value, metadata);
+    return this.inner.set(prefixNamespace(this.tenantId, target), value, metadata);
   }
 
   async delete(target: UnifiedMemoryKey): Promise<boolean> {
-    return this.inner.delete(this.mapKey(target));
+    return this.inner.delete(prefixNamespace(this.tenantId, target));
   }
 
   async list(query?: UnifiedMemoryListQuery): Promise<UnifiedMemoryEntry[]> {
-    return this.inner.list(this.mapQuery(query));
+    const scoped = prefixQuery(this.tenantId, query);
+    if (this.tenantId.trim() && !scoped) {
+      return [];
+    }
+    return this.inner.list(scoped ?? query);
   }
 }

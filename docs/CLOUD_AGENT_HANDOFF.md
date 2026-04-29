@@ -13,7 +13,7 @@ Use this document when one cloud agent hands execution to another. The objective
 2. Install and verify:
    - `npm install`
    - `npm run check`
-   - `npm test` (Vitest `globalSetup` ensures `./evidence` exists; the directory is gitignored but some script integration tests default to it.)
+   - `npm test`
 3. Confirm runtime command compiles and runs:
    - `npm run dispatch -- --text "startup verification" --chat-id 1 --message-id 1`
 
@@ -44,97 +44,77 @@ Every PR should include:
 - Preserve canonical `traceId` continuity from envelope to response.
 - Keep explicit lane directives (`@cursor`, `@hermes`) deterministic.
 
-## H3 durability (unified memory file backend)
+## Unified dispatch ingress (H4)
 
-Optional crash recovery for file-backed unified memory:
+- **Canonical binary**: `src/bin/unified-dispatch.ts` — only location that may construct `EveAdapter` / `HermesAdapter` for production-shaped runs.
+- **CI gate**: `npm run validate:unified-entrypoints` scans `src/**/*.ts` for stray adapter constructors.
+- **Contract**: `UNIFIED_DISPATCH_CONTRACT_VERSION` in `src/contracts/schema-version.ts`; fixtures under `test/fixtures/contracts/` validate with `validateUnifiedDispatchResult`.
+- **Deprecation map**: `docs/LEGACY_ENTRYPOINT_DEPRECATION_MAP.md`.
 
-- **`UNIFIED_MEMORY_JOURNAL_PATH`** — append-only JSONL WAL (`v:1`, `op: set|delete`). Each `set`/`delete` appends before the in-memory map is updated; on startup the store loads the JSON snapshot then **replays** the journal. After each successful atomic snapshot persist, the journal is **truncated** (operations are durable in the snapshot file).
-- **`UNIFIED_MEMORY_VERIFY_PERSIST=1`** — after each successful persist, re-read the snapshot and verify it matches the in-memory map (and SHA-256 of canonical JSON).
-- **`UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY=1`** — before each persist, verify **(on-disk snapshot + WAL replay)** matches the in-memory map (detects journal tampering or drift).
-- Preflight checks the journal path parent is writable when set and `UNIFIED_MEMORY_STORE_KIND=file`.
-- **CI / operator durability check:** `npm run validate:memory-durability` — runs `src/bin/verify-memory-durability.ts` (simulated process restart, eve + hermes keys, optional `--memory-file` / `--journal-path` / `--cycles`).
+## Tenant, region, and bounded automation (H5)
 
-## Dispatch audit JSONL (schema)
+- **Envelope fields**: optional `tenantId` and `regionId` on `UnifiedMessageEnvelope`; validated in `validateEnvelope` when set.
+- **Dispatch tenant gate**: `UNIFIED_TENANT_ALLOWLIST` / `UNIFIED_TENANT_DENYLIST` — evaluated before routing or capability execution; failures return `policy_failure` without touching lane adapters.
+- **Capability tenant gate**: `UNIFIED_CAPABILITY_ALLOWED_TENANT_IDS` / `UNIFIED_CAPABILITY_DENIED_TENANT_IDS` — applies to `@cap` flows via capability policy.
+- **Memory isolation**: capability execution uses `TenantScopedUnifiedMemoryStore` when `tenantId` is present (namespace prefix `tenantId::`).
+- **Standby region routing**: `UNIFIED_ROUTER_STANDBY_REGION` — when it equals `envelope.regionId`, primary and fallback lanes swap for failover drills (skipped when fallback is `none`).
+- **Lane env passthrough**: Eve receives `EVE_TASK_DISPATCH_TENANT_ID` / `EVE_TASK_DISPATCH_REGION_ID`; Hermes receives `HERMES_UNIFIED_TENANT_ID` / `HERMES_UNIFIED_REGION_ID` when set.
+- **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
+- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H16** (no downstream horizon).
 
-- Each append includes **`auditSchemaVersion`** (see `src/contracts/dispatch-audit-version.ts`; current **v2** adds optional provenance field **`tenantId`** as `null` or a normalized tenant string, omitted in v1 lines). Bump the constant when changing the record shape.
-- **`fallbackInfo`** may include router telemetry when fallback is skipped by policy: **`primaryFailureClass`** and **`noFallbackOnPrimaryFailureClasses`** (same **`auditSchemaVersion`**; manifest validator accepts these optional fields).
-- Validate a captured log: `node scripts/validate-manifest-schema.mjs --type unified-dispatch-audit-jsonl --file <path>` (accepts **v1** and **v2** lines; v2 requires **`tenantId`** key present as `null` or string).
-- Capability policy audit: `node scripts/validate-manifest-schema.mjs --type capability-policy-audit-jsonl --file <path>` (expects `evidence/capability-policy-audit-*.jsonl` naming for `--type all` sweep).
-- **`npm run validate:manifest-schemas`** includes `evidence/unified-dispatch-audit-*.jsonl`, `evidence/capability-policy-audit-*.jsonl`, `evidence/router-telemetry-*.jsonl`, `evidence/dispatch-queue-journal-*.jsonl`, and `evidence/emergency-rollback-bundle-*.json` when present.
+## Sustainment assurance (terminal H16)
 
-## Capability execution budget and lane abort
+- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h15-assurance-bundle`**.
+- **H16 bundle** (current): `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H16**) and **`validate:manifest-schemas`** over **`evidence/`**.
+- **Closeout gate**: `npm run validate:h16-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
+- **Horizon index**: orchestration scripts include **H16** as the terminal horizon sequence entry.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H16** assurance bundle + `validate:h16-closeout` → `evidence/post-h16-sustainment-loop-*.json`. **`npm run validate:post-h16-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h15-legacy`** / **`validate:post-h15-sustainment-manifest`**; **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
 
-- **`UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS`** (alias `CAPABILITY_EXECUTION_TIMEOUT_MS`) — wall-clock limit for `@cap` handlers; `0` disables.
-- **`UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT=1`** (alias `CAPABILITY_ABORT_LANE_ON_TIMEOUT`) — when enabled with a positive timeout, abort the in-flight lane subprocess (`SIGTERM`) if the handler exceeds the budget.
-- **`UNIFIED_CAPABILITY_MAX_OUTPUT_CHARS`** — when `> 0`, truncate capability **`responseText`** to this many UTF-16 code units (suffix records original length).
-- **`UNIFIED_CAPABILITY_MAX_LANE_DISPATCHES`** — when `> 0`, each `@cap` handler may call **`dispatchLane`** at most this many times; exceeding fails with **`capability_lane_dispatch_budget_exceeded`** (**`policy_failure`**).
+## Dispatch audit rotation (H7)
 
-## Capability policy audit (append-only JSONL)
+- **Env**: `UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES` (0 = off), `UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT` (default 8; minimum enforced as 1 generation).
+- **Behavior**: before each append in `src/bin/unified-dispatch.ts`, when max-bytes is set, the active JSONL may rotate to `${path}.${timestamp}.jsonl`; oldest archives are pruned to satisfy retention.
 
-- **`UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH`** (alias `CAPABILITY_POLICY_AUDIT_LOG_PATH`) — append-only JSONL for **`policy_denial`** events (capability id, lane, policy reason, **`policyFingerprintSha256`** of stable config JSON, optional **`tenantId`**) and optional **`policy_config_loaded`** on startup.
-- **`UNIFIED_CAPABILITY_POLICY_AUDIT_VERIFY_LOAD`** — when `1` (default when an audit path is set), append **`policy_config_loaded`** only if the fingerprint differs from the last `policy_config_loaded` line (idempotent restarts); set `0` to append every process start.
-- **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`** / **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_BYTES`** — same semantics as dispatch audit rotation (`0` = disabled); line-aligned tail retained in the primary file after rotate.
-- Stable fingerprint: `capabilityPolicyFingerprintSha256` in `src/config/capability-policy-fingerprint.ts`.
-- Preflight checks the audit path parent is writable when the path is non-empty.
+## Capability policy authorization audit (H8)
 
-## Router fallback hardening (H3 policy maturity)
+- **Env**: `UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH` — append-only JSONL for each `@cap` policy evaluation (allowed/denied + `policyReason`). Defaults to `dirname(UNIFIED_AUDIT_LOG_PATH)/unified-capability-policy-audit.jsonl` when unset.
+- **Runtime**: `UnifiedCapabilityEngine` logs after `authorize()` when the path is configured; preflight checks parent directory writable.
 
-- **`UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES`** — comma-separated **`FailureClass`** values (`policy_failure`, `state_unavailable`, `dispatch_failure`, `provider_limit`, `cooldown`, never `none`). When the primary lane returns **`failed`** with a class in this set, unified dispatch **does not invoke the fallback lane** even if **`UNIFIED_ROUTER_FAIL_CLOSED=0`**; **`fallbackInfo.attempted`** is **`false`**, **`fallbackInfo.reason`** is **`no_fallback_for_primary_failure_class`**, and **`fallbackInfo`** includes **`primaryFailureClass`** plus a snapshot array **`noFallbackOnPrimaryFailureClasses`** for dashboards and dispatch-audit JSONL.
-- **Dedicated router telemetry JSONL (optional):** **`UNIFIED_ROUTER_TELEMETRY_LOG_PATH`** — append-only JSONL with event **`router_no_fallback_skipped`** when the no-fallback policy suppresses fallback (same fields as operator dashboards: trace, tenant, lanes, policy version, primary failure class, configured class list). **`UNIFIED_ROUTER_TELEMETRY_ROTATION_MAX_BYTES`** / **`UNIFIED_ROUTER_TELEMETRY_ROTATION_RETAIN_BYTES`** — same semantics as dispatch audit rotation (`0` = disabled). Validate: `node scripts/validate-manifest-schema.mjs --type router-telemetry-jsonl --file <path>`. Evidence sweep **`--type all`** includes `evidence/router-telemetry-*.jsonl` when present.
+## File-backed unified memory crash safety (H9)
 
-## Progressive horizon goal runway (`check:progressive-horizon-goals`)
+- **`FileUnifiedMemoryStore`** commits snapshots by writing **`${UNIFIED_MEMORY_FILE_PATH}.tmp`** then **`rename`** into place so readers rarely observe partial JSON during crashes (same directory as the primary path).
 
-- Growth checks use **`sourceBaselineCount`**: pending **`nextActions`** rows for the **source** horizon when any exist (completed source rows do not inflate the bar). When the source horizon has **zero pending** rows, growth-vs-source checks are **skipped** so external **`docs/GOAL_POLICIES.json`** (large historical source counts) does not require an impossible next-horizon row count; **`minPendingNextActions`** and **`requiredTaggedActionCounts`** still apply. Check output includes **`sourcePendingActionCount`** and **`sourceBaselineCount`**.
+## Dispatch durability queue retention (H10)
 
-## Dispatch queue journal (H3 crash recovery)
+- **Env**: **`UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX`** (alias **`DISPATCH_QUEUE_RETENTION_NON_TERMINAL_MAX`**) — max **`dispatched`** / **`failed`** rows to keep (**oldest** pruned first after each mutation). **`0`** = unlimited. **`pending`** entries are never removed by pruning.
+- **Runtime**: **`FileDispatchDurabilityQueue`** passes retention into each atomic queue save via **`pruneCompletedDispatchQueueEntries`**.
 
-- **`UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH`** (alias **`DISPATCH_QUEUE_JOURNAL_PATH`**) — optional append-only JSONL. Each dispatch writes **`dispatch_queue_accepted`** (routing snapshot + `dispatchPath`: `lane` \| `capability`) then **`dispatch_queue_finished`** (outcome summary). **`UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES`** / **`UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES`** — same semantics as other JSONL logs (`0` = disabled).
-- **Reconcile** (find accepted rows missing a matching finished by `traceId`): `node scripts/reconcile-dispatch-queue.mjs --file <path>` (exit `2` if orphans or parse errors).
-- Validate: `node scripts/validate-manifest-schema.mjs --type dispatch-queue-journal-jsonl --file <path>`. Evidence sweep **`--type all`** includes `evidence/dispatch-queue-journal-*.jsonl` when present.
+## Capability policy audit rotation (H11)
 
-## Soak simulation and SLO drift (H3)
+- **Env**: **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`** (alias **`CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES`**, 0 = off), **`UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT`** (alias **`CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT`**, default 8).
+- **Behavior**: before each capability policy audit append in **`appendCapabilityPolicyAuditLog`**, when max-bytes is set, rotate active JSONL to **`${path}.${timestamp}.jsonl`** (same naming pattern as dispatch audit); **`UnifiedCapabilityEngine`** passes rotation when configured via **`unified-dispatch`** runtime config.
 
-- **`npm run validate:soak`** — `scripts/soak-simulate.sh` writes `evidence/soak-*.jsonl`: each iteration appends the **dispatch JSON** (stdout) then an optional **`soakMeta`** line (iteration, exit code, stderr excerpt, trace summary) so `summarize-evidence.mjs` still parses dispatch records. **`scripts/soak-append-meta.mjs`** is plain Node ESM (no TypeScript-only syntax).
-- **`npm run validate:soak-slo`** — `scripts/validate-soak-slo.mjs --file <soak.jsonl>` writes **`evidence/soak-slo-*.json`** with success rate / policy-failure rate / P95 latency. Thresholds: **`UNIFIED_SOAK_SLO_MIN_SUCCESS_RATE`** (default `0.5`), **`UNIFIED_SOAK_SLO_MAX_POLICY_FAILURE_RATE`** (default `0.45`); CLI overrides **`--min-success-rate`** / **`--max-policy-failure-rate`**. Soak logs may contain **pretty-printed multi-line dispatch JSON** per iteration (from `soak-simulate.sh`); the validator scans **top-level JSON objects** in the file (not only single-line records).
-- **Release readiness gate:** set **`UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO=1`** so `scripts/release-readiness.mjs` requires a passing **`soak-slo-*.json`** in the evidence dir.
+## Dispatch durability queue replay attempt bound (H12)
 
-## Emergency rollback rehearsal bundle (H3)
+- **Env**: **`UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY`** (alias **`DISPATCH_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY`**) — max replay attempts per **`pending`** entry before marking **`failed`** with reason **`replay_max_attempts_exceeded`**. **`0`** = unlimited (legacy behavior).
+- **Runtime**: **`replayPendingDispatches`** compares **`entry.attempts`** to the configured cap before **`incrementAttempt`**; **`FileDispatchDurabilityQueue`** receives the cap from **`unified-dispatch`** runtime config.
 
-- **`npm run bundle:emergency-rollback`** — `scripts/build-emergency-rollback-bundle.mjs --evidence-dir ./evidence` writes **`evidence/emergency-rollback-bundle-<timestamp>.json`** (pinned paths to latest validation summary, soak, failure injection, cutover, regression).
-- Validate: `node scripts/validate-manifest-schema.mjs --type emergency-rollback-bundle --file <path>`.
+## CI soak SLO drift gate (H13)
 
-## H4 legacy retirement scope + dispatch fixtures
+- **Scripts**: **`scripts/run-ci-soak-slo-gate.mjs`** runs **`soak-simulate.sh`** (iterations from **`UNIFIED_CI_SOAK_ITERATIONS`**, default **25**) then **`summarize-soak-report.mjs`** with **`UNIFIED_SOAK_FAIL_ON_DRIFT=1`** so trace rate, success rate, and P95 latency thresholds fail the process on drift.
+- **Evidence**: **`evidence/ci-soak-slo-gate-*.json`** records **`checks.ciSoakDriftPass`** and any **`driftAlarms`** from the summarizer.
+- **CI**: **`unified-ci`** runs **`npm run run:h16-assurance-bundle`** (includes H15 sub-bundle + goal-policy validation + manifest schema sweep) before the full **`validate:all`** chain.
 
-- **Inventory:** `docs/H4_DIRECT_LANE_INVOCATION_INVENTORY.md` — canonical production path is **`src/bin/unified-dispatch.ts`** constructing **`EveAdapter` / `HermesAdapter`** and calling **`dispatchUnifiedMessage`**; no other `src/` constructors for those adapters.
-- **Conformance:** `fixtures/dispatch/*.json` use **`dispatchFixtureSchemaVersion`** (align with **`DISPATCH_FIXTURE_SCHEMA_VERSION`** in `src/contracts/dispatch-fixture-version.ts`). **`test/dispatch-conformance-fixtures.test.ts`** runs **`dispatchUnifiedMessage`** against fixtures.
-- **Memory audit:** `docs/H4_UNIFIED_MEMORY_AUDIT.md`; probe **`npx tsx src/bin/memory-audit-report.ts`** (JSON with **`checks.crossLaneInvariantPass`** / **`checks.walReplayInvariantPass`**).
-- **Closeout evidence bundle:** **`npm run bundle:h4-closeout-evidence`** (alias **`npm run verify:h4-closeout-evidence`**) writes **`evidence/h4-closeout-evidence-*.json`** (dispatch fixture Vitest run + memory audit; if **`evidence/emergency-rollback-bundle-*.json`** exists, its schema must validate). Validate: **`node scripts/validate-manifest-schema.mjs --type h4-closeout-evidence --file <path>`**. **`validate-horizon-closeout.mjs`** recognizes **`npm run verify:h4-closeout-evidence`** for **`requiredEvidence`** row **`h4-closeout-evidence`** (see **`docs/HORIZON_STATUS.json`**, **`horizons: ["H4"]`**).
+## Shell unified dispatch ingress (H14)
 
-## H5 evidence baseline + soak/evidence-summary correctness
+- **`scripts/unified-dispatch-runner.sh`**: **`resolve_unified_dispatch`** sets **`UNIFIED_DISPATCH_CMD`** to **`node dist/.../unified-dispatch.js`** when built, else **`tsx src/bin/unified-dispatch.ts`**. Honors **`UNIFIED_DISPATCH_BIN`** when pointing at an existing file.
+- **`scripts/validate-shell-unified-dispatch.sh`**: smoke-check that the resolver succeeds (used by **`run-h14-assurance-bundle.mjs`**).
+- **Refactors**: **`soak-simulate.sh`**, **`regression-eve-primary.sh`**, **`verify-cutover-readiness.sh`**, **`failure-injection-smoke.sh`** invoke dispatch only via the resolver so **`validate:all`** works **before** **`npm run build`** in clean checkouts.
 
-- **`npm run bundle:h5-evidence-baseline`** (alias **`verify:h5-evidence-baseline`**) — after **`validate:all`**-style artifacts exist, writes **`evidence/h5-evidence-baseline-*.json`** (soak SLO on latest **`soak-*.jsonl`**, validation-summary **`gates.passed`**, P95 + soak line budgets via **`UNIFIED_H5_BASELINE_*`**; optional **`h4-closeout-evidence`** and **`emergency-rollback-bundle`** checks; runs **`scripts/prune-evidence.mjs --dry-run`** and requires **`checks.evidencePruneDryRunPass`**, writing **`evidence/evidence-prune-dry-run-*.json`** unless **`UNIFIED_H5_BASELINE_SKIP_EVIDENCE_PRUNE_DRY_RUN=1`**). Schema: **`validate-manifest-schema.mjs --type h5-evidence-baseline`**. **`validate-horizon-closeout`** maps **`npm run verify:h5-evidence-baseline`** for **`requiredEvidence`** scoped to **H5** in **`docs/HORIZON_STATUS.json`**.
-- **`npm run verify:evidence-prune`** / **`npm run prune:evidence`** — **`scripts/prune-evidence.mjs`** (`UNIFIED_EVIDENCE_PRUNE_TTL_DAYS`, optional **`UNIFIED_EVIDENCE_PRUNE_PREFIXES`**); manifest type **`evidence-prune-run`**; CI runs advisory **`verify:evidence-prune`** with **`UNIFIED_EVIDENCE_PRUNE_TTL_DAYS=0`**.
-- **`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1`** — **`scripts/validate-release-readiness.sh`** runs **`npm run bundle:h5-evidence-baseline`** before **`release-readiness.mjs`**, which then requires a newest **`h5-evidence-baseline-*.json`** with **`pass: true`** (manifest checks **`h5BaselineRequired`**, **`h5BaselinePassed`**, **`h5BaselinePath`**).
-- **`npm run validate:soak-long-window`** — **`scripts/run-long-window-soak.sh`**: optional iterations arg or **`UNIFIED_SOAK_LONG_ITERATIONS`** (cap 2000); writes **`soak-slo-scheduled-*.json`** for archival. Scheduled GitHub Actions workflow **`soak-long-window`** (`.github/workflows/soak-long-window-scheduled.yml`).
-- **`scripts/validate-soak-slo.mjs`** — parses **multi-line** pretty-printed dispatch JSON in soak logs (brace-balanced scan + dedupe by **`traceId`**).
-- **`scripts/summarize-evidence.mjs`** — selects the latest **`soak-*.jsonl`** dispatch log only (so **`soak-slo-baseline-*.json`** / **`soak-slo-*.json`** files in **`evidence/`** cannot be mistaken for soak input).
+## Shell dispatch CI convergence (H15)
 
-## Horizon-neutral failure id inventory (orchestration scripts)
-
-- **`validate-horizon-closeout.mjs`** — dual-reports **`horizon_drill_*`** alongside legacy **`h2_drill_*`**; appends **`h2_closeout_run_*` / `h2_promotion_run_*`** aliases via **`appendH2CompatFailureAliases`** for closeout/promotion run checks.
-- **`promote-horizon.mjs`** — **`appendCloseoutRunFailureCompat`** adds **`closeout_run_h2_*`** when the canonical id starts with **`closeout_run_horizon_`** and source horizon is H2 or later.
-- **`run-h2-closeout.mjs`** — **`horizon_closeout_gate_failed`** plus **`h2_closeout_gate_failed`** when **`--horizon`** is H2 or later.
-- **`run-h2-promotion.mjs`** — **`closeoutRunFailureCodes`** emits **`horizon_closeout_run_<detail>`** plus **`h2_closeout_run_<detail>`** when the two differ (H2 source uses legacy id as scoped form).
-
-## Tenant isolation (dispatch + capability memory)
-
-- **`tenantId`** on `UnifiedMessageEnvelope` (optional) and **`metadata.tenantId`** (optional); metadata wins when both are set. Values must be non-empty, ≤128 chars, and must not contain `/` or `\`.
-- **`UNIFIED_TENANT_STRICT=1`** — fail closed with reason `tenant_id_required` when no tenant is present after resolution.
-- **`UNIFIED_TENANT_ALLOWLIST`** — comma-separated list; when non-empty, require a tenant id and reject with `tenant_id_not_allowed` if not listed.
-- **`UNIFIED_TENANT_MEMORY_ISOLATION=1`** — when a memory store is configured, require a valid tenant and route **all** capability handler memory through `TenantScopedMemoryStore` (no capability reads/writes on unprefixed namespaces).
-- **`npm run dispatch`** accepts **`--tenant-id <id>`** (sets envelope `tenantId`).
-- Capability → lane dispatch passes the **full ingress envelope** (with `text` replaced by the lane payload) so subprocess env includes tenant when set: **`EVE_TASK_DISPATCH_TENANT_ID`**, **`HERMES_UNIFIED_TENANT_ID`**.
-- When `memoryStore` is wired on the runtime and a valid tenant id is present, **`@cap` handlers** receive a **`TenantScopedMemoryStore`** so capability execution namespaces are prefixed (`tenant:<id>:...`); non-capability lane paths do not use unified memory unless extended later.
+- **`scripts/validate-shell-unified-dispatch-ci.mjs`**: scans **`scripts/*.sh`** except **`unified-dispatch-runner.sh`**; fails on **`dist/src/bin/unified-dispatch`** substrings or **`node`/`tsx`** lines that invoke **`unified-dispatch`** directly (use **`UNIFIED_DISPATCH_CMD`** after **`resolve_unified_dispatch`**).
+- **`npm run run:h15-assurance-bundle`**: H14 sub-bundle + CI scan (**`shellUnifiedDispatchCiScanPass`**).
 
 ## Cutover and Rollback Commands
 
@@ -206,7 +186,7 @@ Schema validation expectations:
 - horizon tracking metadata is machine-validated via:
   - `npm run validate:horizon-status`
 - horizon closeout readiness is machine-validated via:
-  - `npm run validate:horizon-closeout -- --horizon <H1|H2|H3|H4|H5> --target-next <H2|H3|H4|H5>`
+  - `npm run validate:horizon-closeout -- --horizon <H1|H2|H3|H4|H5|H6> --target-next <H2|H3|H4|H5|H6>`
   - closeout release evidence now fail-closes on goal-policy signals:
     - `validate:release-readiness` evidence must report and pass `checks.goalPolicyFileValidationPassed`
     - `validate:initial-scope` evidence must report and pass propagated release goal-policy status

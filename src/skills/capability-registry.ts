@@ -1,4 +1,4 @@
-import type { DispatchState, FailureClass, LaneId, UnifiedMessageEnvelope } from "../contracts/types.js";
+import type { DispatchState, FailureClass, LaneId } from "../contracts/types.js";
 import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
 
 export type CapabilityOwner = "eve" | "hermes" | "shared";
@@ -16,10 +16,8 @@ export type CapabilityExecutionContext = {
   chatId: string;
   messageId: string;
   traceId: string;
-  /** Full ingress envelope (tenant fields preserved for lane subprocess env). */
-  envelope: UnifiedMessageEnvelope;
-  /** Passed to lane dispatch when capability budget aborts in-flight subprocess. */
-  signal?: AbortSignal;
+  tenantId?: string;
+  regionId?: string;
   dispatchLane: (input: CapabilityLaneDispatchInput) => Promise<DispatchState>;
   memoryStore: UnifiedMemoryStore;
 };
@@ -46,12 +44,17 @@ export type CapabilityLaneDispatchInput = {
   lane: LaneId;
   text: string;
   intentRoute: string;
-  /** Lane dispatch uses this envelope with `text` overridden to the lane payload. */
-  envelope: UnifiedMessageEnvelope;
-  signal?: AbortSignal;
 };
 
-export type CapabilityLaneDispatcher = (input: CapabilityLaneDispatchInput) => Promise<DispatchState>;
+export type CapabilityLaneDispatcher = (
+  input: CapabilityLaneDispatchInput & {
+    chatId: string;
+    messageId: string;
+    traceId: string;
+    tenantId?: string;
+    regionId?: string;
+  },
+) => Promise<DispatchState>;
 
 export type CapabilityRegistrationDeps = {
   dispatchLane: CapabilityLaneDispatcher;
@@ -162,8 +165,6 @@ export function registerEveCommandWrappers(
             lane: "eve",
             text: probeText,
             intentRoute: "capability:check_status",
-            envelope: context.envelope,
-            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",
@@ -200,8 +201,6 @@ export function registerEveCommandWrappers(
             lane: "eve",
             text: taskText,
             intentRoute: "capability:eve_dispatch_task",
-            envelope: context.envelope,
-            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",
@@ -241,8 +240,6 @@ export function registerHermesTools(
             lane: "hermes",
             text: summarizeText,
             intentRoute: "capability:summarize_state",
-            envelope: context.envelope,
-            signal: context.signal,
           });
           const recentExecutions = await context.memoryStore.list({
             lane: "hermes",
@@ -285,8 +282,6 @@ export function registerHermesTools(
             lane: "hermes",
             text: taskText,
             intentRoute: "capability:hermes_dispatch_task",
-            envelope: context.envelope,
-            signal: context.signal,
           });
           return {
             consumed: state.status === "pass",

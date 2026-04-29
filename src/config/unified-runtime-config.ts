@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { FailureClass, LaneId } from "../contracts/types.js";
 import type { RouterPolicyConfig } from "../router/policy-router.js";
 
@@ -11,23 +13,30 @@ export type UnifiedRuntimeEnvConfig = {
   hermesLaunchArgs: string[];
   unifiedMemoryStoreKind: UnifiedMemoryStoreKind;
   unifiedMemoryFilePath: string;
-  /** Optional append-only journal for file-backed memory (crash recovery between snapshot persists). */
-  unifiedMemoryJournalPath: string;
   unifiedDispatchAuditLogPath: string;
-  /** Optional append-only JSONL for capability policy denials and config fingerprint events. */
-  capabilityPolicyAuditLogPath: string;
-  /** When true, append policy_config_loaded on startup only if fingerprint changed vs last line in audit log. */
-  capabilityPolicyAuditVerifyLoad: boolean;
-  /** When > 0, rotate capability policy audit log before append if file exceeds this many bytes. */
-  capabilityPolicyAuditRotationMaxBytes: number;
-  /** Bytes of tail to keep in the primary policy audit log after rotation (line-aligned). */
-  capabilityPolicyAuditRotationRetainBytes: number;
+  /** File path for durable dispatch replay queue (JSON). */
+  dispatchDurabilityQueuePath: string;
+  /**
+   * Max dispatched/failed queue entries to retain (oldest pruned first); 0 = unlimited.
+   * Pending entries are never pruned.
+   */
+  durabilityQueueRetentionNonTerminalMax: number;
+  /**
+   * Max replay attempts per pending queue entry (checked before each replay increment); 0 = unlimited.
+   */
+  durabilityQueueReplayMaxAttemptsPerEntry: number;
+  /** When true, wrap in-memory (or any) store with serialized writes for ordered mutation under concurrency. */
+  unifiedMemorySerializeWrites: boolean;
+  /** Wall-clock budget (ms) for capability executor body; 0 = unlimited. */
+  capabilityExecutionTimeoutMs: number;
   capabilityPolicy: {
     defaultMode: "allow" | "deny";
     allowCapabilities: string[];
     denyCapabilities: string[];
     allowedChatIds: string[];
     deniedChatIds: string[];
+    allowedTenantIds: string[];
+    deniedTenantIds: string[];
     allowCapabilityChats: Record<string, string[]>;
     denyCapabilityChats: Record<string, string[]>;
   };
@@ -36,45 +45,20 @@ export type UnifiedRuntimeEnvConfig = {
     strict: boolean;
   };
   auditLogPath: string;
-  /** When > 0, rotate dispatch audit log before append if file exceeds this many bytes. */
-  auditLogRotationMaxBytes: number;
-  /** Bytes of tail to keep in the primary log after rotation (line-aligned). */
-  auditLogRotationRetainBytes: number;
-  /** Optional append-only JSONL for router policy events (e.g. no-fallback-on-class). */
-  routerTelemetryLogPath: string;
-  /** When > 0, rotate router telemetry log before append if file exceeds this many bytes. */
-  routerTelemetryRotationMaxBytes: number;
-  /** Bytes of tail to keep in the primary router telemetry log after rotation (line-aligned). */
-  routerTelemetryRotationRetainBytes: number;
-  /** Optional append-only JSONL: dispatch accepted/finished pairs for crash recovery / reconcile. */
-  dispatchQueueJournalPath: string;
-  dispatchQueueJournalRotationMaxBytes: number;
-  dispatchQueueJournalRotationRetainBytes: number;
-  /** When > 0, fail capability execution if the handler does not settle within this many ms. */
-  capabilityExecutionTimeoutMs: number;
-  /** When true with a positive execution timeout, SIGTERM lane subprocess on budget expiry. */
-  capabilityAbortLaneOnTimeout: boolean;
-  /**
-   * When > 0, capability handler `responseText` is truncated to this many UTF-16 code units (suffix notes original length).
-   */
-  capabilityMaxOutputChars: number;
-  /**
-   * When > 0, capability handlers may call `dispatchLane` at most this many times per execution (fail closed with auditable error).
-   */
-  capabilityMaxLaneDispatches: number;
-  /** When true, reject dispatches that omit a tenant id (after metadata resolution). */
-  tenantStrict: boolean;
-  /** When non-empty, only these tenant ids are accepted (fail-closed for others). */
+  /** Rotate active dispatch audit log when file exceeds this size (bytes); 0 = disabled. */
+  auditRotationMaxBytes: number;
+  /** Keep at most this many generations (active log + timestamped rotated siblings). */
+  auditRotationRetainCount: number;
+  /** Append-only JSONL log for capability policy authorization decisions (@cap). */
+  capabilityPolicyAuditLogPath: string;
+  /** Rotate capability policy audit JSONL when active file exceeds this size (bytes); 0 = disabled. */
+  capabilityPolicyAuditRotationMaxBytes: number;
+  /** Keep at most this many generations (active log + rotated siblings). */
+  capabilityPolicyAuditRotationRetainCount: number;
+  /** When non-empty, dispatch rejects envelopes whose tenantId is missing or not in this list. */
   tenantAllowlist: string[];
-  /**
-   * When true with a configured memory store, require a valid tenant id and route all capability
-   * memory through a tenant-prefixed view (fail-closed cross-tenant access to shared namespaces).
-   */
-  tenantMemoryIsolation: boolean;
-  /** When true with file store + journal, re-read disk after each persist and verify snapshot matches memory. */
-  unifiedMemoryVerifyPersist: boolean;
-  /** When true with file store + journal, before each persist verify snapshot+WAL replay matches in-memory map. */
-  unifiedMemoryVerifyJournalReplay: boolean;
+  /** Dispatch rejects envelopes whose tenantId is in this list. */
+  tenantDenylist: string[];
   routerConfig: RouterPolicyConfig;
 };
 
@@ -130,17 +114,6 @@ function parseCsvList(raw: string | undefined): string[] {
     .filter((value) => value.length > 0);
 }
 
-function normalizeTenantAllowlistEntry(raw: string): string | undefined {
-  const t = raw.trim();
-  if (!t || t.length > 128) {
-    return undefined;
-  }
-  if (t.includes("/") || t.includes("\\")) {
-    return undefined;
-  }
-  return t;
-}
-
 function parseCapabilityDefaultMode(raw: string | undefined): "allow" | "deny" {
   return raw?.toLowerCase() === "deny" ? "deny" : "allow";
 }
@@ -166,15 +139,7 @@ function parsePercent(raw: string | undefined, fallback: number): number {
   return fallback;
 }
 
-function parseNonNegativeInt(raw: string | undefined, fallback: number): number {
-  const numeric = Number(raw);
-  if (!Number.isFinite(numeric) || numeric < 0) {
-    return fallback;
-  }
-  return Math.floor(numeric);
-}
-
-const FAILURE_CLASS_SET = new Set<string>([
+const FAILURE_CLASS_SET = new Set<FailureClass>([
   "none",
   "provider_limit",
   "cooldown",
@@ -183,21 +148,37 @@ const FAILURE_CLASS_SET = new Set<string>([
   "policy_failure",
 ]);
 
-function parseFailureClassList(raw: string | undefined): FailureClass[] {
-  if (!raw) {
-    return [];
+function parsePositiveIntMs(raw: string | undefined, fallback: number): number {
+  const n = Number.parseInt(String(raw), 10);
+  if (Number.isFinite(n) && n > 0) {
+    return n;
+  }
+  return fallback;
+}
+
+/** Parses non-negative integers; empty/missing uses fallback. */
+function parseNonNegativeInt(raw: string | undefined, fallback: number): number {
+  const n = Number.parseInt(String(raw ?? ""), 10);
+  if (Number.isFinite(n) && n >= 0) {
+    return Math.floor(n);
+  }
+  return fallback;
+}
+
+function parseNoFallbackFailureClasses(raw: string | undefined): FailureClass[] | undefined {
+  const tokens = parseCsvList(raw);
+  if (tokens.length === 0) {
+    return undefined;
   }
   const out: FailureClass[] = [];
-  for (const part of raw.split(",")) {
-    const t = part.trim();
-    if (!t) {
+  for (const token of tokens) {
+    const normalized = token.trim().toLowerCase().replace(/-/g, "_") as FailureClass;
+    if (!FAILURE_CLASS_SET.has(normalized)) {
       continue;
     }
-    if (FAILURE_CLASS_SET.has(t)) {
-      out.push(t as FailureClass);
-    }
+    out.push(normalized);
   }
-  return out;
+  return out.length > 0 ? out : undefined;
 }
 
 export function loadUnifiedRuntimeEnvConfig(
@@ -220,11 +201,37 @@ export function loadUnifiedRuntimeEnvConfig(
   const unifiedMemoryFilePath =
     firstDefined(reader, ["UNIFIED_MEMORY_FILE_PATH", "MEMORY_FILE_PATH"]) ??
     "/tmp/eve-hermes-unified-memory.json";
-  const unifiedMemoryJournalPath =
-    firstDefined(reader, ["UNIFIED_MEMORY_JOURNAL_PATH", "MEMORY_JOURNAL_PATH"]) ?? "";
+  const unifiedMemorySerializeWrites = parseBooleanFlag(
+    firstDefined(reader, ["UNIFIED_MEMORY_SERIALIZE_WRITES", "MEMORY_SERIALIZE_WRITES"]),
+    false,
+  );
+  const capabilityExecutionTimeoutMs = parsePositiveIntMs(
+    firstDefined(reader, [
+      "UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS",
+      "CAPABILITY_EXECUTION_TIMEOUT_MS",
+    ]),
+    0,
+  );
   const unifiedDispatchAuditLogPath =
     firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
+  const dispatchDurabilityQueuePath =
+    firstDefined(reader, ["UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH", "DISPATCH_QUEUE_PATH"]) ??
+    "/tmp/eve-hermes-unified-dispatch-queue.json";
+  const durabilityQueueRetentionNonTerminalMax = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX",
+      "DISPATCH_QUEUE_RETENTION_NON_TERMINAL_MAX",
+    ]),
+    5000,
+  );
+  const durabilityQueueReplayMaxAttemptsPerEntry = parseNonNegativeInt(
+    firstDefined(reader, [
+      "UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY",
+      "DISPATCH_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY",
+    ]),
+    0,
+  );
   const capabilityDefaultModeRaw = firstDefined(reader, [
     "UNIFIED_CAPABILITY_POLICY_MODE",
     "CAPABILITY_POLICY_MODE",
@@ -274,6 +281,14 @@ export function loadUnifiedRuntimeEnvConfig(
   const capabilityDeniedChatIds = parseCsvList(
     capabilityDeniedChatIdsRaw,
   );
+  const capabilityAllowedTenantIdsRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_ALLOWED_TENANT_IDS",
+    "CAPABILITY_ALLOWED_TENANT_IDS",
+  ]);
+  const capabilityDeniedTenantIdsRaw = firstDefined(reader, [
+    "UNIFIED_CAPABILITY_DENIED_TENANT_IDS",
+    "CAPABILITY_DENIED_TENANT_IDS",
+  ]);
   const capabilityAllowChatMap = parseCapabilityChatMaps(
     firstDefined(reader, [
       "UNIFIED_CAPABILITY_PER_CAPABILITY_CHAT_ALLOWLIST",
@@ -296,9 +311,17 @@ export function loadUnifiedRuntimeEnvConfig(
     denyCapabilitiesRaw: capabilityDenyListRaw,
     allowedChatIdsRaw: capabilityAllowedChatIdsRaw,
     deniedChatIdsRaw: capabilityDeniedChatIdsRaw,
+    allowedTenantIdsRaw: capabilityAllowedTenantIdsRaw,
+    deniedTenantIdsRaw: capabilityDeniedTenantIdsRaw,
     allowCapabilityChatsRaw: undefined,
     denyCapabilityChatsRaw: undefined,
   });
+  const dispatchAllowedTenantIds = parseCsvList(
+    firstDefined(reader, ["UNIFIED_TENANT_ALLOWLIST", "UNIFIED_ALLOWED_TENANT_IDS"]),
+  );
+  const dispatchDeniedTenantIds = parseCsvList(
+    firstDefined(reader, ["UNIFIED_TENANT_DENYLIST", "UNIFIED_DENIED_TENANT_IDS"]),
+  );
   const preflightEnabled = parseBooleanFlag(
     firstDefined(reader, [
       "UNIFIED_PREFLIGHT_ENABLED",
@@ -314,18 +337,18 @@ export function loadUnifiedRuntimeEnvConfig(
   const auditLogPath =
     firstDefined(reader, ["UNIFIED_AUDIT_LOG_PATH", "AUDIT_LOG_PATH", "UNIFIED_DISPATCH_AUDIT_LOG_PATH", "DISPATCH_AUDIT_LOG_PATH"]) ??
     "/tmp/eve-hermes-unified-dispatch-audit.jsonl";
-  const capabilityPolicyAuditLogPath =
-    firstDefined(reader, [
-      "UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH",
-      "CAPABILITY_POLICY_AUDIT_LOG_PATH",
-    ]) ?? "";
-  const capabilityPolicyAuditVerifyLoad = parseBooleanFlag(
-    firstDefined(reader, [
-      "UNIFIED_CAPABILITY_POLICY_AUDIT_VERIFY_LOAD",
-      "CAPABILITY_POLICY_AUDIT_VERIFY_LOAD",
-    ]),
-    capabilityPolicyAuditLogPath.length > 0,
+  const auditRotationMaxBytes = parseNonNegativeInt(
+    firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES", "UNIFIED_AUDIT_ROTATION_MAX_BYTES"]),
+    0,
   );
+  const auditRotationRetainCountRaw = parseNonNegativeInt(
+    firstDefined(reader, ["UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT", "UNIFIED_AUDIT_ROTATION_RETAIN_COUNT"]),
+    8,
+  );
+  const auditRotationRetainCount = auditRotationRetainCountRaw <= 0 ? 1 : auditRotationRetainCountRaw;
+  const capabilityPolicyAuditLogPath =
+    firstDefined(reader, ["UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH", "CAPABILITY_POLICY_AUDIT_LOG_PATH"]) ??
+    path.join(path.dirname(auditLogPath), "unified-capability-policy-audit.jsonl");
   const capabilityPolicyAuditRotationMaxBytes = parseNonNegativeInt(
     firstDefined(reader, [
       "UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES",
@@ -333,131 +356,15 @@ export function loadUnifiedRuntimeEnvConfig(
     ]),
     0,
   );
-  const capabilityPolicyAuditRotationRetainBytes = parseNonNegativeInt(
+  const capabilityPolicyAuditRotationRetainCountRaw = parseNonNegativeInt(
     firstDefined(reader, [
-      "UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_BYTES",
-      "CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_BYTES",
+      "UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT",
+      "CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT",
     ]),
-    0,
+    8,
   );
-  const auditLogRotationMaxBytes = parseNonNegativeInt(
-    firstDefined(reader, [
-      "UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES",
-      "AUDIT_LOG_ROTATION_MAX_BYTES",
-      "UNIFIED_DISPATCH_AUDIT_LOG_ROTATION_MAX_BYTES",
-    ]),
-    0,
-  );
-  const auditLogRotationRetainBytes = parseNonNegativeInt(
-    firstDefined(reader, [
-      "UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES",
-      "AUDIT_LOG_ROTATION_RETAIN_BYTES",
-      "UNIFIED_DISPATCH_AUDIT_LOG_ROTATION_RETAIN_BYTES",
-    ]),
-    0,
-  );
-  const routerTelemetryLogPath =
-    firstDefined(reader, [
-      "UNIFIED_ROUTER_TELEMETRY_LOG_PATH",
-      "ROUTER_TELEMETRY_LOG_PATH",
-    ]) ?? "";
-  const routerTelemetryRotationMaxBytes = parseNonNegativeInt(
-    firstDefined(reader, [
-      "UNIFIED_ROUTER_TELEMETRY_ROTATION_MAX_BYTES",
-      "ROUTER_TELEMETRY_ROTATION_MAX_BYTES",
-    ]),
-    0,
-  );
-  const routerTelemetryRotationRetainBytes = parseNonNegativeInt(
-    firstDefined(reader, [
-      "UNIFIED_ROUTER_TELEMETRY_ROTATION_RETAIN_BYTES",
-      "ROUTER_TELEMETRY_ROTATION_RETAIN_BYTES",
-    ]),
-    0,
-  );
-  const dispatchQueueJournalPath =
-    firstDefined(reader, [
-      "UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH",
-      "DISPATCH_QUEUE_JOURNAL_PATH",
-    ]) ?? "";
-  const dispatchQueueJournalRotationMaxBytes = parseNonNegativeInt(
-    firstDefined(reader, [
-      "UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES",
-      "DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES",
-    ]),
-    0,
-  );
-  const dispatchQueueJournalRotationRetainBytes = parseNonNegativeInt(
-    firstDefined(reader, [
-      "UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES",
-      "DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES",
-    ]),
-    0,
-  );
-  const capabilityExecutionTimeoutMs = Math.min(
-    86_400_000,
-    parseNonNegativeInt(
-      firstDefined(reader, [
-        "UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS",
-        "CAPABILITY_EXECUTION_TIMEOUT_MS",
-      ]),
-      0,
-    ),
-  );
-  const capabilityAbortLaneOnTimeout = parseBooleanFlag(
-    firstDefined(reader, [
-      "UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT",
-      "CAPABILITY_ABORT_LANE_ON_TIMEOUT",
-    ]),
-    false,
-  );
-  const capabilityMaxOutputChars = Math.min(
-    2_000_000,
-    parseNonNegativeInt(
-      firstDefined(reader, [
-        "UNIFIED_CAPABILITY_MAX_OUTPUT_CHARS",
-        "CAPABILITY_MAX_OUTPUT_CHARS",
-      ]),
-      0,
-    ),
-  );
-  const capabilityMaxLaneDispatches = Math.min(
-    500,
-    parseNonNegativeInt(
-      firstDefined(reader, [
-        "UNIFIED_CAPABILITY_MAX_LANE_DISPATCHES",
-        "CAPABILITY_MAX_LANE_DISPATCHES",
-      ]),
-      0,
-    ),
-  );
-  const tenantStrict = parseBooleanFlag(
-    firstDefined(reader, ["UNIFIED_TENANT_STRICT", "TENANT_STRICT"]),
-    false,
-  );
-  const tenantAllowlist = parseCsvList(
-    firstDefined(reader, ["UNIFIED_TENANT_ALLOWLIST", "TENANT_ALLOWLIST"]),
-  )
-    .map((entry) => normalizeTenantAllowlistEntry(entry))
-    .filter((entry): entry is string => entry !== undefined);
-  const tenantMemoryIsolation = parseBooleanFlag(
-    firstDefined(reader, ["UNIFIED_TENANT_MEMORY_ISOLATION", "TENANT_MEMORY_ISOLATION"]),
-    false,
-  );
-  const unifiedMemoryVerifyPersist = parseBooleanFlag(
-    firstDefined(reader, [
-      "UNIFIED_MEMORY_VERIFY_PERSIST",
-      "MEMORY_VERIFY_PERSIST",
-    ]),
-    false,
-  );
-  const unifiedMemoryVerifyJournalReplay = parseBooleanFlag(
-    firstDefined(reader, [
-      "UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY",
-      "MEMORY_VERIFY_JOURNAL_REPLAY",
-    ]),
-    false,
-  );
+  const capabilityPolicyAuditRotationRetainCount =
+    capabilityPolicyAuditRotationRetainCountRaw <= 0 ? 1 : capabilityPolicyAuditRotationRetainCountRaw;
   const defaultPrimary = parseLane(
     firstDefined(reader, ["UNIFIED_ROUTER_DEFAULT_PRIMARY", "ROUTER_DEFAULT_PRIMARY"]),
     "eve",
@@ -493,12 +400,19 @@ export function loadUnifiedRuntimeEnvConfig(
   );
   const hashSalt =
     firstDefined(reader, ["UNIFIED_ROUTER_HASH_SALT", "ROUTER_HASH_SALT"]) ?? "eve-hermes-unified";
-  const noFallbackOnPrimaryFailureClasses = parseFailureClassList(
+  const hermesPrimaryChatIds = parseCsvList(
     firstDefined(reader, [
-      "UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES",
-      "ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES",
+      "UNIFIED_ROUTER_HERMES_PRIMARY_CHAT_IDS",
+      "ROUTER_HERMES_PRIMARY_CHAT_IDS",
     ]),
   );
+  const noFallbackFailureClassesRaw = firstDefined(reader, [
+    "UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES",
+    "ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES",
+  ]);
+  const noFallbackOnFailureClasses = parseNoFallbackFailureClasses(noFallbackFailureClassesRaw);
+  const standbyRegionRaw = firstDefined(reader, ["UNIFIED_ROUTER_STANDBY_REGION", "ROUTER_STANDBY_REGION"]);
+  const standbyRegion = standbyRegionRaw?.trim() ? standbyRegionRaw.trim() : undefined;
 
   return {
     eveDispatchScript,
@@ -507,18 +421,20 @@ export function loadUnifiedRuntimeEnvConfig(
     hermesLaunchArgs: hermesLaunchArgsRaw.split(/\s+/).filter(Boolean),
     unifiedMemoryStoreKind,
     unifiedMemoryFilePath,
-    unifiedMemoryJournalPath,
+    unifiedMemorySerializeWrites,
+    capabilityExecutionTimeoutMs,
     unifiedDispatchAuditLogPath,
-    capabilityPolicyAuditLogPath,
-    capabilityPolicyAuditVerifyLoad,
-    capabilityPolicyAuditRotationMaxBytes,
-    capabilityPolicyAuditRotationRetainBytes,
+    dispatchDurabilityQueuePath,
+    durabilityQueueRetentionNonTerminalMax,
+    durabilityQueueReplayMaxAttemptsPerEntry,
     capabilityPolicy: {
       defaultMode: capabilityDefaultMode,
       allowCapabilities: capabilityPolicyBaseline.allowCapabilities,
       denyCapabilities: capabilityPolicyBaseline.denyCapabilities,
       allowedChatIds: capabilityPolicyBaseline.allowedChatIds,
       deniedChatIds: capabilityPolicyBaseline.deniedChatIds,
+      allowedTenantIds: capabilityPolicyBaseline.allowedTenantIds,
+      deniedTenantIds: capabilityPolicyBaseline.deniedTenantIds,
       allowCapabilityChats: capabilityAllowChatMap,
       denyCapabilityChats: capabilityDenyChatMap,
     },
@@ -527,33 +443,25 @@ export function loadUnifiedRuntimeEnvConfig(
       strict: preflightStrict,
     },
     auditLogPath,
-    auditLogRotationMaxBytes,
-    auditLogRotationRetainBytes,
-    routerTelemetryLogPath,
-    routerTelemetryRotationMaxBytes,
-    routerTelemetryRotationRetainBytes,
-    dispatchQueueJournalPath,
-    dispatchQueueJournalRotationMaxBytes,
-    dispatchQueueJournalRotationRetainBytes,
-    capabilityExecutionTimeoutMs,
-    capabilityAbortLaneOnTimeout,
-    capabilityMaxOutputChars,
-    capabilityMaxLaneDispatches,
-    tenantStrict,
-    tenantAllowlist,
-    tenantMemoryIsolation,
-    unifiedMemoryVerifyPersist,
-    unifiedMemoryVerifyJournalReplay,
+    auditRotationMaxBytes,
+    auditRotationRetainCount,
+    capabilityPolicyAuditLogPath,
+    capabilityPolicyAuditRotationMaxBytes,
+    capabilityPolicyAuditRotationRetainCount,
+    tenantAllowlist: dispatchAllowedTenantIds,
+    tenantDenylist: dispatchDeniedTenantIds,
     routerConfig: {
       defaultPrimary,
       defaultFallback,
       failClosed,
       policyVersion,
+      noFallbackOnFailureClasses,
+      hermesPrimaryChatIds,
+      standbyRegion,
       cutoverStage,
       canaryChatIds,
       majorityPercent,
       hashSalt,
-      noFallbackOnPrimaryFailureClasses,
     },
   };
 }

@@ -4,7 +4,7 @@ import path from "node:path";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16"];
 
 function parseArgs(argv) {
   const options = {
@@ -245,9 +245,6 @@ async function main() {
           String(action.targetHorizon ?? "").trim().toUpperCase() === sourceHorizon,
       )
     : [];
-  const sourcePendingActions = sourceActions.filter(
-    (action) => String(action?.status ?? "").trim().toLowerCase() !== "completed",
-  );
   const nextActions = Array.isArray(horizonStatus?.nextActions)
     ? horizonStatus.nextActions.filter(
         (action) =>
@@ -261,44 +258,37 @@ async function main() {
   );
 
   const sourceActionCount = sourceActions.length;
-  const sourcePendingActionCount = sourcePendingActions.length;
   const nextActionCount = nextActions.length;
   const nextPendingActionCount = nextPendingActions.length;
-  const nextHorizonFullyComplete = nextActionCount > 0 && nextPendingActionCount === 0;
-  /**
-   * When the source horizon still has pending actions, compare only to that pending backlog so
-   * completed rows do not inflate the bar. When every source row is completed, skip growth-vs-source
-   * checks (external goal policy files still carry large historical source counts); tag and
-   * next-pending rules below remain authoritative.
-   */
-  const sourceBaselineCount = sourcePendingActionCount > 0 ? sourcePendingActionCount : 0;
-  const goalDelta = nextActionCount - sourceBaselineCount;
+  const sourcePendingActions = sourceActions.filter(
+    (action) => String(action?.status ?? "").trim().toLowerCase() !== "completed",
+  );
+  const sourceBaselineCount = sourcePendingActions.length;
+  const goalDelta = nextActionCount - sourceActionCount;
 
-  let requiredNextActionCount = Math.max(1, options.minPendingNextActions);
-  if (sourceBaselineCount > 0) {
+  let requiredNextActionCount = Math.max(
+    1,
+    options.minPendingNextActions,
+    sourceActionCount + options.minimumGoalIncrease,
+  );
+  if (sourceActionCount > 0 && isFinitePositiveNumber(options.minActionGrowthFactor)) {
     requiredNextActionCount = Math.max(
       requiredNextActionCount,
-      sourceBaselineCount + options.minimumGoalIncrease,
+      Math.ceil(sourceActionCount * options.minActionGrowthFactor),
     );
-    if (isFinitePositiveNumber(options.minActionGrowthFactor)) {
-      requiredNextActionCount = Math.max(
-        requiredNextActionCount,
-        Math.ceil(sourceBaselineCount * options.minActionGrowthFactor),
-      );
-    }
   }
 
-  if (sourceBaselineCount > 0 && goalDelta < options.minimumGoalIncrease) {
+  if (goalDelta < options.minimumGoalIncrease) {
     failures.push(
       `insufficient_goal_increase:${String(goalDelta)}<${String(options.minimumGoalIncrease)}`,
     );
   }
-  if (sourceBaselineCount > 0 && nextActionCount < requiredNextActionCount) {
+  if (nextActionCount < requiredNextActionCount) {
     failures.push(
       `next_action_count_below_growth_target:${String(nextActionCount)}<${String(requiredNextActionCount)}`,
     );
   }
-  if (!nextHorizonFullyComplete && nextPendingActionCount < options.minPendingNextActions) {
+  if (nextPendingActionCount < options.minPendingNextActions) {
     failures.push(
       `next_pending_action_count_below_min:${String(nextPendingActionCount)}<${String(options.minPendingNextActions)}`,
     );
@@ -312,10 +302,7 @@ async function main() {
         `required_tag_count_below_min:${tag}:${String(actual.total)}<${String(requirement.minCount)}`,
       );
     }
-    if (
-      !nextHorizonFullyComplete
-      && Number(actual.pending) < Number(requirement.minPendingCount)
-    ) {
+    if (Number(actual.pending) < Number(requirement.minPendingCount)) {
       failures.push(
         `required_tag_pending_count_below_min:${tag}:${String(actual.pending)}<${String(requirement.minPendingCount)}`,
       );
@@ -337,12 +324,10 @@ async function main() {
     },
     checks: {
       sourceActionCount,
-      sourcePendingActionCount,
       sourceBaselineCount,
       nextActionCount,
       goalDelta,
       nextPendingActionCount,
-      nextHorizonFullyComplete,
       policyKey: policyApplied ? derivedPolicyKey : null,
       policyApplied,
       minimumGoalIncrease: options.minimumGoalIncrease,
@@ -351,7 +336,7 @@ async function main() {
       requiredNextActionCount,
       requiredTaggedActionCounts,
       nextTaggedActionCounts: nextTagCounts,
-      actionGrowthRatio: sourceBaselineCount > 0 ? nextActionCount / sourceBaselineCount : null,
+      actionGrowthRatio: sourceActionCount > 0 ? nextActionCount / sourceActionCount : null,
     },
     failures,
   };

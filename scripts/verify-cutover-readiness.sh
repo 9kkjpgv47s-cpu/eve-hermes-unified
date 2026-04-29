@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${UNIFIED_EVIDENCE_DIR:-$ROOT_DIR/evidence}"
 mkdir -p "$OUT_DIR"
 
+# shellcheck source=scripts/unified-dispatch-runner.sh
+source "$ROOT_DIR/scripts/unified-dispatch-runner.sh"
+
 timestamp="$(date +%Y%m%d-%H%M%S)"
 report="$OUT_DIR/cutover-readiness-$timestamp.json"
 if [[ -n "${UNIFIED_CUTOVER_READINESS_REPORT_PATH:-}" ]]; then
@@ -31,20 +34,7 @@ run_dispatch_json() {
   local text="$1"
   local chat_id="$2"
   local message_id="$3"
-  local dispatch_runner
-  local dispatch_entry
-  if [[ -f "$ROOT_DIR/dist/src/bin/unified-dispatch.js" ]]; then
-    dispatch_runner=(node)
-    dispatch_entry="$ROOT_DIR/dist/src/bin/unified-dispatch.js"
-  elif [[ -x "$ROOT_DIR/node_modules/.bin/tsx" && -f "$ROOT_DIR/src/bin/unified-dispatch.ts" ]]; then
-    # Keep readiness tests independent from build ordering in CI.
-    dispatch_runner=("$ROOT_DIR/node_modules/.bin/tsx")
-    dispatch_entry="$ROOT_DIR/src/bin/unified-dispatch.ts"
-  else
-    echo "Missing dispatch runner. Expected dist binary or local tsx install." >&2
-    echo "Run npm install and optionally npm run build before cutover readiness checks." >&2
-    exit 71
-  fi
+  resolve_unified_dispatch || exit $?
   UNIFIED_ROUTER_DEFAULT_PRIMARY="${UNIFIED_ROUTER_DEFAULT_PRIMARY:-eve}" \
   UNIFIED_ROUTER_DEFAULT_FALLBACK="${UNIFIED_ROUTER_DEFAULT_FALLBACK:-hermes}" \
   UNIFIED_ROUTER_FAIL_CLOSED="${UNIFIED_ROUTER_FAIL_CLOSED:-1}" \
@@ -57,7 +47,7 @@ run_dispatch_json() {
   EVE_DISPATCH_RESULT_PATH="${EVE_DISPATCH_RESULT_PATH:-/tmp/eve-dispatch-result.json}" \
   UNIFIED_MEMORY_STORE_KIND="${UNIFIED_MEMORY_STORE_KIND:-file}" \
   UNIFIED_MEMORY_FILE_PATH="${UNIFIED_MEMORY_FILE_PATH:-/tmp/eve-hermes-unified-memory.json}" \
-    "${dispatch_runner[@]}" "$dispatch_entry" --text "$text" --chat-id "$chat_id" --message-id "$message_id"
+    "${UNIFIED_DISPATCH_CMD[@]}" --text "$text" --chat-id "$chat_id" --message-id "$message_id"
 }
 
 extract_json_field() {

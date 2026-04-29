@@ -37,6 +37,8 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.defaultFallback).toBe("none");
     expect(config.routerConfig.failClosed).toBe(false);
     expect(config.routerConfig.policyVersion).toBe("v1");
+    expect(config.tenantAllowlist).toEqual([]);
+    expect(config.tenantDenylist).toEqual([]);
   });
 
   it("supports legacy-compatible fallback names for router defaults", () => {
@@ -85,30 +87,6 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.unifiedMemoryFilePath).toBe("/tmp/custom-memory.json");
   });
 
-  it("parses unified memory journal path", () => {
-    const config = loadUnifiedRuntimeEnvConfig(
-      readFrom(
-        baseEnv({
-          UNIFIED_MEMORY_JOURNAL_PATH: "/tmp/mem.journal",
-        }),
-      ),
-    );
-    expect(config.unifiedMemoryJournalPath).toBe("/tmp/mem.journal");
-  });
-
-  it("parses memory verify persist and journal replay flags", () => {
-    const config = loadUnifiedRuntimeEnvConfig(
-      readFrom(
-        baseEnv({
-          UNIFIED_MEMORY_VERIFY_PERSIST: "1",
-          UNIFIED_MEMORY_VERIFY_JOURNAL_REPLAY: "1",
-        }),
-      ),
-    );
-    expect(config.unifiedMemoryVerifyPersist).toBe(true);
-    expect(config.unifiedMemoryVerifyJournalReplay).toBe(true);
-  });
-
   it("parses capability policy controls", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(
@@ -144,149 +122,70 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.preflight.enabled).toBe(true);
     expect(config.preflight.strict).toBe(false);
     expect(config.auditLogPath).toBe("/tmp/unified-audit.jsonl");
+    expect(config.auditRotationMaxBytes).toBe(0);
+    expect(config.auditRotationRetainCount).toBe(8);
   });
 
-  it("parses audit log rotation byte limits", () => {
+  it("parses audit rotation max bytes and retain count", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(
         baseEnv({
-          UNIFIED_AUDIT_LOG_ROTATION_MAX_BYTES: "10485760",
-          UNIFIED_AUDIT_LOG_ROTATION_RETAIN_BYTES: "2097152",
+          UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES: "1048576",
+          UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT: "4",
         }),
       ),
     );
-    expect(config.auditLogRotationMaxBytes).toBe(10_485_760);
-    expect(config.auditLogRotationRetainBytes).toBe(2_097_152);
+    expect(config.auditRotationMaxBytes).toBe(1048576);
+    expect(config.auditRotationRetainCount).toBe(4);
   });
 
-  it("parses capability execution timeout", () => {
+  it("coerces retain count below 1 to 1", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(
         baseEnv({
-          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "120000",
+          UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES: "100",
+          UNIFIED_DISPATCH_AUDIT_ROTATION_RETAIN_COUNT: "0",
         }),
       ),
     );
-    expect(config.capabilityExecutionTimeoutMs).toBe(120_000);
+    expect(config.auditRotationRetainCount).toBe(1);
   });
 
-  it("parses capability abort lane on timeout flag", () => {
+  it("defaults capability policy audit log beside unified audit path", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(
         baseEnv({
-          UNIFIED_CAPABILITY_ABORT_LANE_ON_TIMEOUT: "1",
+          UNIFIED_AUDIT_LOG_PATH: "/var/log/unified/dispatch-audit.jsonl",
         }),
       ),
     );
-    expect(config.capabilityAbortLaneOnTimeout).toBe(true);
+    expect(config.capabilityPolicyAuditLogPath).toBe("/var/log/unified/unified-capability-policy-audit.jsonl");
   });
 
-  it("parses capability max output chars and max lane dispatches", () => {
+  it("parses explicit capability policy audit log path", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(
         baseEnv({
-          UNIFIED_CAPABILITY_MAX_OUTPUT_CHARS: "65536",
-          UNIFIED_CAPABILITY_MAX_LANE_DISPATCHES: "5",
+          UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH: "/tmp/explicit-cap-policy.jsonl",
         }),
       ),
     );
-    expect(config.capabilityMaxOutputChars).toBe(65536);
-    expect(config.capabilityMaxLaneDispatches).toBe(5);
+    expect(config.capabilityPolicyAuditLogPath).toBe("/tmp/explicit-cap-policy.jsonl");
+    expect(config.capabilityPolicyAuditRotationMaxBytes).toBe(0);
+    expect(config.capabilityPolicyAuditRotationRetainCount).toBe(8);
   });
 
-  it("parses tenant strict and allowlist", () => {
+  it("parses capability policy audit rotation env", () => {
     const config = loadUnifiedRuntimeEnvConfig(
       readFrom(
         baseEnv({
-          UNIFIED_TENANT_STRICT: "1",
-          UNIFIED_TENANT_ALLOWLIST: "acme,beta",
+          UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES: "65536",
+          CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_COUNT: "5",
         }),
       ),
     );
-    expect(config.tenantStrict).toBe(true);
-    expect(config.tenantAllowlist).toEqual(["acme", "beta"]);
-  });
-
-  it("parses tenant memory isolation flag", () => {
-    const config = loadUnifiedRuntimeEnvConfig(
-      readFrom(
-        baseEnv({
-          UNIFIED_TENANT_MEMORY_ISOLATION: "1",
-        }),
-      ),
-    );
-    expect(config.tenantMemoryIsolation).toBe(true);
-  });
-
-  it("parses capability policy audit log path and verify load flag", () => {
-    const config = loadUnifiedRuntimeEnvConfig(
-      readFrom(
-        baseEnv({
-          UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH: "/tmp/cap-policy-audit.jsonl",
-          UNIFIED_CAPABILITY_POLICY_AUDIT_VERIFY_LOAD: "0",
-        }),
-      ),
-    );
-    expect(config.capabilityPolicyAuditLogPath).toBe("/tmp/cap-policy-audit.jsonl");
-    expect(config.capabilityPolicyAuditVerifyLoad).toBe(false);
-  });
-
-  it("parses capability policy audit rotation bytes", () => {
-    const config = loadUnifiedRuntimeEnvConfig(
-      readFrom(
-        baseEnv({
-          UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH: "/tmp/cap-audit.jsonl",
-          UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES: "4096",
-          UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_RETAIN_BYTES: "2048",
-        }),
-      ),
-    );
-    expect(config.capabilityPolicyAuditRotationMaxBytes).toBe(4096);
-    expect(config.capabilityPolicyAuditRotationRetainBytes).toBe(2048);
-  });
-
-  it("parses router no-fallback-on-primary failure class list", () => {
-    const config = loadUnifiedRuntimeEnvConfig(
-      readFrom(
-        baseEnv({
-          UNIFIED_ROUTER_NO_FALLBACK_ON_PRIMARY_FAILURE_CLASSES: "policy_failure,state_unavailable,invalid",
-        }),
-      ),
-    );
-    expect(config.routerConfig.noFallbackOnPrimaryFailureClasses).toEqual([
-      "policy_failure",
-      "state_unavailable",
-    ]);
-  });
-
-  it("parses router telemetry log path and rotation bytes", () => {
-    const config = loadUnifiedRuntimeEnvConfig(
-      readFrom(
-        baseEnv({
-          UNIFIED_ROUTER_TELEMETRY_LOG_PATH: "/tmp/router-tel.jsonl",
-          UNIFIED_ROUTER_TELEMETRY_ROTATION_MAX_BYTES: "8192",
-          UNIFIED_ROUTER_TELEMETRY_ROTATION_RETAIN_BYTES: "4096",
-        }),
-      ),
-    );
-    expect(config.routerTelemetryLogPath).toBe("/tmp/router-tel.jsonl");
-    expect(config.routerTelemetryRotationMaxBytes).toBe(8192);
-    expect(config.routerTelemetryRotationRetainBytes).toBe(4096);
-  });
-
-  it("parses dispatch queue journal path and rotation bytes", () => {
-    const config = loadUnifiedRuntimeEnvConfig(
-      readFrom(
-        baseEnv({
-          UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH: "/tmp/dispatch-queue.jsonl",
-          UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_MAX_BYTES: "16384",
-          UNIFIED_DISPATCH_QUEUE_JOURNAL_ROTATION_RETAIN_BYTES: "8192",
-        }),
-      ),
-    );
-    expect(config.dispatchQueueJournalPath).toBe("/tmp/dispatch-queue.jsonl");
-    expect(config.dispatchQueueJournalRotationMaxBytes).toBe(16384);
-    expect(config.dispatchQueueJournalRotationRetainBytes).toBe(8192);
+    expect(config.capabilityPolicyAuditRotationMaxBytes).toBe(65536);
+    expect(config.capabilityPolicyAuditRotationRetainCount).toBe(5);
   });
 
   it("parses cutover stage controls and aliases", () => {
@@ -306,5 +205,127 @@ describe("loadUnifiedRuntimeEnvConfig", () => {
     expect(config.routerConfig.majorityPercent).toBe(35);
     expect(config.routerConfig.hashSalt).toBe("salt-1");
     expect(config.preflight.enabled).toBe(false);
+  });
+
+  it("parses dispatch durability queue path and alias", () => {
+    const fromUnified = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH: "/tmp/queue-a.json",
+        }),
+      ),
+    );
+    expect(fromUnified.dispatchDurabilityQueuePath).toBe("/tmp/queue-a.json");
+
+    const fromAlias = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH: "",
+          DISPATCH_QUEUE_PATH: "/tmp/queue-b.json",
+        }),
+      ),
+    );
+    expect(fromAlias.dispatchDurabilityQueuePath).toBe("/tmp/queue-b.json");
+  });
+
+  it("parses durability queue retention max for non-terminal entries", () => {
+    const defaults = loadUnifiedRuntimeEnvConfig(readFrom(baseEnv({})));
+    expect(defaults.durabilityQueueRetentionNonTerminalMax).toBe(5000);
+
+    const zero = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX: "0",
+        }),
+      ),
+    );
+    expect(zero.durabilityQueueRetentionNonTerminalMax).toBe(0);
+
+    const capped = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          DISPATCH_QUEUE_RETENTION_NON_TERMINAL_MAX: "100",
+        }),
+      ),
+    );
+    expect(capped.durabilityQueueRetentionNonTerminalMax).toBe(100);
+  });
+
+  it("parses durability queue replay max attempts per entry", () => {
+    const defaults = loadUnifiedRuntimeEnvConfig(readFrom(baseEnv({})));
+    expect(defaults.durabilityQueueReplayMaxAttemptsPerEntry).toBe(0);
+
+    const capped = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY: "5",
+        }),
+      ),
+    );
+    expect(capped.durabilityQueueReplayMaxAttemptsPerEntry).toBe(5);
+
+    const fromAlias = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY: "",
+          DISPATCH_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY: "12",
+        }),
+      ),
+    );
+    expect(fromAlias.durabilityQueueReplayMaxAttemptsPerEntry).toBe(12);
+  });
+
+  it("parses Hermes-primary chat allowlist", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_HERMES_PRIMARY_CHAT_IDS: "vip-1, vip-2 ",
+        }),
+      ),
+    );
+    expect(config.routerConfig.hermesPrimaryChatIds).toEqual(["vip-1", "vip-2"]);
+  });
+
+  it("parses no-fallback-on-failure-classes", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES: "policy_failure, dispatch_failure,unknown",
+        }),
+      ),
+    );
+    expect(config.routerConfig.noFallbackOnFailureClasses).toEqual(["policy_failure", "dispatch_failure"]);
+  });
+
+  it("parses standby region and tenant dispatch lists", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_ROUTER_STANDBY_REGION: "eu-west-backup",
+          UNIFIED_TENANT_ALLOWLIST: "org-a, org-b",
+          UNIFIED_TENANT_DENYLIST: "blocked",
+          UNIFIED_CAPABILITY_ALLOWED_TENANT_IDS: "org-a",
+          UNIFIED_CAPABILITY_DENIED_TENANT_IDS: "blocked",
+        }),
+      ),
+    );
+    expect(config.routerConfig.standbyRegion).toBe("eu-west-backup");
+    expect(config.tenantAllowlist).toEqual(["org-a", "org-b"]);
+    expect(config.tenantDenylist).toEqual(["blocked"]);
+    expect(config.capabilityPolicy.allowedTenantIds).toEqual(["org-a"]);
+    expect(config.capabilityPolicy.deniedTenantIds).toEqual(["blocked"]);
+  });
+
+  it("parses memory serialize writes and capability execution timeout", () => {
+    const config = loadUnifiedRuntimeEnvConfig(
+      readFrom(
+        baseEnv({
+          UNIFIED_MEMORY_SERIALIZE_WRITES: "1",
+          UNIFIED_CAPABILITY_EXECUTION_TIMEOUT_MS: "120000",
+        }),
+      ),
+    );
+    expect(config.unifiedMemorySerializeWrites).toBe(true);
+    expect(config.capabilityExecutionTimeoutMs).toBe(120000);
   });
 });

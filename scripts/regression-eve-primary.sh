@@ -37,6 +37,11 @@ mkdir -p "$(dirname "$report")"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
+# shellcheck source=scripts/unified-dispatch-runner.sh
+source "$ROOT_DIR/scripts/unified-dispatch-runner.sh"
+resolve_unified_dispatch || exit $?
+dispatch_cmd=("${UNIFIED_DISPATCH_CMD[@]}")
+
 fake_eve_script="$tmp_dir/fake-eve-dispatch.sh"
 cat >"$fake_eve_script" <<'SCRIPT'
 #!/usr/bin/env bash
@@ -56,18 +61,6 @@ cat >"$result_path" <<JSON
 JSON
 SCRIPT
 chmod +x "$fake_eve_script"
-
-dispatch_bin="${UNIFIED_DISPATCH_BIN:-$ROOT_DIR/dist/src/bin/unified-dispatch.js}"
-dispatch_cmd=()
-if [[ -f "$dispatch_bin" ]]; then
-  dispatch_cmd=(node "$dispatch_bin")
-elif [[ -x "$ROOT_DIR/node_modules/.bin/tsx" && -f "$ROOT_DIR/src/bin/unified-dispatch.ts" ]]; then
-  dispatch_cmd=("$ROOT_DIR/node_modules/.bin/tsx" "$ROOT_DIR/src/bin/unified-dispatch.ts")
-else
-  echo "Missing dispatch runner. Expected dist binary or local tsx install." >&2
-  echo "Run npm install and optionally npm run build before regression checks." >&2
-  exit 70
-fi
 
 run_dispatch() {
   local output_path="$1"

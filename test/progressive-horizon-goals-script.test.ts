@@ -140,6 +140,19 @@ async function seedHorizonStatus(
           H3: { status: activeHorizon === "H3" ? "in_progress" : "planned", summary: "H3 state" },
           H4: { status: "planned", summary: "H4 planned" },
           H5: { status: "planned", summary: "H5 planned" },
+          H6: { status: "planned", summary: "H6 planned" },
+          H7: { status: "planned", summary: "H7 planned" },
+          H8: { status: "planned", summary: "H8 planned" },
+          H9: { status: "planned", summary: "H9 planned" },
+          H10: { status: "planned", summary: "H10 planned" },
+          H11: { status: "planned", summary: "H11 planned" },
+          H12: { status: "planned", summary: "H12 planned" },
+
+          H13: { status: "planned", summary: "H13 planned" },
+
+          H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
+          H16: { status: "planned", summary: "H16 planned" },
         },
         history: [
           {
@@ -298,7 +311,7 @@ describe("check-progressive-horizon-goals.mjs", () => {
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks.sourceBaselineCount).toBe(0);
-      expect(payload.checks.goalDelta).toBe(5);
+      expect(payload.checks.goalDelta).toBe(3);
       expect(payload.checks.minActionGrowthFactor).toBe(1.2);
       expect(payload.checks.policyKey).toBe("H2->H3");
     });

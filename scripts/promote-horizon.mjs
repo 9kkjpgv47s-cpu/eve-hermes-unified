@@ -6,7 +6,7 @@ import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16"];
 
 function parseArgs(argv) {
   const options = {
@@ -33,7 +33,7 @@ function parseArgs(argv) {
     requireGoalPolicySourceConsistency: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
-    goalPolicyCoverageUntilHorizon: "H5",
+    goalPolicyCoverageUntilHorizon: "H12",
     goalPolicyCoverageUntilExplicit: false,
     requiredPolicyTransitions: "",
     requireGoalPolicyFileValidation: false,
@@ -187,26 +187,6 @@ function isNonEmptyString(value) {
 function normalizeHorizon(value, fallback = "") {
   const normalized = String(value ?? "").trim().toUpperCase();
   return HORIZON_SEQUENCE.includes(normalized) ? normalized : fallback;
-}
-
-/**
- * Emit horizon-neutral closeout-run failure ids, then append legacy `closeout_run_h2_*`
- * aliases when the promotion source horizon is H2 or later (matches dual-report in
- * `validate-horizon-closeout.mjs` for downstream tooling that keys on H2-only names).
- */
-function appendCloseoutRunFailureCompat(failures, sourceHorizon, canonicalId) {
-  failures.push(canonicalId);
-  if (!isNonEmptyString(sourceHorizon)) {
-    return;
-  }
-  const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
-  const h2Index = HORIZON_SEQUENCE.indexOf("H2");
-  if (sourceIndex < 0 || h2Index < 0 || sourceIndex < h2Index) {
-    return;
-  }
-  if (canonicalId.startsWith("closeout_run_horizon_")) {
-    failures.push(canonicalId.replace(/^closeout_run_horizon_/, "closeout_run_h2_"));
-  }
 }
 
 function stamp() {
@@ -753,17 +733,11 @@ async function main() {
       }
       if (failures.length === 0) {
         if (!closeoutRunCloseoutGate.reported) {
-          appendCloseoutRunFailureCompat(
-            failures,
-            sourceHorizon,
-            "closeout_run_horizon_closeout_gate_not_reported",
-          );
+          failures.push("closeout_run_horizon_closeout_gate_not_reported");
+          failures.push("closeout_run_h2_closeout_gate_not_reported");
         } else if (!closeoutRunCloseoutGate.pass) {
-          appendCloseoutRunFailureCompat(
-            failures,
-            sourceHorizon,
-            "closeout_run_horizon_closeout_gate_not_passed",
-          );
+          failures.push("closeout_run_horizon_closeout_gate_not_passed");
+          failures.push("closeout_run_h2_closeout_gate_not_passed");
         } else if (!closeoutRunStageGoalPolicySignals.validationReported) {
           failures.push("closeout_run_supervised_simulation_stage_goal_policy_propagation_not_reported");
         } else if (!closeoutRunStageGoalPolicySignals.sourceConsistencyReported) {
@@ -901,7 +875,7 @@ async function main() {
   if (failures.length === 0 && options.requireGoalPolicyFileValidation) {
     const policyValidationUntilHorizon = normalizeHorizon(
       options.goalPolicyFileValidationUntilHorizon,
-      nextHorizon || "H5",
+      nextHorizon || "H12",
     );
     const goalPolicyFileValidationArgv = [
       "node",
@@ -971,7 +945,7 @@ async function main() {
   if (failures.length === 0 && options.requireGoalPolicyCoverage) {
     const coverageUntilHorizon = normalizeHorizon(
       options.goalPolicyCoverageUntilHorizon,
-      "H5",
+      "H12",
     );
     const goalPolicyCoverageArgv = [
       "node",
@@ -1009,7 +983,7 @@ async function main() {
   if (failures.length === 0 && options.requireGoalPolicyReadinessAudit) {
     const auditUntilHorizon = normalizeHorizon(
       options.goalPolicyReadinessAuditUntilHorizon,
-      nextHorizon || "H5",
+      nextHorizon || "H12",
     );
     const goalPolicyReadinessAuditArgv = [
       "node",
@@ -1249,7 +1223,7 @@ async function main() {
       requireGoalPolicyCoverage: options.requireGoalPolicyCoverage,
       goalPolicyCoverageUntilHorizon:
         options.requireGoalPolicyCoverage === true
-          ? normalizeHorizon(options.goalPolicyCoverageUntilHorizon, nextHorizon || "H5") || null
+          ? normalizeHorizon(options.goalPolicyCoverageUntilHorizon, nextHorizon || "H12") || null
           : null,
       requiredPolicyTransitions:
         options.requireGoalPolicyCoverage === true && isNonEmptyString(options.requiredPolicyTransitions)
@@ -1266,7 +1240,7 @@ async function main() {
           : null,
       goalPolicyFileValidationUntilHorizon:
         options.requireGoalPolicyFileValidation === true
-          ? normalizeHorizon(options.goalPolicyFileValidationUntilHorizon, nextHorizon || "H5") || null
+          ? normalizeHorizon(options.goalPolicyFileValidationUntilHorizon, nextHorizon || "H12") || null
           : null,
       allowGoalPolicyFileValidationFallback: options.allowGoalPolicyFileValidationFallback,
       requireGoalPolicyReadinessAudit: options.requireGoalPolicyReadinessAudit,
@@ -1276,7 +1250,7 @@ async function main() {
           : null,
       goalPolicyReadinessAuditUntilHorizon:
         options.requireGoalPolicyReadinessAudit === true
-          ? normalizeHorizon(options.goalPolicyReadinessAuditUntilHorizon, nextHorizon || "H5") || null
+          ? normalizeHorizon(options.goalPolicyReadinessAuditUntilHorizon, nextHorizon || "H12") || null
           : null,
       progressiveGoalsPass:
         options.requireProgressiveGoals === true

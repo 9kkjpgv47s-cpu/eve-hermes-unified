@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16"];
 
 function parseArgs(argv) {
   const options = {
@@ -136,9 +136,8 @@ function deriveNextHorizon(sourceHorizon) {
 
 function appendCloseoutGateFailure(failures, sourceHorizon) {
   failures.push("horizon_closeout_gate_failed");
-  const h2Index = HORIZON_SEQUENCE.indexOf("H2");
-  const sourceIndex = HORIZON_SEQUENCE.indexOf(sourceHorizon);
-  if (h2Index >= 0 && sourceIndex >= h2Index) {
+  const idx = HORIZON_SEQUENCE.indexOf(sourceHorizon);
+  if (idx >= HORIZON_SEQUENCE.indexOf("H2")) {
     failures.push("h2_closeout_gate_failed");
   }
 }

@@ -1,7 +1,6 @@
 import {
   createUnifiedMemoryStoreFromEnv,
   InMemoryUnifiedMemoryStore,
-  type FileMemoryStoreOptions,
   type UnifiedMemoryEntry,
   type UnifiedMemoryKey,
   type UnifiedMemoryListQuery,
@@ -37,19 +36,14 @@ export function createInMemoryHermesStore(): UnifiedMemoryStore {
   return new InMemoryUnifiedMemoryStore();
 }
 
-export function createFileBackedHermesStore(
-  filePath: string,
-  journalPath?: string,
-  options?: FileMemoryStoreOptions,
-): UnifiedMemoryStore {
-  return createUnifiedMemoryStoreFromEnv("file", filePath, journalPath, options);
+export function createFileBackedHermesStore(filePath: string): UnifiedMemoryStore {
+  return createUnifiedMemoryStoreFromEnv("file", filePath);
 }
 
 export function createHermesMemoryStoreFromEnv(
   kind: UnifiedMemoryStoreKind,
   filePath: string,
-  journalPath?: string,
-  options?: FileMemoryStoreOptions,
+  options?: { serializeWrites?: boolean },
 ): UnifiedMemoryStore {
-  return createUnifiedMemoryStoreFromEnv(kind, filePath, journalPath, options);
+  return createUnifiedMemoryStoreFromEnv(kind, filePath, options);
 }

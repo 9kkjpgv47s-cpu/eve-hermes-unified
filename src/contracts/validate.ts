@@ -19,41 +19,22 @@ function isLane(value: string): value is "eve" | "hermes" {
   return value === "eve" || value === "hermes";
 }
 
-function normalizeTenantIdField(raw: string | undefined, label: string): string | undefined {
-  if (raw === undefined) {
-    return undefined;
-  }
-  const t = raw.trim();
-  if (t.length === 0) {
-    return undefined;
-  }
-  ensure(t.length <= 128, `${label} must be at most 128 characters.`);
-  ensure(!t.includes("/") && !t.includes("\\"), `${label} must not contain path separators.`);
-  return t;
-}
-
 export function validateEnvelope(value: UnifiedMessageEnvelope): UnifiedMessageEnvelope {
   ensure(value.traceId.length > 0, "Envelope traceId is required.");
   ensure(value.channel === "telegram", "Envelope channel must be telegram.");
   ensure(value.chatId.length > 0, "Envelope chatId is required.");
   ensure(value.messageId.length > 0, "Envelope messageId is required.");
   ensure(value.text.length > 0, "Envelope text is required.");
-  let metadata = value.metadata;
-  if (metadata) {
-    const metaTenant = normalizeTenantIdField(metadata.tenantId, "metadata.tenantId");
-    metadata = { ...metadata };
-    if (metaTenant === undefined) {
-      delete metadata.tenantId;
-    } else {
-      metadata.tenantId = metaTenant;
-    }
+  if (value.tenantId !== undefined) {
+    ensure(value.tenantId.trim().length > 0, "Envelope tenantId must be non-empty when set.");
+    ensure(value.tenantId.length <= 128, "Envelope tenantId must be at most 128 characters.");
+    ensure(!value.tenantId.includes("/") && !value.tenantId.includes("\\"), "Envelope tenantId must not contain path separators.");
   }
-  const tenantId = normalizeTenantIdField(value.tenantId, "tenantId");
-  return {
-    ...value,
-    tenantId,
-    metadata,
-  };
+  if (value.regionId !== undefined) {
+    ensure(value.regionId.trim().length > 0, "Envelope regionId must be non-empty when set.");
+    ensure(value.regionId.length <= 128, "Envelope regionId must be at most 128 characters.");
+  }
+  return value;
 }
 
 export function validateRoutingDecision(value: RoutingDecision): RoutingDecision {

@@ -11,15 +11,10 @@ export type RuntimePreflightConfig = {
   hermesLaunchCommand: string;
   unifiedMemoryStoreKind: "file" | "memory";
   unifiedMemoryFilePath: string;
-  unifiedMemoryJournalPath?: string;
   auditEnabled?: boolean;
   auditLogPath: string;
-  /** When set and non-empty, parent directory must be writable (append-only policy audit). */
+  /** Optional JSONL path for capability policy authorization audit; directory must be writable when set. */
   capabilityPolicyAuditLogPath?: string;
-  /** When set and non-empty, parent directory must be writable (router telemetry JSONL). */
-  routerTelemetryLogPath?: string;
-  /** When set and non-empty, parent directory must be writable (dispatch queue journal). */
-  dispatchQueueJournalPath?: string;
 };
 
 function shellEscape(value: string): string {
@@ -83,12 +78,6 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     if (!memoryWritable) {
       issues.push(`Unified memory file path is not writable: ${config.unifiedMemoryFilePath}`);
     }
-    if (config.unifiedMemoryJournalPath && config.unifiedMemoryJournalPath.trim().length > 0) {
-      const journalWritable = await checkWritableParent(config.unifiedMemoryJournalPath);
-      if (!journalWritable) {
-        issues.push(`Unified memory journal path is not writable: ${config.unifiedMemoryJournalPath}`);
-      }
-    }
   }
 
   if (config.auditEnabled) {
@@ -98,27 +87,11 @@ export async function runRuntimePreflight(config: RuntimePreflightConfig): Promi
     }
   }
 
-  const policyAudit = config.capabilityPolicyAuditLogPath?.trim();
-  if (policyAudit && policyAudit.length > 0) {
-    const policyAuditWritable = await checkWritableParent(policyAudit);
-    if (!policyAuditWritable) {
-      issues.push(`Capability policy audit log path is not writable: ${policyAudit}`);
-    }
-  }
-
-  const routerTelemetry = config.routerTelemetryLogPath?.trim();
-  if (routerTelemetry && routerTelemetry.length > 0) {
-    const routerTelemetryWritable = await checkWritableParent(routerTelemetry);
-    if (!routerTelemetryWritable) {
-      issues.push(`Router telemetry log path is not writable: ${routerTelemetry}`);
-    }
-  }
-
-  const dispatchQueue = config.dispatchQueueJournalPath?.trim();
-  if (dispatchQueue && dispatchQueue.length > 0) {
-    const dispatchQueueWritable = await checkWritableParent(dispatchQueue);
-    if (!dispatchQueueWritable) {
-      issues.push(`Dispatch queue journal path is not writable: ${dispatchQueue}`);
+  const capAudit = config.capabilityPolicyAuditLogPath?.trim();
+  if (capAudit) {
+    const capWritable = await checkWritableParent(capAudit);
+    if (!capWritable) {
+      issues.push(`Capability policy audit log path is not writable: ${capAudit}`);
     }
   }
 

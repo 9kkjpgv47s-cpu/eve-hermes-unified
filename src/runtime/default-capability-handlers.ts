@@ -1,5 +1,4 @@
-import type { DispatchState, UnifiedMessageEnvelope } from "../contracts/types.js";
-import { validateEnvelope } from "../contracts/validate.js";
+import type { DispatchState } from "../contracts/types.js";
 import type {
   CapabilityRegistry,
   CapabilityRegistrationDeps,
@@ -38,15 +37,21 @@ function buildLaneDispatcher(deps: CapabilityRegistrationDeps) {
     lane: "eve" | "hermes",
     text: string,
     intentRoute: string,
-    envelope: UnifiedMessageEnvelope,
-    signal?: AbortSignal,
+    chatId: string,
+    messageId: string,
+    traceId: string,
+    tenantId?: string,
+    regionId?: string,
   ): Promise<DispatchState> => {
     return deps.dispatchLane({
       lane,
       text,
       intentRoute,
-      envelope: validateEnvelope({ ...envelope, text }),
-      signal,
+      chatId,
+      messageId,
+      traceId,
+      tenantId,
+      regionId,
     });
   };
 }
@@ -70,8 +75,11 @@ export function registerDefaultCapabilityExecutors(
         "eve",
         probe,
         "capability:check_status",
-        context.envelope,
-        context.signal,
+        context.chatId,
+        context.messageId,
+        context.traceId,
+        context.tenantId,
+        context.regionId,
       );
       return {
         consumed: state.status === "pass",
@@ -99,8 +107,11 @@ export function registerDefaultCapabilityExecutors(
         "eve",
         task,
         "capability:eve_dispatch_task",
-        context.envelope,
-        context.signal,
+        context.chatId,
+        context.messageId,
+        context.traceId,
+        context.tenantId,
+        context.regionId,
       );
       return {
         consumed: state.status === "pass",
@@ -125,8 +136,11 @@ export function registerDefaultCapabilityExecutors(
         "hermes",
         summarizeText,
         "capability:summarize_state",
-        context.envelope,
-        context.signal,
+        context.chatId,
+        context.messageId,
+        context.traceId,
+        context.tenantId,
+        context.regionId,
       );
       const recent = await context.memoryStore.list({
         lane: "hermes",
@@ -161,8 +175,11 @@ export function registerDefaultCapabilityExecutors(
         "hermes",
         task,
         "capability:hermes_dispatch_task",
-        context.envelope,
-        context.signal,
+        context.chatId,
+        context.messageId,
+        context.traceId,
+        context.tenantId,
+        context.regionId,
       );
       return {
         consumed: state.status === "pass",

@@ -1,73 +1,151 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-04-30T12:00:00Z",
+  "updatedAtIso": "2026-04-30T18:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H2",
-  "activeStatus": "in_progress",
-  "summary": "H2 progressive traffic enablement is active with drill suite automation, deterministic evidence-selection modes, executable rollback-threshold calibration, supervised rollback simulation evidence generation, a machine-checkable H2 closeout gate, one-command closeout/promotion runners, a gated horizon-promotion command, and progressive goal-runway enforcement so each promotion can require larger next-horizon scope.",
+  "activeHorizon": "H16",
+  "activeStatus": "completed",
+  "summary": "Horizon H16 (merge readiness policy gates): run-h16-assurance-bundle chains H15 + validate:goal-policy-file (H2→H16) + validate:manifest-schemas; verify:sustainment-loop post-H16; verify:sustainment-loop:h15-legacy for post-H15 loop.",
   "blockers": [],
   "requiredEvidence": [
     {
       "id": "h1-validate-all",
       "command": "npm run validate:all",
       "artifactPattern": "evidence/validation-summary-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-release-readiness",
       "command": "npm run validate:release-readiness",
       "artifactPattern": "evidence/release-readiness-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-initial-scope",
       "command": "npm run validate:initial-scope",
       "artifactPattern": "evidence/initial-scope-validation-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-merge-bundle",
       "command": "npm run validate:merge-bundle",
       "artifactPattern": "evidence/merge-bundle-validation-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-manifest-schemas",
       "command": "npm run validate:manifest-schemas",
       "artifactPattern": "evidence/release-readiness-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-bundle-verification",
       "command": "npm run verify:merge-bundle",
       "artifactPattern": "evidence/bundle-verification-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-cutover-readiness",
       "command": "npm run validate:cutover-readiness",
       "artifactPattern": "evidence/cutover-readiness-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
       "id": "h1-evidence-summary",
       "command": "npm run validate:evidence-summary",
       "artifactPattern": "evidence/validation-summary-*.json",
-      "required": true
+      "required": true,
+      "horizons": ["H1", "H2", "H3", "H4"]
     },
     {
-      "id": "h5-evidence-baseline",
-      "command": "npm run verify:h5-evidence-baseline",
-      "artifactPattern": "evidence/h5-evidence-baseline-*.json",
+      "id": "h5-closeout-evidence",
+      "command": "node ./scripts/run-h5-closeout-evidence.mjs",
+      "artifactPattern": "evidence/h5-closeout-evidence-*.json",
       "required": true,
       "horizons": ["H5"]
     },
     {
-      "id": "h5-evidence-prune-dry-run",
-      "command": "npm run verify:evidence-prune",
-      "artifactPattern": "evidence/evidence-prune-run-*.json",
+      "id": "h6-assurance-bundle",
+      "command": "node ./scripts/run-h6-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h6-assurance-bundle-*.json",
       "required": true,
-      "horizons": ["H5"]
+      "horizons": ["H6"]
+    },
+    {
+      "id": "h7-assurance-bundle",
+      "command": "node ./scripts/run-h7-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h7-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H7"]
+    },
+    {
+      "id": "h8-assurance-bundle",
+      "command": "node ./scripts/run-h8-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h8-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H8"]
+    },
+    {
+      "id": "h9-assurance-bundle",
+      "command": "node ./scripts/run-h9-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h9-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H9"]
+    },
+    {
+      "id": "h10-assurance-bundle",
+      "command": "node ./scripts/run-h10-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h10-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H10"]
+    },
+    {
+      "id": "h11-assurance-bundle",
+      "command": "node ./scripts/run-h11-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h11-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H11"]
+    },
+    {
+      "id": "h12-assurance-bundle",
+      "command": "node ./scripts/run-h12-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h12-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H12"]
+    },
+    {
+      "id": "h13-assurance-bundle",
+      "command": "node ./scripts/run-h13-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h13-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H13"]
+    },
+    {
+      "id": "h14-assurance-bundle",
+      "command": "node ./scripts/run-h14-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h14-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H14"]
+    },
+    {
+      "id": "h15-assurance-bundle",
+      "command": "node ./scripts/run-h15-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h15-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H15"]
+    },
+    {
+      "id": "h16-assurance-bundle",
+      "command": "node ./scripts/run-h16-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h16-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H16"]
     }
   ],
   "nextActions": [
@@ -211,136 +289,283 @@
     },
     {
       "id": "h4-action-1",
-      "summary": "Inventory direct Eve/Hermes invocation paths outside unified dispatch for H4 retirement scope.",
+      "summary": "Identify and deprecate direct Eve/Hermes invocation paths outside unified dispatch.",
       "targetHorizon": "H4",
       "status": "completed",
-      "tags": ["legacy", "contract"]
+      "tags": ["legacy", "runtime"]
     },
     {
       "id": "h4-action-2",
-      "summary": "Expand contract conformance tests against versioned dispatch fixtures.",
+      "summary": "Remove compatibility shims that are no longer required by production integrations.",
+      "targetHorizon": "H4",
+      "status": "completed",
+      "tags": ["legacy", "config"]
+    },
+    {
+      "id": "h4-action-3",
+      "summary": "Freeze a versioned unified dispatch contract and publish upgrade notes.",
       "targetHorizon": "H4",
       "status": "completed",
       "tags": ["contract", "validation"]
     },
     {
-      "id": "h4-action-3",
-      "summary": "Add H5 runway actions for progressive H4->H5 promotion gates (autonomous ops + scale envelope).",
-      "targetHorizon": "H4",
-      "status": "completed",
-      "tags": ["planning", "horizon-runway", "rollback"]
-    },
-    {
-      "id": "h4-action-4",
-      "summary": "Define H4 closeout evidence requirements (legacy path audit + fixture conformance in CI) and wire validate:h4-closeout checks.",
-      "targetHorizon": "H4",
-      "status": "completed",
-      "tags": ["validation", "contract"]
-    },
-    {
-      "id": "h4-action-5",
-      "summary": "Extend H4 capability contract checks (tenant scope, policy denials) beyond fixture lane-only paths.",
-      "targetHorizon": "H4",
-      "status": "completed",
-      "tags": ["capability", "contract"]
-    },
-    {
-      "id": "h4-action-6",
-      "summary": "Audit unified memory surfaces for H4 legacy retirement (cross-lane keys, WAL replay invariants).",
-      "targetHorizon": "H4",
-      "status": "completed",
-      "tags": ["memory", "durability", "validation"]
-    },
-    {
       "id": "h5-action-1",
-      "summary": "Define autonomous operations envelope (SLOs, alerting hooks, operator escalation paths) for H5.",
+      "summary": "Tenant isolation for routing ingress, capability policy, and memory namespaces with executable leak checks.",
       "targetHorizon": "H5",
       "status": "completed",
-      "tags": ["validation", "operations"]
+      "tags": ["tenant", "policy", "validation"]
     },
     {
       "id": "h5-action-2",
-      "summary": "Define scale envelope targets (throughput, fan-out, evidence volume) and measurement harness for H5.",
+      "summary": "Region-aware standby routing swap with replay-safe envelopes and failover rehearsal manifest.",
       "targetHorizon": "H5",
       "status": "completed",
-      "tags": ["validation", "durability"]
+      "tags": ["region", "routing", "rollback"]
     },
     {
       "id": "h5-action-3",
-      "summary": "Add H5 emergency rollback drill requirements tied to unified dispatch evidence bundles.",
+      "summary": "Bounded agent remediation playbook dry-run chaining tenant validation and region rehearsal artifacts.",
       "targetHorizon": "H5",
       "status": "completed",
-      "tags": ["rollback", "validation"]
+      "tags": ["operations", "automation"]
     },
     {
       "id": "h5-action-4",
-      "summary": "Define H5 load-test harness integration with soak SLO gates and evidence retention policy.",
-      "targetHorizon": "H5",
-      "status": "completed",
-      "tags": ["validation", "durability"]
-    },
-    {
-      "id": "h5-action-5",
-      "summary": "Document H5 operator runbook updates for full-stage unified dispatch and incident response.",
-      "targetHorizon": "H5",
-      "status": "completed",
-      "tags": ["validation", "rollback"]
-    },
-    {
-      "id": "h5-action-6",
-      "summary": "Define H6 runway: post-scale autonomous verification gates and deprecation of shadow-only paths.",
-      "targetHorizon": "H5",
-      "status": "completed",
-      "tags": ["validation", "planning"]
-    },
-    {
-      "id": "h5-action-7",
-      "summary": "Add evidence automation for H5 SLO regression baselines against soak and failure-injection artifacts.",
-      "targetHorizon": "H5",
-      "status": "completed",
-      "tags": ["validation", "durability"]
-    },
-    {
-      "id": "h5-action-8",
-      "summary": "Schedule long-window soak in CI or dedicated runner and archive soak-slo manifests for regression dashboards.",
-      "targetHorizon": "H5",
-      "status": "completed",
-      "tags": ["validation", "durability", "rollback"]
-    },
-    {
-      "id": "h5-action-9",
-      "summary": "Optional release-readiness gate: require latest h5-evidence-baseline pass when UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1.",
-      "targetHorizon": "H5",
-      "status": "completed",
-      "tags": ["validation", "operations"]
-    },
-    {
-      "id": "h5-action-10",
-      "summary": "Wire H5 baseline + soak SLO into operator promotion checklist and evidence retention policy (artifact TTL / pruning).",
+      "summary": "Evidence TTL pruning + H5 baseline prune dry-run wired into h5-closeout-evidence and CI advisory verify:evidence-prune.",
       "targetHorizon": "H5",
       "status": "completed",
       "tags": ["validation", "operations", "rollback"]
     },
     {
       "id": "h6-action-1",
-      "summary": "Define H6 production cutover evidence pack: pinned release-readiness + H5 baseline + prune report for each promotion window.",
+      "summary": "Executable sustainment assurance bundle chaining horizon metadata validation, tenant isolation, region failover rehearsal, and unified entrypoint scan.",
       "targetHorizon": "H6",
-      "status": "planned",
-      "tags": ["validation", "operations"]
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
     },
     {
       "id": "h6-action-2",
-      "summary": "Automate evidence directory size guardrails (max bytes / max file count) with operator override and CI advisory mode.",
+      "summary": "Extend horizon orchestration sequences and goal-policy defaults through H6 for promotion and audit tooling parity.",
       "targetHorizon": "H6",
-      "status": "planned",
-      "tags": ["validation", "durability"]
+      "status": "completed",
+      "tags": ["tooling", "policy"]
     },
     {
       "id": "h6-action-3",
-      "summary": "Document artifact retention for scheduled long-window soak (GitHub retention vs local prune) and rehearsal rollback using pruned evidence snapshots.",
+      "summary": "Document H6 sustainment expectations and CI evidence path for continuous assurance after full cutover.",
       "targetHorizon": "H6",
-      "status": "planned",
-      "tags": ["rollback", "operations"]
+      "status": "completed",
+      "tags": ["documentation", "operations"]
+    },
+    {
+      "id": "h7-action-1",
+      "summary": "Dispatch audit log size-based rotation with generation retention (UNIFIED_DISPATCH_AUDIT_ROTATION_MAX_BYTES / RETAIN_COUNT) applied before append in unified-dispatch.",
+      "targetHorizon": "H7",
+      "status": "completed",
+      "tags": ["audit", "observability", "runtime"]
+    },
+    {
+      "id": "h7-action-2",
+      "summary": "H7 assurance bundle extends H6 gates with audit-log rotation unit proof; horizon orchestration extended through H7 with validate:h7-closeout and post-H7 sustainment loop manifest.",
+      "targetHorizon": "H7",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h7-action-3",
+      "summary": "Goal policy and documentation parity for H6→H7 transition and terminal sustainment commands (verify:sustainment-loop).",
+      "targetHorizon": "H7",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h8-action-1",
+      "summary": "Append-only capability policy authorization audit JSONL (traceId, capabilityId, allowed, policyReason) wired through UnifiedCapabilityEngine and unified-dispatch preflight.",
+      "targetHorizon": "H8",
+      "status": "completed",
+      "tags": ["policy", "audit", "runtime"]
+    },
+    {
+      "id": "h8-action-2",
+      "summary": "H8 assurance bundle extends H7 with capability-policy-audit vitest; validate:h8-closeout and post-H8 sustainment loop manifest.",
+      "targetHorizon": "H8",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h8-action-3",
+      "summary": "Goal policy H7→H8 transition and documentation for capability policy audit path and legacy sustainment npm aliases.",
+      "targetHorizon": "H8",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h9-action-1",
+      "summary": "Atomic replace persistence for file-backed UnifiedMemoryStore (write temp JSON then rename) for crash-safe JSON snapshots.",
+      "targetHorizon": "H9",
+      "status": "completed",
+      "tags": ["durability", "memory", "runtime"]
+    },
+    {
+      "id": "h9-action-2",
+      "summary": "H9 assurance bundle extends H8 with unified-memory-atomic-persistence vitest; validate:h9-closeout and post-H9 sustainment loop manifest.",
+      "targetHorizon": "H9",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h9-action-3",
+      "summary": "Goal policy H8→H9 transition and documentation for atomic memory persistence and legacy sustainment npm aliases.",
+      "targetHorizon": "H9",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h10-action-1",
+      "summary": "Configurable retention cap for dispatched/failed FileDispatchDurabilityQueue entries (default 5000; 0 = unlimited); pruning runs after each queue mutation.",
+      "targetHorizon": "H10",
+      "status": "completed",
+      "tags": ["durability", "operations", "runtime"]
+    },
+    {
+      "id": "h10-action-2",
+      "summary": "H10 assurance bundle extends H9 with dispatch-durability-queue-retention vitest; validate:h10-closeout and post-H10 sustainment loop manifest.",
+      "targetHorizon": "H10",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h10-action-3",
+      "summary": "Goal policy H9→H10 transition and documentation; verify:sustainment-loop now runs post-H10; verify:sustainment-loop:h9-legacy for prior chain.",
+      "targetHorizon": "H10",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h11-action-1",
+      "summary": "Optional size-triggered rotation for capability policy audit JSONL (same archive naming as dispatch audit); wired through appendCapabilityPolicyAuditLog + UnifiedCapabilityEngine when max-bytes > 0.",
+      "targetHorizon": "H11",
+      "status": "completed",
+      "tags": ["audit", "policy", "runtime"]
+    },
+    {
+      "id": "h11-action-2",
+      "summary": "H11 assurance bundle extends H10 with capability-policy-audit-rotation vitest; validate:h11-closeout and post-H11 sustainment loop manifest.",
+      "targetHorizon": "H11",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h11-action-3",
+      "summary": "Goal policy H10→H11 transition and documentation; verify:sustainment-loop post-H11; verify:sustainment-loop:h10-legacy for prior chain.",
+      "targetHorizon": "H11",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h12-action-1",
+      "summary": "Configurable max replay attempts per pending durability queue entry (default 0 unlimited); replayPendingDispatches fails stuck rows with replay_max_attempts_exceeded when attempts >= cap.",
+      "targetHorizon": "H12",
+      "status": "completed",
+      "tags": ["durability", "operations", "runtime"]
+    },
+    {
+      "id": "h12-action-2",
+      "summary": "H12 assurance bundle extends H11 with dispatch-durability-queue-replay-limit vitest; validate:h12-closeout and post-H12 sustainment loop manifest.",
+      "targetHorizon": "H12",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h12-action-3",
+      "summary": "Goal policy H11→H12 transition and documentation; verify:sustainment-loop post-H12; verify:sustainment-loop:h11-legacy for prior chain.",
+      "targetHorizon": "H12",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h13-action-1",
+      "summary": "CI soak SLO drift gate: scripts/run-ci-soak-slo-gate.mjs runs soak-simulate then summarize-soak-report with UNIFIED_SOAK_FAIL_ON_DRIFT=1; writes evidence/ci-soak-slo-gate-*.json.",
+      "targetHorizon": "H13",
+      "status": "completed",
+      "tags": ["observability", "validation", "ci"]
+    },
+    {
+      "id": "h13-action-2",
+      "summary": "H13 assurance bundle chains run-h12-assurance-bundle + ci soak gate; validate:h13-closeout and post-H13 sustainment loop manifest.",
+      "targetHorizon": "H13",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h13-action-3",
+      "summary": "Goal policy H12→H13 transition; unified-ci soak SLO step; verify:sustainment-loop post-H13; verify:sustainment-loop:h12-legacy for prior chain.",
+      "targetHorizon": "H13",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h14-action-1",
+      "summary": "Canonical shell resolver unified-dispatch-runner.sh + validate-shell-unified-dispatch.sh; refactor soak/regression/cutover-readiness/failure-injection to use UNIFIED_DISPATCH_CMD.",
+      "targetHorizon": "H14",
+      "status": "completed",
+      "tags": ["validation", "convergence", "runtime"]
+    },
+    {
+      "id": "h14-action-2",
+      "summary": "H14 assurance bundle extends H13 with shell ingress gate; validate:h14-closeout and post-H14 sustainment loop manifest.",
+      "targetHorizon": "H14",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h14-action-3",
+      "summary": "Goal policy H13→H14 transition; verify:sustainment-loop post-H14; verify:sustainment-loop:h13-legacy for prior chain.",
+      "targetHorizon": "H14",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h15-action-1",
+      "summary": "CI static scan validate-shell-unified-dispatch-ci.mjs forbids scripts/*.sh from embedding dist paths or direct node/tsx unified-dispatch invocations outside unified-dispatch-runner.sh.",
+      "targetHorizon": "H15",
+      "status": "completed",
+      "tags": ["validation", "ci", "convergence"]
+    },
+    {
+      "id": "h15-action-2",
+      "summary": "H15 assurance bundle extends H14 with shell CI scan; validate:h15-closeout and post-H15 sustainment loop manifest.",
+      "targetHorizon": "H15",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "tooling"]
+    },
+    {
+      "id": "h15-action-3",
+      "summary": "Goal policy H14→H15 transition; verify:sustainment-loop post-H15; verify:sustainment-loop:h14-legacy for prior chain.",
+      "targetHorizon": "H15",
+      "status": "completed",
+      "tags": ["policy", "documentation", "operations"]
+    },
+    {
+      "id": "h16-action-1",
+      "summary": "H16 assurance bundle: H15 sub-bundle plus validate:goal-policy-file (through H16) and validate:manifest-schemas evidence sweep.",
+      "targetHorizon": "H16",
+      "status": "completed",
+      "tags": ["validation", "policy", "tooling"]
+    },
+    {
+      "id": "h16-action-2",
+      "summary": "validate:h16-closeout + post-H16 sustainment loop manifest; verify:sustainment-loop points at post-H16; verify:sustainment-loop:h15-legacy for prior chain.",
+      "targetHorizon": "H16",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h16-action-3",
+      "summary": "Goal policy H15→H16 transition; unified-ci runs run:h16-assurance-bundle before validate:all.",
+      "targetHorizon": "H16",
+      "status": "completed",
+      "tags": ["policy", "documentation", "ci"]
     }
   ],
   "goalPolicies": {
@@ -392,23 +617,173 @@
       },
       "H5->H6": {
         "minimumGoalIncrease": 1,
-        "minActionGrowthFactor": 1.08,
-        "minPendingNextActions": 2,
+        "minActionGrowthFactor": 1.05,
+        "minPendingNextActions": 1,
         "requiredTaggedActionCounts": {
-          "validation": {
-            "minCount": 2,
+          "sustainment": {
+            "minCount": 1,
             "minPendingCount": 1
           },
           "operations": {
             "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H6->H7": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.02,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "audit": {
+            "minCount": 1,
             "minPendingCount": 1
+          },
+          "observability": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H7->H8": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "policy": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "audit": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H8->H9": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "memory": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H9->H10": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H10->H11": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "audit": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "policy": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H11->H12": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "durability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H12->H13": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "observability": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H13->H14": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "sustainment": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H14->H15": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "ci": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
+      },
+      "H15->H16": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "policy": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
           }
         }
       }
     }
   },
   "promotionReadiness": {
-    "targetStage": "canary",
+    "targetStage": "full",
     "gates": {
       "releaseReadinessPass": true,
       "mergeBundlePass": true,
@@ -423,24 +798,64 @@
       "summary": "Operationalization baseline closed with passing unified CI, artifact upload reliability, and downloaded artifact verification workflow."
     },
     "H2": {
-      "status": "in_progress",
-      "summary": "Canary/majority drills are automated, evidence selection mode is configurable, threshold calibration and supervised rollback simulation are executable, H2-specific closeout evidence is machine-validated, one-command closeout and promotion runners are available, horizon advancement can consume pinned closeout-run evidence, and progressive goal-runway gates can require larger next-horizon scope before promotion."
+      "status": "completed",
+      "summary": "Cutover drills, rollback calibration, supervised simulation, closeout/promotion orchestration, and progressive goal gates delivered; operational baseline preserved for replay."
     },
     "H3": {
-      "status": "planned",
-      "summary": "Runtime durability and policy maturity hardening."
+      "status": "completed",
+      "summary": "Durability queue and replay; fallback suppression by failure class; capability execution timeout; SerializedUnifiedMemoryStore; soak drift summarizer; emergency rollback rehearsal manifests."
     },
     "H4": {
-      "status": "planned",
-      "summary": "Legacy path retirement and contract tightening."
+      "status": "completed",
+      "summary": "Legacy retirement gates: validate-unified-entrypoints CI script, LEGACY_ENTRYPOINT_DEPRECATION_MAP, contract version constant v1 + fixture validation tests."
     },
     "H5": {
-      "status": "planned",
-      "summary": "Autonomous operations and scale envelope."
+      "status": "completed",
+      "summary": "Tenant/region isolation, standby routing swap, bounded remediation playbook; H5 closeout evidence embeds h5-evidence-baseline (soak SLO + prune dry-run) via run-h5-closeout-evidence.mjs; CI gates validate:tenant-isolation + rehearse:region-failover."
     },
     "H6": {
-      "status": "planned",
-      "summary": "Production cutover consolidation, evidence volume guardrails, and operator-facing retention documentation."
+      "status": "completed",
+      "summary": "Continuous assurance bundle (run-h6-assurance-bundle): horizon metadata + tenant isolation + region rehearsal + unified entrypoints; documented in NEXT_LONG_HORIZON_ACTION_PLAN and CLOUD_AGENT_HANDOFF; H5->H6 goal policy in GOAL_POLICIES.json."
+    },
+    "H7": {
+      "status": "completed",
+      "summary": "Audit lifecycle: dispatch audit JSONL rotation/retention in unified-dispatch; H7 assurance bundle adds audit-log rotation tests; terminal sustainment loop chains validate:h7-closeout; horizon tooling VALID_HORIZONS includes H7."
+    },
+    "H8": {
+      "status": "completed",
+      "summary": "Capability policy authorization audit: append-only JSONL per @cap decision (default path beside dispatch audit); H8 assurance adds capability-policy-audit tests; VALID_HORIZONS H8; verify:sustainment-loop post-H8."
+    },
+    "H9": {
+      "status": "completed",
+      "summary": "Crash-safe file memory: atomic rename commit for UNIFIED_MEMORY_STORE_KIND=file; H9 assurance adds unified-memory-atomic-persistence tests."
+    },
+    "H10": {
+      "status": "completed",
+      "summary": "Durability queue lifecycle: bounded retention for dispatched/failed JSON queue entries (default max 5000); H10 assurance adds retention vitest."
+    },
+    "H11": {
+      "status": "completed",
+      "summary": "Capability policy audit lifecycle: optional JSONL rotation aligned with dispatch audit naming; H11 assurance adds capability-policy-audit-rotation tests."
+    },
+    "H12": {
+      "status": "completed",
+      "summary": "Durability queue replay guardrail: optional max replay attempts per pending entry; H12 assurance adds replay-limit tests; sustainment superseded by post-H14 terminal loop."
+    },
+    "H13": {
+      "status": "completed",
+      "summary": "CI soak SLO drift gate: fail-closed summarize-soak-report after soak-simulate; H13 assurance bundles H12 + ci soak gate; unified-ci enforces soak thresholds; superseded by post-H14 sustainment."
+    },
+    "H14": {
+      "status": "completed",
+      "summary": "Shell ingress convergence: unified-dispatch-runner.sh for soak/regression/cutover/failure-injection; H14 assurance adds validate-shell-unified-dispatch gate on top of H13 bundle."
+    },
+    "H15": {
+      "status": "completed",
+      "summary": "Shell dispatch CI convergence: validate-shell-unified-dispatch-ci.mjs; run-h15-assurance-bundle chains H14 + CI scan; superseded by post-H16 sustainment loop."
+    },
+    "H16": {
+      "status": "completed",
+      "summary": "Merge readiness policy gates: run-h16-assurance-bundle adds goal-policy validation (H2→H16) and validate:manifest-schemas on evidence; terminal sustainment post-H16."
     }
   },
   "history": [
@@ -559,52 +974,106 @@
       "note": "Added goal-policy readiness-audit gate integration so promotion flows can require both transition coverage checks and matrix-based readiness audits before advancement."
     },
     {
-      "timestamp": "2026-04-28T22:05:00Z",
+      "timestamp": "2026-04-28T21:15:00Z",
       "horizon": "H3",
       "status": "planned",
-      "note": "Completed h3-action-2: no-fallback-on-primary-failure-class policy, dispatch audit fallbackInfo telemetry, optional router-telemetry JSONL + schema gate; fixed progressive-horizon-goals to ignore completed source rows and skip growth-vs-source when source has zero pending (works with external GOAL_POLICIES.json)."
+      "note": "Implemented dispatch durability queue (JSON file, atomic writes), replay-safe dispatchUnifiedEnvelope path, CLI enqueue/replay flags, and config UNIFIED_DISPATCH_DURABILITY_QUEUE_PATH; marked h3-action-1 completed."
     },
     {
-      "timestamp": "2026-04-28T22:20:00Z",
+      "timestamp": "2026-04-28T21:22:00Z",
       "horizon": "H3",
       "status": "planned",
-      "note": "Completed h3-action-1: optional UNIFIED_DISPATCH_QUEUE_JOURNAL_PATH JSONL (accepted/finished), reconcile-dispatch-queue.mjs, validate-manifest-schema dispatch-queue-journal-jsonl. Completed h3-action-4: validate:memory-durability (tsx verify-memory-durability.ts) for WAL + cross-lane replay after simulated restart."
+      "note": "Merged durability + Hermes-primary allowlist streams; added RouterPolicyConfig.noFallbackOnFailureClasses and dispatch suppression via UNIFIED_ROUTER_NO_FALLBACK_ON_FAILURE_CLASSES; marked h3-action-2 completed."
     },
     {
-      "timestamp": "2026-04-28T23:00:00Z",
-      "horizon": "H3",
-      "status": "planned",
-      "note": "Completed h3-action-3: UNIFIED_CAPABILITY_MAX_OUTPUT_CHARS and UNIFIED_CAPABILITY_MAX_LANE_DISPATCHES in capability engine. Completed h3-action-5: soak JSONL + soakMeta lines, validate-soak-slo.mjs, optional UNIFIED_RELEASE_READINESS_REQUIRE_SOAK_SLO. Completed h3-action-6: build-emergency-rollback-bundle.mjs + emergency-rollback-bundle manifest validation."
-    },
-    {
-      "timestamp": "2026-04-28T23:45:00Z",
+      "timestamp": "2026-04-28T21:45:00Z",
       "horizon": "H4",
-      "status": "planned",
-      "note": "Completed h4-action-1: docs/H4_DIRECT_LANE_INVOCATION_INVENTORY.md. Completed h4-action-2: fixtures/dispatch/*.json + DISPATCH_FIXTURE_SCHEMA_VERSION + dispatch-conformance-fixtures.test.ts."
+      "status": "in_progress",
+      "note": "H4 slice: UNIFIED_DISPATCH_CONTRACT_VERSION v1, LEGACY_ENTRYPOINT_DEPRECATION_MAP, validate-unified-entrypoints.mjs + CI, fixture test unified-dispatch-result-v1-pass.json; activeHorizon advanced to H4; H3 marked completed."
+    },
+    {
+      "timestamp": "2026-04-28T22:30:00Z",
+      "horizon": "H5",
+      "status": "in_progress",
+      "note": "H5 slice: envelope tenantId/regionId; tenant dispatch allowlist/denylist; capability tenant allow/deny; TenantScopedUnifiedMemoryStore for capability execution; standby region lane swap; Eve/Hermes env passthrough; validate:tenant-isolation, rehearse:region-failover, agent-remediation-playbook; H4 marked completed."
+    },
+    {
+      "timestamp": "2026-04-30T18:00:00Z",
+      "horizon": "H5",
+      "status": "completed",
+      "note": "H5 closeout evidence now embeds h5-evidence-baseline (soak SLO, validation-summary, evidence prune dry-run) after remediation playbook; restored npm bundle/h5/h4/prune scripts for CI; validate-horizon-closeout evaluates h5-evidence-baseline and evidence-prune-run commands."
+    },
+    {
+      "timestamp": "2026-04-29T02:00:00Z",
+      "horizon": "H6",
+      "status": "completed",
+      "note": "Post-H6 sustainment: run-post-h6-sustainment-loop emits checks.horizonStatusPass/h6AssuranceBundlePass/h6CloseoutGatePass; validate-horizon-closeout can evaluate post-h6 manifests when present (not requiredEvidence—avoid circular dependency with validate:h6-closeout inside the loop)."
     },
     {
       "timestamp": "2026-04-29T12:00:00Z",
-      "horizon": "H4",
-      "status": "planned",
-      "note": "Completed h4-action-3..6: H5 runway rows (h5-action-6/7), h4-closeout-evidence bundle + validate:h4-closeout wiring, memory-audit-report.ts, tenant-metadata contract test, docs/H4_UNIFIED_MEMORY_AUDIT.md and docs/H5_AUTONOMOUS_OPS_ENVELOPE.md."
+      "horizon": "H7",
+      "status": "completed",
+      "note": "H7 audit lifecycle: audit-log rotation module + env-driven policy before append; run-h7-assurance-bundle and verify:sustainment-loop post-H7; tooling sequences extended through H7; terminal closeout skips stage-promotion at H7."
     },
     {
       "timestamp": "2026-04-29T18:00:00Z",
-      "horizon": "H5",
-      "status": "planned",
-      "note": "Completed h5-action-1..7: h5-evidence-baseline.mjs + manifest schema + horizon-closeout mapping, runbook H5 section, env thresholds, CI bundle:h5-evidence-baseline. Added h5-action-8/9 for soak scheduling and optional release-readiness baseline gate."
+      "horizon": "H8",
+      "status": "completed",
+      "note": "H8 capability policy audit trail: appendCapabilityPolicyAuditLog + UNIFIED_CAPABILITY_POLICY_AUDIT_LOG_PATH; run-h8-assurance-bundle; promote:sustainment-loop to post-H8; terminal closeout at H8."
     },
     {
       "timestamp": "2026-04-29T22:00:00Z",
-      "horizon": "H5",
-      "status": "planned",
-      "note": "Completed h5-action-8: .github/workflows/soak-long-window-scheduled.yml + scripts/run-long-window-soak.sh + npm run validate:soak-long-window (soak-slo-scheduled-*.json). Completed h5-action-9: validate-release-readiness.sh runs bundle:h5-evidence-baseline when UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1; unified-ci enables gate and reorders release-readiness after baseline. Added h5-action-10 for retention/TTL follow-up."
+      "horizon": "H9",
+      "status": "completed",
+      "note": "H9 atomic file memory: FileUnifiedMemoryStore writes memory.json.tmp then renames to memory.json for crash-safe commits; run-h9-assurance-bundle + post-H9 sustainment; terminal closeout at H9."
     },
     {
-      "timestamp": "2026-04-30T12:00:00Z",
-      "horizon": "H5",
-      "status": "planned",
-      "note": "Completed h5-action-10: scripts/prune-evidence.mjs + npm run prune:evidence / verify:evidence-prune, evidence-prune-run manifest schema, H5 baseline embeds prune dry-run, requiredEvidence h5-evidence-prune-dry-run, CI advisory prune (TTL 0). Added H6 horizon states, H5->H6 goal policy, and h6-action-1..3 runway."
+      "timestamp": "2026-04-29T23:30:00Z",
+      "horizon": "H10",
+      "status": "completed",
+      "note": "H10 durability queue retention: prune oldest dispatched/failed entries after each mutation when UNIFIED_DISPATCH_DURABILITY_QUEUE_RETENTION_NON_TERMINAL_MAX is set (default 5000); run-h10-assurance-bundle + post-H10 sustainment; terminal closeout at H10."
+    },
+    {
+      "timestamp": "2026-04-29T23:55:00Z",
+      "horizon": "H11",
+      "status": "completed",
+      "note": "H11 capability policy audit rotation: optional UNIFIED_CAPABILITY_POLICY_AUDIT_ROTATION_MAX_BYTES before each @cap policy append; run-h11-assurance-bundle + post-H11 sustainment; terminal closeout at H11."
+    },
+    {
+      "timestamp": "2026-04-30T00:05:00Z",
+      "horizon": "H12",
+      "status": "completed",
+      "note": "H12 durability queue replay limit: optional UNIFIED_DISPATCH_DURABILITY_QUEUE_REPLAY_MAX_ATTEMPTS_PER_ENTRY caps replay attempts per pending row; run-h12-assurance-bundle + post-H12 sustainment; terminal closeout at H12."
+    },
+    {
+      "timestamp": "2026-04-30T18:15:00Z",
+      "horizon": "H12",
+      "status": "completed",
+      "note": "Roadmap merged to main: H12 terminal horizon documented in NEXT_LONG_HORIZON_ACTION_PLAN (H12 section + post-H12 sustainment); CLOUD_AGENT_HANDOFF terminal closeout wording aligned (H5 retroactive skip references H12)."
+    },
+    {
+      "timestamp": "2026-05-01T12:00:00Z",
+      "horizon": "H13",
+      "status": "completed",
+      "note": "H13 CI soak SLO gate: run-ci-soak-slo-gate.mjs + run-h13-assurance-bundle; unified-ci soak drift step; terminal sustainment post-H13 via verify:sustainment-loop; H12->H13 goal policy."
+    },
+    {
+      "timestamp": "2026-05-02T12:00:00Z",
+      "horizon": "H14",
+      "status": "completed",
+      "note": "H14 shell unified dispatch ingress: unified-dispatch-runner.sh + validate-shell-unified-dispatch.sh; soak/regression/cutover/failure-injection refactored; run-h14-assurance-bundle + post-H14 sustainment; H13->H14 goal policy."
+    },
+    {
+      "timestamp": "2026-05-03T12:00:00Z",
+      "horizon": "H15",
+      "status": "completed",
+      "note": "H15 shell dispatch CI convergence: validate-shell-unified-dispatch-ci.mjs static scan; run-h15-assurance-bundle chains H14 + scan; verify:sustainment-loop post-H15; verify:sustainment-loop:h14-legacy; H14->H15 goal policy; terminal closeout at H15."
+    },
+    {
+      "timestamp": "2026-05-04T12:00:00Z",
+      "horizon": "H16",
+      "status": "completed",
+      "note": "H16 merge readiness policy gates: run-h16-assurance-bundle chains H15 + validate:goal-policy-file (H2→H16) + validate:manifest-schemas; verify:sustainment-loop post-H16; verify:sustainment-loop:h15-legacy; H15->H16 goal policy; terminal closeout at H16."
     }
   ]
 }

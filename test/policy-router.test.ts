@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { FailureClass } from "../src/contracts/types.js";
 import { routeMessage } from "../src/router/policy-router.js";
 
 const baseConfig = {
@@ -6,6 +7,9 @@ const baseConfig = {
   defaultFallback: "hermes" as const,
   failClosed: true,
   policyVersion: "v1",
+  noFallbackOnFailureClasses: [] as FailureClass[],
+  hermesPrimaryChatIds: [] as string[],
+  standbyRegion: undefined as string | undefined,
   cutoverStage: "shadow" as const,
   canaryChatIds: [],
   majorityPercent: 50,
@@ -188,6 +192,49 @@ describe("routeMessage", () => {
     expect(eveChat.reason).toBe("stage_majority_default_primary");
   });
 
+  it("routes allowlisted chats to Hermes primary without cutover stage", () => {
+    const routed = routeMessage(
+      {
+        traceId: "t11",
+        channel: "telegram",
+        chatId: "vip-chat",
+        messageId: "1",
+        receivedAtIso: new Date().toISOString(),
+        text: "hello",
+      },
+      {
+        defaultPrimary: "eve",
+        defaultFallback: "eve",
+        failClosed: true,
+        policyVersion: "v1",
+        hermesPrimaryChatIds: ["vip-chat"],
+      },
+    );
+    expect(routed.primaryLane).toBe("hermes");
+    expect(routed.reason).toBe("router_hermes_primary_allowlist");
+    expect(routed.fallbackLane).toBe("eve");
+
+    const notListed = routeMessage(
+      {
+        traceId: "t12",
+        channel: "telegram",
+        chatId: "other",
+        messageId: "1",
+        receivedAtIso: new Date().toISOString(),
+        text: "hello",
+      },
+      {
+        defaultPrimary: "eve",
+        defaultFallback: "eve",
+        failClosed: true,
+        policyVersion: "v1",
+        hermesPrimaryChatIds: ["vip-chat"],
+      },
+    );
+    expect(notListed.primaryLane).toBe("eve");
+    expect(notListed.reason).toBe("default_policy_lane");
+  });
+
   it("forces hermes primary in full stage", () => {
     const decision = routeMessage(
       {
@@ -206,5 +253,43 @@ describe("routeMessage", () => {
     );
     expect(decision.primaryLane).toBe("hermes");
     expect(decision.reason).toBe("stage_full_force_hermes");
+  });
+
+  it("swaps primary and fallback when standbyRegion matches envelope.regionId", () => {
+    const env = {
+      traceId: "t11",
+      channel: "telegram" as const,
+      chatId: "1",
+      messageId: "2",
+      receivedAtIso: new Date().toISOString(),
+      text: "hello region",
+      regionId: "eu-west-backup",
+    };
+    const decision = routeMessage(env, {
+      ...baseConfig,
+      standbyRegion: "eu-west-backup",
+    });
+    expect(decision.primaryLane).toBe("hermes");
+    expect(decision.fallbackLane).toBe("eve");
+    expect(decision.reason).toContain("standby_region_swap");
+  });
+
+  it("does not swap lanes when standbyRegion does not match", () => {
+    const env = {
+      traceId: "t12",
+      channel: "telegram" as const,
+      chatId: "1",
+      messageId: "2",
+      receivedAtIso: new Date().toISOString(),
+      text: "hello",
+      regionId: "us-east",
+    };
+    const decision = routeMessage(env, {
+      ...baseConfig,
+      standbyRegion: "eu-west-backup",
+    });
+    expect(decision.primaryLane).toBe("eve");
+    expect(decision.fallbackLane).toBe("hermes");
+    expect(decision.reason).not.toContain("standby_region_swap");
   });
 });

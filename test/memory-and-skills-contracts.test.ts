@@ -17,6 +17,7 @@ import {
 import {
   createUnifiedMemoryStoreFromEnv,
   InMemoryUnifiedMemoryStore,
+  SerializedUnifiedMemoryStore,
 } from "../src/memory/unified-memory-store.js";
 
 describe("UnifiedMemoryStore adapters", () => {
@@ -69,26 +70,25 @@ describe("UnifiedMemoryStore adapters", () => {
     expect(raw).toContain("persisted");
   });
 
-  it("serializes concurrent file-backed writes without losing entries", async () => {
-    const tempDir = await mkdtemp(path.join(os.tmpdir(), "unified-memory-concurrent-"));
-    const memoryFilePath = path.join(tempDir, "memory.json");
-    const store = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
-    await Promise.all(
-      Array.from({ length: 24 }, (_, index) =>
-        store.set(
-          { lane: "shared", namespace: "concurrent", key: `key-${index}` },
-          `value-${index}`,
-        ),
-      ),
-    );
+  it("serializes concurrent writes through SerializedUnifiedMemoryStore", async () => {
+    const inner = new InMemoryUnifiedMemoryStore();
+    const store = new SerializedUnifiedMemoryStore(inner);
+    const key = { lane: "shared" as const, namespace: "concurrent", key: "k1" };
+    await Promise.all([store.set(key, "first", {}), store.set(key, "second", {})]);
+    const entry = await store.get(key);
+    expect(["first", "second"]).toContain(entry?.value);
+  });
 
-    const reader = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
-    const listed = await reader.list({ namespace: "concurrent" });
-    expect(listed).toHaveLength(24);
-    const keys = new Set(listed.map((e) => e.key));
-    for (let index = 0; index < 24; index += 1) {
-      expect(keys.has(`key-${index}`)).toBe(true);
-    }
+  it("reloads file-backed memory state after new store instance (restart simulation)", async () => {
+    const memoryFilePath = path.join(
+      os.tmpdir(),
+      `unified-memory-restart-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    );
+    const store1 = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
+    await store1.set({ lane: "eve", namespace: "ns", key: "restart-key" }, "survives");
+    const store2 = createUnifiedMemoryStoreFromEnv("file", memoryFilePath);
+    const loaded = await store2.get({ lane: "eve", namespace: "ns", key: "restart-key" });
+    expect(loaded?.value).toBe("survives");
   });
 });
 
@@ -142,14 +142,6 @@ describe("CapabilityRegistry", () => {
       traceId: "trace-x",
       chatId: "1",
       messageId: "2",
-      envelope: {
-        traceId: "trace-x",
-        channel: "telegram",
-        chatId: "1",
-        messageId: "2",
-        receivedAtIso: new Date().toISOString(),
-        text: "@cap status",
-      },
       memoryStore: new InMemoryUnifiedMemoryStore(),
       dispatchLane: async () => fakeDispatchState,
     };

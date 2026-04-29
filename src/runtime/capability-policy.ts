@@ -4,6 +4,9 @@ export type CapabilityPolicyConfig = {
   denyCapabilities: string[];
   allowedChatIds: string[];
   deniedChatIds: string[];
+  /** When non-empty, only these tenants may invoke capabilities (strict allowlist). */
+  allowedTenantIds: string[];
+  deniedTenantIds: string[];
   allowCapabilityChats: Record<string, string[]>;
   denyCapabilityChats: Record<string, string[]>;
 };
@@ -13,6 +16,7 @@ export type CapabilityPolicy = {
     capabilityId: string;
     lane: "eve" | "hermes";
     chatId: string;
+    tenantId?: string;
   }): CapabilityPolicyDecision;
 };
 
@@ -80,6 +84,8 @@ export function createCapabilityPolicyConfigFromEnv(input: {
   denyCapabilitiesRaw: string | undefined;
   allowedChatIdsRaw: string | undefined;
   deniedChatIdsRaw: string | undefined;
+  allowedTenantIdsRaw?: string | undefined;
+  deniedTenantIdsRaw?: string | undefined;
   allowCapabilityChatsRaw: string | undefined;
   denyCapabilityChatsRaw: string | undefined;
 }): CapabilityPolicyConfig {
@@ -92,6 +98,8 @@ export function createCapabilityPolicyConfigFromEnv(input: {
   );
   const allowedChatIds = [...(parseCsvSet(input.allowedChatIdsRaw) ?? [])];
   const deniedChatIds = [...(parseCsvSet(input.deniedChatIdsRaw) ?? [])];
+  const allowedTenantIds = [...(parseCsvSet(input.allowedTenantIdsRaw) ?? [])];
+  const deniedTenantIds = [...(parseCsvSet(input.deniedTenantIdsRaw) ?? [])];
   const allowCapabilityChats = Object.fromEntries(
     Object.entries(parseCapabilityChatAllowlists(input.allowCapabilityChatsRaw)).map(
       ([capabilityId, chatIds]) => [capabilityId, [...chatIds.values()]],
@@ -108,6 +116,8 @@ export function createCapabilityPolicyConfigFromEnv(input: {
     denyCapabilities,
     allowedChatIds,
     deniedChatIds,
+    allowedTenantIds,
+    deniedTenantIds,
     allowCapabilityChats,
     denyCapabilityChats,
   };
@@ -118,6 +128,8 @@ export function createCapabilityPolicy(config: CapabilityPolicyConfig): Capabili
   const denyCapabilities = new Set(config.denyCapabilities.map((item) => normalizeCapabilityId(item)));
   const allowedChats = new Set(config.allowedChatIds.map((item) => item.trim()).filter(Boolean));
   const deniedChats = new Set(config.deniedChatIds.map((item) => item.trim()).filter(Boolean));
+  const allowedTenants = new Set(config.allowedTenantIds.map((item) => item.trim()).filter(Boolean));
+  const deniedTenants = new Set(config.deniedTenantIds.map((item) => item.trim()).filter(Boolean));
   const allowCapabilityChats = new Map<string, Set<string>>(
     Object.entries(config.allowCapabilityChats).map(([capabilityId, chats]) => [
       normalizeCapabilityId(capabilityId),
@@ -134,6 +146,14 @@ export function createCapabilityPolicy(config: CapabilityPolicyConfig): Capabili
   return {
     authorize(input): CapabilityPolicyDecision {
       const capabilityId = normalizeCapabilityId(input.capabilityId);
+      const tenant = input.tenantId?.trim() ?? "";
+
+      if (allowedTenants.size > 0 && (!tenant || !allowedTenants.has(tenant))) {
+        return { allowed: false, reason: "tenant_not_allowlisted" };
+      }
+      if (tenant && deniedTenants.has(tenant)) {
+        return { allowed: false, reason: "tenant_denied_by_policy" };
+      }
 
       if (deniedChats.has(input.chatId)) {
         return { allowed: false, reason: "chat_denied_by_policy" };
@@ -175,10 +195,12 @@ export function evaluateCapabilityPolicy(
   config: CapabilityPolicyConfig,
   capabilityId: string,
   chatId: string,
+  tenantId?: string,
 ): CapabilityPolicyDecision {
   return createCapabilityPolicy(config).authorize({
     capabilityId,
     chatId,
     lane: "eve",
+    tenantId,
   });
 }

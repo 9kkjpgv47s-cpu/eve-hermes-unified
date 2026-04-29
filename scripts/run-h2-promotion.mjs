@@ -5,7 +5,7 @@ import path from "node:path";
 import { resolveGoalPolicySource } from "./goal-policy-source.mjs";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16"];
 
 function parseArgs(argv) {
   const options = {
@@ -39,19 +39,19 @@ function parseArgs(argv) {
     strictGoalPolicyGates: false,
     requireGoalPolicyValidation: false,
     goalPolicyValidationOut: "",
-    goalPolicyValidationUntilHorizon: "H5",
+    goalPolicyValidationUntilHorizon: "H12",
     goalPolicyValidationUntilExplicit: false,
     allowGoalPolicyValidationFallback: false,
     requireGoalPolicyCoverage: false,
     goalPolicyCoverageOut: "",
-    goalPolicyCoverageUntilHorizon: "H5",
+    goalPolicyCoverageUntilHorizon: "H12",
     goalPolicyCoverageUntilExplicit: false,
     requiredPolicyTransitions: "",
     requirePolicyTaggedTargets: false,
     requirePositivePendingPolicyMin: false,
     requireGoalPolicyReadinessAudit: false,
     goalPolicyReadinessAuditOut: "",
-    goalPolicyReadinessAuditUntilHorizon: "H5",
+    goalPolicyReadinessAuditUntilHorizon: "H12",
     goalPolicyReadinessAuditUntilExplicit: false,
     requireGoalPolicyReadinessTaggedTargets: false,
     requireGoalPolicyReadinessPositivePendingMin: false,

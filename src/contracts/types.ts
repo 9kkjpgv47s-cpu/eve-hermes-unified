@@ -17,8 +17,10 @@ export type UnifiedMessageEnvelope = {
   messageId: string;
   receivedAtIso: string;
   text: string;
-  /** Optional tenant scope for isolation (see metadata.tenantId override). */
+  /** Logical tenant for isolation (memory namespace, capability policy). Omit for single-tenant mode. */
   tenantId?: string;
+  /** Region label for routing hints (e.g. standby failover drills). */
+  regionId?: string;
   metadata?: Record<string, string>;
 };
 
@@ -74,13 +76,6 @@ export type DispatchFallbackInfo = {
   reason: string;
   fromLane: LaneId;
   toLane: LaneId;
-  /**
-   * When `reason` is `no_fallback_for_primary_failure_class`, set for operator telemetry
-   * (dispatch audit JSONL, dashboards).
-   */
-  primaryFailureClass?: FailureClass;
-  /** Snapshot of `noFallbackOnPrimaryFailureClasses` from router policy when fallback was skipped. */
-  noFallbackOnPrimaryFailureClasses?: FailureClass[];
 };
 
 export type UnifiedDispatchResult = {

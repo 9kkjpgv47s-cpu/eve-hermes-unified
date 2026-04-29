@@ -72,20 +72,6 @@ describe("runRuntimePreflight", () => {
     });
   });
 
-  it("fails when memory journal directory is not writable", async () => {
-    await withTempDir(async (dir) => {
-      const blockedFile = path.join(dir, "blocked");
-      await writeFile(blockedFile, "x", "utf8");
-      const config = {
-        ...baseConfig(dir),
-        unifiedMemoryJournalPath: path.join(blockedFile, "journal.jsonl"),
-      };
-      await expect(runRuntimePreflight(config)).rejects.toThrow(
-        "Unified memory journal path is not writable",
-      );
-    });
-  });
-
   it("fails when capability policy audit log directory is not writable", async () => {
     await withTempDir(async (dir) => {
       const blockedFile = path.join(dir, "blocked");
@@ -100,31 +86,4 @@ describe("runRuntimePreflight", () => {
     });
   });
 
-  it("fails when router telemetry log directory is not writable", async () => {
-    await withTempDir(async (dir) => {
-      const blockedFile = path.join(dir, "blocked");
-      await writeFile(blockedFile, "x", "utf8");
-      const config = {
-        ...baseConfig(dir),
-        routerTelemetryLogPath: path.join(blockedFile, "router-tel.jsonl"),
-      };
-      await expect(runRuntimePreflight(config)).rejects.toThrow(
-        "Router telemetry log path is not writable",
-      );
-    });
-  });
-
-  it("fails when dispatch queue journal directory is not writable", async () => {
-    await withTempDir(async (dir) => {
-      const blockedFile = path.join(dir, "blocked");
-      await writeFile(blockedFile, "x", "utf8");
-      const config = {
-        ...baseConfig(dir),
-        dispatchQueueJournalPath: path.join(blockedFile, "queue.jsonl"),
-      };
-      await expect(runRuntimePreflight(config)).rejects.toThrow(
-        "Dispatch queue journal path is not writable",
-      );
-    });
-  });
 });

@@ -3,6 +3,7 @@ import type {
   CapabilityExecutionResult,
   DispatchFallbackInfo,
   DispatchState,
+  FailureClass,
   LaneId,
   RoutingDecision,
   UnifiedCapabilityDecision,
@@ -21,40 +22,15 @@ import {
 import type { LaneAdapter } from "../adapters/lane-adapter.js";
 import { routeMessage, type RouterPolicyConfig } from "../router/policy-router.js";
 import type { CapabilityEngine } from "./capability-engine.js";
-import { TenantScopedMemoryStore } from "../memory/tenant-scoped-memory-store.js";
-import type { UnifiedMemoryStore } from "../memory/unified-memory-store.js";
-import { normalizeValidatedTenantId, resolveEnvelopeTenantId } from "./tenant-scope.js";
-import { appendRouterTelemetryNoFallbackSkipped } from "./router-telemetry-append.js";
-import { appendDispatchQueueAccepted, appendDispatchQueueFinished } from "./dispatch-queue-journal.js";
 
 export type UnifiedRuntime = {
   eveAdapter: LaneAdapter;
   hermesAdapter: LaneAdapter;
   routerConfig: RouterPolicyConfig;
   capabilityEngine?: CapabilityEngine;
-  /** When set, primary/fallback lane dispatch receives this signal for cooperative subprocess cancel. */
-  abortSignal?: AbortSignal;
-  /** Shared memory store (non-tenant); capability execution may use a tenant-scoped view. */
-  memoryStore?: UnifiedMemoryStore;
-  /** When true, reject if resolved tenant id is empty. */
-  tenantStrict?: boolean;
-  /** When non-empty, reject if resolved tenant is not in this set (normalized). */
+  /** When non-empty, envelopes without a matching tenantId are rejected before routing. */
   tenantAllowlist?: string[];
-  /**
-   * When true with memoryStore set, require a valid tenant and scope capability memory
-   * (no shared-namespace capability reads/writes without tenant prefix).
-   */
-  tenantMemoryIsolation?: boolean;
-  /** Optional append-only JSONL path for router policy telemetry (e.g. no-fallback-on-class). */
-  routerTelemetryLogPath?: string;
-  /** When > 0 with `routerTelemetryLogPath`, rotate telemetry log before append. */
-  routerTelemetryRotationMaxBytes?: number;
-  /** Bytes of tail to retain in primary telemetry log after rotation. */
-  routerTelemetryRotationRetainBytes?: number;
-  /** Optional append-only JSONL: accepted/finished pairs for crash-safe dispatch recovery. */
-  dispatchQueueJournalPath?: string;
-  dispatchQueueJournalRotationMaxBytes?: number;
-  dispatchQueueJournalRotationRetainBytes?: number;
+  tenantDenylist?: string[];
 };
 
 export function laneAdapterFor(runtime: UnifiedRuntime, lane: LaneId): LaneAdapter {
@@ -101,34 +77,6 @@ function toDispatchStateFromCapability(
   });
 }
 
-function failClosedTenantState(
-  envelope: UnifiedMessageEnvelope,
-  reason: string,
-  primaryLane: LaneId,
-  policyVersion: string,
-): UnifiedDispatchResult {
-  const failedState = validateDispatchState({
-    status: "failed",
-    reason,
-    runtimeUsed: "unified-dispatch",
-    runId: `tenant-gate-${randomUUID().slice(0, 8)}`,
-    elapsedMs: 0,
-    failureClass: "policy_failure",
-    sourceLane: primaryLane,
-    sourceChatId: envelope.chatId,
-    sourceMessageId: envelope.messageId,
-    traceId: envelope.traceId,
-  });
-  const routing = validateRoutingDecision({
-    primaryLane,
-    fallbackLane: "none",
-    reason: "tenant_gate",
-    policyVersion,
-    failClosed: true,
-  });
-  return buildResult(envelope, routing, failedState, failedState);
-}
-
 function buildResult(
   envelope: UnifiedMessageEnvelope,
   routing: RoutingDecision,
@@ -165,133 +113,142 @@ function buildResult(
   };
 }
 
-function queueJournalOptions(runtime: UnifiedRuntime) {
-  return {
-    maxBytesBeforeRotate: runtime.dispatchQueueJournalRotationMaxBytes,
-    retainBytesAfterRotate: runtime.dispatchQueueJournalRotationRetainBytes,
-  };
+function shouldSkipFallback(
+  routing: RoutingDecision,
+  primaryFailureClass: FailureClass,
+  routerConfig: RouterPolicyConfig,
+): boolean {
+  if (routing.fallbackLane === "none" || routing.failClosed) {
+    return true;
+  }
+  const suppressed = routerConfig.noFallbackOnFailureClasses;
+  if (!suppressed?.length) {
+    return false;
+  }
+  return suppressed.includes(primaryFailureClass);
 }
 
-async function dispatchUnifiedMessageAfterEnvelope(
+function evaluateTenantDispatchPolicy(
+  envelope: UnifiedMessageEnvelope,
+  allowlist: string[] | undefined,
+  denylist: string[] | undefined,
+): { ok: true } | { ok: false; reason: string } {
+  const tenant = envelope.tenantId?.trim() ?? "";
+  const denied = new Set((denylist ?? []).map((item) => item.trim()).filter(Boolean));
+  if (tenant && denied.has(tenant)) {
+    return { ok: false, reason: "tenant_denied_by_dispatch_policy" };
+  }
+  const allowed = (allowlist ?? []).map((item) => item.trim()).filter(Boolean);
+  if (allowed.length > 0 && (!tenant || !allowed.includes(tenant))) {
+    return { ok: false, reason: "tenant_not_allowlisted_for_dispatch" };
+  }
+  return { ok: true };
+}
+
+function tenantPolicyFailureResult(
+  envelope: UnifiedMessageEnvelope,
+  routerConfig: RouterPolicyConfig,
+  reason: string,
+): UnifiedDispatchResult {
+  const routing = validateRoutingDecision({
+    primaryLane: routerConfig.defaultPrimary,
+    fallbackLane: "none",
+    reason,
+    policyVersion: routerConfig.policyVersion,
+    failClosed: true,
+  });
+  const primaryState = validateDispatchState({
+    status: "failed",
+    reason,
+    runtimeUsed: "unified-dispatch",
+    runId: `tenant-policy-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`,
+    elapsedMs: 0,
+    failureClass: "policy_failure",
+    sourceLane: routerConfig.defaultPrimary,
+    sourceChatId: envelope.chatId,
+    sourceMessageId: envelope.messageId,
+    traceId: envelope.traceId,
+  });
+  return buildResult(envelope, routing, primaryState, primaryState);
+}
+
+export function createUnifiedEnvelopeForDispatch(
+  input: Omit<UnifiedMessageEnvelope, "traceId" | "receivedAtIso">,
+): UnifiedMessageEnvelope {
+  return validateEnvelope({
+    ...input,
+    traceId: `unified-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`,
+    receivedAtIso: new Date().toISOString(),
+  });
+}
+
+export async function dispatchUnifiedEnvelope(
   runtime: UnifiedRuntime,
   envelope: UnifiedMessageEnvelope,
-  tenantMemory: UnifiedMemoryStore | undefined,
-  options?: { lockedCapabilityDecision?: UnifiedCapabilityDecision },
 ): Promise<UnifiedDispatchResult> {
-  const policyVersion = runtime.routerConfig.policyVersion;
+  const validated = validateEnvelope(envelope);
 
-  const pre = options?.lockedCapabilityDecision;
-  if (pre) {
-    const engine = runtime.capabilityEngine;
-    if (!engine) {
-      throw new Error("dispatch_internal_error: locked_capability_without_engine");
-    }
-    const validatedDecision = validateCapabilityDecision(pre);
-    const executed = await engine.execute(validatedDecision, envelope, {
-      memoryStore: tenantMemory,
-    });
-    const validatedExecution = validateCapabilityExecutionResult(executed);
-    const capabilityState = toDispatchStateFromCapability(validatedDecision, validatedExecution, envelope);
-    const routing = validateRoutingDecision({
-      primaryLane: validatedDecision.lane,
-      fallbackLane: "none",
-      reason: validatedDecision.routeReason,
-      policyVersion,
-      failClosed: true,
-    });
-    return buildResult(envelope, routing, capabilityState, capabilityState, {
-      capabilityDecision: validatedDecision,
-      capabilityExecution: validatedExecution,
-    });
+  const tenantPolicy = evaluateTenantDispatchPolicy(
+    validated,
+    runtime.tenantAllowlist,
+    runtime.tenantDenylist,
+  );
+  if (!tenantPolicy.ok) {
+    return tenantPolicyFailureResult(validated, runtime.routerConfig, tenantPolicy.reason);
   }
 
   if (runtime.capabilityEngine) {
-    const capabilityDecision = runtime.capabilityEngine.select(envelope, runtime.routerConfig);
+    const capabilityDecision = runtime.capabilityEngine.select(validated, runtime.routerConfig);
     if (capabilityDecision) {
       const validatedDecision = validateCapabilityDecision(capabilityDecision);
-      const executed = await runtime.capabilityEngine.execute(validatedDecision, envelope, {
-        memoryStore: tenantMemory,
-      });
+      const executed = await runtime.capabilityEngine.execute(validatedDecision, validated);
       const validatedExecution = validateCapabilityExecutionResult(executed);
-      const capabilityState = toDispatchStateFromCapability(validatedDecision, validatedExecution, envelope);
-      const routing = validateRoutingDecision({
+      const capabilityState = toDispatchStateFromCapability(validatedDecision, validatedExecution, validated);
+      const routing: RoutingDecision = {
         primaryLane: validatedDecision.lane,
         fallbackLane: "none",
         reason: validatedDecision.routeReason,
-        policyVersion,
+        policyVersion: runtime.routerConfig.policyVersion,
         failClosed: true,
-      });
-      return buildResult(envelope, routing, capabilityState, capabilityState, {
+      };
+      const result = buildResult(validated, routing, capabilityState, capabilityState, {
         capabilityDecision: validatedDecision,
         capabilityExecution: validatedExecution,
       });
+      return result;
     }
   }
 
-  const routing = routeMessage(envelope, runtime.routerConfig);
+  const routing = routeMessage(validated, runtime.routerConfig);
   const primary = getLaneAdapter(runtime, routing.primaryLane);
   const primaryState = withCanonicalTraceId(
     await primary.dispatch({
-      envelope,
+      envelope: validated,
       intentRoute: `unified:${routing.reason}`,
-      signal: runtime.abortSignal,
     }),
-    envelope.traceId,
+    validated.traceId,
   );
-  const noFallbackClasses = runtime.routerConfig.noFallbackOnPrimaryFailureClasses ?? [];
-  const blockFallback =
-    primaryState.status === "failed"
-    && routing.fallbackLane !== "none"
-    && !routing.failClosed
-    && noFallbackClasses.length > 0
-    && noFallbackClasses.includes(primaryState.failureClass);
-  if (primaryState.status === "pass" || routing.fallbackLane === "none" || routing.failClosed || blockFallback) {
-    if (blockFallback) {
-      const toLane = routing.fallbackLane;
-      if (toLane === "none") {
-        return buildResult(envelope, routing, primaryState, primaryState);
-      }
-      const telemetryPath = runtime.routerTelemetryLogPath?.trim();
-      if (telemetryPath) {
-        await appendRouterTelemetryNoFallbackSkipped(
-          telemetryPath,
-          {
-            envelope,
-            routing,
-            primaryState,
-            skippedFallbackLane: toLane,
-            noFallbackOnPrimaryFailureClasses: [...noFallbackClasses],
-          },
-          {
-            maxBytesBeforeRotate: runtime.routerTelemetryRotationMaxBytes,
-            retainBytesAfterRotate: runtime.routerTelemetryRotationRetainBytes,
-          },
-        );
-      }
-      return buildResult(envelope, routing, primaryState, primaryState, {
-        fallbackInfo: {
-          attempted: false,
-          reason: "no_fallback_for_primary_failure_class",
-          fromLane: primaryState.sourceLane,
-          toLane,
-          primaryFailureClass: primaryState.failureClass,
-          noFallbackOnPrimaryFailureClasses: [...noFallbackClasses],
-        },
-      });
-    }
-    return buildResult(envelope, routing, primaryState, primaryState);
+  if (
+    primaryState.status === "pass" ||
+    shouldSkipFallback(routing, primaryState.failureClass, runtime.routerConfig)
+  ) {
+    return buildResult(validated, routing, primaryState, primaryState);
   }
 
-  const fallback = getLaneAdapter(runtime, routing.fallbackLane);
+  const fallbackLane = routing.fallbackLane;
+  if (fallbackLane === "none") {
+    return buildResult(validated, routing, primaryState, primaryState);
+  }
+
+  const fallback = getLaneAdapter(runtime, fallbackLane);
   const fallbackState = withCanonicalTraceId(
     await fallback.dispatch({
-      envelope,
+      envelope: validated,
       intentRoute: `unified:fallback_after_${routing.reason}`,
-      signal: runtime.abortSignal,
     }),
-    envelope.traceId,
+    validated.traceId,
   );
-  return buildResult(envelope, routing, primaryState, fallbackState, {
+  const result = buildResult(validated, routing, primaryState, fallbackState, {
     fallbackState,
     fallbackInfo: {
       attempted: true,
@@ -300,103 +257,13 @@ async function dispatchUnifiedMessageAfterEnvelope(
       toLane: fallbackState.sourceLane,
     },
   });
+  return result;
 }
 
 export async function dispatchUnifiedMessage(
   runtime: UnifiedRuntime,
   input: Omit<UnifiedMessageEnvelope, "traceId" | "receivedAtIso">,
 ): Promise<UnifiedDispatchResult> {
-  const envelope = validateEnvelope({
-    ...input,
-    traceId: `unified-${Date.now().toString(36)}-${randomUUID().slice(0, 6)}`,
-    receivedAtIso: new Date().toISOString(),
-  });
-
-  const policyVersion = runtime.routerConfig.policyVersion;
-  const rawTenant = resolveEnvelopeTenantId(envelope);
-  const normalizedTenant = normalizeValidatedTenantId(rawTenant);
-  if (normalizedTenant === undefined && rawTenant.trim().length > 0) {
-    return failClosedTenantState(
-      envelope,
-      "tenant_id_invalid",
-      runtime.routerConfig.defaultPrimary,
-      policyVersion,
-    );
-  }
-  if (runtime.tenantStrict === true && !normalizedTenant) {
-    return failClosedTenantState(
-      envelope,
-      "tenant_id_required",
-      runtime.routerConfig.defaultPrimary,
-      policyVersion,
-    );
-  }
-  const allow = runtime.tenantAllowlist ?? [];
-  if (allow.length > 0 && !normalizedTenant) {
-    return failClosedTenantState(
-      envelope,
-      "tenant_id_required",
-      runtime.routerConfig.defaultPrimary,
-      policyVersion,
-    );
-  }
-  if (allow.length > 0 && normalizedTenant && !allow.includes(normalizedTenant)) {
-    return failClosedTenantState(
-      envelope,
-      "tenant_id_not_allowed",
-      runtime.routerConfig.defaultPrimary,
-      policyVersion,
-    );
-  }
-
-  if (
-    runtime.tenantMemoryIsolation === true
-    && runtime.memoryStore
-    && !normalizedTenant
-  ) {
-    return failClosedTenantState(
-      envelope,
-      "tenant_id_required_for_memory_isolation",
-      runtime.routerConfig.defaultPrimary,
-      policyVersion,
-    );
-  }
-
-  const tenantMemory =
-    runtime.memoryStore && normalizedTenant
-      ? new TenantScopedMemoryStore(runtime.memoryStore, normalizedTenant)
-      : runtime.memoryStore;
-
-  const queuePath = runtime.dispatchQueueJournalPath?.trim();
-  if (queuePath) {
-    const qOpts = queueJournalOptions(runtime);
-    const capSel = runtime.capabilityEngine?.select(envelope, runtime.routerConfig);
-    if (capSel) {
-      const validated = validateCapabilityDecision(capSel);
-      const routing = validateRoutingDecision({
-        primaryLane: validated.lane,
-        fallbackLane: "none",
-        reason: validated.routeReason,
-        policyVersion,
-        failClosed: true,
-      });
-      await appendDispatchQueueAccepted(
-        queuePath,
-        { envelope, routing, path: "capability" },
-        qOpts,
-      );
-      const result = await dispatchUnifiedMessageAfterEnvelope(runtime, envelope, tenantMemory, {
-        lockedCapabilityDecision: validated,
-      });
-      await appendDispatchQueueFinished(queuePath, result, qOpts);
-      return result;
-    }
-    const routing = routeMessage(envelope, runtime.routerConfig);
-    await appendDispatchQueueAccepted(queuePath, { envelope, routing, path: "lane" }, qOpts);
-    const result = await dispatchUnifiedMessageAfterEnvelope(runtime, envelope, tenantMemory);
-    await appendDispatchQueueFinished(queuePath, result, qOpts);
-    return result;
-  }
-
-  return dispatchUnifiedMessageAfterEnvelope(runtime, envelope, tenantMemory);
+  const envelope = createUnifiedEnvelopeForDispatch(input);
+  return dispatchUnifiedEnvelope(runtime, envelope);
 }

@@ -114,8 +114,6 @@ async function main() {
   const emergencyPath = await newestMatching(evidenceDir, "emergency-rollback-bundle-", ".json");
   const h4CloseoutPath = await newestMatching(evidenceDir, "h4-closeout-evidence-", ".json");
 
-  const h4CloseoutPath = await newestMatching(evidenceDir, "h4-closeout-evidence-", ".json");
-
   const pruneDryPath = path.join(evidenceDir, `evidence-prune-dry-run-${stamp}.json`);
   const pruneTtlRaw = Number(process.env.UNIFIED_EVIDENCE_PRUNE_TTL_DAYS ?? "");
   const pruneTtl = Number.isFinite(pruneTtlRaw) && pruneTtlRaw >= 0 ? Math.trunc(pruneTtlRaw) : 30;

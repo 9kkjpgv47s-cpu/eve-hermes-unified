@@ -386,6 +386,19 @@ async function seedHorizonStatus(statusPath: string): Promise<void> {
           H3: { status: "planned", summary: "H3 planned" },
           H4: { status: "planned", summary: "H4 planned" },
           H5: { status: "planned", summary: "H5 planned" },
+          H6: { status: "planned", summary: "H6 planned" },
+          H7: { status: "planned", summary: "H7 planned" },
+          H8: { status: "planned", summary: "H8 planned" },
+          H9: { status: "planned", summary: "H9 planned" },
+          H10: { status: "planned", summary: "H10 planned" },
+          H11: { status: "planned", summary: "H11 planned" },
+          H12: { status: "planned", summary: "H12 planned" },
+
+          H13: { status: "planned", summary: "H13 planned" },
+
+          H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
+          H16: { status: "planned", summary: "H16 planned" },
         },
         history: [
           {
@@ -549,7 +562,6 @@ describe("validate-horizon-closeout.mjs (H2)", () => {
             id: "h2-drill-suite",
             pass: false,
             checks: expect.arrayContaining([
-              expect.stringContaining("horizon_drill_suite_schema_invalid:checks must be an object"),
               expect.stringContaining("h2_drill_suite_schema_invalid:checks must be an object"),
             ]),
           }),

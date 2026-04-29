@@ -4,13 +4,24 @@ import path from "node:path";
 import { validateManifestSchema } from "./validate-manifest-schema.mjs";
 import { validateHorizonStatus } from "./validate-horizon-status.mjs";
 
-const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6"];
+const HORIZON_SEQUENCE = ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13", "H14", "H15", "H16"];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
   H2: "canary",
   H3: "majority",
   H4: "full",
   H5: "full",
+  H6: "full",
+  H7: "full",
+  H8: "full",
+  H9: "full",
+  H10: "full",
+  H11: "full",
+  H12: "full",
+  H13: "full",
+  H14: "full",
+  H15: "full",
+  H16: "full",
 };
 
 function isNonEmptyString(value) {
@@ -28,26 +39,6 @@ function deriveNextHorizon(sourceHorizon) {
     return "";
   }
   return HORIZON_SEQUENCE[sourceIndex + 1];
-}
-
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * Append legacy h2_* failure ids for tooling that still keys on H2-only names.
- * Pass criteria unchanged (duplicate checks still fail the same way).
- */
-function appendH2CompatFailureAliases(checks, horizonPrefix, h2Prefix) {
-  const re = new RegExp(`^${escapeRegExp(horizonPrefix)}`);
-  for (const c of [...checks]) {
-    if (typeof c !== "string") {
-      continue;
-    }
-    if (c.startsWith(`${horizonPrefix}_`) || c === horizonPrefix) {
-      checks.push(c.replace(re, h2Prefix));
-    }
-  }
 }
 
 function normalizeCommand(value) {
@@ -78,7 +69,7 @@ function readCommandOptionValue(tokens, optionNames) {
 
 function parseHorizonRunnerCommand(command) {
   const normalized = normalizeCommand(command);
-  const match = normalized.match(/^npm run run:h([1-5])-(closeout|promotion)(?:\s+.*)?$/);
+  const match = normalized.match(/^npm run run:h([1-6])-(closeout|promotion)(?:\s+.*)?$/);
   if (match) {
     const source = normalizeHorizon(`H${String(match[1])}`);
     const kind = String(match[2]);
@@ -291,15 +282,6 @@ function commandVerificationType(command) {
   if (command === "npm run validate:cutover-readiness") {
     return "pass-only";
   }
-  if (command === "npm run verify:h4-closeout-evidence") {
-    return "h4-closeout-evidence";
-  }
-  if (command === "npm run verify:h5-evidence-baseline") {
-    return "h5-evidence-baseline";
-  }
-  if (command === "npm run verify:evidence-prune") {
-    return "evidence-prune-run";
-  }
   if (command === "npm run run:h2-drill-suite") {
     return "h2-drill-suite";
   }
@@ -311,6 +293,81 @@ function commandVerificationType(command) {
   }
   if (command === "npm run validate:initial-scope") {
     return "initial-scope";
+  }
+  if (command === "node ./scripts/run-h5-closeout-evidence.mjs") {
+    return "h5-closeout-evidence";
+  }
+  if (command === "npm run verify:h5-evidence-baseline") {
+    return "h5-evidence-baseline";
+  }
+  if (command === "npm run verify:evidence-prune") {
+    return "evidence-prune-run";
+  }
+  if (command === "node ./scripts/run-h6-assurance-bundle.mjs") {
+    return "h6-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h7-assurance-bundle.mjs") {
+    return "h7-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h8-assurance-bundle.mjs") {
+    return "h8-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h9-assurance-bundle.mjs") {
+    return "h9-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h10-assurance-bundle.mjs") {
+    return "h10-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h11-assurance-bundle.mjs") {
+    return "h11-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h12-assurance-bundle.mjs") {
+    return "h12-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-post-h6-sustainment-loop.mjs") {
+    return "post-h6-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h7-sustainment-loop.mjs") {
+    return "post-h7-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h8-sustainment-loop.mjs") {
+    return "post-h8-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h9-sustainment-loop.mjs") {
+    return "post-h9-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h10-sustainment-loop.mjs") {
+    return "post-h10-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h11-sustainment-loop.mjs") {
+    return "post-h11-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-post-h12-sustainment-loop.mjs") {
+    return "post-h12-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-h13-assurance-bundle.mjs") {
+    return "h13-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-post-h13-sustainment-loop.mjs") {
+    return "post-h13-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-h14-assurance-bundle.mjs") {
+    return "h14-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-post-h14-sustainment-loop.mjs") {
+    return "post-h14-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-h15-assurance-bundle.mjs") {
+    return "h15-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-post-h15-sustainment-loop.mjs") {
+    return "post-h15-sustainment-loop";
+  }
+  if (command === "node ./scripts/run-h16-assurance-bundle.mjs") {
+    return "h16-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-post-h16-sustainment-loop.mjs") {
+    return "post-h16-sustainment-loop";
   }
   return "existence-only";
 }
@@ -593,36 +650,26 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     const schema = validateManifestSchema("h2-drill-suite", payload);
     const checks = [];
     if (!schema.valid) {
-      for (const error of schema.errors) {
-        checks.push(`horizon_drill_suite_schema_invalid:${error}`);
-        checks.push(`h2_drill_suite_schema_invalid:${error}`);
-      }
+      checks.push(...schema.errors.map((error) => `h2_drill_suite_schema_invalid:${error}`));
     }
     if (payload.pass !== true) {
-      checks.push("horizon_drill_suite_not_passed");
       checks.push("h2_drill_suite_not_passed");
     }
     if (payload?.checks?.canaryHoldPass !== true) {
-      checks.push("horizon_drill_canary_hold_failed");
       checks.push("h2_drill_canary_hold_failed");
     }
     if (payload?.checks?.majorityHoldPass !== true) {
-      checks.push("horizon_drill_majority_hold_failed");
       checks.push("h2_drill_majority_hold_failed");
     }
     if (payload?.checks?.rollbackSimulationPass !== true) {
-      checks.push("horizon_drill_rollback_simulation_failed");
       checks.push("h2_drill_rollback_simulation_failed");
     }
     if (payload?.checks?.rollbackSimulationTriggered !== true) {
-      checks.push("horizon_drill_rollback_simulation_not_triggered");
       checks.push("h2_drill_rollback_simulation_not_triggered");
     }
     if (payload?.checks?.rollbackPolicySourceConsistencySignalsReported !== true) {
-      checks.push("horizon_drill_rollback_source_consistency_signals_not_reported");
       checks.push("h2_drill_rollback_source_consistency_signals_not_reported");
     } else if (payload?.checks?.rollbackPolicySourceConsistencySignalsPass !== true) {
-      checks.push("horizon_drill_rollback_source_consistency_signals_not_passed");
       checks.push("h2_drill_rollback_source_consistency_signals_not_passed");
     }
     return { pass: checks.length === 0, checks };
@@ -715,7 +762,6 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     } else if (!sourceConsistencyPropagationPassed.pass) {
       checks.push("horizon_closeout_run_supervised_stage_goal_policy_source_consistency_not_passed");
     }
-    appendH2CompatFailureAliases(checks, "horizon_closeout_run", "h2_closeout_run");
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "horizon-promotion-run") {
@@ -814,7 +860,6 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
         "horizon_promotion_run_closeout_run_supervised_stage_goal_policy_source_consistency_not_passed",
       );
     }
-    appendH2CompatFailureAliases(checks, "horizon_promotion_run", "h2_promotion_run");
     return { pass: checks.length === 0, checks };
   }
   if (verificationType === "rollback-threshold-calibration") {
@@ -888,23 +933,48 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
-  if (verificationType === "h4-closeout-evidence") {
-    const schema = validateManifestSchema("h4-closeout-evidence", payload);
+  if (verificationType === "initial-scope") {
     const checks = [];
-    if (!schema.valid) {
-      checks.push(...schema.errors.map((error) => `h4_closeout_evidence_schema_invalid:${error}`));
-    }
     if (payload.pass !== true) {
-      checks.push("h4_closeout_evidence_not_passed");
+      checks.push("initial_scope_not_passed");
     }
-    if (payload?.checks?.dispatchFixtureConformancePass !== true) {
-      checks.push("h4_closeout_dispatch_fixture_conformance_not_passed");
+    const initialScopeGoalPolicyValidation = resolveInitialScopeGoalPolicyValidationState(payload);
+    if (!initialScopeGoalPolicyValidation.reported) {
+      checks.push("initial_scope_goal_policy_validation_not_reported");
+    } else if (!initialScopeGoalPolicyValidation.pass) {
+      checks.push("initial_scope_goal_policy_validation_not_passed");
     }
-    if (payload?.checks?.memoryAuditReportPass !== true) {
-      checks.push("h4_closeout_memory_audit_not_passed");
+    const initialScopeGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(payload, [
+      "releaseReadinessGoalPolicySourceConsistencyPassed",
+      "releaseReadinessGoalPolicySourceConsistencyPass",
+    ]);
+    if (!initialScopeGoalPolicySourceConsistency.reported) {
+      checks.push("initial_scope_goal_policy_source_consistency_not_reported");
+    } else if (!initialScopeGoalPolicySourceConsistency.pass) {
+      checks.push("initial_scope_goal_policy_source_consistency_not_passed");
     }
-    if (payload?.checks?.emergencyRollbackBundleSchemaPass === false) {
-      checks.push("h4_closeout_emergency_rollback_bundle_schema_not_passed");
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h5-closeout-evidence") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h5_closeout_evidence_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.tenantIsolationExitPass !== true) {
+      checks.push("h5_closeout_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverExitPass !== true) {
+      checks.push("h5_closeout_region_failover_not_passed");
+    }
+    if (signal.remediationExitPass !== true) {
+      checks.push("h5_closeout_remediation_runner_not_passed");
+    }
+    if (signal.h5EvidenceBaselinePass !== true) {
+      checks.push("h5_closeout_evidence_baseline_not_passed");
+    }
+    if (signal.evidencePruneDryRunPass !== true) {
+      checks.push("h5_closeout_evidence_prune_dry_run_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -954,25 +1024,452 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
-  if (verificationType === "initial-scope") {
+  if (verificationType === "h6-assurance-bundle") {
     const checks = [];
     if (payload.pass !== true) {
-      checks.push("initial_scope_not_passed");
+      checks.push("h6_assurance_bundle_not_passed");
     }
-    const initialScopeGoalPolicyValidation = resolveInitialScopeGoalPolicyValidationState(payload);
-    if (!initialScopeGoalPolicyValidation.reported) {
-      checks.push("initial_scope_goal_policy_validation_not_reported");
-    } else if (!initialScopeGoalPolicyValidation.pass) {
-      checks.push("initial_scope_goal_policy_validation_not_passed");
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("h6_assurance_horizon_status_not_passed");
     }
-    const initialScopeGoalPolicySourceConsistency = resolveGoalPolicySourceConsistencyState(payload, [
-      "releaseReadinessGoalPolicySourceConsistencyPassed",
-      "releaseReadinessGoalPolicySourceConsistencyPass",
-    ]);
-    if (!initialScopeGoalPolicySourceConsistency.reported) {
-      checks.push("initial_scope_goal_policy_source_consistency_not_reported");
-    } else if (!initialScopeGoalPolicySourceConsistency.pass) {
-      checks.push("initial_scope_goal_policy_source_consistency_not_passed");
+    if (signal.tenantIsolationPass !== true) {
+      checks.push("h6_assurance_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverPass !== true) {
+      checks.push("h6_assurance_region_failover_not_passed");
+    }
+    if (signal.unifiedEntrypointsPass !== true) {
+      checks.push("h6_assurance_unified_entrypoints_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h7-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h7_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("h7_assurance_horizon_status_not_passed");
+    }
+    if (signal.tenantIsolationPass !== true) {
+      checks.push("h7_assurance_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverPass !== true) {
+      checks.push("h7_assurance_region_failover_not_passed");
+    }
+    if (signal.unifiedEntrypointsPass !== true) {
+      checks.push("h7_assurance_unified_entrypoints_not_passed");
+    }
+    if (signal.auditRotationPass !== true) {
+      checks.push("h7_assurance_audit_rotation_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h8-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h8_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("h8_assurance_horizon_status_not_passed");
+    }
+    if (signal.tenantIsolationPass !== true) {
+      checks.push("h8_assurance_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverPass !== true) {
+      checks.push("h8_assurance_region_failover_not_passed");
+    }
+    if (signal.unifiedEntrypointsPass !== true) {
+      checks.push("h8_assurance_unified_entrypoints_not_passed");
+    }
+    if (signal.auditRotationPass !== true) {
+      checks.push("h8_assurance_audit_rotation_not_passed");
+    }
+    if (signal.capabilityPolicyAuditPass !== true) {
+      checks.push("h8_assurance_capability_policy_audit_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h9-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h9_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("h9_assurance_horizon_status_not_passed");
+    }
+    if (signal.tenantIsolationPass !== true) {
+      checks.push("h9_assurance_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverPass !== true) {
+      checks.push("h9_assurance_region_failover_not_passed");
+    }
+    if (signal.unifiedEntrypointsPass !== true) {
+      checks.push("h9_assurance_unified_entrypoints_not_passed");
+    }
+    if (signal.auditRotationPass !== true) {
+      checks.push("h9_assurance_audit_rotation_not_passed");
+    }
+    if (signal.capabilityPolicyAuditPass !== true) {
+      checks.push("h9_assurance_capability_policy_audit_not_passed");
+    }
+    if (signal.memoryAtomicPersistencePass !== true) {
+      checks.push("h9_assurance_memory_atomic_persistence_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h10-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h10_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("h10_assurance_horizon_status_not_passed");
+    }
+    if (signal.tenantIsolationPass !== true) {
+      checks.push("h10_assurance_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverPass !== true) {
+      checks.push("h10_assurance_region_failover_not_passed");
+    }
+    if (signal.unifiedEntrypointsPass !== true) {
+      checks.push("h10_assurance_unified_entrypoints_not_passed");
+    }
+    if (signal.auditRotationPass !== true) {
+      checks.push("h10_assurance_audit_rotation_not_passed");
+    }
+    if (signal.capabilityPolicyAuditPass !== true) {
+      checks.push("h10_assurance_capability_policy_audit_not_passed");
+    }
+    if (signal.memoryAtomicPersistencePass !== true) {
+      checks.push("h10_assurance_memory_atomic_persistence_not_passed");
+    }
+    if (signal.dispatchDurabilityQueueRetentionPass !== true) {
+      checks.push("h10_assurance_dispatch_durability_queue_retention_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h11-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h11_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("h11_assurance_horizon_status_not_passed");
+    }
+    if (signal.tenantIsolationPass !== true) {
+      checks.push("h11_assurance_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverPass !== true) {
+      checks.push("h11_assurance_region_failover_not_passed");
+    }
+    if (signal.unifiedEntrypointsPass !== true) {
+      checks.push("h11_assurance_unified_entrypoints_not_passed");
+    }
+    if (signal.auditRotationPass !== true) {
+      checks.push("h11_assurance_audit_rotation_not_passed");
+    }
+    if (signal.capabilityPolicyAuditPass !== true) {
+      checks.push("h11_assurance_capability_policy_audit_not_passed");
+    }
+    if (signal.memoryAtomicPersistencePass !== true) {
+      checks.push("h11_assurance_memory_atomic_persistence_not_passed");
+    }
+    if (signal.dispatchDurabilityQueueRetentionPass !== true) {
+      checks.push("h11_assurance_dispatch_durability_queue_retention_not_passed");
+    }
+    if (signal.capabilityPolicyAuditRotationPass !== true) {
+      checks.push("h11_assurance_capability_policy_audit_rotation_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h12-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h12_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("h12_assurance_horizon_status_not_passed");
+    }
+    if (signal.tenantIsolationPass !== true) {
+      checks.push("h12_assurance_tenant_isolation_not_passed");
+    }
+    if (signal.regionFailoverPass !== true) {
+      checks.push("h12_assurance_region_failover_not_passed");
+    }
+    if (signal.unifiedEntrypointsPass !== true) {
+      checks.push("h12_assurance_unified_entrypoints_not_passed");
+    }
+    if (signal.auditRotationPass !== true) {
+      checks.push("h12_assurance_audit_rotation_not_passed");
+    }
+    if (signal.capabilityPolicyAuditPass !== true) {
+      checks.push("h12_assurance_capability_policy_audit_not_passed");
+    }
+    if (signal.memoryAtomicPersistencePass !== true) {
+      checks.push("h12_assurance_memory_atomic_persistence_not_passed");
+    }
+    if (signal.dispatchDurabilityQueueRetentionPass !== true) {
+      checks.push("h12_assurance_dispatch_durability_queue_retention_not_passed");
+    }
+    if (signal.capabilityPolicyAuditRotationPass !== true) {
+      checks.push("h12_assurance_capability_policy_audit_rotation_not_passed");
+    }
+    if (signal.dispatchDurabilityQueueReplayLimitPass !== true) {
+      checks.push("h12_assurance_dispatch_durability_queue_replay_limit_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h13-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h13_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h12AssuranceBundlePass !== true) {
+      checks.push("h13_assurance_h12_bundle_not_passed");
+    }
+    if (signal.ciSoakSloDriftGatePass !== true) {
+      checks.push("h13_assurance_ci_soak_slo_drift_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h14-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h14_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h13AssuranceBundlePass !== true) {
+      checks.push("h14_assurance_h13_bundle_not_passed");
+    }
+    if (signal.shellUnifiedDispatchScriptsPass !== true) {
+      checks.push("h14_assurance_shell_unified_dispatch_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h15-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h15_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h14AssuranceBundlePass !== true) {
+      checks.push("h15_assurance_h14_bundle_not_passed");
+    }
+    if (signal.shellUnifiedDispatchCiScanPass !== true) {
+      checks.push("h15_assurance_shell_unified_dispatch_ci_scan_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "h16-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h16_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h15AssuranceBundlePass !== true) {
+      checks.push("h16_assurance_h15_bundle_not_passed");
+    }
+    if (signal.goalPolicyFileValidationPass !== true) {
+      checks.push("h16_assurance_goal_policy_file_validation_not_passed");
+    }
+    if (signal.manifestSchemasPass !== true) {
+      checks.push("h16_assurance_manifest_schemas_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h6-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h6_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h6_horizon_status_not_passed");
+    }
+    if (signal.h6AssuranceBundlePass !== true) {
+      checks.push("post_h6_h6_assurance_bundle_not_passed");
+    }
+    if (signal.h6CloseoutGatePass !== true) {
+      checks.push("post_h6_h6_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h7-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h7_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h7_horizon_status_not_passed");
+    }
+    if (signal.h7AssuranceBundlePass !== true) {
+      checks.push("post_h7_h7_assurance_bundle_not_passed");
+    }
+    if (signal.h7CloseoutGatePass !== true) {
+      checks.push("post_h7_h7_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h8-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h8_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h8_horizon_status_not_passed");
+    }
+    if (signal.h8AssuranceBundlePass !== true) {
+      checks.push("post_h8_h8_assurance_bundle_not_passed");
+    }
+    if (signal.h8CloseoutGatePass !== true) {
+      checks.push("post_h8_h8_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h9-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h9_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h9_horizon_status_not_passed");
+    }
+    if (signal.h9AssuranceBundlePass !== true) {
+      checks.push("post_h9_h9_assurance_bundle_not_passed");
+    }
+    if (signal.h9CloseoutGatePass !== true) {
+      checks.push("post_h9_h9_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h10-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h10_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h10_horizon_status_not_passed");
+    }
+    if (signal.h10AssuranceBundlePass !== true) {
+      checks.push("post_h10_h10_assurance_bundle_not_passed");
+    }
+    if (signal.h10CloseoutGatePass !== true) {
+      checks.push("post_h10_h10_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h11-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h11_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h11_horizon_status_not_passed");
+    }
+    if (signal.h11AssuranceBundlePass !== true) {
+      checks.push("post_h11_h11_assurance_bundle_not_passed");
+    }
+    if (signal.h11CloseoutGatePass !== true) {
+      checks.push("post_h11_h11_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h12-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h12_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h12_horizon_status_not_passed");
+    }
+    if (signal.h12AssuranceBundlePass !== true) {
+      checks.push("post_h12_h12_assurance_bundle_not_passed");
+    }
+    if (signal.h12CloseoutGatePass !== true) {
+      checks.push("post_h12_h12_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h13-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h13_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h13_horizon_status_not_passed");
+    }
+    if (signal.h13AssuranceBundlePass !== true) {
+      checks.push("post_h13_h13_assurance_bundle_not_passed");
+    }
+    if (signal.h13CloseoutGatePass !== true) {
+      checks.push("post_h13_h13_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h14-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h14_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h14_horizon_status_not_passed");
+    }
+    if (signal.h14AssuranceBundlePass !== true) {
+      checks.push("post_h14_h14_assurance_bundle_not_passed");
+    }
+    if (signal.h14CloseoutGatePass !== true) {
+      checks.push("post_h14_h14_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h15-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h15_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h15_horizon_status_not_passed");
+    }
+    if (signal.h15AssuranceBundlePass !== true) {
+      checks.push("post_h15_h15_assurance_bundle_not_passed");
+    }
+    if (signal.h15CloseoutGatePass !== true) {
+      checks.push("post_h15_h15_closeout_gate_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
+  if (verificationType === "post-h16-sustainment-loop") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("post_h16_sustainment_loop_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.horizonStatusPass !== true) {
+      checks.push("post_h16_horizon_status_not_passed");
+    }
+    if (signal.h16AssuranceBundlePass !== true) {
+      checks.push("post_h16_h16_assurance_bundle_not_passed");
+    }
+    if (signal.h16CloseoutGatePass !== true) {
+      checks.push("post_h16_h16_closeout_gate_not_passed");
     }
     return { pass: checks.length === 0, checks };
   }
@@ -1041,51 +1538,65 @@ async function main() {
       failures.push(`missing_horizon_state:${targetHorizon}`);
     }
 
-    const stagePromotionPath = await newestFileInDir(
-      evidenceDir,
-      "stage-promotion-readiness-",
-    );
-    if (!isNonEmptyString(stagePromotionPath)) {
-      stagePromotionEvidence.checks.push("missing_stage_promotion_artifact");
-      failures.push("missing_stage_promotion_readiness_artifact");
-    } else {
-      stagePromotionEvidence.path = stagePromotionPath;
-      stagePromotionEvidence.present = true;
-      const stagePromotionPayload = await readJson(stagePromotionPath);
-      const stagePromotionSchema = validateManifestSchema(
-        "stage-promotion-readiness",
-        stagePromotionPayload,
+    const nextHorizonStateEntry =
+      nextHorizon && horizonStatus?.horizonStates?.[nextHorizon]
+        ? horizonStatus.horizonStates[nextHorizon]
+        : null;
+    /** Skip stage-promotion artifact when there is no next horizon, closing out terminal H16, or next horizon already completed (retroactive closeout). */
+    const skipStagePromotionReadiness =
+      derivedNext === "" ||
+      targetHorizon === "H16" ||
+      Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
+
+    if (!skipStagePromotionReadiness) {
+      const stagePromotionPath = await newestFileInDir(
+        evidenceDir,
+        "stage-promotion-readiness-",
       );
-      stagePromotionEvidence.schemaValid = stagePromotionSchema.valid;
-      stagePromotionEvidence.schemaErrors = stagePromotionSchema.valid
-        ? []
-        : [...stagePromotionSchema.errors];
-      if (!stagePromotionSchema.valid) {
-        stagePromotionEvidence.pass = false;
-        stagePromotionEvidence.checks.push(
-          ...stagePromotionSchema.errors.map((error) => `stage_promotion_schema_invalid:${error}`),
-        );
-        failures.push("stage_promotion_schema_invalid");
-      }
-      if (stagePromotionPayload?.pass === true) {
-        // Preserve fail-closed schema verdict even if payload.pass is true.
-        stagePromotionEvidence.pass = stagePromotionEvidence.schemaValid;
-        const stagePromotionGoalPolicySignals = resolveStagePromotionGoalPolicySignals(
+      if (!isNonEmptyString(stagePromotionPath)) {
+        stagePromotionEvidence.checks.push("missing_stage_promotion_artifact");
+        failures.push("missing_stage_promotion_readiness_artifact");
+      } else {
+        stagePromotionEvidence.path = stagePromotionPath;
+        stagePromotionEvidence.present = true;
+        const stagePromotionPayload = await readJson(stagePromotionPath);
+        const stagePromotionSchema = validateManifestSchema(
+          "stage-promotion-readiness",
           stagePromotionPayload,
         );
-        if (!stagePromotionGoalPolicySignals.propagationReported) {
+        stagePromotionEvidence.schemaValid = stagePromotionSchema.valid;
+        stagePromotionEvidence.schemaErrors = stagePromotionSchema.valid
+          ? []
+          : [...stagePromotionSchema.errors];
+        if (!stagePromotionSchema.valid) {
           stagePromotionEvidence.pass = false;
-          stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_reported");
-          failures.push("stage_promotion_goal_policy_source_consistency_not_reported");
-        } else if (!stagePromotionGoalPolicySignals.propagationPassed) {
-          stagePromotionEvidence.pass = false;
-          stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_passed");
-          failures.push("stage_promotion_goal_policy_source_consistency_not_passed");
+          stagePromotionEvidence.checks.push(
+            ...stagePromotionSchema.errors.map((error) => `stage_promotion_schema_invalid:${error}`),
+          );
+          failures.push("stage_promotion_schema_invalid");
         }
-      } else {
-        stagePromotionEvidence.checks.push("stage_promotion_not_passed");
-        failures.push("stage_promotion_readiness_not_passed");
+        if (stagePromotionPayload?.pass === true) {
+          // Preserve fail-closed schema verdict even if payload.pass is true.
+          stagePromotionEvidence.pass = stagePromotionEvidence.schemaValid;
+          const stagePromotionGoalPolicySignals = resolveStagePromotionGoalPolicySignals(
+            stagePromotionPayload,
+          );
+          if (!stagePromotionGoalPolicySignals.propagationReported) {
+            stagePromotionEvidence.pass = false;
+            stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_reported");
+            failures.push("stage_promotion_goal_policy_source_consistency_not_reported");
+          } else if (!stagePromotionGoalPolicySignals.propagationPassed) {
+            stagePromotionEvidence.pass = false;
+            stagePromotionEvidence.checks.push("stage_promotion_goal_policy_source_consistency_not_passed");
+            failures.push("stage_promotion_goal_policy_source_consistency_not_passed");
+          }
+        } else {
+          stagePromotionEvidence.checks.push("stage_promotion_not_passed");
+          failures.push("stage_promotion_readiness_not_passed");
+        }
       }
+    } else {
+      stagePromotionEvidence.checks.push("skipped_stage_promotion_closeout");
     }
 
     const targetActions = Array.isArray(horizonStatus.nextActions)

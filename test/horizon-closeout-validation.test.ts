@@ -364,6 +364,19 @@ async function seedHorizonStatus(statusPath: string, mode: "h1-in-progress" | "h
           H3: { status: "planned", summary: "H3" },
           H4: { status: "planned", summary: "H4" },
           H5: { status: "planned", summary: "H5" },
+          H6: { status: "planned", summary: "H6 planned" },
+          H7: { status: "planned", summary: "H7 planned" },
+          H8: { status: "planned", summary: "H8 planned" },
+          H9: { status: "planned", summary: "H9 planned" },
+          H10: { status: "planned", summary: "H10 planned" },
+          H11: { status: "planned", summary: "H11 planned" },
+          H12: { status: "planned", summary: "H12 planned" },
+
+          H13: { status: "planned", summary: "H13 planned" },
+
+          H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
+          H16: { status: "planned", summary: "H16 planned" },
         },
         history: [
           {
@@ -837,7 +850,20 @@ describe("validate-horizon-closeout.mjs", () => {
               H3: { status: "in_progress", summary: "H3 active" },
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
-            },
+              H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
+              H8: { status: "planned", summary: "H8 planned" },
+              H9: { status: "planned", summary: "H9 planned" },
+              H10: { status: "planned", summary: "H10 planned" },
+              H11: { status: "planned", summary: "H11 planned" },
+              H12: { status: "planned", summary: "H12 planned" },
+
+              H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
+          H16: { status: "planned", summary: "H16 planned" },
+        },
             history: [
               {
                 timestamp: new Date().toISOString(),
@@ -977,7 +1003,20 @@ describe("validate-horizon-closeout.mjs", () => {
               H3: { status: "in_progress", summary: "H3 active" },
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
-            },
+              H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
+              H8: { status: "planned", summary: "H8 planned" },
+              H9: { status: "planned", summary: "H9 planned" },
+              H10: { status: "planned", summary: "H10 planned" },
+              H11: { status: "planned", summary: "H11 planned" },
+              H12: { status: "planned", summary: "H12 planned" },
+
+              H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
+          H16: { status: "planned", summary: "H16 planned" },
+        },
             history: [
               {
                 timestamp: new Date().toISOString(),
@@ -1128,7 +1167,20 @@ describe("validate-horizon-closeout.mjs", () => {
               H3: { status: "in_progress", summary: "H3 active" },
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
-            },
+              H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
+              H8: { status: "planned", summary: "H8 planned" },
+              H9: { status: "planned", summary: "H9 planned" },
+              H10: { status: "planned", summary: "H10 planned" },
+              H11: { status: "planned", summary: "H11 planned" },
+              H12: { status: "planned", summary: "H12 planned" },
+
+              H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
+          H16: { status: "planned", summary: "H16 planned" },
+        },
             history: [
               {
                 timestamp: new Date().toISOString(),
@@ -1283,7 +1335,20 @@ describe("validate-horizon-closeout.mjs", () => {
               H3: { status: "in_progress", summary: "H3 active" },
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
-            },
+              H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
+              H8: { status: "planned", summary: "H8 planned" },
+              H9: { status: "planned", summary: "H9 planned" },
+              H10: { status: "planned", summary: "H10 planned" },
+              H11: { status: "planned", summary: "H11 planned" },
+              H12: { status: "planned", summary: "H12 planned" },
+
+              H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
+          H16: { status: "planned", summary: "H16 planned" },
+        },
             history: [
               {
                 timestamp: new Date().toISOString(),
@@ -1418,7 +1483,20 @@ describe("validate-horizon-closeout.mjs", () => {
               H3: { status: "in_progress", summary: "H3 active" },
               H4: { status: "planned", summary: "H4 planned" },
               H5: { status: "planned", summary: "H5 planned" },
-            },
+              H6: { status: "planned", summary: "H6 planned" },
+              H7: { status: "planned", summary: "H7 planned" },
+              H8: { status: "planned", summary: "H8 planned" },
+              H9: { status: "planned", summary: "H9 planned" },
+              H10: { status: "planned", summary: "H10 planned" },
+              H11: { status: "planned", summary: "H11 planned" },
+              H12: { status: "planned", summary: "H12 planned" },
+
+              H13: { status: "planned", summary: "H13 planned" },
+
+              H14: { status: "planned", summary: "H14 planned" },
+          H15: { status: "planned", summary: "H15 planned" },
+          H16: { status: "planned", summary: "H16 planned" },
+        },
             history: [
               {
                 timestamp: new Date().toISOString(),

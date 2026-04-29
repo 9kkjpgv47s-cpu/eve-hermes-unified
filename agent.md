@@ -8,18 +8,18 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Current State Snapshot
 
-- **Active horizon:** `H24` **completed** per `docs/HORIZON_STATUS.json` (terminal: **`run:h24-assurance-bundle`** = **`run:h23-assurance-bundle`** + **`validate:manifest-schemas`** over **`evidence/`**; **H23** = **H22** + **`validate-horizon-status`** on `docs/HORIZON_STATUS.json`; chain continues through **H16**).
+- **Active horizon:** `H25` **completed** per `docs/HORIZON_STATUS.json` (terminal: **`run:h25-assurance-bundle`** = **`run:h24-assurance-bundle`** + **`validate-horizon-status`** on `docs/HORIZON_STATUS.json`; **H24** = **H23** + **`validate:manifest-schemas`**; chain continues through **H16**).
 - **H5 evidence retention (h5-action-10):** `scripts/prune-evidence.mjs` with `npm run prune:evidence` / `npm run verify:evidence-prune`, manifest type **`evidence-prune-run`**, **`h5-evidence-baseline.mjs`** embeds prune **dry-run** and requires **`checks.evidencePruneDryRunPass`**. **`run-h5-closeout-evidence.mjs`** chains remediation playbook + baseline so H5 closeout evidence carries the same signals.
-- **Post-H16 sustainment:** `npm run verify:sustainment-loop` runs **`validate:horizon-status`** + **`run:h24-assurance-bundle`** + **`validate:evidence-volume`**. Closeout gates (**`validate:h17-closeout`** … **`validate:h24-closeout`**) consume the sustainment manifest and must **not** be nested inside the loop.
-- **Goal policy window:** `npm run validate:goal-policy-file` defaults to **H2→H24** (`package.json`).
+- **Post-H16 sustainment:** `npm run verify:sustainment-loop` runs **`validate:horizon-status`** + **`run:h25-assurance-bundle`** + **`validate:evidence-volume`**. Closeout gates (**`validate:h17-closeout`** … **`validate:h25-closeout`**) consume the sustainment manifest and must **not** be nested inside the loop.
+- **Goal policy window:** `npm run validate:goal-policy-file` defaults to **H2→H25** (`package.json`).
 - **CI:** `unified-ci` runs advisory **`verify:evidence-prune`** (TTL `0`), **`bundle:h4-closeout-evidence`**, **`bundle:h5-evidence-baseline`**, then **release-readiness** with **`UNIFIED_RELEASE_READINESS_REQUIRE_H5_BASELINE=1`** when configured in `validate-release-readiness.sh`.
 
 ## What Was Just Completed (this chunk)
 
-1. **`run-h24-assurance-bundle.mjs`**: H23 + **`validate:manifest-schemas`**; **`package.json`**: **`run:h24-assurance-bundle`**, **`validate:h24-closeout`**, **`validate:goal-policy-file`** **`--until-horizon H24`**; **`run-h16-assurance-bundle`** invokes goal-policy through **H24**; sustainment runs **`run:h24-assurance-bundle`**.
-2. **`GOAL_POLICIES.json` / `HORIZON_STATUS.json`**: **`H23->H24`**; **`h24-action-*`**; H24 required evidence; predecessor **`requiredEvidence`** horizons extended through **H24**; embedded **`goalPolicies`** aligned with file; **`validate-horizon-status.mjs`** **`VALID_HORIZONS`** + goal-policy regex **H1–H24**.
-3. **`validate-horizon-closeout.mjs`**: **`H24`** in sequence and stage map; **`h24-assurance-bundle`** verification; stage-promotion skip for **H24**.
-4. **`evaluate-auto-rollback-policy.mjs`**: **H24** uses **full** stage.
+1. **`run-h25-assurance-bundle.mjs`**: H24 + final horizon-status recheck; **`package.json`**: **`run:h25-assurance-bundle`**, **`validate:h25-closeout`**, **`validate:goal-policy-file`** **`--until-horizon H25`**; **`run-h16-assurance-bundle`** invokes goal-policy through **H25**; sustainment runs **`run:h25-assurance-bundle`**.
+2. **`GOAL_POLICIES.json` / `HORIZON_STATUS.json`**: **`H24->H25`**; **`h25-action-*`**; H25 required evidence; predecessor **`requiredEvidence`** horizons extended through **H25**; embedded **`goalPolicies`** aligned with file; **`validate-horizon-status.mjs`** **`VALID_HORIZONS`** + goal-policy regex **H1–H25**.
+3. **`validate-horizon-closeout.mjs`**: **`H25`** in sequence and stage map; **`h25-assurance-bundle`** verification; stage-promotion skip for **H25**.
+4. **`evaluate-auto-rollback-policy.mjs`**: **H25** uses **full** stage.
 5. **Docs**: `agent.md`, `docs/CLOUD_AGENT_HANDOFF.md`, `docs/MASTER_EXECUTION_CHECKLIST.md` (update after edits).
 
 ## Read Order
@@ -28,8 +28,8 @@ Continue long-horizon convergence work for Eve/Hermes with strict fail-closed sa
 
 ## Immediate Next Targets
 
-1. **H25** runway (extend sequences, **`H24->H25`** in both policy sources, **`run-h25-assurance-bundle`**, bump **`--until-horizon`**, point sustainment at new terminal; **verify `HORIZON_SEQUENCE` has no skipped integers** when appending).
-2. **`npm run validate:h24-closeout`** after evidence changes affecting H24 required artifacts.
+1. **H26** runway (extend sequences, **`H25->H26`** in both policy sources, **`run-h26-assurance-bundle`**, bump **`--until-horizon`**, point sustainment at new terminal; **verify `HORIZON_SEQUENCE` has no skipped integers** when appending).
+2. **`npm run validate:h25-closeout`** after evidence changes affecting H25 required artifacts.
 3. **`npm run verify:sustainment-loop`** after changing assurance scripts.
 
 ## Validation Pack

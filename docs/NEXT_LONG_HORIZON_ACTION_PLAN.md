@@ -286,7 +286,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h11-assurance-bundle`** passes and artifact matches **`evidence/h11-assurance-bundle-*.json`** (includes **`capabilityPolicyAuditRotationPass`**).
-- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H16**).
+- **`npm run validate:h11-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H17**).
 
 Primary risks:
 
@@ -309,7 +309,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h12-assurance-bundle`** passes and artifact matches **`evidence/h12-assurance-bundle-*.json`**.
-- **`npm run validate:h12-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H16**).
+- **`npm run validate:h12-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H17**).
 
 Primary risks:
 
@@ -332,7 +332,7 @@ Workstreams:
 Exit evidence:
 
 - **`npm run run:h13-assurance-bundle`** passes and artifact matches **`evidence/h13-assurance-bundle-*.json`**.
-- **`npm run validate:h13-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H16**).
+- **`npm run validate:h13-closeout`** passes when evidence is present (stage-promotion readiness skipped when the next horizon is already completed or when validating terminal **H17**).
 
 Primary risks:
 
@@ -397,23 +397,23 @@ Mitigations:
 
 - Scan skips **`#`** comment lines and blank lines; violations reference file and line number.
 
-### Post-H15 operations (sustainment; subsumed by H16 terminal chain)
+### Post-H15 operations (sustainment; subsumed by H17 terminal chain)
 
-After **H15** is marked completed, **`npm run run:h15-assurance-bundle`** remains the shell CI convergence path; terminal sustainment uses **Post-H16** below. Legacy: **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
+After **H15** is marked completed, **`npm run run:h15-assurance-bundle`** remains the shell CI convergence path; terminal sustainment uses **Post-H17** below. Legacy: **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
 
 ### Horizon H16 - Merge readiness policy gates (goal policy + manifest schemas)
 
-Goal: tie **merge-bundle readiness discipline** to executable assurance by chaining **`validate:goal-policy-file`** (full runway **H2→H16**) and **`validate:manifest-schemas`** on **`evidence/`** after the **H15** bundle, so horizon transitions stay aligned with machine-readable evidence shapes before **`validate:all`**.
+Goal: tie **merge-bundle readiness discipline** to executable assurance by chaining **`validate:goal-policy-file`** (full runway **H2→H17**) and **`validate:manifest-schemas`** on **`evidence/`** after the **H15** bundle, so horizon transitions stay aligned with machine-readable evidence shapes before **`validate:all`**.
 
 Workstreams:
 
 - **`npm run run:h16-assurance-bundle`**: **`run-h15-assurance-bundle.mjs`** + **`validate:goal-policy-file`** + **`validate:manifest-schemas`**; artifact includes **`goalPolicyFileValidationPass`** and **`manifestSchemasPass`**.
-- **`npm run validate:h16-closeout`**, **`npm run verify:sustainment-loop`** (post-H16), **`npm run validate:post-h16-sustainment-manifest`**.
+- **`npm run validate:h16-closeout`** (replay / legacy sustainment via **`verify:sustainment-loop:h16-legacy`**).
 
 Exit evidence:
 
 - **`npm run run:h16-assurance-bundle`** passes and artifact matches **`evidence/h16-assurance-bundle-*.json`**.
-- **`npm run validate:h16-closeout`** passes when evidence is present (**H16** is terminal: stage-promotion readiness skipped in closeout validator).
+- **`npm run validate:h16-closeout`** passes when evidence is present (retroactive closeout when **H17** is terminal).
 
 Primary risks:
 
@@ -423,9 +423,31 @@ Mitigations:
 
 - Run **H16** bundle after **H6**/tenant gates so baseline evidence exists.
 
-### Post-H16 operations (terminal sustainment)
+### Horizon H17 - Merge bundle operational assurance
 
-After **H16** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8). Optionally **`npm run validate:post-h16-sustainment-manifest`**. Legacy prior chains: **`verify:sustainment-loop:h15-legacy`** / **`validate:post-h15-sustainment-manifest`**, **`verify:sustainment-loop:h14-legacy`** … **`h6-legacy`**.
+Goal: after **`validate:release-readiness`** and **`validate:initial-scope`** produce merge inputs, **single-command** verification replaces standalone **`validate:merge-bundle`**, **`validate:manifest-schemas`**, and **`verify:merge-bundle`** steps so CI stays deduplicated and **`verify:sustainment-loop`** gates merge-bundle verification explicitly.
+
+Workstreams:
+
+- **`npm run run:h17-assurance-bundle`**: **`validate:merge-bundle`** + **`validate:manifest-schemas`** + **`verify:merge-bundle --latest --no-require-archive`** (reads **`bundle-verification-*.json`** or parses multi-line stdout for **`pass`**).
+- **`npm run validate:h17-closeout`**, **`npm run verify:sustainment-loop`** (post-H17), **`npm run validate:post-h17-sustainment-manifest`**.
+
+Exit evidence:
+
+- **`npm run run:h17-assurance-bundle`** passes and artifact matches **`evidence/h17-assurance-bundle-*.json`**.
+- **`npm run validate:h17-closeout`** passes when evidence is present (**H17** is terminal: stage-promotion readiness skipped in closeout validator).
+
+Primary risks:
+
+- **`validate:initial-scope`** fails if **`docs/MASTER_EXECUTION_CHECKLIST.md`** Phase 8 has unchecked boxes.
+
+Mitigations:
+
+- Keep Phase 8 operator checklist items **`[x]`** when the horizon is marked completed.
+
+### Post-H17 operations (terminal sustainment)
+
+After **H17** is marked completed, use **`npm run verify:sustainment-loop`** (see `docs/MASTER_EXECUTION_CHECKLIST.md` Phase 8). Optionally **`npm run validate:post-h17-sustainment-manifest`**. Legacy prior chains: **`verify:sustainment-loop:h16-legacy`** / **`validate:post-h16-sustainment-manifest`**, **`verify:sustainment-loop:h15-legacy`** … **`h6-legacy`**.
 
 ## Cross-Horizon Execution Rules
 
@@ -436,7 +458,7 @@ After **H16** is marked completed, use **`npm run verify:sustainment-loop`** (se
 
 ## Immediate Next Actions (archived H2 drill checklist)
 
-The roadmap horizons **H1–H16** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h16-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
+The roadmap horizons **H1–H17** are completed in `docs/HORIZON_STATUS.json`. For ongoing verification, use **`npm run verify:sustainment-loop`** and **`npm run validate:post-h17-sustainment-manifest`** (Phase 8 in `docs/MASTER_EXECUTION_CHECKLIST.md`). The steps below remain as a reference for **H2** stage-drill and promotion workflows.
 
 1. Run majority promotion drill via `npm run run:stage-drill -- --target-stage majority --dry-run --evidence-dir evidence` and capture report.
 2. Calibrate H2 rollback-policy thresholds using canary + majority drill outputs (success rate, trace rate, P95 latency) with:

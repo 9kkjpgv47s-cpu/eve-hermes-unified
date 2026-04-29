@@ -6,19 +6,19 @@ import { runCommandWithTimeout } from "../src/process/exec.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-describe("run-post-h16-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop npm script", async () => {
+describe("run-post-h16-sustainment-loop.mjs (legacy)", () => {
+  it("exposes verify:sustainment-loop:h16-legacy npm script", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h16-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop:h16-legacy"]).toContain("run-post-h16-sustainment-loop.mjs");
   });
 
   it(
-    "emits pass and structured checks in sustainment loop manifest",
+    "emits pass and structured checks in legacy sustainment loop manifest",
     async () => {
       const result = await runCommandWithTimeout(
         ["node", path.join(repoRoot, "scripts/run-post-h16-sustainment-loop.mjs")],
-        { timeoutMs: 360_000 },
+        { timeoutMs: 420_000 },
       );
       expect(result.code).toBe(0);
       const out = result.stdout.trim();
@@ -37,7 +37,7 @@ describe("run-post-h16-sustainment-loop.mjs", () => {
       expect(payload.checks?.h16AssuranceBundlePass).toBe(true);
       expect(payload.checks?.h16CloseoutGatePass).toBe(true);
     },
-    360_000,
+    420_000,
   );
 
   it("validate:post-h16-sustainment-manifest passes on latest loop output", async () => {

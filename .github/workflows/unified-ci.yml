@@ -39,14 +39,8 @@ jobs:
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: H16 sustainment assurance bundle (goal policy + manifest schemas + H15 gates)
+      - name: H16 sustainment assurance bundle (goal policy through H17 + manifest schemas + H15 gates)
         run: npm run run:h16-assurance-bundle
-
-      - name: Post-H16 sustainment loop (horizon + closeout gate)
-        run: npm run verify:sustainment-loop
-
-      - name: Validate post-H16 sustainment manifest
-        run: npm run validate:post-h16-sustainment-manifest
 
       - name: Build
         run: npm run build
@@ -87,17 +81,14 @@ jobs:
       - name: Initial scope gate
         run: npm run validate:initial-scope
 
-      - name: Merge bundle validation
-        env:
-          UNIFIED_MERGE_BUNDLE_RUN_RELEASE_READINESS: "0"
-          UNIFIED_MERGE_BUNDLE_RUN_INITIAL_SCOPE: "0"
-        run: npm run validate:merge-bundle
+      - name: H17 merge readiness assurance bundle
+        run: npm run run:h17-assurance-bundle
 
-      - name: Validate manifest schemas
-        run: npm run validate:manifest-schemas
+      - name: Post-H17 sustainment loop (horizon + closeout gate)
+        run: npm run verify:sustainment-loop
 
-      - name: Verify merge bundle package
-        run: npm run verify:merge-bundle
+      - name: Validate post-H17 sustainment manifest
+        run: npm run validate:post-h17-sustainment-manifest
 
       - name: Stage promotion readiness gate
         run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch

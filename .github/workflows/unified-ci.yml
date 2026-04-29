@@ -30,16 +30,10 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Unified adapter entrypoints gate
-        run: npm run validate:unified-entrypoints
-
-      - name: H5 tenant isolation and region failover gates
-        run: npm run validate:tenant-isolation && npm run rehearse:region-failover
-
       - name: H6 sustainment assurance bundle
         run: npm run run:h6-assurance-bundle
 
-      - name: H16 sustainment assurance bundle (goal policy through H19 + manifest schemas + H15 gates)
+      - name: H16 sustainment assurance bundle (goal policy through H20 + manifest schemas + H15 gates)
         run: npm run run:h16-assurance-bundle
 
       - name: Build
@@ -84,20 +78,17 @@ jobs:
       - name: H17 merge readiness assurance bundle
         run: npm run run:h17-assurance-bundle
 
-      - name: H18 progressive cutover rehearsal bundle
-        run: npm run run:h18-assurance-bundle
+      - name: H20 tenant/region + unified entrypoints + H18 cutover rehearsal assurance bundle
+        run: npm run run:h20-assurance-bundle
 
-      - name: Post-H19 sustainment loop (horizon + CI soak SLO + closeout gate)
+      - name: Post-H20 sustainment loop (horizon + CI soak SLO + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H19 sustainment manifest
-        run: npm run validate:post-h19-sustainment-manifest
+      - name: Validate post-H20 sustainment manifest
+        run: npm run validate:post-h20-sustainment-manifest
 
       - name: Stage promotion readiness gate
         run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch
-
-      - name: Validate horizon status metadata
-        run: npm run validate:horizon-status
 
       - name: Upload evidence artifacts
         uses: actions/upload-artifact@v4

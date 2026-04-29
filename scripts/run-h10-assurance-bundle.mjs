@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
  * Horizon H10 assurance bundle: H9 gates plus dispatch durability queue retention proof.
+ *
+ * Tenant isolation, region failover, and unified adapter entrypoints run in **`run-h20-assurance-bundle.mjs`** after **`validate:all`** + **`npm run build`**.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -36,18 +38,6 @@ const horizonStatus = runStep("validate_horizon_status", [
   "--file",
   path.join(root, "docs/HORIZON_STATUS.json"),
 ]);
-const tenantIsolation = runStep("validate_tenant_isolation", [
-  process.execPath,
-  path.join(root, "scripts/validate-tenant-isolation.mjs"),
-]);
-const regionFailover = runStep("rehearse_region_failover", [
-  "bash",
-  path.join(root, "scripts/region-failover-rehearsal.sh"),
-]);
-const unifiedEntrypoints = runStep("validate_unified_entrypoints", [
-  process.execPath,
-  path.join(root, "scripts/validate-unified-entrypoints.mjs"),
-]);
 const auditRotation = runStep("audit_log_rotation_tests", [
   process.execPath,
   path.join(root, "node_modules/vitest/vitest.mjs"),
@@ -78,33 +68,18 @@ const payload = {
   horizon: "H10",
   pass:
     horizonStatus.pass
-    && tenantIsolation.pass
-    && regionFailover.pass
-    && unifiedEntrypoints.pass
     && auditRotation.pass
     && capabilityPolicyAudit.pass
     && memoryAtomic.pass
     && durabilityRetention.pass,
   checks: {
     horizonStatusPass: horizonStatus.pass,
-    tenantIsolationPass: tenantIsolation.pass,
-    regionFailoverPass: regionFailover.pass,
-    unifiedEntrypointsPass: unifiedEntrypoints.pass,
     auditRotationPass: auditRotation.pass,
     capabilityPolicyAuditPass: capabilityPolicyAudit.pass,
     memoryAtomicPersistencePass: memoryAtomic.pass,
     dispatchDurabilityQueueRetentionPass: durabilityRetention.pass,
   },
-  steps: [
-    horizonStatus,
-    tenantIsolation,
-    regionFailover,
-    unifiedEntrypoints,
-    auditRotation,
-    capabilityPolicyAudit,
-    memoryAtomic,
-    durabilityRetention,
-  ],
+  steps: [horizonStatus, auditRotation, capabilityPolicyAudit, memoryAtomic, durabilityRetention],
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

@@ -85,9 +85,9 @@ Exit criteria:
 Exit criteria:
 - Initial project scope is merge-ready with executable confirmation.
 
-## Phase 8 - Post-H28 sustainment (continuous)
+## Phase 8 - Post-H29 sustainment (continuous)
 
-After horizon **H28** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
+After horizon **H29** is completed in `docs/HORIZON_STATUS.json`, operators and agents should periodically confirm the sustainment bundle still passes end-to-end:
 
 - [x] `npm run validate:horizon-status` exits `0`.
 - [x] `npm run run:h17-assurance-bundle` exits `0` and emits `evidence/h17-assurance-bundle-*.json`.
@@ -102,17 +102,18 @@ After horizon **H28** is completed in `docs/HORIZON_STATUS.json`, operators and 
 - [x] `npm run run:failure-injection-evidence` exits `0` and emits `evidence/failure-injection-evidence-*.json`.
 - [x] `npm run run:regression-eve-evidence` exits `0` and emits `evidence/regression-eve-evidence-*.json`.
 - [x] `npm run run:evidence-summary-evidence` exits `0` and emits `evidence/evidence-summary-evidence-*.json`.
-- [x] `npm run validate:h28-closeout` exits `0` (uses evidence under `evidence/`).
+- [x] `npm run run:evidence-gates-evidence` exits `0` and emits `evidence/evidence-gates-evidence-*.json`.
+- [x] `npm run validate:h29-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains post-H27 sustainment + evidence-summary gate evidence + H28 closeout and writes `evidence/post-h28-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains post-H28 sustainment + evidence-gates gate evidence + H29 closeout and writes `evidence/post-h29-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [x] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [x] `npm run validate:post-h28-sustainment-manifest` exits `0`.
+- [x] `npm run validate:post-h29-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h27-legacy`** / **`validate:post-h27-sustainment-manifest`** (H27 chain without evidence-summary artifact); **`npm run verify:sustainment-loop:h26-legacy`** / **`validate:post-h26-sustainment-manifest`**; **`verify:sustainment-loop:h25-legacy`** … **`h6-legacy`**.
+Historical sustainment: **`npm run verify:sustainment-loop:h28-legacy`** / **`validate:post-h28-sustainment-manifest`** (H28 chain without evidence-gates artifact); **`npm run verify:sustainment-loop:h27-legacy`** / **`validate:post-h27-sustainment-manifest`**; **`verify:sustainment-loop:h26-legacy`** … **`h6-legacy`**.
 
 Exit criteria:
 

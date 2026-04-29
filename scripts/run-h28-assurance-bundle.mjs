@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Horizon H28 terminal assurance bundle: **`validate:initial-scope`** then **`run-h27-assurance-bundle`**
+ * Horizon H28 assurance bundle (non-terminal vs **H29**): **`validate:initial-scope`** then **`run-h27-assurance-bundle`**
  * (horizon status + H26 chain). Folds the standalone **`validate:initial-scope`** unified-ci step into terminal assurance.
  *
- * Prerequisites: **`validate:release-readiness`** has populated **`evidence/release-readiness-*.json`**; **`validate:all`** artifacts under **`evidence/`**.
+ * Prerequisites: **`validate:release-readiness`** has populated **`evidence/release-readiness-*.json`** (or run inside **`run-h29-assurance-bundle`**); **`validate:all`** artifacts under **`evidence/`**.
  */
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";

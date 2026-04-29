@@ -47,7 +47,7 @@ jobs:
           HERMES_LAUNCH_ARGS: ""
         run: npm run validate:all
 
-      - name: Release readiness
+      - name: H29 terminal assurance bundle (release readiness gate + H28 chain)
         env:
           UNIFIED_RELEASE_READINESS_RUN_VALIDATE_ALL: "0"
           UNIFIED_RELEASE_READINESS_SKIP_TEST: "1"
@@ -64,16 +64,13 @@ jobs:
           EVE_DISPATCH_RESULT_PATH: /tmp/eve-dispatch.json
           HERMES_LAUNCH_COMMAND: /bin/true
           HERMES_LAUNCH_ARGS: ""
-        run: npm run validate:release-readiness
+        run: npm run run:h29-assurance-bundle
 
-      - name: H28 terminal assurance bundle (initial scope gate + H27 chain)
-        run: npm run run:h28-assurance-bundle
-
-      - name: Post-H28 sustainment loop (H28 bundle + closeout gate)
+      - name: Post-H29 sustainment loop (H29 bundle + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H28 sustainment manifest
-        run: npm run validate:post-h28-sustainment-manifest
+      - name: Validate post-H29 sustainment manifest
+        run: npm run validate:post-h29-sustainment-manifest
 
       - name: Upload evidence artifacts
         uses: actions/upload-artifact@v4

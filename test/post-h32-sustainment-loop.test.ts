@@ -61,19 +61,19 @@ async function seedMergeBundleInputs() {
   expect(init.code).toBe(0);
 }
 
-describe("run-post-h30-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop:h30-legacy npm script", async () => {
+describe("run-post-h32-sustainment-loop.mjs", () => {
+  it("exposes verify:sustainment-loop npm script (post-H32 terminal chain)", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop:h30-legacy"]).toContain("run-post-h30-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h32-sustainment-loop.mjs");
   });
 
   it(
-    "emits pass and structured checks in post-H30 sustainment loop manifest",
+    "emits pass and structured checks in post-H32 sustainment loop manifest",
     async () => {
       await seedMergeBundleInputs();
       const result = await runCommandWithTimeout(
-        ["node", path.join(repoRoot, "scripts/run-post-h30-sustainment-loop.mjs")],
+        ["node", path.join(repoRoot, "scripts/run-post-h32-sustainment-loop.mjs")],
         {
           timeoutMs: 900_000,
           env: mergeEnv({ UNIFIED_CI_SOAK_ITERATIONS: "15" }),
@@ -93,8 +93,8 @@ describe("run-post-h30-sustainment-loop.mjs", () => {
           unifiedEntrypointsEvidencePass?: boolean;
           shellUnifiedDispatchCiEvidencePass?: boolean;
           tenantIsolationEvidencePass?: boolean;
-          h30AssuranceBundlePass?: boolean;
-          h30CloseoutGatePass?: boolean;
+          h32AssuranceBundlePass?: boolean;
+          h32CloseoutGatePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
@@ -105,15 +105,15 @@ describe("run-post-h30-sustainment-loop.mjs", () => {
       expect(payload.checks?.unifiedEntrypointsEvidencePass).toBe(true);
       expect(payload.checks?.shellUnifiedDispatchCiEvidencePass).toBe(true);
       expect(payload.checks?.tenantIsolationEvidencePass).toBe(true);
-      expect(payload.checks?.h30AssuranceBundlePass).toBe(true);
-      expect(payload.checks?.h30CloseoutGatePass).toBe(true);
+      expect(payload.checks?.h32AssuranceBundlePass).toBe(true);
+      expect(payload.checks?.h32CloseoutGatePass).toBe(true);
     },
     1_200_000,
   );
 
-  it("validate:post-h30-sustainment-manifest passes on latest loop output", async () => {
+  it("validate:post-h32-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/validate-post-h30-sustainment-manifest.mjs")],
+      ["node", path.join(repoRoot, "scripts/validate-post-h32-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

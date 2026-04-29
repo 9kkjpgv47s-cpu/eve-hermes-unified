@@ -68,10 +68,10 @@ describe("run-post-h24-sustainment-loop.mjs", () => {
     expect(pkg.scripts?.["verify:sustainment-loop:h24-legacy"]).toContain("run-post-h24-sustainment-loop.mjs");
   });
 
-  it("exposes verify:sustainment-loop npm script (post-H26 terminal chain)", async () => {
+  it("exposes verify:sustainment-loop npm script (post-H28 terminal chain)", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h26-sustainment-loop.mjs");
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h28-sustainment-loop.mjs");
   });
 
   it(

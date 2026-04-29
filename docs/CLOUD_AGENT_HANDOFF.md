@@ -62,10 +62,10 @@ Every PR should include:
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
 - **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H22** (no downstream horizon).
 
-## Sustainment assurance (terminal H26)
+## Sustainment assurance (terminal H28)
 
 - **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h16-assurance-bundle`**.
-- **H16 bundle**: `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H26**) and **`validate:manifest-schemas`** (runs before **`validate:all`** in CI).
+- **H16 bundle**: `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H28**) and **`validate:manifest-schemas`** (runs before **`validate:all`** in CI).
 - **H17 bundle** (merge readiness verification): `npm run run:h17-assurance-bundle` runs **`validate:merge-bundle`**, **`validate:manifest-schemas`**, and **`verify:merge-bundle --latest --no-require-archive`** after **`validate:release-readiness`** + **`validate:initial-scope`** populate **`evidence/`**.
 - **H18 bundle** (progressive cutover rehearsal): `npm run run:h18-assurance-bundle` runs **`npm run run:h2-drill-suite`** in **dry-run** mode (canary + majority + rollback simulation) so merge-gated evidence exercises stage drills end-to-end.
 - **CI soak SLO gate**: `npm run run:ci-soak-slo-gate` runs **`soak-simulate.sh`** then **`summarize-soak-report.mjs`** with **`UNIFIED_SOAK_FAIL_ON_DRIFT=1`**; writes **`evidence/ci-soak-slo-gate-*.json`**.
@@ -76,8 +76,10 @@ Every PR should include:
 - **H24 bundle**: `npm run run:h24-assurance-bundle` runs **`run-h23-assurance-bundle.mjs`** then **`validate-horizon-status`** on **`docs/HORIZON_STATUS.json`**; writes **`evidence/h24-assurance-bundle-*.json`**.
 - **H25 bundle**: `npm run run:h25-assurance-bundle` runs **`run-post-h24-sustainment-loop.mjs`** then **`validate:manifest-schemas`**; writes **`evidence/h25-assurance-bundle-*.json`**.
 - **H26 bundle**: `npm run run:h26-assurance-bundle` runs **`run-h25-assurance-bundle.mjs`** then **`validate-horizon-status`** on **`docs/HORIZON_STATUS.json`**; writes **`evidence/h26-assurance-bundle-*.json`**.
-- **Closeout gates**: `npm run validate:h26-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`); **`npm run validate:h25-closeout`** … **`validate:h17-closeout`** remain for replay when pinned to earlier horizons.
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H17** assurance + **H18** rehearsal + **`run:ci-soak-slo-gate`** + **`run:unified-entrypoints-evidence`** + **`run:shell-unified-dispatch-ci-evidence`** + **`run:tenant-isolation-evidence`** + **`run:h26-assurance-bundle`** + **`validate:h26-closeout`** → **`evidence/post-h26-sustainment-loop-*.json`**. **`npm run validate:post-h26-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h25-legacy`** / **`validate:post-h25-sustainment-manifest`**; **`verify:sustainment-loop:h24-legacy`** / **`validate:post-h24-sustainment-manifest`**; **`verify:sustainment-loop:h23-legacy`** … **`h6-legacy`**.
+- **H27 bundle**: `npm run run:h27-assurance-bundle` runs **`run-post-h26-sustainment-loop.mjs`** then **`validate:manifest-schemas`**; writes **`evidence/h27-assurance-bundle-*.json`**.
+- **H28 bundle**: `npm run run:h28-assurance-bundle` runs **`run-h27-assurance-bundle.mjs`** then **`validate-horizon-status`** on **`docs/HORIZON_STATUS.json`**; writes **`evidence/h28-assurance-bundle-*.json`**.
+- **Closeout gates**: `npm run validate:h28-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`); **`npm run validate:h27-closeout`** … **`validate:h17-closeout`** remain for replay when pinned to earlier horizons.
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H17** assurance + **H18** rehearsal + **`run:ci-soak-slo-gate`** + **`run:unified-entrypoints-evidence`** + **`run:shell-unified-dispatch-ci-evidence`** + **`run:tenant-isolation-evidence`** + **`run:h28-assurance-bundle`** + **`validate:h28-closeout`** → **`evidence/post-h28-sustainment-loop-*.json`**. **`npm run validate:post-h28-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h27-legacy`** / **`validate:post-h27-sustainment-manifest`**; **`verify:sustainment-loop:h26-legacy`** / **`validate:post-h26-sustainment-manifest`**; **`verify:sustainment-loop:h25-legacy`** / **`validate:post-h25-sustainment-manifest`**; **`verify:sustainment-loop:h24-legacy`** / **`validate:post-h24-sustainment-manifest`**; **`verify:sustainment-loop:h23-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 
@@ -112,7 +114,7 @@ Every PR should include:
 
 - **Scripts**: **`scripts/run-ci-soak-slo-gate.mjs`** runs **`soak-simulate.sh`** (iterations from **`UNIFIED_CI_SOAK_ITERATIONS`**, default **25**) then **`summarize-soak-report.mjs`** with **`UNIFIED_SOAK_FAIL_ON_DRIFT=1`** so trace rate, success rate, and P95 latency thresholds fail the process on drift.
 - **Evidence**: **`evidence/ci-soak-slo-gate-*.json`** records **`checks.ciSoakDriftPass`** and any **`driftAlarms`** from the summarizer.
-- **CI**: **`unified-ci`** runs **`npm run run:h16-assurance-bundle`** before **`validate:all`**, then **`validate:release-readiness`** / **`validate:initial-scope`**, then **`npm run run:h17-assurance-bundle`** (merge readiness verification), then **`npm run run:h18-assurance-bundle`** (cutover drill rehearsal), then **`verify:sustainment-loop`** / **`validate:post-h26-sustainment-manifest`**, then **`check:stage-promotion-readiness`**.
+- **CI**: **`unified-ci`** runs **`npm run run:h16-assurance-bundle`** before **`validate:all`**, then **`validate:release-readiness`** / **`validate:initial-scope`**, then **`npm run run:h17-assurance-bundle`** (merge readiness verification), then **`npm run run:h18-assurance-bundle`** (cutover drill rehearsal), then **`verify:sustainment-loop`** / **`validate:post-h28-sustainment-manifest`**, then **`check:stage-promotion-readiness`**.
 
 ## Shell unified dispatch ingress (H14)
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * Horizon H22 operational assurance sub-chain (post-merge gates): H17 merge-bundle assurance,
- * H18 cutover rehearsal, CI soak SLO drift gate, unified entrypoints evidence, shell CI evidence,
- * tenant isolation evidence.
+ * H18 cutover rehearsal, CI soak SLO drift gate, shell unified-dispatch CI evidence.
+ *
+ * Unified entrypoints (**`validate:unified-entrypoints`**), tenant isolation (**`validate:tenant-isolation`**),
+ * and region failover rehearsal (**`rehearse:region-failover`**) run in **`run-h24-assurance-bundle.mjs`** before **`run-h23-assurance-bundle`**.
  *
  * Prerequisites: **`validate:release-readiness`**, **`validate:initial-scope`**, and **`npm run build`**
  * (via **`validate:all`**) so merge-bundle inputs exist; **`dist/`** exists for shell CI scan where applicable.
- *
- * Chained from **`run-h23-assurance-bundle.mjs`** together with goal-policy + manifest schema gates.
  */
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -103,32 +103,17 @@ const ciSoakReportPath = newestMatchingFile(evidenceDir, "ci-soak-slo-gate-", ".
 const ciSoakPayloadPass = ciSoakReportPath ? readJsonPass(ciSoakReportPath) : false;
 const ciSoakSloGatePass = ciSoakFixed.pass && ciSoakPayloadPass;
 
-const entrypoints = runStepWithEnv("run_unified_entrypoints_evidence", [
-  process.execPath,
-  path.join(root, "scripts/run-unified-entrypoints-evidence.mjs"),
-], {});
-const unifiedEntrypointsEvidencePass = entrypoints.pass;
-
 const shellCi = runStepWithEnv("run_shell_unified_dispatch_ci_evidence", [
   process.execPath,
   path.join(root, "scripts/run-shell-unified-dispatch-ci-evidence.mjs"),
 ], {});
 const shellUnifiedDispatchCiEvidencePass = shellCi.pass;
 
-const tenantIsolation = runStepWithEnv("run_tenant_isolation_evidence", [
-  process.execPath,
-  path.join(root, "scripts/run-tenant-isolation-evidence.mjs"),
-], {});
-const tenantIsolationEvidencePass = tenantIsolation.pass;
-
 const pass =
   h17AssuranceBundlePass &&
   h18AssuranceBundlePass &&
   ciSoakSloGatePass &&
-  ciSoakPayloadPass &&
-  unifiedEntrypointsEvidencePass &&
-  shellUnifiedDispatchCiEvidencePass &&
-  tenantIsolationEvidencePass;
+  shellUnifiedDispatchCiEvidencePass;
 
 const payload = {
   generatedAtIso: new Date().toISOString(),
@@ -141,16 +126,14 @@ const payload = {
     h18AssuranceBundleReportPass: h18PayloadPass,
     ciSoakSloGatePass,
     ciSoakSloGateReportPass: ciSoakPayloadPass,
-    unifiedEntrypointsEvidencePass,
     shellUnifiedDispatchCiEvidencePass,
-    tenantIsolationEvidencePass,
   },
   files: {
     h17AssuranceBundlePath: h17ReportPath || null,
     h18AssuranceBundlePath: h18ReportPath || null,
     ciSoakSloGatePath: ciSoakReportPath || null,
   },
-  steps: [h17Bundle, h18Bundle, ciSoakFixed, entrypoints, shellCi, tenantIsolation],
+  steps: [h17Bundle, h18Bundle, ciSoakFixed, shellCi],
 };
 
 writeFileSync(outPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");

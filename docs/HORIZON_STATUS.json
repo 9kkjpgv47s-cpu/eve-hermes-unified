@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-12T18:00:00Z",
+  "updatedAtIso": "2026-05-13T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H23",
+  "activeHorizon": "H24",
   "activeStatus": "completed",
-  "summary": "Horizon H23 (terminal assurance): run-h23-assurance-bundle chains validate:goal-policy-file H2\u2192H23 + validate:manifest-schemas + run-h22-assurance-bundle (H17/H18/soak/entrypoints/shell CI/tenant isolation); verify:sustainment-loop post-H23; verify:sustainment-loop:h22-legacy replays prior post-H22 chain; run-h16-assurance-bundle and run-h6-assurance-bundle are horizon-metadata-only.",
+  "summary": "Horizon H24 (terminal assurance): run-h24-assurance-bundle chains validate:unified-entrypoints + validate:tenant-isolation + rehearse:region-failover + run-h23-assurance-bundle (policy/manifest + slim H22 chain); verify:sustainment-loop post-H24; verify:sustainment-loop:h23-legacy for prior chain; run-h22-assurance-bundle drops entrypoints/tenant evidence steps (moved to H24).",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -223,7 +223,8 @@
         "H20",
         "H21",
         "H22",
-        "H23"
+        "H23",
+        "H24"
       ]
     },
     {
@@ -237,7 +238,8 @@
         "H20",
         "H21",
         "H22",
-        "H23"
+        "H23",
+        "H24"
       ]
     },
     {
@@ -250,7 +252,8 @@
         "H20",
         "H21",
         "H22",
-        "H23"
+        "H23",
+        "H24"
       ]
     },
     {
@@ -262,7 +265,8 @@
         "H20",
         "H21",
         "H22",
-        "H23"
+        "H23",
+        "H24"
       ]
     },
     {
@@ -273,7 +277,8 @@
       "horizons": [
         "H21",
         "H22",
-        "H23"
+        "H23",
+        "H24"
       ]
     },
     {
@@ -291,7 +296,17 @@
       "artifactPattern": "evidence/h23-assurance-bundle-*.json",
       "required": true,
       "horizons": [
-        "H23"
+        "H23",
+        "H24"
+      ]
+    },
+    {
+      "id": "h24-assurance-bundle",
+      "command": "node ./scripts/run-h24-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h24-assurance-bundle-*.json",
+      "required": true,
+      "horizons": [
+        "H24"
       ]
     }
   ],
@@ -1085,7 +1100,7 @@
     },
     {
       "id": "h23-action-2",
-      "summary": "post-H23 sustainment loop; verify:sustainment-loop; validate:post-h23-sustainment-manifest; verify:sustainment-loop:h22-legacy for H22 chain.",
+      "summary": "Legacy post-H23 sustainment (verify:sustainment-loop:h23-legacy); terminal loop is post-H24 (run-post-h23-sustainment-loop-legacy.mjs).",
       "targetHorizon": "H23",
       "status": "completed",
       "tags": [
@@ -1098,6 +1113,39 @@
       "id": "h23-action-3",
       "summary": "Goal policy H22\u2192H23 transition; validate:goal-policy-file extends through H23 inside run-h23-assurance-bundle.",
       "targetHorizon": "H23",
+      "status": "completed",
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
+    },
+    {
+      "id": "h24-action-1",
+      "summary": "run-h24-assurance-bundle: pre-build unified entrypoints + tenant isolation + region failover rehearsal before H23 terminal chain.",
+      "targetHorizon": "H24",
+      "status": "completed",
+      "tags": [
+        "operations",
+        "validation",
+        "ci"
+      ]
+    },
+    {
+      "id": "h24-action-2",
+      "summary": "post-H24 sustainment loop; verify:sustainment-loop; validate:post-h24-sustainment-manifest; verify:sustainment-loop:h23-legacy for H23 chain.",
+      "targetHorizon": "H24",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
+    },
+    {
+      "id": "h24-action-3",
+      "summary": "Goal policy H23\u2192H24 transition; validate:goal-policy-file extends through H24 inside run-h23-assurance-bundle.",
+      "targetHorizon": "H24",
       "status": "completed",
       "tags": [
         "policy",
@@ -1422,6 +1470,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H23->H24": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -1522,11 +1585,15 @@
     },
     "H22": {
       "status": "completed",
-      "summary": "Operational sub-chain (non-terminal): run-h22-assurance-bundle chains H17 + H18 + CI soak + entrypoints + shell CI + tenant isolation evidence; consumed by run-h23-assurance-bundle."
+      "summary": "Operational sub-chain (non-terminal): run-h22-assurance-bundle chains H17 + H18 + CI soak + shell CI evidence (no entrypoints/tenant isolation \u2014 those run in run-h24-assurance-bundle); consumed by run-h23-assurance-bundle."
     },
     "H23": {
       "status": "completed",
-      "summary": "Terminal assurance: run-h23-assurance-bundle (policy + schemas + H22 chain); post-H23 sustainment via verify:sustainment-loop + validate:h23-closeout."
+      "summary": "Policy + schemas terminal sub-bundle (non-terminal vs H24): run-h23-assurance-bundle chains goal-policy + manifest schemas + run-h22-assurance-bundle; consumed by run-h24-assurance-bundle."
+    },
+    "H24": {
+      "status": "completed",
+      "summary": "Terminal assurance: run-h24-assurance-bundle (pre-build gates + H23 chain); post-H24 sustainment via verify:sustainment-loop + validate:h24-closeout."
     }
   },
   "history": [
@@ -1787,6 +1854,12 @@
       "horizon": "H23",
       "status": "completed",
       "note": "H23 terminal assurance: run-h23-assurance-bundle chains goal-policy H2\u2192H23 + manifest schemas + run-h22-assurance-bundle; verify:sustainment-loop post-H23; run-h6/h16 slimmed to horizon-only; verify:sustainment-loop:h22-legacy for prior post-H22 chain; H22->H23 goal policy."
+    },
+    {
+      "timestamp": "2026-05-13T12:00:00Z",
+      "horizon": "H24",
+      "status": "completed",
+      "note": "H24 terminal assurance: run-h24-assurance-bundle chains entrypoints + tenant + region rehearsal + run-h23-assurance-bundle; slim run-h22-assurance-bundle; verify:sustainment-loop post-H24; verify:sustainment-loop:h23-legacy; H23->H24 goal policy."
     }
   ]
 }

@@ -30,13 +30,7 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Unified adapter entrypoints gate
-        run: npm run validate:unified-entrypoints
-
-      - name: H5 tenant isolation and region failover gates
-        run: npm run validate:tenant-isolation && npm run rehearse:region-failover
-
-      - name: H6 sustainment assurance bundle
+      - name: H6 horizon metadata assurance bundle
         run: npm run run:h6-assurance-bundle
 
       - name: H16 horizon metadata assurance bundle (goal policy + manifest schemas run in H23 terminal bundle)
@@ -81,14 +75,14 @@ jobs:
       - name: Initial scope gate
         run: npm run validate:initial-scope
 
-      - name: H23 terminal assurance bundle (goal policy + manifest schemas + H22 operational chain)
-        run: npm run run:h23-assurance-bundle
+      - name: H24 terminal assurance bundle (pre-build gates + H23 policy/manifest + slim H22 chain)
+        run: npm run run:h24-assurance-bundle
 
-      - name: Post-H23 sustainment loop (horizon + H23 bundle + closeout gate)
+      - name: Post-H24 sustainment loop (horizon + H24 bundle + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H23 sustainment manifest
-        run: npm run validate:post-h23-sustainment-manifest
+      - name: Validate post-H24 sustainment manifest
+        run: npm run validate:post-h24-sustainment-manifest
 
       - name: Stage promotion readiness gate
         run: npm run check:stage-promotion-readiness -- --target-stage canary --allow-horizon-mismatch

@@ -388,6 +388,7 @@ async function seedHorizonStatus(statusPath: string, mode: "h1-in-progress" | "h
           H25: { status: "planned", summary: "H25 planned" },
           H26: { status: "planned", summary: "H26 planned" },
           H27: { status: "planned", summary: "H27 planned" },
+          H28: { status: "planned", summary: "H28 planned" },
         },
         history: [
           {
@@ -885,6 +886,7 @@ describe("validate-horizon-closeout.mjs", () => {
           H25: { status: "planned", summary: "H25 planned" },
           H26: { status: "planned", summary: "H26 planned" },
           H27: { status: "planned", summary: "H27 planned" },
+          H28: { status: "planned", summary: "H28 planned" },
         },
             history: [
               {
@@ -1049,6 +1051,7 @@ describe("validate-horizon-closeout.mjs", () => {
           H25: { status: "planned", summary: "H25 planned" },
           H26: { status: "planned", summary: "H26 planned" },
           H27: { status: "planned", summary: "H27 planned" },
+          H28: { status: "planned", summary: "H28 planned" },
         },
             history: [
               {
@@ -1224,6 +1227,7 @@ describe("validate-horizon-closeout.mjs", () => {
           H25: { status: "planned", summary: "H25 planned" },
           H26: { status: "planned", summary: "H26 planned" },
           H27: { status: "planned", summary: "H27 planned" },
+          H28: { status: "planned", summary: "H28 planned" },
         },
             history: [
               {
@@ -1403,6 +1407,7 @@ describe("validate-horizon-closeout.mjs", () => {
           H25: { status: "planned", summary: "H25 planned" },
           H26: { status: "planned", summary: "H26 planned" },
           H27: { status: "planned", summary: "H27 planned" },
+          H28: { status: "planned", summary: "H28 planned" },
         },
             history: [
               {
@@ -1562,6 +1567,7 @@ describe("validate-horizon-closeout.mjs", () => {
           H25: { status: "planned", summary: "H25 planned" },
           H26: { status: "planned", summary: "H26 planned" },
           H27: { status: "planned", summary: "H27 planned" },
+          H28: { status: "planned", summary: "H28 planned" },
         },
             history: [
               {

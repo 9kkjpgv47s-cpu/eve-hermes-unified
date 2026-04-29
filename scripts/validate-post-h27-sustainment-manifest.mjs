@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Validates the newest evidence/post-h27-sustainment-loop-*.json (after npm run verify:sustainment-loop).
+ * Validates the newest evidence/post-h27-sustainment-loop-*.json (after npm run verify:sustainment-loop:h27-legacy).
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";

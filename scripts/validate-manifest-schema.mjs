@@ -875,6 +875,43 @@ export function validatePostH27SustainmentLoopManifest(payload) {
   return { valid: errors.length === 0, errors };
 }
 
+export function validatePostH28SustainmentLoopManifest(payload) {
+  const errors = [];
+  pushError(errors, payload && typeof payload === "object", "payload must be an object");
+  if (!payload || typeof payload !== "object") {
+    return { valid: false, errors };
+  }
+
+  pushError(errors, isNonEmptyString(payload.generatedAtIso), "generatedAtIso must be non-empty string");
+  pushError(errors, typeof payload.pass === "boolean", "pass must be boolean");
+  const checks = payload.checks;
+  pushError(errors, checks && typeof checks === "object", "checks must be an object");
+  if (checks && typeof checks === "object") {
+    const requiredBools = [
+      "postH27SustainmentChainPass",
+      "manifestSchemasPostH27LoopEvidencePass",
+      "stagePromotionSustainmentEvidencePass",
+      "h28CloseoutGatePass",
+    ];
+    for (const key of requiredBools) {
+      pushError(errors, typeof checks[key] === "boolean", `checks.${key} must be boolean`);
+    }
+  }
+  pushError(errors, Array.isArray(payload.steps), "steps must be an array");
+  if (Array.isArray(payload.steps)) {
+    payload.steps.forEach((step, index) => {
+      const prefix = `steps[${String(index)}]`;
+      pushError(errors, step && typeof step === "object", `${prefix} must be an object`);
+      if (!step || typeof step !== "object") {
+        return;
+      }
+      pushError(errors, isNonEmptyString(step.script), `${prefix}.script must be non-empty string`);
+      pushError(errors, Number.isFinite(step.exitCode), `${prefix}.exitCode must be a finite number`);
+    });
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 export function validateStageDrillManifest(payload) {
   const errors = [];
   pushError(errors, payload && typeof payload === "object", "payload must be an object");
@@ -961,6 +998,9 @@ export function validateManifestSchema(type, payload) {
   if (type === "post-h27-sustainment-loop") {
     return validatePostH27SustainmentLoopManifest(payload);
   }
+  if (type === "post-h28-sustainment-loop") {
+    return validatePostH28SustainmentLoopManifest(payload);
+  }
   return { valid: false, errors: [`Unsupported manifest type: ${type}`] };
 }
 
@@ -1021,6 +1061,7 @@ async function listAllManifestTargets(evidenceDir) {
   const stageDrillTargets = [];
   const postH26SustainmentLoopTargets = [];
   const postH27SustainmentLoopTargets = [];
+  const postH28SustainmentLoopTargets = [];
   for (const entry of entries) {
     if (!entry.isFile()) {
       continue;
@@ -1116,6 +1157,11 @@ async function listAllManifestTargets(evidenceDir) {
         type: "post-h27-sustainment-loop",
         file: path.join(evidenceDir, entry.name),
       });
+    } else if (entry.name.startsWith("post-h28-sustainment-loop-") && entry.name.endsWith(".json")) {
+      postH28SustainmentLoopTargets.push({
+        type: "post-h28-sustainment-loop",
+        file: path.join(evidenceDir, entry.name),
+      });
     }
   }
   releaseTargets.sort((a, b) => a.file.localeCompare(b.file));
@@ -1135,6 +1181,7 @@ async function listAllManifestTargets(evidenceDir) {
   stageDrillTargets.sort((a, b) => a.file.localeCompare(b.file));
   postH26SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
   postH27SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
+  postH28SustainmentLoopTargets.sort((a, b) => a.file.localeCompare(b.file));
   return {
     releaseTargets,
     mergeBundleValidationTargets,
@@ -1153,6 +1200,7 @@ async function listAllManifestTargets(evidenceDir) {
     stageDrillTargets,
     postH26SustainmentLoopTargets,
     postH27SustainmentLoopTargets,
+    postH28SustainmentLoopTargets,
   };
 }
 
@@ -1170,7 +1218,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!isNonEmptyString(options.type)) {
     throw new Error(
-      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|post-h26-sustainment-loop|post-h27-sustainment-loop|all)",
+      "Missing --type (release-readiness|merge-bundle|merge-bundle-validation|horizon-closeout|h2-closeout-run|horizon-closeout-run|horizon-promotion|h2-promotion-run|horizon-promotion-run|stage-promotion-readiness|h2-drill-suite|supervised-rollback-simulation|rollback-threshold-calibration|stage-promotion-execution|auto-rollback-policy|stage-drill|post-h26-sustainment-loop|post-h27-sustainment-loop|post-h28-sustainment-loop|all)",
     );
   }
 
@@ -1269,6 +1317,13 @@ async function main() {
                 ],
               ]
             : []),
+          ...(targetGroups.postH28SustainmentLoopTargets.length > 0
+            ? [
+                targetGroups.postH28SustainmentLoopTargets[
+                  targetGroups.postH28SustainmentLoopTargets.length - 1
+                ],
+              ]
+            : []),
         ]
       : [
           ...targetGroups.releaseTargets,
@@ -1288,6 +1343,7 @@ async function main() {
           ...targetGroups.stageDrillTargets,
           ...targetGroups.postH26SustainmentLoopTargets,
           ...targetGroups.postH27SustainmentLoopTargets,
+          ...targetGroups.postH28SustainmentLoopTargets,
         ];
     const results = [];
     for (const target of targets) {

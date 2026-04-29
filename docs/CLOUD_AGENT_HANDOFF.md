@@ -60,15 +60,16 @@ Every PR should include:
 - **Standby region routing**: `UNIFIED_ROUTER_STANDBY_REGION` — when it equals `envelope.regionId`, primary and fallback lanes swap for failover drills (skipped when fallback is `none`).
 - **Lane env passthrough**: Eve receives `EVE_TASK_DISPATCH_TENANT_ID` / `EVE_TASK_DISPATCH_REGION_ID`; Hermes receives `HERMES_UNIFIED_TENANT_ID` / `HERMES_UNIFIED_REGION_ID` when set.
 - **Evidence scripts**: `npm run validate:tenant-isolation`, `npm run rehearse:region-failover`, `npm run rehearse:agent-remediation` (read-only bundle manifest).
-- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H17** (no downstream horizon).
+- **H5 closeout**: `npm run run:h5-closeout-evidence` writes `evidence/h5-closeout-evidence-*.json`; gate with `npm run validate:h5-closeout`. Stage-promotion readiness is skipped when the next horizon is already **completed** (retroactive closeout) or for terminal **H18** (no downstream horizon).
 
-## Sustainment assurance (terminal H17)
+## Sustainment assurance (terminal H18)
 
-- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h16-assurance-bundle`**.
-- **H16 bundle**: `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H17**) and **`validate:manifest-schemas`** (runs before **`validate:all`** in CI).
+- **Older bundles** (historical): `run:h6-assurance-bundle` … through **`run:h17-assurance-bundle`**.
+- **H16 bundle**: `npm run run:h16-assurance-bundle` chains **`run-h15-assurance-bundle.mjs`** plus **`validate:goal-policy-file`** (through **H18**) and **`validate:manifest-schemas`** (runs before **`validate:all`** in CI).
 - **H17 bundle** (merge readiness verification): `npm run run:h17-assurance-bundle` runs **`validate:merge-bundle`**, **`validate:manifest-schemas`**, and **`verify:merge-bundle --latest --no-require-archive`** after **`validate:release-readiness`** + **`validate:initial-scope`** populate **`evidence/`**.
-- **Closeout gate**: `npm run validate:h17-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
-- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H17** assurance bundle + `validate:h17-closeout` → `evidence/post-h17-sustainment-loop-*.json`. **`npm run validate:post-h17-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h16-legacy`** / **`validate:post-h16-sustainment-manifest`**; **`verify:sustainment-loop:h15-legacy`** … **`h6-legacy`**.
+- **H18 bundle** (merge readiness + stage promotion): `npm run run:h18-assurance-bundle` runs **`run-h17-assurance-bundle.mjs`** then **`check:stage-promotion-readiness`** with **`--target-stage canary --allow-horizon-mismatch`** (matches **`unified-ci`**).
+- **Closeout gate**: `npm run validate:h18-closeout` (terminal horizon skips downstream stage-promotion in `validate-horizon-closeout`; older horizons remain for replay).
+- **Periodic verification**: `npm run verify:sustainment-loop` chains horizon status + **H18** assurance bundle + `validate:h18-closeout` → `evidence/post-h18-sustainment-loop-*.json`. **`npm run validate:post-h18-sustainment-manifest`** optionally validates the latest manifest. Legacy: **`verify:sustainment-loop:h17-legacy`** / **`validate:post-h17-sustainment-manifest`**; **`verify:sustainment-loop:h16-legacy`** … **`h6-legacy`**.
 
 ## Dispatch audit rotation (H7)
 

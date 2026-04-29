@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-05T12:00:00Z",
+  "updatedAtIso": "2026-05-05T18:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H17",
+  "activeHorizon": "H18",
   "activeStatus": "completed",
-  "summary": "Horizon H17 (merge bundle operational assurance): run-h17-assurance-bundle runs validate:merge-bundle + validate:manifest-schemas + verify:merge-bundle; CI runs H16 pre-validate:all then merge gates after initial-scope; verify:sustainment-loop post-H17; verify:sustainment-loop:h16-legacy for post-H16 loop.",
+  "summary": "Horizon H18 (stage-promotion operational assurance): run-h18-assurance-bundle chains run-h17-assurance-bundle + check:stage-promotion-readiness (canary, allow-horizon-mismatch); verify:sustainment-loop post-H18; verify:sustainment-loop:h17-legacy for post-H17 chain; goal-policy runway H2→H18.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -153,6 +153,13 @@
       "artifactPattern": "evidence/h17-assurance-bundle-*.json",
       "required": true,
       "horizons": ["H17"]
+    },
+    {
+      "id": "h18-assurance-bundle",
+      "command": "node ./scripts/run-h18-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h18-assurance-bundle-*.json",
+      "required": true,
+      "horizons": ["H18"]
     }
   ],
   "nextActions": [
@@ -587,6 +594,27 @@
       "targetHorizon": "H17",
       "status": "completed",
       "tags": ["policy", "documentation", "ci"]
+    },
+    {
+      "id": "h18-action-1",
+      "summary": "run-h18-assurance-bundle: H17 merge readiness plus stage-promotion-readiness (CI-aligned canary probe with allow-horizon-mismatch).",
+      "targetHorizon": "H18",
+      "status": "completed",
+      "tags": ["operations", "validation", "tooling"]
+    },
+    {
+      "id": "h18-action-2",
+      "summary": "post-H18 sustainment loop; verify:sustainment-loop; verify:sustainment-loop:h17-legacy for H17 chain.",
+      "targetHorizon": "H18",
+      "status": "completed",
+      "tags": ["validation", "sustainment", "operations"]
+    },
+    {
+      "id": "h18-action-3",
+      "summary": "Goal policy H17→H18 transition; validate:goal-policy-file H2→H18; terminal closeout skips stage-promotion at H18.",
+      "targetHorizon": "H18",
+      "status": "completed",
+      "tags": ["policy", "documentation", "validation"]
     }
   ],
   "goalPolicies": {
@@ -815,6 +843,21 @@
             "minPendingCount": 0
           }
         }
+      },
+      "H17->H18": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          }
+        }
       }
     }
   },
@@ -895,7 +938,11 @@
     },
     "H17": {
       "status": "completed",
-      "summary": "Merge bundle assurance: run-h17-assurance-bundle replaces standalone merge-bundle/schema/verify steps after release artifacts exist; terminal sustainment post-H17."
+      "summary": "Merge bundle assurance: run-h17-assurance-bundle; superseded as terminal chain by H18 bundle which adds stage-promotion readiness."
+    },
+    "H18": {
+      "status": "completed",
+      "summary": "Stage-promotion assurance: run-h18-assurance-bundle chains H17 merge gates + check:stage-promotion-readiness; terminal sustainment post-H18 via verify:sustainment-loop."
     }
   },
   "history": [
@@ -1120,6 +1167,12 @@
       "horizon": "H17",
       "status": "completed",
       "note": "H17 merge bundle assurance: run-h17-assurance-bundle after release-readiness + initial-scope (validate:merge-bundle + validate:manifest-schemas + verify:merge-bundle); unified-ci consolidates merge steps; verify:sustainment-loop post-H17; verify:sustainment-loop:h16-legacy; H16->H17 goal policy; terminal closeout at H17."
+    },
+    {
+      "timestamp": "2026-05-05T18:00:00Z",
+      "horizon": "H18",
+      "status": "completed",
+      "note": "H18 stage-promotion operational assurance: run-h18-assurance-bundle chains H17 + check:stage-promotion-readiness (canary, allow-horizon-mismatch); verify:sustainment-loop post-H18; verify:sustainment-loop:h17-legacy; validate:goal-policy-file H2→H18; H17->H18 goal policy; terminal closeout at H18."
     }
   ]
 }

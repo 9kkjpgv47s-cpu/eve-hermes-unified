@@ -43,7 +43,7 @@ async function runValidateAllArtifactsExceptTests() {
   expect(va.code).toBe(0);
 }
 
-/** Aligns with unified-ci: goal-policy JSON, validation artifacts, then release-readiness + initial-scope before merge-bundle. */
+/** Aligns with unified-ci: goal-policy JSON, validation artifacts, then release-readiness + initial-scope before merge-bundle / stage-promotion gates. */
 async function seedMergeBundleInputs() {
   const gp = await runCommandWithTimeout(["npm", "run", "validate:goal-policy-file"], {
     timeoutMs: 60_000,
@@ -63,13 +63,11 @@ async function seedMergeBundleInputs() {
   expect(init.code).toBe(0);
 }
 
-describe("run-post-h17-sustainment-loop.mjs (legacy)", () => {
-  it("exposes verify:sustainment-loop:h17-legacy npm script", async () => {
+describe("run-post-h18-sustainment-loop.mjs", () => {
+  it("exposes verify:sustainment-loop npm script", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop:h17-legacy"]).toContain(
-      "run-post-h17-sustainment-loop.mjs",
-    );
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h18-sustainment-loop.mjs");
   });
 
   it(
@@ -77,8 +75,8 @@ describe("run-post-h17-sustainment-loop.mjs (legacy)", () => {
     async () => {
       await seedMergeBundleInputs();
       const result = await runCommandWithTimeout(
-        ["node", path.join(repoRoot, "scripts/run-post-h17-sustainment-loop.mjs")],
-        { timeoutMs: 180_000 },
+        ["node", path.join(repoRoot, "scripts/run-post-h18-sustainment-loop.mjs")],
+        { timeoutMs: 240_000 },
       );
       expect(result.code).toBe(0);
       const out = result.stdout.trim();
@@ -88,21 +86,21 @@ describe("run-post-h17-sustainment-loop.mjs (legacy)", () => {
         pass?: boolean;
         checks?: {
           horizonStatusPass?: boolean;
-          h17AssuranceBundlePass?: boolean;
-          h17CloseoutGatePass?: boolean;
+          h18AssuranceBundlePass?: boolean;
+          h18CloseoutGatePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
       expect(payload.checks?.horizonStatusPass).toBe(true);
-      expect(payload.checks?.h17AssuranceBundlePass).toBe(true);
-      expect(payload.checks?.h17CloseoutGatePass).toBe(true);
+      expect(payload.checks?.h18AssuranceBundlePass).toBe(true);
+      expect(payload.checks?.h18CloseoutGatePass).toBe(true);
     },
     900_000,
   );
 
-  it("validate:post-h17-sustainment-manifest passes on latest loop output", async () => {
+  it("validate:post-h18-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/validate-post-h17-sustainment-manifest.mjs")],
+      ["node", path.join(repoRoot, "scripts/validate-post-h18-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

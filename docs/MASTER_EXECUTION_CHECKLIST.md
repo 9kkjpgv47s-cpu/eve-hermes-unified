@@ -93,15 +93,15 @@ After horizon **H17** is completed in `docs/HORIZON_STATUS.json`, operators and 
 - [x] `npm run run:h17-assurance-bundle` exits `0` and emits `evidence/h17-assurance-bundle-*.json`.
 - [x] `npm run validate:h17-closeout` exits `0` (uses evidence under `evidence/`).
 
-Single command (chains horizon status + H17 assurance + closeout and writes `evidence/post-h17-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
+Single command (chains horizon status + H18 assurance + closeout and writes `evidence/post-h18-sustainment-loop-*.json` with structured `checks.*Pass` booleans):
 
 - [x] `npm run verify:sustainment-loop` exits `0`.
 
 Optional re-validation of the latest loop artifact without re-running:
 
-- [x] `npm run validate:post-h17-sustainment-manifest` exits `0`.
+- [x] `npm run validate:post-h18-sustainment-manifest` exits `0`.
 
-Historical sustainment: **`npm run verify:sustainment-loop:h16-legacy`** / **`validate:post-h16-sustainment-manifest`** (H16 chain); **`verify:sustainment-loop:h15-legacy`** … **`h6-legacy`**.
+Historical sustainment: **`npm run verify:sustainment-loop:h17-legacy`** / **`validate:post-h17-sustainment-manifest`** (H17 chain); **`verify:sustainment-loop:h16-legacy`** … **`h6-legacy`**.
 
 Exit criteria:
 

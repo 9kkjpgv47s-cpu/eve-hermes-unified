@@ -1,10 +1,10 @@
 {
   "schemaVersion": "v1",
-  "updatedAtIso": "2026-05-16T12:00:00Z",
+  "updatedAtIso": "2026-05-17T12:00:00Z",
   "owner": "cloud-agent",
-  "activeHorizon": "H29",
+  "activeHorizon": "H30",
   "activeStatus": "completed",
-  "summary": "Horizon H29 (terminal assurance): run-h29-assurance-bundle chains validate:release-readiness + run-h28-assurance-bundle; unified-ci removes duplicate release-readiness step; verify:sustainment-loop post-H29 (H29 bundle + closeout only); verify:sustainment-loop:h28-legacy.",
+  "summary": "Horizon H30 (terminal assurance): run-h30-assurance-bundle chains validate:all + run-h29-assurance-bundle; unified-ci folds check/test/build/full-validation into H30; verify:sustainment-loop post-H30 (H30 bundle + closeout only); verify:sustainment-loop:h29-legacy.",
   "blockers": [],
   "requiredEvidence": [
     {
@@ -229,7 +229,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -249,7 +250,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -268,7 +270,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -286,7 +289,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -303,7 +307,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -327,7 +332,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -341,7 +347,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -354,7 +361,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -366,7 +374,8 @@
         "H26",
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -377,7 +386,8 @@
       "horizons": [
         "H27",
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -387,7 +397,8 @@
       "required": true,
       "horizons": [
         "H28",
-        "H29"
+        "H29",
+        "H30"
       ]
     },
     {
@@ -396,7 +407,17 @@
       "artifactPattern": "evidence/h29-assurance-bundle-*.json",
       "required": true,
       "horizons": [
-        "H29"
+        "H29",
+        "H30"
+      ]
+    },
+    {
+      "id": "h30-assurance-bundle",
+      "command": "node ./scripts/run-h30-assurance-bundle.mjs",
+      "artifactPattern": "evidence/h30-assurance-bundle-*.json",
+      "required": true,
+      "horizons": [
+        "H30"
       ]
     }
   ],
@@ -1388,7 +1409,7 @@
     },
     {
       "id": "h29-action-2",
-      "summary": "post-H29 sustainment loop; verify:sustainment-loop; validate:post-h29-sustainment-manifest; verify:sustainment-loop:h28-legacy.",
+      "summary": "Legacy post-H29 sustainment (verify:sustainment-loop:h29-legacy); terminal loop is post-H30 (run-post-h29-sustainment-loop-legacy.mjs).",
       "targetHorizon": "H29",
       "status": "completed",
       "tags": [
@@ -1401,6 +1422,39 @@
       "id": "h29-action-3",
       "summary": "Goal policy H28\u2192H29 transition; validate:goal-policy-file extends through H29 inside run-h23-assurance-bundle.",
       "targetHorizon": "H29",
+      "status": "completed",
+      "tags": [
+        "policy",
+        "documentation",
+        "ci"
+      ]
+    },
+    {
+      "id": "h30-action-1",
+      "summary": "run-h30-assurance-bundle: validate:all gate + run-h29-assurance-bundle terminal chain.",
+      "targetHorizon": "H30",
+      "status": "completed",
+      "tags": [
+        "ci",
+        "validation",
+        "operations"
+      ]
+    },
+    {
+      "id": "h30-action-2",
+      "summary": "post-H30 sustainment loop; verify:sustainment-loop; validate:post-h30-sustainment-manifest; verify:sustainment-loop:h29-legacy.",
+      "targetHorizon": "H30",
+      "status": "completed",
+      "tags": [
+        "validation",
+        "sustainment",
+        "operations"
+      ]
+    },
+    {
+      "id": "h30-action-3",
+      "summary": "Goal policy H29\u2192H30 transition; validate:goal-policy-file extends through H30 inside run-h23-assurance-bundle.",
+      "targetHorizon": "H30",
       "status": "completed",
       "tags": [
         "policy",
@@ -1835,6 +1889,25 @@
             "minPendingCount": 1
           }
         }
+      },
+      "H29->H30": {
+        "minimumGoalIncrease": 1,
+        "minActionGrowthFactor": 1.01,
+        "minPendingNextActions": 1,
+        "requiredTaggedActionCounts": {
+          "operations": {
+            "minCount": 1,
+            "minPendingCount": 1
+          },
+          "validation": {
+            "minCount": 1,
+            "minPendingCount": 0
+          },
+          "ci": {
+            "minCount": 1,
+            "minPendingCount": 1
+          }
+        }
       }
     }
   },
@@ -1963,7 +2036,11 @@
     },
     "H29": {
       "status": "completed",
-      "summary": "Terminal assurance: run-h29-assurance-bundle (validate:release-readiness + H28 chain); post-H29 sustainment via verify:sustainment-loop + validate:h29-closeout."
+      "summary": "Release readiness + H28 sub-chain (non-terminal vs H30): run-h29-assurance-bundle (validate:release-readiness + run-h28-assurance-bundle); consumed by run-h30-assurance-bundle."
+    },
+    "H30": {
+      "status": "completed",
+      "summary": "Terminal assurance: run-h30-assurance-bundle (validate:all + H29 chain); post-H30 sustainment via verify:sustainment-loop + validate:h30-closeout."
     }
   },
   "history": [
@@ -2260,6 +2337,12 @@
       "horizon": "H29",
       "status": "completed",
       "note": "H29 terminal assurance: run-h29-assurance-bundle chains validate:release-readiness + run-h28-assurance-bundle; unified-ci drops duplicate validate:release-readiness; verify:sustainment-loop post-H29; verify:sustainment-loop:h28-legacy; H28->H29 goal policy."
+    },
+    {
+      "timestamp": "2026-05-17T12:00:00Z",
+      "horizon": "H30",
+      "status": "completed",
+      "note": "H30 terminal assurance: run-h30-assurance-bundle chains validate:all + run-h29-assurance-bundle; unified-ci drops duplicate check/test/build steps; verify:sustainment-loop post-H30; verify:sustainment-loop:h29-legacy; H29->H30 goal policy."
     }
   ]
 }

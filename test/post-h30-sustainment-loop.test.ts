@@ -61,21 +61,19 @@ async function seedMergeBundleInputs() {
   expect(init.code).toBe(0);
 }
 
-describe("run-post-h29-sustainment-loop.mjs", () => {
-  it("exposes verify:sustainment-loop:h29-legacy npm script (legacy post-H29 chain)", async () => {
+describe("run-post-h30-sustainment-loop.mjs", () => {
+  it("exposes verify:sustainment-loop npm script (post-H30 terminal chain)", async () => {
     const pkgRaw = await readFile(path.join(repoRoot, "package.json"), "utf8");
     const pkg = JSON.parse(pkgRaw) as { scripts?: Record<string, string> };
-    expect(pkg.scripts?.["verify:sustainment-loop:h29-legacy"]).toContain(
-      "run-post-h29-sustainment-loop-legacy.mjs",
-    );
+    expect(pkg.scripts?.["verify:sustainment-loop"]).toContain("run-post-h30-sustainment-loop.mjs");
   });
 
   it(
-    "emits pass and structured checks in post-H29 sustainment loop manifest",
+    "emits pass and structured checks in post-H30 sustainment loop manifest",
     async () => {
       await seedMergeBundleInputs();
       const result = await runCommandWithTimeout(
-        ["node", path.join(repoRoot, "scripts/run-post-h29-sustainment-loop-legacy.mjs")],
+        ["node", path.join(repoRoot, "scripts/run-post-h30-sustainment-loop.mjs")],
         {
           timeoutMs: 720_000,
           env: mergeEnv({ UNIFIED_CI_SOAK_ITERATIONS: "15" }),
@@ -88,20 +86,20 @@ describe("run-post-h29-sustainment-loop.mjs", () => {
       const payload = JSON.parse(raw) as {
         pass?: boolean;
         checks?: {
-          h29AssuranceBundlePass?: boolean;
-          h29CloseoutGatePass?: boolean;
+          h30AssuranceBundlePass?: boolean;
+          h30CloseoutGatePass?: boolean;
         };
       };
       expect(payload.pass).toBe(true);
-      expect(payload.checks?.h29AssuranceBundlePass).toBe(true);
-      expect(payload.checks?.h29CloseoutGatePass).toBe(true);
+      expect(payload.checks?.h30AssuranceBundlePass).toBe(true);
+      expect(payload.checks?.h30CloseoutGatePass).toBe(true);
     },
     900_000,
   );
 
-  it("validate:post-h29-sustainment-manifest passes on latest loop output", async () => {
+  it("validate:post-h30-sustainment-manifest passes on latest loop output", async () => {
     const result = await runCommandWithTimeout(
-      ["node", path.join(repoRoot, "scripts/validate-post-h29-sustainment-manifest.mjs")],
+      ["node", path.join(repoRoot, "scripts/validate-post-h30-sustainment-manifest.mjs")],
       { timeoutMs: 15_000 },
     );
     expect(result.code).toBe(0);

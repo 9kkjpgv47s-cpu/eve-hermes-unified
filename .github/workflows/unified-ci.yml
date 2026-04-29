@@ -24,30 +24,7 @@ jobs:
       - name: Prepare workspace dirs
         run: mkdir -p evidence
 
-      - name: Typecheck
-        run: npm run check
-
-      - name: Unit tests
-        run: npm test
-
-      - name: Build
-        run: npm run build
-
-      - name: Full validation chain
-        env:
-          UNIFIED_ROUTER_DEFAULT_PRIMARY: hermes
-          UNIFIED_ROUTER_DEFAULT_FALLBACK: none
-          UNIFIED_ROUTER_FAIL_CLOSED: "1"
-          UNIFIED_ROUTER_CUTOVER_STAGE: full
-          UNIFIED_MEMORY_STORE_KIND: file
-          UNIFIED_MEMORY_FILE_PATH: /tmp/eve-hermes-unified-memory.json
-          EVE_TASK_DISPATCH_SCRIPT: /bin/true
-          EVE_DISPATCH_RESULT_PATH: /tmp/eve-dispatch.json
-          HERMES_LAUNCH_COMMAND: /bin/true
-          HERMES_LAUNCH_ARGS: ""
-        run: npm run validate:all
-
-      - name: H29 terminal assurance bundle (release readiness gate + H28 chain)
+      - name: H30 terminal assurance bundle (validate:all + H29 chain)
         env:
           UNIFIED_RELEASE_READINESS_RUN_VALIDATE_ALL: "0"
           UNIFIED_RELEASE_READINESS_SKIP_TEST: "1"
@@ -64,13 +41,13 @@ jobs:
           EVE_DISPATCH_RESULT_PATH: /tmp/eve-dispatch.json
           HERMES_LAUNCH_COMMAND: /bin/true
           HERMES_LAUNCH_ARGS: ""
-        run: npm run run:h29-assurance-bundle
+        run: npm run run:h30-assurance-bundle
 
-      - name: Post-H29 sustainment loop (H29 bundle + closeout gate)
+      - name: Post-H30 sustainment loop (H30 bundle + closeout gate)
         run: npm run verify:sustainment-loop
 
-      - name: Validate post-H29 sustainment manifest
-        run: npm run validate:post-h29-sustainment-manifest
+      - name: Validate post-H30 sustainment manifest
+        run: npm run validate:post-h30-sustainment-manifest
 
       - name: Upload evidence artifacts
         uses: actions/upload-artifact@v4

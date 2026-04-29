@@ -390,6 +390,7 @@ async function seedHorizonStatus(statusPath: string, mode: "h1-in-progress" | "h
           H27: { status: "planned", summary: "H27 planned" },
           H28: { status: "planned", summary: "H28 planned" },
           H29: { status: "planned", summary: "H29 planned" },
+          H30: { status: "planned", summary: "H30 planned" },
         },
         history: [
           {
@@ -889,6 +890,7 @@ describe("validate-horizon-closeout.mjs", () => {
               H27: { status: "planned", summary: "H27 planned" },
               H28: { status: "planned", summary: "H28 planned" },
               H29: { status: "planned", summary: "H29 planned" },
+              H30: { status: "planned", summary: "H30 planned" },
             },
             history: [
               {
@@ -1403,6 +1405,7 @@ describe("validate-horizon-closeout.mjs", () => {
               H27: { status: "planned", summary: "H27 planned" },
               H28: { status: "planned", summary: "H28 planned" },
               H29: { status: "planned", summary: "H29 planned" },
+              H30: { status: "planned", summary: "H30 planned" },
             },
             history: [
               {

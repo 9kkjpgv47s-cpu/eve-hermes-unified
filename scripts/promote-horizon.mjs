@@ -37,6 +37,7 @@ const HORIZON_SEQUENCE = [
   "H28",
   "H29",
   "H30",
+  "H31",
 ];
 
 function parseArgs(argv) {

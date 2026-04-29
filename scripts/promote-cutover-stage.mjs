@@ -20,6 +20,7 @@ function parseArgs(argv) {
     timeoutMs: 120_000,
     dryRun: false,
     allowHorizonMismatch: false,
+    relaxStageTransition: false,
     evidenceSelectionMode: "latest",
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -59,6 +60,8 @@ function parseArgs(argv) {
       options.dryRun = true;
     } else if (arg === "--allow-horizon-mismatch" || arg === "--ignore-horizon-target") {
       options.allowHorizonMismatch = true;
+    } else if (arg === "--relax-stage-transition") {
+      options.relaxStageTransition = true;
     } else if (arg === "--evidence-selection-mode") {
       options.evidenceSelectionMode = value ?? "";
       index += 1;
@@ -226,6 +229,9 @@ async function main() {
   ];
   if (options.allowHorizonMismatch) {
     readinessArgv.push("--allow-horizon-mismatch");
+  }
+  if (options.relaxStageTransition) {
+    readinessArgv.push("--relax-stage-transition");
   }
   const readinessCommand = await runCommand(readinessArgv, {
     timeoutMs: Number.isFinite(options.timeoutMs) ? options.timeoutMs : 120_000,

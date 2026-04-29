@@ -162,6 +162,7 @@ Before marking a phase complete, include artifacts from:
 - `npm run promote:stage -- --target-stage <canary|majority|full> --dry-run`
 - `npm run evaluate:auto-rollback-policy -- --stage <canary|majority|full> --evidence-dir evidence`
 - `npm run run:stage-drill -- --target-stage <canary|majority|full> --evidence-dir evidence --dry-run`
+  - **Dry-run** without `--current-stage` forwards **`--relax-stage-transition`** so a gateway env still at **shadow** does not fail **shadow→majority** as non-sequential. Explicit: **`check-stage-promotion-readiness`** / **`promote-cutover-stage`** accept **`--relax-stage-transition`**; env **`UNIFIED_RELAX_STAGE_TRANSITION=1`**.
 - `npm run run:h2-drill-suite -- --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --dry-run`
 - `npm run calibrate:rollback-thresholds -- --stage <canary|majority|full> --evidence-dir evidence`
 - `npm run run:supervised-rollback-simulation -- --stage majority --evidence-dir evidence --horizon-status-file docs/HORIZON_STATUS.json --env-file "$HOME/.openclaw/run/gateway.env" --allow-horizon-mismatch`

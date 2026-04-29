@@ -30,6 +30,7 @@ const HORIZON_SEQUENCE = [
   "H23",
   "H24",
   "H25",
+  "H26",
 ];
 const HORIZON_STAGE_MAP = {
   H1: "shadow",
@@ -57,6 +58,7 @@ const HORIZON_STAGE_MAP = {
   H23: "full",
   H24: "full",
   H25: "full",
+  H26: "full",
 };
 
 function isNonEmptyString(value) {
@@ -430,6 +432,9 @@ function commandVerificationType(command) {
   }
   if (command === "node ./scripts/run-h25-assurance-bundle.mjs") {
     return "h25-assurance-bundle";
+  }
+  if (command === "node ./scripts/run-h26-assurance-bundle.mjs") {
+    return "h26-assurance-bundle";
   }
   if (command === "node ./scripts/run-post-h16-sustainment-loop.mjs") {
     return "post-h16-sustainment-loop";
@@ -1491,6 +1496,20 @@ function evaluateCommandPayload(command, payload, targetHorizon = "") {
     }
     return { pass: checks.length === 0, checks };
   }
+  if (verificationType === "h26-assurance-bundle") {
+    const checks = [];
+    if (payload.pass !== true) {
+      checks.push("h26_assurance_bundle_not_passed");
+    }
+    const signal = payload.checks && typeof payload.checks === "object" ? payload.checks : {};
+    if (signal.h25AssuranceBundlePass !== true) {
+      checks.push("h26_assurance_h25_bundle_not_passed");
+    }
+    if (signal.manifestSchemasPass !== true) {
+      checks.push("h26_assurance_manifest_schemas_not_passed");
+    }
+    return { pass: checks.length === 0, checks };
+  }
   if (verificationType === "post-h6-sustainment-loop") {
     const checks = [];
     if (payload.pass !== true) {
@@ -1758,6 +1777,7 @@ async function main() {
       targetHorizon === "H23" ||
       targetHorizon === "H24" ||
       targetHorizon === "H25" ||
+      targetHorizon === "H26" ||
       Boolean(nextHorizon && nextHorizonStateEntry?.status === "completed");
 
     if (!skipStagePromotionReadiness) {
